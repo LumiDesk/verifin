@@ -3719,6 +3719,21 @@ class ReportsPage extends StatelessWidget {
     final expenseTotal = sumByType(entries, EntryType.expense);
     final categoryStats = _categoryStats(expenseEntries);
     final topCategory = categoryStats.firstOrNull;
+    final trendWindow = sevenDayWindowFor(DateTime.now());
+    final trendValues = valuesForTypeInWindow(
+      entries,
+      trendWindow,
+      EntryType.expense,
+    );
+    final trendMax = trendValues.fold<double>(
+      0,
+      (max, value) => value > max ? value : max,
+    );
+    final monthlyValues = monthlyExpenseValues(entries);
+    final monthlyMax = monthlyValues.fold<double>(
+      0,
+      (max, value) => value > max ? value : max,
+    );
 
     return VeriPage(
       child: ListView(
@@ -3739,8 +3754,8 @@ class ReportsPage extends StatelessWidget {
                 Row(
                   children: <Widget>[
                     SizedBox(
-                      width: 138,
-                      height: 138,
+                      width: 156,
+                      height: 156,
                       child: Stack(
                         alignment: Alignment.center,
                         children: <Widget>[
@@ -3748,25 +3763,36 @@ class ReportsPage extends StatelessWidget {
                             value: topCategory == null || expenseTotal <= 0
                                 ? 0
                                 : topCategory.amount / expenseTotal,
-                            strokeWidth: 18,
+                            strokeWidth: 16,
                             color: veriRoyal,
                             backgroundColor: Theme.of(
                               context,
                             ).colorScheme.surfaceContainerHighest,
                           ),
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              Text(
-                                topCategory?.category.label ?? '暂无',
-                                style: Theme.of(context).textTheme.labelMedium,
-                              ),
-                              Text(
-                                formatExpenseAmount(expenseTotal),
-                                style: Theme.of(context).textTheme.titleSmall
-                                    ?.copyWith(fontWeight: FontWeight.w800),
-                              ),
-                            ],
+                          SizedBox(
+                            width: 82,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Text(
+                                  topCategory?.category.label ?? '暂无',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.labelSmall
+                                      ?.copyWith(fontWeight: FontWeight.w700),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  formatExpenseAmount(expenseTotal),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.labelMedium
+                                      ?.copyWith(fontWeight: FontWeight.w800),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -3846,9 +3872,9 @@ class ReportsPage extends StatelessWidget {
                               context,
                             ).colorScheme.onSurface.withValues(alpha: 0.42)
                           : veriExpense,
-                      values: dailyExpenseValues(entries, DateTime.now()),
-                      xLabels: monthAxisLabels(DateTime.now()),
-                      yLabels: reportAxisLabels(expenseTotal),
+                      values: trendValues,
+                      xLabels: labelsForWindow(trendWindow),
+                      yLabels: reportAxisLabels(trendMax),
                       labelColor: Theme.of(
                         context,
                       ).colorScheme.onSurface.withValues(alpha: 0.50),
@@ -3870,7 +3896,7 @@ class ReportsPage extends StatelessWidget {
                   height: 146,
                   child: CustomPaint(
                     painter: BarChartPainter(
-                      values: monthlyExpenseValues(entries),
+                      values: monthlyValues,
                       xLabels: const <String>[
                         '1',
                         '2',
@@ -3885,6 +3911,7 @@ class ReportsPage extends StatelessWidget {
                         '11',
                         '12',
                       ],
+                      yLabels: reportAxisLabels(monthlyMax),
                       labelColor: Theme.of(
                         context,
                       ).colorScheme.onSurface.withValues(alpha: 0.50),
@@ -3972,7 +3999,7 @@ class ProfilePage extends StatelessWidget {
                       const Icon(Icons.chevron_right),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 20),
                   Row(
                     children: <Widget>[
                       Expanded(
@@ -4982,7 +5009,17 @@ List<String> monthAxisLabels(DateTime month) {
 
 List<String> reportAxisLabels(double maxValue) {
   final top = maxValue <= 0 ? 100 : maxValue;
-  return <String>['0', formatAmount(top / 2), formatAmount(top)];
+  return <String>['0', _formatAxisAmount(top / 2), _formatAxisAmount(top)];
+}
+
+String _formatAxisAmount(num value) {
+  final abs = value.abs();
+  if (abs >= 10000) {
+    final compact = value / 10000;
+    final decimals = compact.abs() >= 10 || compact % 1 == 0 ? 0 : 1;
+    return '${compact.toStringAsFixed(decimals)}w';
+  }
+  return formatAmount(value);
 }
 
 String _yy(int year) => (year % 100).toString().padLeft(2, '0');

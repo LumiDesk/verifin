@@ -145,19 +145,23 @@ class BarChartPainter extends CustomPainter {
   const BarChartPainter({
     required this.values,
     this.xLabels = const <String>[],
+    this.yLabels = const <String>[],
     this.labelColor,
   });
 
   final List<double> values;
   final List<String> xLabels;
+  final List<String> yLabels;
   final Color? labelColor;
 
   @override
   void paint(Canvas canvas, Size size) {
+    const leftInset = 30.0;
+    const rightInset = 4.0;
     final chartRect = Rect.fromLTWH(
+      yLabels.isEmpty ? 0 : leftInset,
       0,
-      0,
-      size.width,
+      size.width - (yLabels.isEmpty ? 0 : leftInset + rightInset),
       size.height - (xLabels.isEmpty ? 0 : 22),
     );
     final axisColor = labelColor ?? Colors.white.withValues(alpha: 0.45);
@@ -176,6 +180,14 @@ class BarChartPainter extends CustomPainter {
       Offset(chartRect.right, chartRect.bottom),
       axisPaint,
     );
+    for (var i = 1; i < 4; i += 1) {
+      final y = chartRect.bottom - chartRect.height * i / 3;
+      canvas.drawLine(
+        Offset(chartRect.left, y),
+        Offset(chartRect.right, y),
+        axisPaint..color = axisColor.withValues(alpha: 0.10),
+      );
+    }
 
     final maxValue = math.max(values.reduce(math.max), 1);
     final gap = chartRect.width / values.length;
@@ -192,13 +204,14 @@ class BarChartPainter extends CustomPainter {
       );
       canvas.drawRRect(rect, barPaint);
     }
-    _drawLabels(canvas, chartRect, xLabels, const <String>[], axisColor);
+    _drawLabels(canvas, chartRect, xLabels, yLabels, axisColor);
   }
 
   @override
   bool shouldRepaint(covariant BarChartPainter oldDelegate) {
     return oldDelegate.values != values ||
         oldDelegate.xLabels != xLabels ||
+        oldDelegate.yLabels != yLabels ||
         oldDelegate.labelColor != labelColor;
   }
 }
