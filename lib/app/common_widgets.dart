@@ -389,11 +389,13 @@ class VeriCard extends StatelessWidget {
     super.key,
     required this.child,
     this.onTap,
+    this.quietTap = false,
     this.padding = const EdgeInsets.all(13),
   });
 
   final Widget child;
   final VoidCallback? onTap;
+  final bool quietTap;
   final EdgeInsetsGeometry padding;
 
   @override
@@ -415,6 +417,21 @@ class VeriCard extends StatelessWidget {
           ),
       ],
     );
+
+    if (onTap != null && quietTap) {
+      return Semantics(
+        button: true,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: Container(
+            padding: padding,
+            decoration: decoration,
+            child: child,
+          ),
+        ),
+      );
+    }
 
     if (onTap != null) {
       return Material(
@@ -442,19 +459,163 @@ class PageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        Expanded(
-          child: Text(
-            title,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
+    return VeriHeader(
+      title: title,
+      actions: trailing == null ? null : [trailing!],
+    );
+  }
+}
+
+class VeriHeader extends StatelessWidget {
+  const VeriHeader({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.showBack = false,
+    this.onBack,
+    this.actions,
+  });
+
+  final String title;
+  final String? subtitle;
+  final bool showBack;
+  final VoidCallback? onBack;
+  final List<Widget>? actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final actionWidgets = actions ?? const <Widget>[];
+    return SizedBox(
+      height: 48,
+      child: Row(
+        children: <Widget>[
+          if (showBack) ...<Widget>[
+            IconButton(
+              tooltip: '返回',
+              onPressed: onBack ?? () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.arrow_back),
+            ),
+            const SizedBox(width: 2),
+          ],
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+                ),
+                if (subtitle != null) ...<Widget>[
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.48),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-        ),
-        ?trailing,
-      ],
+          if (actionWidgets.isNotEmpty) ...<Widget>[
+            const SizedBox(width: 8),
+            ...actionWidgets,
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class HeaderAction extends StatelessWidget {
+  const HeaderAction({
+    super.key,
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    this.destructive = false,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = destructive
+        ? veriExpense
+        : Theme.of(context).colorScheme.onSurface;
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      icon: Icon(icon, color: color.withValues(alpha: 0.82)),
+    );
+  }
+}
+
+class HeaderPopupAction<T> extends StatelessWidget {
+  const HeaderPopupAction({
+    super.key,
+    required this.tooltip,
+    required this.icon,
+    required this.onSelected,
+    required this.itemBuilder,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final PopupMenuItemSelected<T> onSelected;
+  final PopupMenuItemBuilder<T> itemBuilder;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<T>(
+      tooltip: tooltip,
+      icon: Icon(icon),
+      onSelected: onSelected,
+      itemBuilder: itemBuilder,
+    );
+  }
+}
+
+class HeaderTextAction extends StatelessWidget {
+  const HeaderTextAction({
+    super.key,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(onPressed: onPressed, child: Text(label));
+  }
+}
+
+class HeaderInline extends StatelessWidget {
+  const HeaderInline({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 220),
+      child: child,
     );
   }
 }

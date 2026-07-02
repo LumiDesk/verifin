@@ -449,6 +449,7 @@ class HomeTrendPanel extends StatelessWidget {
 
     return VeriCard(
       onTap: onTap,
+      quietTap: true,
       padding: const EdgeInsets.fromLTRB(14, 13, 14, 12),
       child: RepaintBoundary(
         child: Column(
@@ -692,6 +693,7 @@ class BudgetPanel extends StatelessWidget {
 
     return VeriCard(
       onTap: onTap,
+      quietTap: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -841,14 +843,10 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
             children: <Widget>[
+              const VeriHeader(title: '收支统计', showBack: true),
+              const SizedBox(height: 8),
               Row(
                 children: <Widget>[
-                  IconButton(
-                    tooltip: '返回',
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back),
-                  ),
-                  const SizedBox(width: 4),
                   _MonthSwitcher(
                     month: _visibleMonth,
                     onPrevious: () => setState(() {
@@ -994,25 +992,14 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
             children: <Widget>[
-              Row(
-                children: <Widget>[
-                  IconButton(
-                    tooltip: '返回',
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back),
-                  ),
-                  Expanded(
-                    child: Text(
-                      '预算设置',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  IconButton(
+              VeriHeader(
+                title: '预算设置',
+                showBack: true,
+                actions: <Widget>[
+                  HeaderAction(
+                    icon: Icons.check,
                     tooltip: '保存预算',
                     onPressed: _save,
-                    icon: const Icon(Icons.check),
                   ),
                 ],
               ),
@@ -1261,14 +1248,12 @@ class _TransactionsPageState extends State<TransactionsPage> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
               children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    IconButton(
-                      tooltip: '返回',
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.arrow_back),
-                    ),
-                  ],
+                VeriHeader(
+                  title: _dateMode ? '当日交易' : '交易明细',
+                  subtitle: _dateMode
+                      ? '${_visibleDate.month}.${_visibleDate.day}'
+                      : null,
+                  showBack: true,
                 ),
                 const SizedBox(height: 8),
                 if (_dateMode)
@@ -1613,24 +1598,15 @@ class TransactionDetailPage extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(14, 8, 14, 26),
               children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    IconButton(
-                      tooltip: '返回',
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.arrow_back),
-                    ),
-                    Text(
-                      entry.type.label,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const Spacer(),
-                    IconButton(
+                VeriHeader(
+                  title: entry.type.label,
+                  showBack: true,
+                  actions: <Widget>[
+                    HeaderAction(
+                      icon: Icons.delete_outline,
                       tooltip: '删除交易',
+                      destructive: true,
                       onPressed: () => _confirmDeleteEntry(context, entry),
-                      icon: const Icon(Icons.delete_outline),
                     ),
                   ],
                 ),
@@ -1990,26 +1966,15 @@ class _AccountGroupsPageState extends State<AccountGroupsPage> {
           child: Column(
             children: <Widget>[
               Padding(
-                padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-                child: Row(
-                  children: <Widget>[
-                    IconButton(
-                      tooltip: '返回',
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.arrow_back),
-                    ),
-                    Expanded(
-                      child: Text(
-                        '账户分组',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    IconButton(
+                padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+                child: VeriHeader(
+                  title: '账户分组',
+                  showBack: true,
+                  actions: <Widget>[
+                    HeaderAction(
+                      icon: Icons.add,
                       tooltip: '新增分组',
                       onPressed: () => _showGroupNameDialog(context),
-                      icon: const Icon(Icons.add),
                     ),
                   ],
                 ),
@@ -2256,25 +2221,14 @@ class _AddAccountPageState extends State<AddAccountPage> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
               children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    IconButton(
-                      tooltip: '返回',
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.arrow_back),
-                    ),
-                    Expanded(
-                      child: Text(
-                        '添加账户',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    IconButton(
+                VeriHeader(
+                  title: '添加账户',
+                  showBack: true,
+                  actions: <Widget>[
+                    HeaderAction(
+                      icon: Icons.check,
                       tooltip: '保存账户',
                       onPressed: _save,
-                      icon: const Icon(Icons.check),
                     ),
                   ],
                 ),
@@ -2430,28 +2384,19 @@ class AccountDetailPage extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
             children: <Widget>[
-              Row(
-                children: <Widget>[
-                  IconButton(
-                    tooltip: '返回',
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back),
-                  ),
-                  Expanded(
-                    child: Text(
-                      currentAccount.name,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  IconButton(
+              VeriHeader(
+                title: currentAccount.name,
+                subtitle: currentAccount.type.label,
+                showBack: true,
+                actions: <Widget>[
+                  HeaderAction(
+                    icon: Icons.delete_outline,
                     tooltip: '删除账户',
+                    destructive: true,
                     onPressed: () {
                       controller.deleteAccount(currentAccount.id);
                       Navigator.of(context).pop();
                     },
-                    icon: const Icon(Icons.delete_outline),
                   ),
                 ],
               ),
@@ -2968,25 +2913,14 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
             children: <Widget>[
-              Row(
-                children: <Widget>[
-                  IconButton(
-                    tooltip: '返回',
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back),
-                  ),
-                  Expanded(
-                    child: Text(
-                      '个人信息',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  IconButton(
+              VeriHeader(
+                title: '个人信息',
+                showBack: true,
+                actions: <Widget>[
+                  HeaderAction(
+                    icon: Icons.check,
                     tooltip: '保存',
                     onPressed: _save,
-                    icon: const Icon(Icons.check),
                   ),
                 ],
               ),
@@ -3083,21 +3017,7 @@ class SettingsPage extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
             children: <Widget>[
-              Row(
-                children: <Widget>[
-                  IconButton(
-                    tooltip: '返回',
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back),
-                  ),
-                  Text(
-                    '设置',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
+              const VeriHeader(title: '设置', showBack: true),
               const SizedBox(height: 10),
               VeriCard(
                 child: Column(
@@ -3248,23 +3168,12 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(14, 8, 14, 20),
                 children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      IconButton(
-                        tooltip: '返回',
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.arrow_back),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '日常账本',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const Icon(Icons.keyboard_arrow_down),
-                      const Spacer(),
-                      TextButton(onPressed: () {}, child: const Text('设置')),
+                  VeriHeader(
+                    title: '日常账本',
+                    subtitle: '记账详情',
+                    showBack: true,
+                    actions: <Widget>[
+                      HeaderTextAction(label: '设置', onPressed: () {}),
                     ],
                   ),
                   const SizedBox(height: 12),
