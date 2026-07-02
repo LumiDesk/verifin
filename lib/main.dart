@@ -6,6 +6,7 @@ import 'app/chart_painters.dart';
 import 'app/common_widgets.dart';
 import 'app/demo_data.dart';
 import 'app/entry_sheets.dart';
+import 'app/image_cropper.dart';
 import 'app/ledger_math.dart';
 import 'app/models.dart';
 import 'app/veri_fin_controller.dart';
@@ -388,10 +389,9 @@ class SectionHeaderAction extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
             ),
             Text(
@@ -2177,7 +2177,27 @@ class AssetsPage extends StatelessWidget {
           controller.setAssetCoverUrl(url);
         }
       case 'local':
-        final dataUrl = await pickAssetCoverDataUrl();
+        final rawImage = await pickRawImageDataUrl();
+        if (rawImage == null || !context.mounted) {
+          return;
+        }
+        final crop = await showImageCropper(
+          context: context,
+          imageDataUrl: rawImage,
+          title: '裁剪资产背景',
+          aspectRatio: 1200 / 520,
+        );
+        if (crop == null) {
+          return;
+        }
+        final dataUrl = await cropImageDataUrl(
+          sourceDataUrl: rawImage,
+          targetWidth: 1200,
+          targetHeight: 520,
+          zoom: crop.zoom,
+          offsetX: crop.offsetX,
+          offsetY: crop.offsetY,
+        );
         if (dataUrl != null) {
           controller.setAssetCoverUrl(dataUrl);
         }
@@ -3741,11 +3761,31 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
   }
 
   Future<void> _pickAvatar() async {
-    final avatar = await pickAvatarDataUrl();
-    if (avatar == null || !mounted) {
+    final rawImage = await pickRawImageDataUrl();
+    if (rawImage == null || !mounted) {
       return;
     }
-    setState(() => _avatarDataUrl = avatar);
+    final crop = await showImageCropper(
+      context: context,
+      imageDataUrl: rawImage,
+      title: '裁剪头像',
+      aspectRatio: 1,
+      circlePreview: true,
+    );
+    if (crop == null) {
+      return;
+    }
+    final avatar = await cropImageDataUrl(
+      sourceDataUrl: rawImage,
+      targetWidth: 512,
+      targetHeight: 512,
+      zoom: crop.zoom,
+      offsetX: crop.offsetX,
+      offsetY: crop.offsetY,
+    );
+    if (avatar != null && mounted) {
+      setState(() => _avatarDataUrl = avatar);
+    }
   }
 
   void _save() {

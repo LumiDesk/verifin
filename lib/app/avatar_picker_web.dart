@@ -1,17 +1,10 @@
 // ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
 
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:html' as html;
 
-Future<String?> pickAvatarDataUrl() {
-  return _pickImageDataUrl();
-}
-
-Future<String?> pickAssetCoverDataUrl() {
-  return _pickImageDataUrl(cropWidth: 1200, cropHeight: 520);
-}
-
-Future<String?> _pickImageDataUrl({int? cropWidth, int? cropHeight}) {
+Future<String?> pickRawImageDataUrl() {
   final completer = Completer<String?>();
   final input = html.FileUploadInputElement()
     ..accept = 'image/*'
@@ -24,20 +17,9 @@ Future<String?> _pickImageDataUrl({int? cropWidth, int? cropHeight}) {
       return;
     }
     final reader = html.FileReader();
-    reader.onLoad.first.then((_) async {
-      final dataUrl = reader.result as String?;
-      if (dataUrl == null || cropWidth == null || cropHeight == null) {
-        completer.complete(dataUrl);
-        return;
-      }
-      completer.complete(
-        await _centerCropDataUrl(
-          dataUrl: dataUrl,
-          targetWidth: cropWidth,
-          targetHeight: cropHeight,
-        ),
-      );
-    });
+    reader.onLoad.first.then(
+      (_) => completer.complete(reader.result as String?),
+    );
     reader.onError.first.then((_) => completer.complete(null));
     reader.readAsDataUrl(file);
   });
@@ -45,42 +27,49 @@ Future<String?> _pickImageDataUrl({int? cropWidth, int? cropHeight}) {
   return completer.future;
 }
 
-Future<String?> _centerCropDataUrl({
-  required String dataUrl,
+Future<String?> cropImageDataUrl({
+  required String sourceDataUrl,
   required int targetWidth,
   required int targetHeight,
+  required double zoom,
+  required double offsetX,
+  required double offsetY,
 }) async {
-  final image = html.ImageElement(src: dataUrl);
+  final image = html.ImageElement(src: sourceDataUrl);
   try {
     await image.onLoad.first;
   } on Object {
-    return dataUrl;
+    return sourceDataUrl;
   }
 
   final sourceWidth = image.naturalWidth;
   final sourceHeight = image.naturalHeight;
   if (sourceWidth == 0 || sourceHeight == 0) {
-    return dataUrl;
+    return sourceDataUrl;
   }
 
   final targetRatio = targetWidth / targetHeight;
   final sourceRatio = sourceWidth / sourceHeight;
-  late final num cropWidth;
-  late final num cropHeight;
-  late final num cropX;
-  late final num cropY;
+  late final double baseCropWidth;
+  late final double baseCropHeight;
 
   if (sourceRatio > targetRatio) {
-    cropHeight = sourceHeight;
-    cropWidth = sourceHeight * targetRatio;
-    cropX = (sourceWidth - cropWidth) / 2;
-    cropY = 0;
+    baseCropHeight = sourceHeight.toDouble();
+    baseCropWidth = baseCropHeight * targetRatio;
   } else {
-    cropWidth = sourceWidth;
-    cropHeight = sourceWidth / targetRatio;
-    cropX = 0;
-    cropY = (sourceHeight - cropHeight) / 2;
+    baseCropWidth = sourceWidth.toDouble();
+    baseCropHeight = baseCropWidth / targetRatio;
   }
+
+  final effectiveZoom = zoom.clamp(1.0, 3.0);
+  final cropWidth = baseCropWidth / effectiveZoom;
+  final cropHeight = baseCropHeight / effectiveZoom;
+  final maxOffsetX = math.max(0, sourceWidth - cropWidth) / 2;
+  final maxOffsetY = math.max(0, sourceHeight - cropHeight) / 2;
+  final centerX = sourceWidth / 2 + offsetX.clamp(-1.0, 1.0) * maxOffsetX;
+  final centerY = sourceHeight / 2 + offsetY.clamp(-1.0, 1.0) * maxOffsetY;
+  final cropX = (centerX - cropWidth / 2).clamp(0, sourceWidth - cropWidth);
+  final cropY = (centerY - cropHeight / 2).clamp(0, sourceHeight - cropHeight);
 
   final canvas = html.CanvasElement(width: targetWidth, height: targetHeight);
   final context = canvas.context2D;
