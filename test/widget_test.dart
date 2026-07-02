@@ -1,30 +1,70 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:verifin/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('shows the main tabs and switches between pages', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const VeriFinApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('日常账本'), findsOneWidget);
+    expect(find.text('首页'), findsOneWidget);
+    expect(find.text('资产'), findsOneWidget);
+    expect(find.text('看板'), findsOneWidget);
+    expect(find.text('我的'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    await tester.tap(find.text('资产'));
+    await tester.pumpAndSettle();
+    expect(find.text('净资产'), findsAtLeastNWidgets(1));
+
+    await tester.tap(find.text('看板'));
+    await tester.pumpAndSettle();
+    expect(find.text('数据看板'), findsOneWidget);
+
+    await tester.tap(find.text('我的'));
+    await tester.pumpAndSettle();
+    expect(find.text('主题模式'), findsOneWidget);
+  });
+
+  testWidgets('changes theme preference from the profile page', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const VeriFinApp());
+
+    await tester.tap(find.text('我的'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('深色'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('theme_segmented_button')), findsOneWidget);
+    expect(find.text('深色'), findsOneWidget);
+  });
+
+  testWidgets('creates an entry through the quick entry flow', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const VeriFinApp());
+
+    await tester.tap(find.byKey(const Key('quick_entry_fab')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('number_key_4')));
     await tester.pump();
+    await tester.tap(find.byKey(const Key('number_key_5')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('number_pad_ok')));
+    await tester.pumpAndSettle();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.byKey(const Key('save_entry_button')), findsOneWidget);
+    expect(find.text('45'), findsAtLeastNWidgets(1));
+
+    await tester.tap(find.byKey(const Key('save_entry_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('今日交易'), findsOneWidget);
+    expect(find.text('餐饮'), findsAtLeastNWidgets(1));
+    expect(find.text('-45'), findsAtLeastNWidgets(1));
   });
 }
