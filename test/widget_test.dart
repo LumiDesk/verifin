@@ -66,4 +66,35 @@ void main() {
     expect(find.text('餐饮'), findsAtLeastNWidgets(1));
     expect(find.text('-45'), findsAtLeastNWidgets(1));
   });
+
+  testWidgets('opens and deletes an entry from the transaction detail page', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const VeriFinApp());
+
+    await tester.tap(find.byKey(const Key('quick_entry_fab')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('number_key_4')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('number_key_5')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('number_pad_ok')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('save_entry_button')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('餐饮').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('支出'), findsAtLeastNWidgets(1));
+    expect(find.text('账户'), findsOneWidget);
+    expect(find.byIcon(Icons.delete_outline), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.delete_outline));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('删除').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('还没有交易'), findsOneWidget);
+  });
 }

@@ -6,69 +6,276 @@ import 'ledger_math.dart';
 import 'models.dart';
 
 class TransactionTile extends StatelessWidget {
-  const TransactionTile(this.entry, {super.key, required this.accounts});
+  const TransactionTile(
+    this.entry, {
+    super.key,
+    required this.accounts,
+    this.onTap,
+  });
 
   final LedgerEntry entry;
   final List<Account> accounts;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final category = categoryById(entry.categoryId);
     final account = accountById(accounts, entry.accountId);
-    final amountColor = entry.type == EntryType.income ? veriMint : null;
+    final amountColor = colorForType(entry.type);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
-      child: Row(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(veriRadiusSm),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          child: Row(
+            children: <Widget>[
+              Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: amountColor,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      category.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      '${formatTime(entry.occurredAt)} · '
+                      '${entry.note.isEmpty ? account.name : entry.note}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.46),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: <Widget>[
+                  Text(
+                    formatSignedAmount(signedAmount(entry)),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: amountColor,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.14),
+                      ),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      account.name,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.46),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class TransactionListCard extends StatelessWidget {
+  const TransactionListCard({
+    super.key,
+    required this.entries,
+    required this.accounts,
+    this.onEntryTap,
+  });
+
+  final List<LedgerEntry> entries;
+  final List<Account> accounts;
+  final ValueChanged<LedgerEntry>? onEntryTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return VeriCard(
+      child: Column(
         children: <Widget>[
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: colorForType(entry.type).withValues(alpha: 0.13),
-              borderRadius: BorderRadius.circular(veriRadiusSm),
+          for (final item in entries.indexed) ...<Widget>[
+            TransactionTile(
+              item.$2,
+              accounts: accounts,
+              onTap: onEntryTap == null ? null : () => onEntryTap!(item.$2),
             ),
-            child: Icon(
-              category.icon,
-              size: 16,
-              color: colorForType(entry.type),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  category.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${formatTime(entry.occurredAt)} · ${account.name}'
-                  '${entry.note.isEmpty ? '' : ' · ${entry.note}'}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.58),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
+            if (item.$1 != entries.length - 1)
+              Divider(
+                indent: 19,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.06),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class FilterPill extends StatelessWidget {
+  const FilterPill({super.key, required this.label, this.icon});
+
+  final String label;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.black.withValues(alpha: 0.28) : Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: isDark ? Colors.white10 : veriLine),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (icon != null) ...<Widget>[
+            Icon(icon, size: 16),
+            const SizedBox(width: 5),
+          ],
           Text(
-            formatSignedAmount(signedAmount(entry)),
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: amountColor,
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(width: 4),
+          const Icon(Icons.keyboard_arrow_down, size: 16),
+        ],
+      ),
+    );
+  }
+}
+
+class DetailInfoRow extends StatelessWidget {
+  const DetailInfoRow({
+    super.key,
+    required this.label,
+    required this.value,
+    this.placeholder = false,
+  });
+
+  final String label;
+  final String value;
+  final bool placeholder;
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = Theme.of(context).colorScheme.onSurface;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: textColor.withValues(alpha: 0.36),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                value,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: textColor.withValues(alpha: placeholder ? 0.32 : 0.88),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Divider(color: textColor.withValues(alpha: 0.07)),
+      ],
+    );
+  }
+}
+
+class SummaryMetric extends StatelessWidget {
+  const SummaryMetric({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: <Widget>[
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Colors.white70),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: color,
+              fontSize: 18,
               fontWeight: FontWeight.w800,
             ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '+0%',
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(color: Colors.white54),
           ),
         ],
       ),

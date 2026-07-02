@@ -1,5 +1,5 @@
 class LocalKeyValueStore {
-  static final Map<String, String> _memory = <String, String>{};
+  final Map<String, String> _memory = <String, String>{};
 
   String? read(String key) => _memory[key];
 

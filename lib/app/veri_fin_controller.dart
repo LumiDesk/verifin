@@ -57,6 +57,12 @@ class VeriFinController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void deleteEntry(String entryId) {
+    _entries.removeWhere((entry) => entry.id == entryId);
+    _persistEntries();
+    notifyListeners();
+  }
+
   void addAccount(Account account) {
     _accounts.add(account);
     _persistAccounts();
