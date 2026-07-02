@@ -3895,7 +3895,7 @@ class ReportsPage extends StatelessWidget {
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final compact = constraints.maxWidth < 360;
-                    final ringSize = compact ? 188.0 : 232.0;
+                    final ringSize = compact ? 126.0 : 156.0;
                     final ringValue = topCategory == null || expenseTotal <= 0
                         ? 0.0
                         : topCategory.amount / expenseTotal;
@@ -3917,7 +3917,7 @@ class ReportsPage extends StatelessWidget {
                             child: const SizedBox.expand(),
                           ),
                           SizedBox(
-                            width: compact ? 96 : 120,
+                            width: compact ? 72 : 88,
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: <Widget>[
@@ -3944,54 +3944,9 @@ class ReportsPage extends StatelessWidget {
                         ],
                       ),
                     );
-                    final detail = Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          topCategory == null ? '暂无支出记录' : '最高分类',
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurface.withValues(alpha: 0.48),
-                                fontWeight: FontWeight.w700,
-                              ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          topCategory == null
-                              ? '保存记录后自动聚合分类占比'
-                              : '${topCategory.category.label} · ${(topCategory.percent * 100).toStringAsFixed(1)}%',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                        const SizedBox(height: 8),
-                        const Divider(),
-                        Text(
-                          '本月支出会按分类自动排序。',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    );
-                    if (compact) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: content,
-                          ),
-                          const SizedBox(height: 12),
-                          detail,
-                        ],
-                      );
-                    }
-                    return Row(
-                      children: <Widget>[
-                        content,
-                        const SizedBox(width: 16),
-                        Expanded(child: detail),
-                      ],
+                    return Align(
+                      alignment: Alignment.centerLeft,
+                      child: content,
                     );
                   },
                 ),
