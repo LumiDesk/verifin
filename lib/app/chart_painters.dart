@@ -202,6 +202,56 @@ class BarChartPainter extends CustomPainter {
   }
 }
 
+class BudgetRingPainter extends CustomPainter {
+  const BudgetRingPainter({
+    required this.value,
+    required this.trackColor,
+    required this.progressColor,
+  });
+
+  final double value;
+  final Color trackColor;
+  final Color progressColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final strokeWidth = size.shortestSide * 0.10;
+    final rect =
+        Offset(strokeWidth / 2, strokeWidth / 2) &
+        Size(size.width - strokeWidth, size.height - strokeWidth);
+    final trackPaint = Paint()
+      ..color = trackColor
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    final progressPaint = Paint()
+      ..shader = SweepGradient(
+        startAngle: -math.pi / 2,
+        endAngle: math.pi * 1.5,
+        colors: <Color>[progressColor, veriRoyal, progressColor],
+      ).createShader(rect)
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(rect, -math.pi / 2, math.pi * 2, false, trackPaint);
+    canvas.drawArc(
+      rect,
+      -math.pi / 2,
+      math.pi * 2 * value.clamp(0, 1).toDouble(),
+      false,
+      progressPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant BudgetRingPainter oldDelegate) {
+    return oldDelegate.value != value ||
+        oldDelegate.trackColor != trackColor ||
+        oldDelegate.progressColor != progressColor;
+  }
+}
+
 void _drawLabels(
   Canvas canvas,
   Rect chartRect,

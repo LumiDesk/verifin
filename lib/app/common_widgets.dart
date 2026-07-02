@@ -642,6 +642,7 @@ class _CalendarPreviewState extends State<CalendarPreview> {
         DateTime(_visibleMonth.year, _visibleMonth.month).weekday - 1;
 
     return VeriCard(
+      padding: const EdgeInsets.fromLTRB(13, 12, 13, 13),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -649,7 +650,7 @@ class _CalendarPreviewState extends State<CalendarPreview> {
             children: <Widget>[
               Expanded(
                 child: Text(
-                  '日历视图',
+                  '日历',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
@@ -663,9 +664,30 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                     _visibleMonth.month - 1,
                   );
                 }),
-                icon: const Icon(Icons.chevron_left),
+                icon: const Icon(Icons.chevron_left, size: 20),
               ),
-              Text('${_visibleMonth.month}月'),
+              Container(
+                constraints: const BoxConstraints(minWidth: 64),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? veriSurfaceAltDark
+                      : veriSurfaceAltLight,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white.withValues(alpha: 0.08)
+                        : veriLine,
+                  ),
+                ),
+                child: Text(
+                  '${_visibleMonth.year}.${_visibleMonth.month.toString().padLeft(2, '0')}',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+                ),
+              ),
               IconButton(
                 tooltip: '下个月',
                 onPressed: () => setState(() {
@@ -674,11 +696,11 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                     _visibleMonth.month + 1,
                   );
                 }),
-                icon: const Icon(Icons.chevron_right),
+                icon: const Icon(Icons.chevron_right, size: 20),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           const Row(
             children: <Widget>[
               _WeekdayLabel('一'),
@@ -696,8 +718,9 @@ class _CalendarPreviewState extends State<CalendarPreview> {
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
-              mainAxisSpacing: 6,
-              crossAxisSpacing: 6,
+              mainAxisSpacing: 5,
+              crossAxisSpacing: 4,
+              mainAxisExtent: 50,
             ),
             itemCount: leadingBlanks + days,
             itemBuilder: (context, index) {
@@ -728,7 +751,7 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                     : () => widget.onDayTap!(date),
                 child: Container(
                   alignment: Alignment.topCenter,
-                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  padding: const EdgeInsets.symmetric(vertical: 3),
                   decoration: BoxDecoration(
                     color:
                         day == now.day &&
@@ -736,12 +759,20 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                             _visibleMonth.month == now.month
                         ? veriRoyal.withValues(alpha: 0.12)
                         : Colors.transparent,
+                    border: Border.all(
+                      color:
+                          day == now.day &&
+                              _visibleMonth.year == now.year &&
+                              _visibleMonth.month == now.month
+                          ? veriRoyal.withValues(alpha: 0.16)
+                          : Colors.transparent,
+                    ),
                     borderRadius: BorderRadius.circular(veriRadiusSm),
                   ),
                   child: Column(
                     children: <Widget>[
                       SizedBox(
-                        height: 18,
+                        height: 17,
                         child: Text(
                           '$day',
                           style: Theme.of(context).textTheme.titleSmall
@@ -757,7 +788,7 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                         ),
                       ),
                       SizedBox(
-                        height: 14,
+                        height: 13,
                         child: expense <= 0
                             ? const SizedBox.shrink()
                             : Text(
@@ -767,7 +798,7 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                               ),
                       ),
                       SizedBox(
-                        height: 14,
+                        height: 13,
                         child: income <= 0
                             ? const SizedBox.shrink()
                             : Text(
@@ -799,7 +830,12 @@ class _WeekdayLabel extends StatelessWidget {
       child: Text(
         label,
         textAlign: TextAlign.center,
-        style: Theme.of(context).textTheme.labelSmall,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: 0.42),
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

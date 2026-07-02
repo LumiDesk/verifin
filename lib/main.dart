@@ -208,13 +208,13 @@ class _BottomNavButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = selected
-        ? veriBlue
+        ? veriRoyal
         : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45);
     return Tooltip(
       message: item.label,
       child: InkResponse(
         onTap: onTap,
-        radius: 24,
+        radius: 28,
         child: Semantics(
           label: item.label,
           selected: selected,
@@ -222,15 +222,21 @@ class _BottomNavButton extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              Icon(selected ? item.activeIcon : item.icon, color: color),
-              const SizedBox(height: 4),
               AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
-                width: selected ? 16 : 4,
-                height: 3,
+                curve: Curves.easeOutCubic,
+                width: selected ? 42 : 38,
+                height: 32,
                 decoration: BoxDecoration(
-                  color: selected ? veriBlue : Colors.transparent,
-                  borderRadius: BorderRadius.circular(2),
+                  color: selected
+                      ? veriRoyal.withValues(alpha: 0.12)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Icon(
+                  selected ? item.activeIcon : item.icon,
+                  color: color,
+                  size: selected ? 22 : 21,
                 ),
               ),
             ],
@@ -436,60 +442,70 @@ class HomeTrendPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final panelColor = isDark ? veriSurfaceDark : veriSurfaceLight;
     final textColor = Theme.of(context).colorScheme.onSurface;
-    final mutedColor = textColor.withValues(alpha: isDark ? 0.56 : 0.48);
+    final mutedColor = textColor.withValues(alpha: isDark ? 0.62 : 0.52);
+    final net = income - expense;
+    final daysWithExpense = values.where((value) => value > 0).length;
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(veriRadiusMd),
+    return VeriCard(
       onTap: onTap,
-      child: Container(
-        clipBehavior: Clip.antiAlias,
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-        decoration: BoxDecoration(
-          color: panelColor,
-          borderRadius: BorderRadius.circular(veriRadiusMd),
-          border: Border.all(
-            color: isDark ? Colors.white.withValues(alpha: 0.10) : veriLine,
-          ),
-          boxShadow: <BoxShadow>[
-            if (!isDark)
-              BoxShadow(
-                color: const Color(0xFF0F172A).withValues(alpha: 0.05),
-                blurRadius: 14,
-                offset: const Offset(0, 6),
-              ),
-          ],
-        ),
+      padding: const EdgeInsets.fromLTRB(14, 13, 14, 12),
+      child: RepaintBoundary(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Row(
               children: <Widget>[
                 Expanded(
-                  child: Text(
-                    '${month.month}月支出',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.labelLarge?.copyWith(color: mutedColor),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        '${month.year}年${month.month}月',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: mutedColor,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '支出走势',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                    ],
                   ),
                 ),
                 Container(
-                  width: 26,
-                  height: 26,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: veriRoyal.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(999),
                   ),
-                  child: const Icon(
-                    Icons.chevron_right,
-                    color: veriRoyal,
-                    size: 18,
+                  child: Row(
+                    children: <Widget>[
+                      Text(
+                        '统计',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: veriRoyal,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(width: 2),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: veriRoyal,
+                        size: 16,
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 9),
+            const SizedBox(height: 12),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: <Widget>[
@@ -500,44 +516,78 @@ class HomeTrendPanel extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: (net >= 0 ? veriIncome : veriExpense).withValues(
+                      alpha: isDark ? 0.16 : 0.10,
+                    ),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
                   child: Text(
-                    '结余 ${formatSignedAmount(income - expense)}',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: mutedColor),
+                    '结余 ${formatSignedAmount(net)}',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: net >= 0 ? veriIncome : veriExpense,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 9),
+            const SizedBox(height: 10),
             Row(
               children: <Widget>[
-                _TrendMetric(
-                  label: '收入',
-                  value: formatAmount(income),
-                  dark: isDark,
+                Expanded(
+                  child: _TrendMetric(
+                    label: '收入',
+                    value: formatAmount(income),
+                    color: veriIncome,
+                    dark: isDark,
+                  ),
                 ),
                 const SizedBox(width: 8),
-                _TrendMetric(
-                  label: '交易',
-                  value: '${values.where((v) => v > 0).length}天',
-                  dark: isDark,
+                Expanded(
+                  child: _TrendMetric(
+                    label: '记账日',
+                    value: '$daysWithExpense天',
+                    color: veriRoyal,
+                    dark: isDark,
+                  ),
                 ),
-                const Spacer(),
-                Text(
-                  '${month.month}.1 - ${month.month}.${DateUtils.getDaysInMonth(month.year, month.month)}',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelSmall?.copyWith(color: mutedColor),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _TrendMetric(
+                    label: '日均支出',
+                    value: formatAmount(
+                      expense /
+                          DateTime.now().day.clamp(
+                            1,
+                            DateUtils.getDaysInMonth(month.year, month.month),
+                          ),
+                    ),
+                    color: veriBlue,
+                    dark: isDark,
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            SizedBox(
-              height: 128,
+            const SizedBox(height: 12),
+            Container(
+              height: 138,
+              padding: const EdgeInsets.fromLTRB(8, 10, 8, 6),
+              decoration: BoxDecoration(
+                color: isDark ? veriSurfaceAltDark : const Color(0xFFF7FAFF),
+                borderRadius: BorderRadius.circular(veriRadiusSm),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : const Color(0xFFEAF0F8),
+                ),
+              ),
               child: CustomPaint(
                 painter: TrendLinePainter(
                   color: veriExpense,
@@ -561,32 +611,53 @@ class _TrendMetric extends StatelessWidget {
   const _TrendMetric({
     required this.label,
     required this.value,
+    required this.color,
     required this.dark,
   });
 
   final String label;
   final String value;
+  final Color color;
   final bool dark;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
       decoration: BoxDecoration(
         color: dark
-            ? Colors.white.withValues(alpha: 0.06)
-            : veriRoyal.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(999),
+            ? color.withValues(alpha: 0.14)
+            : color.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(veriRadiusSm),
         border: Border.all(
-          color: dark ? Colors.white10 : veriRoyal.withValues(alpha: 0.08),
+          color: dark
+              ? color.withValues(alpha: 0.18)
+              : color.withValues(alpha: 0.08),
         ),
       ),
-      child: Text(
-        '$label $value',
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: dark ? Colors.white60 : veriRoyal,
-          fontWeight: FontWeight.w700,
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.50),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: dark ? Colors.white.withValues(alpha: 0.86) : color,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -617,18 +688,35 @@ class BudgetPanel extends StatelessWidget {
       1,
       daysInMonth,
     );
+    final ratio = budget <= 0 ? 0.0 : (expense / budget).clamp(0, 1).toDouble();
 
     return VeriCard(
       onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          SectionHeaderAction(
-            title: '${month.month}月预算',
-            trailing: '',
-            onTap: onTap,
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  '${month.month}月预算',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              Text(
+                '编辑',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: veriRoyal,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(width: 2),
+              const Icon(Icons.chevron_right, size: 16, color: veriRoyal),
+            ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(
             children: <Widget>[
               Expanded(
@@ -645,16 +733,18 @@ class BudgetPanel extends StatelessWidget {
                   alignment: Alignment.center,
                   children: <Widget>[
                     SizedBox(
-                      width: 112,
-                      height: 112,
-                      child: CircularProgressIndicator(
-                        value: (expense / budget).clamp(0, 1),
-                        strokeWidth: 10,
-                        strokeCap: StrokeCap.round,
-                        backgroundColor: Theme.of(
-                          context,
-                        ).colorScheme.surfaceContainerHigh,
-                        color: veriWarning,
+                      width: 116,
+                      height: 116,
+                      child: CustomPaint(
+                        painter: BudgetRingPainter(
+                          value: ratio,
+                          trackColor: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerHighest,
+                          progressColor: ratio > 0.85
+                              ? veriExpense
+                              : veriWarning,
+                        ),
                       ),
                     ),
                     Column(
@@ -671,11 +761,13 @@ class BudgetPanel extends StatelessWidget {
                         ),
                         Text(
                           formatAmount(remaining),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.titleLarge
                               ?.copyWith(fontWeight: FontWeight.w800),
                         ),
                         Text(
-                          '预算${formatAmount(budget)}',
+                          '${(ratio * 100).toStringAsFixed(0)}%',
                           style: Theme.of(context).textTheme.labelSmall
                               ?.copyWith(
                                 color: Theme.of(
@@ -696,6 +788,18 @@ class BudgetPanel extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 2),
+          Center(
+            child: Text(
+              '预算 ${formatAmount(budget)}',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.44),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),

@@ -46,8 +46,8 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
     iconButtonTheme: IconButtonThemeData(
       style: IconButton.styleFrom(
         visualDensity: VisualDensity.compact,
-        minimumSize: const Size(36, 36),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        minimumSize: const Size(40, 40),
+        tapTargetSize: MaterialTapTargetSize.padded,
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
