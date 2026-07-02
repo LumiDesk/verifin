@@ -3895,22 +3895,26 @@ class ReportsPage extends StatelessWidget {
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final compact = constraints.maxWidth < 360;
-                    final ringSize = compact ? 178.0 : 220.0;
+                    final ringSize = compact ? 188.0 : 232.0;
+                    final ringValue = topCategory == null || expenseTotal <= 0
+                        ? 0.0
+                        : topCategory.amount / expenseTotal;
                     final content = SizedBox(
                       width: ringSize,
                       height: ringSize,
                       child: Stack(
                         alignment: Alignment.center,
                         children: <Widget>[
-                          CircularProgressIndicator(
-                            value: topCategory == null || expenseTotal <= 0
-                                ? 0
-                                : topCategory.amount / expenseTotal,
-                            strokeWidth: compact ? 18 : 22,
-                            color: veriRoyal,
-                            backgroundColor: Theme.of(
-                              context,
-                            ).colorScheme.surfaceContainerHighest,
+                          CustomPaint(
+                            painter: BudgetRingPainter(
+                              value: ringValue,
+                              trackColor: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest
+                                  .withValues(alpha: 0.72),
+                              progressColor: veriRoyal,
+                            ),
+                            child: const SizedBox.expand(),
                           ),
                           SizedBox(
                             width: compact ? 96 : 120,

@@ -113,19 +113,19 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
                     }
 
                     final isOk = value == 'OK';
-                    final keyColor = Theme.of(
-                      context,
-                    ).colorScheme.surfaceContainerHighest;
-                    final keyTextColor = Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.92);
+                    final isDark =
+                        Theme.of(context).brightness == Brightness.dark;
+                    final keyColor = isDark
+                        ? Theme.of(context).colorScheme.surfaceContainerHighest
+                        : const Color(0xFF2F3747);
+                    final keyTextColor = Colors.white.withValues(alpha: 0.94);
                     return FilledButton.tonal(
                       key: isOk
                           ? const Key('number_pad_ok')
                           : Key('number_key_$value'),
                       style: FilledButton.styleFrom(
-                        backgroundColor: keyColor,
-                        foregroundColor: keyTextColor,
+                        backgroundColor: isOk ? veriRoyal : keyColor,
+                        foregroundColor: Colors.white,
                         disabledBackgroundColor: keyColor.withValues(
                           alpha: 0.42,
                         ),
