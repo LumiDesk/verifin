@@ -17,6 +17,7 @@ const Color veriSurfaceAltDark = Color(0xFF151A22);
 const double veriRadiusSm = 6;
 const double veriRadiusMd = 8;
 const double veriRadiusLg = 12;
+const double veriHeaderHeight = 52;
 const double veriPageMaxWidth = 440;
 
 ThemeData buildVeriFinTheme(Brightness brightness) {

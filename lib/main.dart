@@ -271,7 +271,7 @@ class HomePage extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(14, 8, 14, 82),
         children: <Widget>[
-          const PageHeader(title: '日常账本'),
+          const PageHeader(title: '首页', subtitle: '日常账本'),
           const SizedBox(height: 10),
           HomeTrendPanel(
             month: now,
@@ -446,6 +446,10 @@ class HomeTrendPanel extends StatelessWidget {
     final mutedColor = textColor.withValues(alpha: isDark ? 0.62 : 0.52);
     final net = income - expense;
     final daysWithExpense = values.where((value) => value > 0).length;
+    final hasExpense = !isZeroAmount(expense);
+    final netColor = isZeroAmount(net)
+        ? mutedColor
+        : (net > 0 ? veriIncome : veriExpense);
 
     return VeriCard(
       onTap: onTap,
@@ -511,9 +515,9 @@ class HomeTrendPanel extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: <Widget>[
                 Text(
-                  '-${formatAmount(expense)}',
+                  formatExpenseAmount(expense),
                   style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                    color: veriExpense,
+                    color: hasExpense ? veriExpense : mutedColor,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -524,15 +528,13 @@ class HomeTrendPanel extends StatelessWidget {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: (net >= 0 ? veriIncome : veriExpense).withValues(
-                      alpha: isDark ? 0.16 : 0.10,
-                    ),
+                    color: netColor.withValues(alpha: isDark ? 0.16 : 0.10),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
                     '结余 ${formatSignedAmount(net)}',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: net >= 0 ? veriIncome : veriExpense,
+                      color: netColor,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -546,7 +548,7 @@ class HomeTrendPanel extends StatelessWidget {
                   child: _TrendMetric(
                     label: '收入',
                     value: formatAmount(income),
-                    color: veriIncome,
+                    color: isZeroAmount(income) ? mutedColor : veriIncome,
                     dark: isDark,
                   ),
                 ),
@@ -591,7 +593,7 @@ class HomeTrendPanel extends StatelessWidget {
               ),
               child: CustomPaint(
                 painter: TrendLinePainter(
-                  color: veriExpense,
+                  color: hasExpense ? veriExpense : mutedColor,
                   values: values,
                   xLabels: monthAxisLabels(month),
                   yLabels: reportAxisLabels(expense),
@@ -724,8 +726,12 @@ class BudgetPanel extends StatelessWidget {
               Expanded(
                 child: _BudgetSideStat(
                   label: '支出',
-                  value: '-${formatAmount(expense)}',
-                  color: veriExpense,
+                  value: formatExpenseAmount(expense),
+                  color: isZeroAmount(expense)
+                      ? Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.48)
+                      : veriExpense,
                 ),
               ),
               SizedBox(
@@ -1309,8 +1315,12 @@ class _TransactionsPageState extends State<TransactionsPage> {
                     children: <Widget>[
                       SummaryMetric(
                         label: '支出',
-                        value: '-${formatAmount(expense)}',
-                        color: veriExpense,
+                        value: formatExpenseAmount(expense),
+                        color: isZeroAmount(expense)
+                            ? Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.48)
+                            : veriExpense,
                       ),
                       SummaryMetric(
                         label: '收入',
@@ -1894,7 +1904,8 @@ class AssetsPage extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(14, 8, 14, 82),
         children: <Widget>[
           PageHeader(
-            title: '净资产',
+            title: '资产',
+            subtitle: '净资产',
             trailing: PopupMenuButton<String>(
               tooltip: '资产操作',
               icon: const Icon(Icons.add, size: 22),
@@ -2689,8 +2700,12 @@ class AccountReportPage extends StatelessWidget {
                     ),
                     SummaryMetric(
                       label: '支出',
-                      value: '-${formatAmount(expense)}',
-                      color: veriExpense,
+                      value: formatExpenseAmount(expense),
+                      color: isZeroAmount(expense)
+                          ? Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.48)
+                          : veriExpense,
                     ),
                   ],
                 ),
@@ -2772,7 +2787,7 @@ class ReportsPage extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(14, 8, 14, 82),
         children: <Widget>[
-          const PageHeader(title: '数据看板'),
+          const PageHeader(title: '看板', subtitle: '数据看板'),
           const SizedBox(height: 10),
           VeriCard(
             child: Column(
@@ -2781,7 +2796,7 @@ class ReportsPage extends StatelessWidget {
                 SectionTitle(
                   title: '分类统计',
                   trailing:
-                      '-${formatAmount(expenseTotal)} · ${DateTime.now().month}月 · 支出',
+                      '${formatExpenseAmount(expenseTotal)} · ${DateTime.now().month}月 · 支出',
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -2810,7 +2825,7 @@ class ReportsPage extends StatelessWidget {
                                 style: Theme.of(context).textTheme.labelMedium,
                               ),
                               Text(
-                                '-${formatAmount(expenseTotal)}',
+                                formatExpenseAmount(expenseTotal),
                                 style: Theme.of(context).textTheme.titleSmall
                                     ?.copyWith(fontWeight: FontWeight.w800),
                               ),
@@ -2882,14 +2897,18 @@ class ReportsPage extends StatelessWidget {
               children: <Widget>[
                 SectionTitle(
                   title: '日趋势',
-                  trailing: '-${formatAmount(expenseTotal)}',
+                  trailing: formatExpenseAmount(expenseTotal),
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
                   height: 138,
                   child: CustomPaint(
                     painter: TrendLinePainter(
-                      color: const Color(0xFFE84D6A),
+                      color: isZeroAmount(expenseTotal)
+                          ? Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.42)
+                          : veriExpense,
                       values: dailyExpenseValues(entries, DateTime.now()),
                       xLabels: monthAxisLabels(DateTime.now()),
                       yLabels: reportAxisLabels(expenseTotal),
@@ -2965,6 +2984,7 @@ class ProfilePage extends StatelessWidget {
         children: <Widget>[
           PageHeader(
             title: '我的',
+            subtitle: '个人中心',
             trailing: IconButton(
               tooltip: '设置',
               onPressed: () {

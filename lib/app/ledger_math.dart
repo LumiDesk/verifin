@@ -31,6 +31,8 @@ double sumByType(Iterable<LedgerEntry> entries, EntryType type) {
       .fold<double>(0, (sum, entry) => sum + entry.amount);
 }
 
+bool isZeroAmount(num value) => value.abs() < 0.005;
+
 List<double> dailyExpenseValues(Iterable<LedgerEntry> entries, DateTime now) {
   final days = DateUtils.getDaysInMonth(now.year, now.month);
   final values = List<double>.filled(days, 0);
@@ -56,14 +58,31 @@ List<double> monthlyExpenseValues(Iterable<LedgerEntry> entries) {
 }
 
 String formatAmount(num value) {
+  if (isZeroAmount(value)) {
+    return '0';
+  }
   final text = value.toStringAsFixed(2);
   return text.endsWith('.00')
       ? text.substring(0, text.length - 3)
       : text.replaceFirst(RegExp(r'0$'), '');
 }
 
+String formatExpenseAmount(num value) {
+  if (isZeroAmount(value)) {
+    return '0';
+  }
+  return '-${formatAmount(value.abs())}';
+}
+
+String formatIncomeAmount(num value) {
+  if (isZeroAmount(value)) {
+    return '0';
+  }
+  return formatAmount(value.abs());
+}
+
 String formatSignedAmount(double value) {
-  if (value == 0) {
+  if (isZeroAmount(value)) {
     return '0';
   }
   return value > 0

@@ -42,82 +42,91 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
       'OK',
     ];
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        14,
-        0,
-        14,
-        14 + MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            widget.title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: veriPageMaxWidth),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            14,
+            0,
+            14,
+            14 + MediaQuery.of(context).viewInsets.bottom,
           ),
-          const SizedBox(height: 10),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(veriRadiusMd),
-            ),
-            child: Text(
-              _input.isEmpty ? '0' : _input,
-              textAlign: TextAlign.end,
-              style: Theme.of(
-                context,
-              ).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w800),
-            ),
-          ),
-          const SizedBox(height: 10),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              childAspectRatio: 2.35,
-            ),
-            itemCount: keys.length,
-            itemBuilder: (context, index) {
-              final value = keys[index];
-              if (value.isEmpty) {
-                return const SizedBox.shrink();
-              }
-
-              final isOk = value == 'OK';
-              return FilledButton.tonal(
-                key: isOk
-                    ? const Key('number_pad_ok')
-                    : Key('number_key_$value'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: isOk ? veriBlue : null,
-                  foregroundColor: isOk ? Colors.white : null,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(veriRadiusMd),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                widget.title,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(veriRadiusMd),
+                ),
+                child: Text(
+                  _input.isEmpty ? '0' : _input,
+                  textAlign: TextAlign.end,
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                onPressed: isOk && _amount <= 0
-                    ? null
-                    : () => _handleKey(value),
-                child: value == '⌫'
-                    ? const Icon(Icons.backspace_outlined)
-                    : Text(
-                        value,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 10),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 4,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  childAspectRatio: 4 / 3,
+                ),
+                itemCount: keys.length,
+                itemBuilder: (context, index) {
+                  final value = keys[index];
+                  if (value.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+
+                  final isOk = value == 'OK';
+                  return FilledButton.tonal(
+                    key: isOk
+                        ? const Key('number_pad_ok')
+                        : Key('number_key_$value'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: isOk ? veriBlue : null,
+                      foregroundColor: isOk ? Colors.white : null,
+                      minimumSize: const Size(64, 48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(veriRadiusMd),
                       ),
-              );
-            },
+                    ),
+                    onPressed: isOk && _amount <= 0
+                        ? null
+                        : () => _handleKey(value),
+                    child: value == '⌫'
+                        ? const Icon(Icons.backspace_outlined)
+                        : Text(
+                            value,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                  );
+                },
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

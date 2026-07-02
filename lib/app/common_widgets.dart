@@ -257,23 +257,26 @@ class SummaryMetric extends StatelessWidget {
     required this.label,
     required this.value,
     required this.color,
+    this.detail,
   });
 
   final String label;
   final String value;
   final Color color;
+  final String? detail;
 
   @override
   Widget build(BuildContext context) {
+    final textColor = Theme.of(context).colorScheme.onSurface;
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
           Text(
             label,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: Colors.white70),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: textColor.withValues(alpha: 0.54),
+            ),
           ),
           const SizedBox(height: 7),
           Text(
@@ -286,13 +289,16 @@ class SummaryMetric extends StatelessWidget {
               fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            '+0%',
-            style: Theme.of(
-              context,
-            ).textTheme.labelSmall?.copyWith(color: Colors.white54),
-          ),
+          if (detail != null) ...<Widget>[
+            const SizedBox(height: 4),
+            Text(
+              detail!,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: textColor.withValues(alpha: 0.42),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -424,6 +430,7 @@ class VeriCard extends StatelessWidget {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
+          onLongPress: () {},
           child: Container(
             padding: padding,
             decoration: decoration,
@@ -452,15 +459,22 @@ class VeriCard extends StatelessWidget {
 }
 
 class PageHeader extends StatelessWidget {
-  const PageHeader({super.key, required this.title, this.trailing});
+  const PageHeader({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+  });
 
   final String title;
+  final String? subtitle;
   final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
     return VeriHeader(
       title: title,
+      subtitle: subtitle,
       actions: trailing == null ? null : [trailing!],
     );
   }
@@ -486,7 +500,7 @@ class VeriHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final actionWidgets = actions ?? const <Widget>[];
     return SizedBox(
-      height: 48,
+      height: veriHeaderHeight,
       child: Row(
         children: <Widget>[
           if (showBack) ...<Widget>[
@@ -666,38 +680,45 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Column(
-        children: <Widget>[
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: veriBlue.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(veriRadiusMd),
-              border: Border.all(color: veriBlue.withValues(alpha: 0.10)),
-            ),
-            child: Icon(icon, size: 24, color: veriBlue),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 260),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: veriRoyal.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(veriRadiusMd),
+                  border: Border.all(color: veriRoyal.withValues(alpha: 0.10)),
+                ),
+                child: Icon(icon, size: 24, color: veriRoyal),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.54),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            description,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.54),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
