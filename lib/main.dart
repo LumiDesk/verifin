@@ -1726,7 +1726,7 @@ Future<String?> _showTextInputDialog({
       ],
     ),
   );
-  controller.dispose();
+  WidgetsBinding.instance.addPostFrameCallback((_) => controller.dispose());
   final trimmed = result?.trim();
   if (trimmed == null || (!allowEmpty && trimmed.isEmpty)) {
     return null;
@@ -2137,24 +2137,32 @@ Future<void> _confirmDeleteAccount(
   Account account,
   List<LedgerEntry> entries,
 ) async {
+  final controller = VeriFinScope.of(context);
   if (entries.isNotEmpty) {
-    await showDialog<void>(
+    final shouldHide = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('暂不能删除账户'),
-        content: Text('此账户已有 ${entries.length} 笔交易。为避免历史记录失去账户来源，请先保留账户或隐藏账户。'),
+        content: Text('此账户已有 ${entries.length} 笔交易。为避免历史记录失去账户来源，可以先隐藏账户。'),
         actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('保留'),
+          ),
           FilledButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('知道了'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('隐藏账户'),
           ),
         ],
       ),
     );
+    if (context.mounted && shouldHide == true) {
+      controller.updateAccount(account.copyWith(hidden: true));
+      Navigator.of(context).pop();
+    }
     return;
   }
 
-  final controller = VeriFinScope.of(context);
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
@@ -2291,10 +2299,15 @@ class AssetsPage extends StatelessWidget {
     final liabilities = assetBalances
         .where((value) => value < 0)
         .fold<double>(0, (sum, value) => sum + value);
+    final assetTrendValues = monthlyNetAssetSeries(
+      accounts,
+      controller.entries,
+    );
     final visibleGroups = <AccountGroup>[
       ...groups,
-      const AccountGroup(
+      AccountGroup(
         id: 'ungrouped',
+        bookId: controller.activeBook.id,
         name: '未分组',
         iconCode: 'folder',
         sortOrder: 999,
@@ -2308,35 +2321,10 @@ class AssetsPage extends StatelessWidget {
           PageHeader(
             title: '资产',
             subtitle: '净资产',
-            trailing: PopupMenuButton<String>(
+            trailing: HeaderAction(
+              icon: Icons.add,
               tooltip: '资产操作',
-              icon: const Icon(Icons.add, size: 22),
-              onSelected: (value) {
-                if (value == 'add_account') {
-                  Navigator.of(context).push<void>(
-                    MaterialPageRoute<void>(
-                      builder: (context) => const AddAccountPage(),
-                    ),
-                  );
-                }
-                if (value == 'manage_groups') {
-                  Navigator.of(context).push<void>(
-                    MaterialPageRoute<void>(
-                      builder: (context) => const AccountGroupsPage(),
-                    ),
-                  );
-                }
-              },
-              itemBuilder: (context) => const <PopupMenuEntry<String>>[
-                PopupMenuItem<String>(
-                  value: 'add_account',
-                  child: Text('添加账户'),
-                ),
-                PopupMenuItem<String>(
-                  value: 'manage_groups',
-                  child: Text('管理分组'),
-                ),
-              ],
+              onPressed: () => _showAssetActions(context),
             ),
           ),
           const SizedBox(height: 10),
@@ -2409,7 +2397,20 @@ class AssetsPage extends StatelessWidget {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          height: 56,
+                          child: CustomPaint(
+                            painter: TrendLinePainter(
+                              color: Colors.white,
+                              values: assetTrendValues,
+                              xLabels: evenMonthAxisLabels(),
+                              labelColor: Colors.white.withValues(alpha: 0.56),
+                            ),
+                            child: const SizedBox.expand(),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                         Text(
                           formatAmount(assets + liabilities),
                           style: Theme.of(context).textTheme.displaySmall
@@ -2546,6 +2547,37 @@ class AssetsPage extends StatelessWidget {
         }
       case 'clear':
         controller.setAssetCoverUrl('');
+    }
+  }
+
+  Future<void> _showAssetActions(BuildContext context) async {
+    final selected = await _showOptionSheet<String>(
+      context: context,
+      title: '资产操作',
+      values: const <String>['add_account', 'manage_groups'],
+      selected: 'add_account',
+      labelOf: (value) {
+        return switch (value) {
+          'add_account' => '添加账户',
+          'manage_groups' => '管理分组',
+          _ => value,
+        };
+      },
+    );
+    if (selected == null || !context.mounted) {
+      return;
+    }
+    if (selected == 'add_account') {
+      Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(builder: (context) => const AddAccountPage()),
+      );
+    }
+    if (selected == 'manage_groups') {
+      Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          builder: (context) => const AccountGroupsPage(),
+        ),
+      );
     }
   }
 }
@@ -2771,25 +2803,15 @@ class _AccountGroupsPageState extends State<AccountGroupsPage> {
     if (groupId == null) {
       return;
     }
-    final iconCode = await showDialog<String>(
+    final current = controller.accountGroups
+        .where((group) => group.id == groupId)
+        .firstOrNull;
+    final iconCode = await _showOptionSheet<String>(
       context: context,
-      builder: (context) => SimpleDialog(
-        title: const Text('选择分组图标'),
-        children: accountIconCodes
-            .map(
-              (code) => SimpleDialogOption(
-                onPressed: () => Navigator.of(context).pop(code),
-                child: Row(
-                  children: <Widget>[
-                    Icon(iconForCode(code)),
-                    const SizedBox(width: 12),
-                    Text(iconLabelForCode(code)),
-                  ],
-                ),
-              ),
-            )
-            .toList(),
-      ),
+      title: '选择分组图标',
+      values: accountIconCodes,
+      selected: current?.iconCode ?? 'folder',
+      labelOf: iconLabelForCode,
     );
     if (iconCode != null) {
       controller.updateAccountGroupIcon(groupId, iconCode);
@@ -2806,6 +2828,7 @@ class AddAccountPage extends StatefulWidget {
 
 class _SelectField extends StatelessWidget {
   const _SelectField({
+    super.key,
     required this.label,
     required this.value,
     required this.icon,
@@ -2985,6 +3008,7 @@ class _AddAccountPageState extends State<AddAccountPage> {
               (group) => group.id == value,
               orElse: () => const AccountGroup(
                 id: 'ungrouped',
+                bookId: defaultLedgerBookId,
                 name: '未分组',
                 iconCode: 'folder',
                 sortOrder: 999,
@@ -3007,6 +3031,7 @@ class _AddAccountPageState extends State<AddAccountPage> {
           (group) => group.id == _groupId,
           orElse: () => const AccountGroup(
             id: 'ungrouped',
+            bookId: defaultLedgerBookId,
             name: '未分组',
             iconCode: 'folder',
             sortOrder: 999,
@@ -3023,6 +3048,7 @@ class _AddAccountPageState extends State<AddAccountPage> {
     controller.addAccount(
       Account(
         id: DateTime.now().microsecondsSinceEpoch.toString(),
+        bookId: controller.activeBook.id,
         name: _nameController.text.trim(),
         type: _type,
         groupId: _groupId,
@@ -3037,17 +3063,24 @@ class _AddAccountPageState extends State<AddAccountPage> {
   }
 }
 
-class AccountDetailPage extends StatelessWidget {
+class AccountDetailPage extends StatefulWidget {
   const AccountDetailPage({super.key, required this.account});
 
   final Account account;
 
   @override
+  State<AccountDetailPage> createState() => _AccountDetailPageState();
+}
+
+class _AccountDetailPageState extends State<AccountDetailPage> {
+  bool _monthlyTrend = false;
+
+  @override
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
     final currentAccount = controller.accounts.firstWhere(
-      (item) => item.id == account.id,
-      orElse: () => account,
+      (item) => item.id == widget.account.id,
+      orElse: () => widget.account,
     );
     final balance = controller.accountBalance(currentAccount);
     final entries = controller.entries
@@ -3072,16 +3105,15 @@ class AccountDetailPage extends StatelessWidget {
                 showBack: true,
                 actions: <Widget>[
                   HeaderAction(
-                    icon: Icons.delete_outline,
-                    tooltip: '删除账户',
-                    destructive: true,
-                    onPressed: () =>
-                        _confirmDeleteAccount(context, currentAccount, entries),
+                    icon: Icons.edit_outlined,
+                    tooltip: '调整余额',
+                    onPressed: () => _editBalance(currentAccount, balance),
                   ),
                 ],
               ),
               const SizedBox(height: 10),
               VeriCard(
+                onTap: () => _editBalance(currentAccount, balance),
                 child: Row(
                   children: <Widget>[
                     Expanded(
@@ -3101,10 +3133,7 @@ class AccountDetailPage extends StatelessWidget {
                         ],
                       ),
                     ),
-                    VeriIconBox(
-                      icon: iconForCode(currentAccount.iconCode),
-                      size: 36,
-                    ),
+                    VeriIconBox(icon: Icons.edit_outlined, size: 36),
                   ],
                 ),
               ),
@@ -3113,15 +3142,39 @@ class AccountDetailPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const SectionTitle(title: '余额趋势', trailing: '日'),
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Text(
+                            '余额趋势',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                        _MiniSegmentedToggle(
+                          value: _monthlyTrend,
+                          leftLabel: '日',
+                          rightLabel: '月',
+                          onChanged: (value) =>
+                              setState(() => _monthlyTrend = value),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 10),
                     SizedBox(
                       height: 148,
                       child: CustomPaint(
                         painter: TrendLinePainter(
                           color: veriBlue,
-                          values: accountBalanceSeries(currentAccount, entries),
-                          xLabels: monthAxisLabels(DateTime.now()),
+                          values: _monthlyTrend
+                              ? accountMonthlyBalanceSeries(
+                                  currentAccount,
+                                  entries,
+                                )
+                              : accountBalanceSeries(currentAccount, entries),
+                          xLabels: _monthlyTrend
+                              ? evenMonthAxisLabels()
+                              : monthAxisLabels(DateTime.now()),
                           yLabels: reportAxisLabels(balance.abs()),
                           labelColor: Theme.of(
                             context,
@@ -3149,7 +3202,23 @@ class AccountDetailPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const SectionTitle(title: '最近交易', trailing: '+'),
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Text(
+                            '最近交易',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                        VeriSectionAction(
+                          icon: Icons.add,
+                          tooltip: '记一笔',
+                          onPressed: () =>
+                              _startEntryForAccount(context, currentAccount),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 6),
                     if (entries.isEmpty)
                       const EmptyState(
@@ -3164,6 +3233,7 @@ class AccountDetailPage extends StatelessWidget {
                             (entry) => TransactionTile(
                               entry,
                               accounts: controller.accounts,
+                              onTap: () => _openEntryDetail(context, entry),
                             ),
                           ),
                     TextButton(
@@ -3186,8 +3256,8 @@ class AccountDetailPage extends StatelessWidget {
               VeriCard(
                 child: Column(
                   children: <Widget>[
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
+                    _CompactSwitchRow(
+                      icon: Icons.account_balance_wallet_outlined,
                       title: const Text('计入资产'),
                       value: currentAccount.includeInAssets,
                       onChanged: (value) {
@@ -3196,8 +3266,9 @@ class AccountDetailPage extends StatelessWidget {
                         );
                       },
                     ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
+                    const Divider(height: 1),
+                    _CompactSwitchRow(
+                      icon: Icons.visibility_off_outlined,
                       title: const Text('隐藏账户'),
                       value: currentAccount.hidden,
                       onChanged: (value) {
@@ -3217,18 +3288,24 @@ class AccountDetailPage extends StatelessWidget {
                       icon: Icons.category_outlined,
                       title: '类型',
                       trailing: currentAccount.type.label,
+                      trailingIcon: Icons.chevron_right,
+                      onTap: () => _pickAccountType(currentAccount),
                     ),
                     const Divider(),
                     SettingsRow(
                       icon: Icons.badge_outlined,
                       title: '名称',
                       trailing: currentAccount.name,
+                      trailingIcon: Icons.chevron_right,
+                      onTap: () => _editAccountName(currentAccount),
                     ),
                     const Divider(),
                     SettingsRow(
                       icon: Icons.image_outlined,
                       title: '图标',
                       trailing: iconLabelForCode(currentAccount.iconCode),
+                      trailingIcon: Icons.chevron_right,
+                      onTap: () => _pickAccountIcon(currentAccount),
                     ),
                     const Divider(),
                     const SettingsRow(
@@ -3243,12 +3320,28 @@ class AccountDetailPage extends StatelessWidget {
                       trailing: currentAccount.note.isEmpty
                           ? '无'
                           : currentAccount.note,
+                      trailingIcon: Icons.chevron_right,
+                      onTap: () => _editAccountNote(currentAccount),
                     ),
                     const Divider(),
                     SettingsRow(
                       icon: Icons.folder_outlined,
                       title: '分组',
                       trailing: groupName,
+                      trailingIcon: Icons.chevron_right,
+                      onTap: () => _pickAccountGroup(currentAccount),
+                    ),
+                    const Divider(),
+                    SettingsRow(
+                      icon: Icons.delete_outline,
+                      title: '删除账户',
+                      trailing: entries.isEmpty ? '可删除' : '已有交易',
+                      trailingIcon: Icons.chevron_right,
+                      onTap: () => _confirmDeleteAccount(
+                        context,
+                        currentAccount,
+                        entries,
+                      ),
                     ),
                   ],
                 ),
@@ -3256,6 +3349,239 @@ class AccountDetailPage extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Future<void> _editBalance(Account account, double balance) async {
+    final amount = await showModalBottomSheet<double>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => NumberPadSheet(
+        title: '调整余额',
+        initialAmount: balance,
+        allowNegative: true,
+        allowZero: true,
+      ),
+    );
+    if (amount == null || !mounted) {
+      return;
+    }
+    VeriFinScope.of(context).adjustAccountBalance(account, amount);
+  }
+
+  Future<void> _startEntryForAccount(
+    BuildContext context,
+    Account account,
+  ) async {
+    final amount = await showModalBottomSheet<double>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => const NumberPadSheet(title: '快速记账'),
+    );
+    if (!context.mounted || amount == null || amount <= 0) {
+      return;
+    }
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => EntryDetailPage(
+          initialAmount: amount,
+          initialAccountId: account.id,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickAccountType(Account account) async {
+    final selected = await _showOptionSheet<AccountType>(
+      context: context,
+      title: '选择账户类型',
+      values: AccountType.values,
+      selected: account.type,
+      labelOf: (value) => value.label,
+    );
+    if (selected != null && mounted) {
+      VeriFinScope.of(context).updateAccount(account.copyWith(type: selected));
+    }
+  }
+
+  Future<void> _editAccountName(Account account) async {
+    final name = await _showTextInputDialog(
+      context: context,
+      title: '编辑账户名称',
+      label: '账户名称',
+      initialValue: account.name,
+    );
+    if (name != null && mounted) {
+      VeriFinScope.of(context).updateAccount(account.copyWith(name: name));
+    }
+  }
+
+  Future<void> _pickAccountIcon(Account account) async {
+    final selected = await _showOptionSheet<String>(
+      context: context,
+      title: '选择账户图标',
+      values: accountIconCodes,
+      selected: account.iconCode,
+      labelOf: iconLabelForCode,
+    );
+    if (selected != null && mounted) {
+      VeriFinScope.of(
+        context,
+      ).updateAccount(account.copyWith(iconCode: selected));
+    }
+  }
+
+  Future<void> _editAccountNote(Account account) async {
+    final note = await _showTextInputDialog(
+      context: context,
+      title: '编辑账户备注',
+      label: '备注',
+      initialValue: account.note,
+      allowEmpty: true,
+    );
+    if (note != null && mounted) {
+      VeriFinScope.of(context).updateAccount(account.copyWith(note: note));
+    }
+  }
+
+  Future<void> _pickAccountGroup(Account account) async {
+    final controller = VeriFinScope.of(context);
+    final groups = controller.accountGroups;
+    final values = <String>['ungrouped', ...groups.map((group) => group.id)];
+    final selected = await _showOptionSheet<String>(
+      context: context,
+      title: '选择账户分组',
+      values: values,
+      selected: account.groupId ?? 'ungrouped',
+      labelOf: (value) {
+        if (value == 'ungrouped') {
+          return '未分组';
+        }
+        return groups.firstWhere((group) => group.id == value).name;
+      },
+    );
+    if (selected != null && mounted) {
+      controller.updateAccount(account.copyWith(groupId: selected));
+    }
+  }
+}
+
+class _MiniSegmentedToggle extends StatelessWidget {
+  const _MiniSegmentedToggle({
+    required this.value,
+    required this.leftLabel,
+    required this.rightLabel,
+    required this.onChanged,
+  });
+
+  final bool value;
+  final String leftLabel;
+  final String rightLabel;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(veriRadiusSm),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          _MiniSegmentButton(
+            label: leftLabel,
+            selected: !value,
+            onTap: () => onChanged(false),
+          ),
+          _MiniSegmentButton(
+            label: rightLabel,
+            selected: value,
+            onTap: () => onChanged(true),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniSegmentButton extends StatelessWidget {
+  const _MiniSegmentButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected
+          ? Theme.of(context).colorScheme.surface
+          : Colors.transparent,
+      borderRadius: BorderRadius.circular(veriRadiusSm - 2),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(veriRadiusSm - 2),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: selected ? 0.88 : 0.48),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactSwitchRow extends StatelessWidget {
+  const _CompactSwitchRow({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final IconData icon;
+  final Widget title;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: <Widget>[
+          VeriIconBox(icon: icon, size: 28),
+          const SizedBox(width: 10),
+          Expanded(
+            child: DefaultTextStyle.merge(
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              child: title,
+            ),
+          ),
+          Transform.scale(
+            scale: 0.82,
+            alignment: Alignment.centerRight,
+            child: Switch(value: value, onChanged: onChanged),
+          ),
+        ],
       ),
     );
   }
@@ -4314,9 +4640,14 @@ class ProfileStat extends StatelessWidget {
 }
 
 class EntryDetailPage extends StatefulWidget {
-  const EntryDetailPage({super.key, required this.initialAmount});
+  const EntryDetailPage({
+    super.key,
+    required this.initialAmount,
+    this.initialAccountId,
+  });
 
   final double initialAmount;
+  final String? initialAccountId;
 
   @override
   State<EntryDetailPage> createState() => _EntryDetailPageState();
@@ -4326,7 +4657,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   late double _amount = widget.initialAmount;
   EntryType _type = EntryType.expense;
   late String _categoryId = categoriesFor(_type).first.id;
-  String _accountId = defaultAccounts.first.id;
+  late String _accountId = widget.initialAccountId ?? '';
   DateTime _occurredAt = DateTime.now();
   final TextEditingController _noteController = TextEditingController();
 
@@ -4424,30 +4755,14 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                     ],
                   ),
                   const SizedBox(height: 18),
-                  Text('账户', style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 8),
                   if (hasAccounts)
-                    DropdownButtonFormField<String>(
+                    _SelectField(
                       key: const Key('account_dropdown'),
-                      initialValue: _accountId,
-                      decoration: const InputDecoration(
-                        prefixIcon: Icon(Icons.wallet),
-                      ),
-                      items: accounts
-                          .map(
-                            (account) => DropdownMenuItem<String>(
-                              value: account.id,
-                              child: Text(
-                                '${account.name} (${formatAmount(account.initialBalance)})',
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() => _accountId = value);
-                        }
-                      },
+                      label: '账户',
+                      value:
+                          '${accountById(accounts, _accountId).name} (${formatAmount(controller.accountBalance(accountById(accounts, _accountId)))})',
+                      icon: Icons.wallet,
+                      onTap: () => _pickAccount(accounts),
                     )
                   else
                     const EmptyState(
@@ -4545,6 +4860,20 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     }
 
     setState(() => _categoryId = selected);
+  }
+
+  Future<void> _pickAccount(List<Account> accounts) async {
+    final selected = await _showOptionSheet<Account>(
+      context: context,
+      title: '选择账户',
+      values: accounts,
+      selected: accountById(accounts, _accountId),
+      labelOf: (value) => value.name,
+    );
+    if (!mounted || selected == null) {
+      return;
+    }
+    setState(() => _accountId = selected.id);
   }
 
   Future<void> _pickDate() async {
@@ -4692,6 +5021,64 @@ List<double> accountBalanceSeries(Account account, List<LedgerEntry> entries) {
     }
   }
   return values;
+}
+
+List<double> accountMonthlyBalanceSeries(
+  Account account,
+  List<LedgerEntry> entries,
+) {
+  final now = DateTime.now();
+  var runningBalance = account.initialBalance;
+  final values = List<double>.filled(12, account.initialBalance.abs());
+  final sortedEntries = List<LedgerEntry>.from(entries)
+    ..sort((a, b) => a.occurredAt.compareTo(b.occurredAt));
+  for (var month = 1; month <= 12; month += 1) {
+    for (final entry in sortedEntries) {
+      if (entry.occurredAt.year != now.year ||
+          entry.occurredAt.month != month) {
+        continue;
+      }
+      runningBalance += signedAmount(entry);
+    }
+    values[month - 1] = runningBalance.abs();
+  }
+  return values;
+}
+
+List<double> monthlyNetAssetSeries(
+  List<Account> accounts,
+  List<LedgerEntry> entries,
+) {
+  if (accounts.isEmpty) {
+    return List<double>.filled(12, 0);
+  }
+  final now = DateTime.now();
+  final visibleAccounts = accounts
+      .where((account) => account.includeInAssets && !account.hidden)
+      .toList();
+  if (visibleAccounts.isEmpty) {
+    return List<double>.filled(12, 0);
+  }
+  return List<double>.generate(12, (index) {
+    final month = index + 1;
+    var total = 0.0;
+    for (final account in visibleAccounts) {
+      var balance = account.initialBalance;
+      for (final entry in entries.where((entry) {
+        return entry.accountId == account.id &&
+            entry.occurredAt.year == now.year &&
+            entry.occurredAt.month <= month;
+      })) {
+        balance += signedAmount(entry);
+      }
+      total += balance;
+    }
+    return total.abs();
+  });
+}
+
+List<String> evenMonthAxisLabels() {
+  return const <String>['2', '4', '6', '8', '10', '12'];
 }
 
 int bookkeepingDays(List<LedgerEntry> entries) {

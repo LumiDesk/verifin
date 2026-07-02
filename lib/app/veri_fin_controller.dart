@@ -51,11 +51,14 @@ class VeriFinController extends ChangeNotifier {
     orElse: () => ledgerBooks.first,
   );
 
-  List<Account> get accounts => List<Account>.unmodifiable(_accounts);
+  List<Account> get accounts => List<Account>.unmodifiable(
+    _accounts.where((account) => account.bookId == _activeBookId),
+  );
 
   List<AccountGroup> get accountGroups {
-    final groups = List<AccountGroup>.from(_accountGroups)
-      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    final groups =
+        _accountGroups.where((group) => group.bookId == _activeBookId).toList()
+          ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     return List<AccountGroup>.unmodifiable(groups);
   }
 
@@ -148,12 +151,16 @@ class VeriFinController extends ChangeNotifier {
     }
     _ledgerBooks.removeWhere((item) => item.id == bookId);
     _entries.removeWhere((entry) => entry.bookId == bookId);
+    _accounts.removeWhere((account) => account.bookId == bookId);
+    _accountGroups.removeWhere((group) => group.bookId == bookId);
     if (_activeBookId == bookId) {
       _activeBookId = defaultLedgerBookId;
       _store.write(_activeBookKey, _activeBookId);
     }
     _persistLedgerBooks();
     _persistEntries();
+    _persistAccounts();
+    _persistAccountGroups();
     notifyListeners();
     return true;
   }
@@ -190,6 +197,32 @@ class VeriFinController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void adjustAccountBalance(Account account, double targetBalance) {
+    final currentBalance = accountBalance(account);
+    final difference = targetBalance - currentBalance;
+    if (difference.abs() < 0.005) {
+      return;
+    }
+    final now = DateTime.now();
+    _entries.insert(
+      0,
+      LedgerEntry(
+        id: now.microsecondsSinceEpoch.toString(),
+        bookId: account.bookId,
+        type: difference > 0 ? EntryType.income : EntryType.expense,
+        amount: difference.abs(),
+        categoryId: difference > 0
+            ? 'balance_adjust_income'
+            : 'balance_adjust_expense',
+        accountId: account.id,
+        note: '余额调整',
+        occurredAt: now,
+      ),
+    );
+    _persistEntries();
+    notifyListeners();
+  }
+
   void addAccountGroup(String name) {
     final trimmedName = name.trim();
     if (trimmedName.isEmpty) {
@@ -198,9 +231,10 @@ class VeriFinController extends ChangeNotifier {
     _accountGroups.add(
       AccountGroup(
         id: DateTime.now().microsecondsSinceEpoch.toString(),
+        bookId: _activeBookId,
         name: trimmedName,
         iconCode: 'folder',
-        sortOrder: _accountGroups.length,
+        sortOrder: accountGroups.length,
       ),
     );
     _persistAccountGroups();
@@ -246,6 +280,9 @@ class VeriFinController extends ChangeNotifier {
 
   void reorderAccountGroup(int oldIndex, int newIndex) {
     final groups = accountGroups.toList();
+    final otherGroups = _accountGroups
+        .where((group) => group.bookId != _activeBookId)
+        .toList();
     if (newIndex > oldIndex) {
       newIndex -= 1;
     }
@@ -253,6 +290,7 @@ class VeriFinController extends ChangeNotifier {
     groups.insert(newIndex, moved);
     _accountGroups
       ..clear()
+      ..addAll(otherGroups)
       ..addAll(
         groups.indexed.map((item) => item.$2.copyWith(sortOrder: item.$1)),
       );
@@ -312,7 +350,7 @@ class VeriFinController extends ChangeNotifier {
   double accountBalance(Account account) {
     var balance = account.initialBalance;
     for (final entry in _entries.where(
-      (item) => item.accountId == account.id,
+      (item) => item.bookId == account.bookId && item.accountId == account.id,
     )) {
       switch (entry.type) {
         case EntryType.expense:
@@ -521,13 +559,17 @@ class VeriFinController extends ChangeNotifier {
   }
 
   void _normalizeGroupOrder() {
-    final groups = List<AccountGroup>.from(_accountGroups)
-      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-    _accountGroups
-      ..clear()
-      ..addAll(
+    final grouped = <String, List<AccountGroup>>{};
+    for (final group in _accountGroups) {
+      grouped.putIfAbsent(group.bookId, () => <AccountGroup>[]).add(group);
+    }
+    _accountGroups.clear();
+    for (final groups in grouped.values) {
+      groups.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+      _accountGroups.addAll(
         groups.indexed.map((item) => item.$2.copyWith(sortOrder: item.$1)),
       );
+    }
   }
 
   @override

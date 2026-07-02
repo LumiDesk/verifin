@@ -803,7 +803,10 @@ class AccountGroupCard extends StatelessWidget {
                         formatAmount(balances[account] ?? 0),
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
-                              color: (balances[account] ?? 0) < 0
+                              color: !account.includeInAssets
+                                  ? Theme.of(context).colorScheme.onSurface
+                                        .withValues(alpha: 0.42)
+                                  : (balances[account] ?? 0) < 0
                                   ? veriExpense
                                   : veriIncome,
                               fontWeight: FontWeight.w800,

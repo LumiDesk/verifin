@@ -221,6 +221,7 @@ class LedgerBook {
 class Account {
   const Account({
     required this.id,
+    required this.bookId,
     required this.name,
     required this.type,
     required this.groupId,
@@ -232,6 +233,7 @@ class Account {
   });
 
   final String id;
+  final String bookId;
   final String name;
   final AccountType type;
   final String? groupId;
@@ -243,6 +245,7 @@ class Account {
 
   Account copyWith({
     String? id,
+    String? bookId,
     String? name,
     AccountType? type,
     String? groupId,
@@ -254,6 +257,7 @@ class Account {
   }) {
     return Account(
       id: id ?? this.id,
+      bookId: bookId ?? this.bookId,
       name: name ?? this.name,
       type: type ?? this.type,
       groupId: groupId ?? this.groupId,
@@ -268,6 +272,7 @@ class Account {
   Map<String, Object?> toJson() {
     return <String, Object?>{
       'id': id,
+      'bookId': bookId,
       'name': name,
       'type': type.name,
       'groupId': groupId,
@@ -282,6 +287,7 @@ class Account {
   static Account fromJson(Map<String, Object?> json) {
     return Account(
       id: json['id'] as String,
+      bookId: json['bookId'] as String? ?? defaultLedgerBookId,
       name: json['name'] as String? ?? '未命名账户',
       type: AccountType.fromStorage(json['type'] as String?),
       groupId: json['groupId'] as String?,
@@ -297,24 +303,28 @@ class Account {
 class AccountGroup {
   const AccountGroup({
     required this.id,
+    required this.bookId,
     required this.name,
     required this.iconCode,
     required this.sortOrder,
   });
 
   final String id;
+  final String bookId;
   final String name;
   final String iconCode;
   final int sortOrder;
 
   AccountGroup copyWith({
     String? id,
+    String? bookId,
     String? name,
     String? iconCode,
     int? sortOrder,
   }) {
     return AccountGroup(
       id: id ?? this.id,
+      bookId: bookId ?? this.bookId,
       name: name ?? this.name,
       iconCode: iconCode ?? this.iconCode,
       sortOrder: sortOrder ?? this.sortOrder,
@@ -324,6 +334,7 @@ class AccountGroup {
   Map<String, Object?> toJson() {
     return <String, Object?>{
       'id': id,
+      'bookId': bookId,
       'name': name,
       'iconCode': iconCode,
       'sortOrder': sortOrder,
@@ -333,6 +344,7 @@ class AccountGroup {
   static AccountGroup fromJson(Map<String, Object?> json) {
     return AccountGroup(
       id: json['id'] as String,
+      bookId: json['bookId'] as String? ?? defaultLedgerBookId,
       name: json['name'] as String? ?? '未命名分组',
       iconCode: json['iconCode'] as String? ?? 'folder',
       sortOrder: json['sortOrder'] as int? ?? 0,

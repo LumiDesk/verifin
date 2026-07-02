@@ -8,6 +8,29 @@ Future<void> tapBottomTab(WidgetTester tester, int index) async {
   await tester.pumpAndSettle();
 }
 
+Future<void> addTestAccount(WidgetTester tester, String name) async {
+  await tapBottomTab(tester, 1);
+  await tester.tap(find.byTooltip('资产操作'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('添加账户'));
+  await tester.pumpAndSettle();
+  await tester.enterText(find.byType(TextFormField).first, name);
+  await tester.tap(find.byTooltip('保存账户'));
+  await tester.pumpAndSettle();
+}
+
+Future<void> createQuickEntry(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('quick_entry_fab')));
+  await tester.pumpAndSettle();
+
+  await tester.tap(find.byKey(const Key('number_key_4')));
+  await tester.pump();
+  await tester.tap(find.byKey(const Key('number_key_5')));
+  await tester.pump();
+  await tester.tap(find.byKey(const Key('number_pad_ok')));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('shows the main tabs and switches between pages', (
     WidgetTester tester,
@@ -74,16 +97,10 @@ void main() {
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const VeriFinApp());
+    await addTestAccount(tester, '现金账户');
+    await tapBottomTab(tester, 0);
 
-    await tester.tap(find.byKey(const Key('quick_entry_fab')));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('number_key_4')));
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('number_key_5')));
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('number_pad_ok')));
-    await tester.pumpAndSettle();
+    await createQuickEntry(tester);
 
     expect(find.byKey(const Key('save_entry_button')), findsOneWidget);
     expect(find.text('45'), findsAtLeastNWidgets(1));
@@ -100,15 +117,10 @@ void main() {
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const VeriFinApp());
+    await addTestAccount(tester, '现金账户');
+    await tapBottomTab(tester, 0);
 
-    await tester.tap(find.byKey(const Key('quick_entry_fab')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('number_key_4')));
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('number_key_5')));
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('number_pad_ok')));
-    await tester.pumpAndSettle();
+    await createQuickEntry(tester);
     await tester.tap(find.byKey(const Key('save_entry_button')));
     await tester.pumpAndSettle();
 
@@ -125,5 +137,37 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('还没有交易'), findsOneWidget);
+  });
+
+  testWidgets('starts with no default accounts', (WidgetTester tester) async {
+    await tester.pumpWidget(const VeriFinApp());
+
+    await tapBottomTab(tester, 1);
+
+    expect(find.text('支付宝'), findsNothing);
+    expect(find.text('微信'), findsNothing);
+    expect(find.text('花呗'), findsNothing);
+  });
+
+  testWidgets('isolates accounts between ledger books', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const VeriFinApp());
+    await addTestAccount(tester, '默认账本账户');
+
+    await tapBottomTab(tester, 3);
+    await tester.tap(find.text('日常账本'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.add));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, '旅行账本');
+    await tester.tap(find.text('确认'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('返回'));
+    await tester.pumpAndSettle();
+
+    await tapBottomTab(tester, 1);
+
+    expect(find.text('默认账本账户'), findsNothing);
   });
 }

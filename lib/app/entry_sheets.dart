@@ -5,10 +5,18 @@ import 'ledger_math.dart';
 import 'models.dart';
 
 class NumberPadSheet extends StatefulWidget {
-  const NumberPadSheet({super.key, required this.title, this.initialAmount});
+  const NumberPadSheet({
+    super.key,
+    required this.title,
+    this.initialAmount,
+    this.allowNegative = false,
+    this.allowZero = false,
+  });
 
   final String title;
   final double? initialAmount;
+  final bool allowNegative;
+  final bool allowZero;
 
   @override
   State<NumberPadSheet> createState() => _NumberPadSheetState();
@@ -38,7 +46,7 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
       '.',
       '0',
       '00',
-      '',
+      widget.allowNegative ? '+/-' : '',
       'OK',
     ];
 
@@ -117,7 +125,7 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
                           borderRadius: BorderRadius.circular(veriRadiusMd),
                         ),
                       ),
-                      onPressed: isOk && _amount <= 0
+                      onPressed: isOk && !_canSubmit
                           ? null
                           : () => _handleKey(value),
                       child: value == '⌫'
@@ -138,6 +146,13 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
     );
   }
 
+  bool get _canSubmit {
+    if (widget.allowNegative) {
+      return widget.allowZero || !isZeroAmount(_amount);
+    }
+    return widget.allowZero ? _amount >= 0 : _amount > 0;
+  }
+
   void _handleKey(String value) {
     if (value == 'OK') {
       Navigator.of(context).pop(_amount);
@@ -152,6 +167,14 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
       if (value == '⌫') {
         if (_input.isNotEmpty) {
           _input = _input.substring(0, _input.length - 1);
+        }
+        return;
+      }
+      if (value == '+/-') {
+        if (_input.startsWith('-')) {
+          _input = _input.substring(1);
+        } else if (_input.isNotEmpty && !isZeroAmount(_amount)) {
+          _input = '-$_input';
         }
         return;
       }
@@ -170,6 +193,8 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
       }
       if (_input == '0' && value != '00') {
         _input = value;
+      } else if (_input == '-0' && value != '00') {
+        _input = '-$value';
       } else {
         _input = '$_input$value';
       }

@@ -2,46 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'models.dart';
 
-const List<AccountGroup> defaultAccountGroups = <AccountGroup>[
-  AccountGroup(id: 'online', name: '网络支付', iconCode: 'wallet', sortOrder: 0),
-  AccountGroup(id: 'credit', name: '信用账户', iconCode: 'credit', sortOrder: 1),
-];
+const List<AccountGroup> defaultAccountGroups = <AccountGroup>[];
 
-const List<Account> defaultAccounts = <Account>[
-  Account(
-    id: 'alipay',
-    name: '支付宝',
-    type: AccountType.onlinePayment,
-    groupId: 'online',
-    initialBalance: 895.32,
-    iconCode: 'alipay',
-    note: '',
-    includeInAssets: true,
-    hidden: false,
-  ),
-  Account(
-    id: 'wechat',
-    name: '微信',
-    type: AccountType.onlinePayment,
-    groupId: 'online',
-    initialBalance: 0,
-    iconCode: 'wechat',
-    note: '',
-    includeInAssets: true,
-    hidden: false,
-  ),
-  Account(
-    id: 'huabei',
-    name: '花呗',
-    type: AccountType.creditCard,
-    groupId: 'credit',
-    initialBalance: -53.71,
-    iconCode: 'credit',
-    note: '',
-    includeInAssets: true,
-    hidden: false,
-  ),
-];
+const List<Account> defaultAccounts = <Account>[];
 
 const UserProfile defaultUserProfile = UserProfile(
   nickname: 'Veri Fin',
@@ -161,6 +124,12 @@ const List<Category> demoCategories = <Category>[
     icon: Icons.local_hospital,
   ),
   Category(
+    id: 'balance_adjust_expense',
+    label: '余额调整',
+    type: EntryType.expense,
+    icon: Icons.tune,
+  ),
+  Category(
     id: 'salary',
     label: '工资',
     type: EntryType.income,
@@ -195,6 +164,12 @@ const List<Category> demoCategories = <Category>[
     label: '兼职',
     type: EntryType.income,
     icon: Icons.work,
+  ),
+  Category(
+    id: 'balance_adjust_income',
+    label: '余额调整',
+    type: EntryType.income,
+    icon: Icons.tune,
   ),
   Category(
     id: 'transfer_out',
@@ -232,6 +207,19 @@ Category categoryById(String id) {
 Account accountById(List<Account> accounts, String id) {
   return accounts.firstWhere(
     (account) => account.id == id,
-    orElse: () => accounts.isEmpty ? defaultAccounts.first : accounts.first,
+    orElse: () => accounts.isEmpty
+        ? const Account(
+            id: 'missing',
+            bookId: defaultLedgerBookId,
+            name: '已删除账户',
+            type: AccountType.cash,
+            groupId: null,
+            initialBalance: 0,
+            iconCode: 'wallet',
+            note: '',
+            includeInAssets: false,
+            hidden: true,
+          )
+        : accounts.first,
   );
 }
