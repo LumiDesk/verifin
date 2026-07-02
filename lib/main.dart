@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app/app_theme.dart';
+import 'app/avatar_picker.dart';
 import 'app/chart_painters.dart';
 import 'app/common_widgets.dart';
 import 'app/demo_data.dart';
@@ -1248,90 +1249,106 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
+    final profile = controller.profile;
+    final netAssets = controller.accounts
+        .where((account) => account.includeInAssets && !account.hidden)
+        .fold<double>(
+          0,
+          (sum, account) => sum + controller.accountBalance(account),
+        );
 
     return VeriPage(
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 96),
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 88),
         children: <Widget>[
-          const PageHeader(title: '我的'),
-          const SizedBox(height: 16),
-          VeriCard(
-            child: Row(
-              children: <Widget>[
-                const CircleAvatar(
-                  radius: 34,
-                  backgroundColor: veriRoyal,
-                  child: Text(
-                    'VF',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                    ),
+          PageHeader(
+            title: '我的',
+            trailing: IconButton(
+              tooltip: '设置',
+              onPressed: () {
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (context) => const SettingsPage(),
                   ),
+                );
+              },
+              icon: const Icon(Icons.settings_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+          InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () {
+              Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (context) => const ProfileInfoPage(),
                 ),
-                const SizedBox(width: 18),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              );
+            },
+            child: VeriCard(
+              child: Column(
+                children: <Widget>[
+                  Row(
                     children: <Widget>[
-                      Text(
-                        'Veri Fin',
-                        style: Theme.of(context).textTheme.headlineSmall,
+                      ProfileAvatar(profile: profile, radius: 28),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              profile.nickname,
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(profile.bio),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 4),
-                      const Text('完全免费 · 数据自主'),
+                      const Icon(Icons.chevron_right),
                     ],
                   ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          VeriCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text('主题模式', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 12),
-                SegmentedButton<ThemePreference>(
-                  key: const Key('theme_segmented_button'),
-                  segments: ThemePreference.values
-                      .map(
-                        (preference) => ButtonSegment<ThemePreference>(
-                          value: preference,
-                          label: Text(preference.label),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: ProfileStat(
+                          label: '记账天数',
+                          value: '${bookkeepingDays(controller.entries)}',
                         ),
-                      )
-                      .toList(),
-                  selected: <ThemePreference>{controller.themePreference},
-                  onSelectionChanged: (selection) {
-                    controller.setThemePreference(selection.first);
-                  },
-                ),
-              ],
+                      ),
+                      Expanded(
+                        child: ProfileStat(
+                          label: '交易笔数',
+                          value: '${controller.entries.length}',
+                        ),
+                      ),
+                      Expanded(
+                        child: ProfileStat(
+                          label: '净资产',
+                          value: formatAmount(netAssets),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           VeriCard(
             child: GridView.count(
               crossAxisCount: 4,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 18,
-              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 8,
               children: const <Widget>[
-                ToolEntry(icon: Icons.category, label: '分类'),
                 ToolEntry(icon: Icons.book, label: '账本'),
-                ToolEntry(icon: Icons.file_download_outlined, label: '导入'),
-                ToolEntry(icon: Icons.file_upload_outlined, label: '导出'),
-                ToolEntry(icon: Icons.security, label: '安全'),
-                ToolEntry(icon: Icons.notifications_none, label: '提醒'),
-                ToolEntry(icon: Icons.menu_book_outlined, label: '手册'),
-                ToolEntry(icon: Icons.share_outlined, label: '分享'),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           VeriCard(
             child: Column(
               children: <Widget>[
@@ -1344,13 +1361,292 @@ class ProfilePage extends StatelessWidget {
                 const SettingsRow(
                   icon: Icons.cloud_off_outlined,
                   title: '云同步',
-                  trailing: '未启用',
+                  trailing: '本地优先',
                 ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class ProfileInfoPage extends StatefulWidget {
+  const ProfileInfoPage({super.key});
+
+  @override
+  State<ProfileInfoPage> createState() => _ProfileInfoPageState();
+}
+
+class _ProfileInfoPageState extends State<ProfileInfoPage> {
+  late TextEditingController _nicknameController;
+  late TextEditingController _bioController;
+  late String _avatarDataUrl;
+  var _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) {
+      return;
+    }
+    final profile = VeriFinScope.of(context).profile;
+    _nicknameController = TextEditingController(text: profile.nickname);
+    _bioController = TextEditingController(text: profile.bio);
+    _avatarDataUrl = profile.avatarDataUrl;
+    _initialized = true;
+  }
+
+  @override
+  void dispose() {
+    _nicknameController.dispose();
+    _bioController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = VeriFinScope.of(context);
+    final netAssets = controller.accounts
+        .where((account) => account.includeInAssets && !account.hidden)
+        .fold<double>(
+          0,
+          (sum, account) => sum + controller.accountBalance(account),
+        );
+
+    return Scaffold(
+      body: SafeArea(
+        child: VeriPage(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  IconButton(
+                    tooltip: '返回',
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.arrow_back),
+                  ),
+                  Expanded(
+                    child: Text(
+                      '个人信息',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: '保存',
+                    onPressed: _save,
+                    icon: const Icon(Icons.check),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Center(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(48),
+                  onTap: _pickAvatar,
+                  child: ProfileAvatar(
+                    profile: controller.profile.copyWith(
+                      avatarDataUrl: _avatarDataUrl,
+                    ),
+                    radius: 46,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              TextField(
+                controller: _nicknameController,
+                decoration: const InputDecoration(labelText: '昵称'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _bioController,
+                maxLines: 3,
+                decoration: const InputDecoration(labelText: '简介'),
+              ),
+              const SizedBox(height: 12),
+              VeriCard(
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: ProfileStat(
+                        label: '记账天数',
+                        value: '${bookkeepingDays(controller.entries)}',
+                      ),
+                    ),
+                    Expanded(
+                      child: ProfileStat(
+                        label: '交易笔数',
+                        value: '${controller.entries.length}',
+                      ),
+                    ),
+                    Expanded(
+                      child: ProfileStat(
+                        label: '净资产',
+                        value: formatAmount(netAssets),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickAvatar() async {
+    final avatar = await pickAvatarDataUrl();
+    if (avatar == null || !mounted) {
+      return;
+    }
+    setState(() => _avatarDataUrl = avatar);
+  }
+
+  void _save() {
+    VeriFinScope.of(context).updateProfile(
+      UserProfile(
+        nickname: _nicknameController.text.trim().isEmpty
+            ? 'Veri Fin'
+            : _nicknameController.text.trim(),
+        bio: _bioController.text.trim().isEmpty
+            ? '完全免费 · 数据自主'
+            : _bioController.text.trim(),
+        avatarDataUrl: _avatarDataUrl,
+      ),
+    );
+    Navigator.of(context).pop();
+  }
+}
+
+class SettingsPage extends StatelessWidget {
+  const SettingsPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = VeriFinScope.of(context);
+
+    return Scaffold(
+      body: SafeArea(
+        child: VeriPage(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  IconButton(
+                    tooltip: '返回',
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.arrow_back),
+                  ),
+                  Text('设置', style: Theme.of(context).textTheme.headlineSmall),
+                ],
+              ),
+              const SizedBox(height: 12),
+              VeriCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      '主题模式',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    SegmentedButton<ThemePreference>(
+                      key: const Key('theme_segmented_button'),
+                      segments: ThemePreference.values
+                          .map(
+                            (preference) => ButtonSegment<ThemePreference>(
+                              value: preference,
+                              label: Text(preference.label),
+                            ),
+                          )
+                          .toList(),
+                      selected: <ThemePreference>{controller.themePreference},
+                      onSelectionChanged: (selection) {
+                        controller.setThemePreference(selection.first);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              const VeriCard(
+                child: Column(
+                  children: <Widget>[
+                    SettingsRow(
+                      icon: Icons.cloud_off_outlined,
+                      title: '同步方式',
+                      trailing: '本地优先',
+                    ),
+                    Divider(),
+                    SettingsRow(
+                      icon: Icons.android_outlined,
+                      title: 'Android 打包',
+                      trailing: 'GitHub CI',
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ProfileAvatar extends StatelessWidget {
+  const ProfileAvatar({super.key, required this.profile, required this.radius});
+
+  final UserProfile profile;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    if (profile.avatarDataUrl.isNotEmpty) {
+      return CircleAvatar(
+        radius: radius,
+        backgroundImage: NetworkImage(profile.avatarDataUrl),
+      );
+    }
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: veriRoyal,
+      child: Text(
+        profile.nickname.isEmpty ? 'VF' : profile.nickname.characters.first,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class ProfileStat extends StatelessWidget {
+  const ProfileStat({super.key, required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 4),
+        Text(label, style: Theme.of(context).textTheme.labelSmall),
+      ],
     );
   }
 }
@@ -1709,4 +2005,14 @@ List<double> accountBalanceSeries(Account account, List<LedgerEntry> entries) {
     }
   }
   return values;
+}
+
+int bookkeepingDays(List<LedgerEntry> entries) {
+  if (entries.isEmpty) {
+    return 0;
+  }
+  final first = entries
+      .map((entry) => entry.occurredAt)
+      .reduce((a, b) => a.isBefore(b) ? a : b);
+  return DateTime.now().difference(first).inDays + 1;
 }

@@ -26,7 +26,7 @@ void main() {
     expect(find.text('数据看板'), findsOneWidget);
 
     await tapBottomTab(tester, 3);
-    expect(find.text('主题模式'), findsOneWidget);
+    expect(find.text('我的'), findsOneWidget);
   });
 
   testWidgets('changes theme preference from the profile page', (
@@ -35,6 +35,8 @@ void main() {
     await tester.pumpWidget(const VeriFinApp());
 
     await tapBottomTab(tester, 3);
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('深色'));
     await tester.pumpAndSettle();
 
