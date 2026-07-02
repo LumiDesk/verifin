@@ -991,6 +991,35 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final controller = VeriFinScope.of(context);
+    final monthEntries = controller.entries
+        .where(
+          (entry) =>
+              entry.occurredAt.year == _month.year &&
+              entry.occurredAt.month == _month.month,
+        )
+        .toList(growable: false);
+    final monthExpense = sumByType(monthEntries, EntryType.expense);
+    final budget = double.tryParse(_amountController.text) ?? 0;
+    final remaining = budget - monthExpense;
+    final ratio = budget <= 0
+        ? 0.0
+        : (monthExpense / budget).clamp(0, 1).toDouble();
+    final daysInMonth = DateUtils.getDaysInMonth(_month.year, _month.month);
+    final now = DateTime.now();
+    final isCurrentMonth = _month.year == now.year && _month.month == now.month;
+    final isPastMonth =
+        _month.year < now.year ||
+        (_month.year == now.year && _month.month < now.month);
+    final remainingDays = isPastMonth
+        ? 0
+        : isCurrentMonth
+        ? (daysInMonth - now.day + 1).clamp(1, daysInMonth)
+        : daysInMonth;
+    final dailyAvailable = remainingDays <= 0 || remaining <= 0
+        ? 0.0
+        : remaining / remainingDays;
+
     return Scaffold(
       body: SafeArea(
         child: VeriPage(
@@ -999,6 +1028,7 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
             children: <Widget>[
               VeriHeader(
                 title: '预算设置',
+                subtitle: '${_month.year}年${_month.month}月',
                 showBack: true,
                 actions: <Widget>[
                   HeaderAction(
@@ -1010,6 +1040,7 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
               ),
               const SizedBox(height: 10),
               VeriCard(
+                padding: const EdgeInsets.fromLTRB(13, 12, 13, 14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
@@ -1018,14 +1049,187 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
                       onPrevious: () => _changeMonth(-1),
                       onNext: () => _changeMonth(1),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: <Widget>[
+                        SizedBox(
+                          width: 132,
+                          height: 132,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: <Widget>[
+                              SizedBox(
+                                width: 118,
+                                height: 118,
+                                child: CustomPaint(
+                                  painter: BudgetRingPainter(
+                                    value: ratio,
+                                    trackColor: Theme.of(context)
+                                        .colorScheme
+                                        .surfaceContainerHighest
+                                        .withValues(alpha: 0.48),
+                                    progressColor: _budgetProgressColor(
+                                      budget,
+                                      remaining,
+                                      ratio,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  Text(
+                                    '已用',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelSmall
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.48),
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                  ),
+                                  Text(
+                                    '${(budget <= 0 ? 0 : monthExpense / budget * 100).toStringAsFixed(0)}%',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w900,
+                                          color: _budgetProgressColor(
+                                            budget,
+                                            remaining,
+                                            ratio,
+                                          ),
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                remaining < 0 ? '本月已超支' : '本月可用预算',
+                                style: Theme.of(context).textTheme.titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.w800),
+                              ),
+                              const SizedBox(height: 5),
+                              Text(
+                                remaining < 0
+                                    ? formatExpenseAmount(remaining.abs())
+                                    : formatAmount(remaining),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.displaySmall
+                                    ?.copyWith(
+                                      color: remaining < 0
+                                          ? veriExpense
+                                          : Theme.of(
+                                              context,
+                                            ).colorScheme.onSurface,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                _budgetPeriodLabel(
+                                  remainingDays,
+                                  isPastMonth,
+                                  isCurrentMonth,
+                                ),
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.52),
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      mainAxisSpacing: 8,
+                      crossAxisSpacing: 8,
+                      childAspectRatio: 2.45,
+                      children: <Widget>[
+                        _BudgetMetricTile(
+                          label: '本月支出',
+                          value: formatExpenseAmount(monthExpense),
+                          icon: Icons.payments_outlined,
+                          color: veriExpense,
+                        ),
+                        _BudgetMetricTile(
+                          label: remaining < 0 ? '超出预算' : '剩余额度',
+                          value: remaining < 0
+                              ? formatExpenseAmount(remaining.abs())
+                              : formatAmount(remaining),
+                          icon: remaining < 0
+                              ? Icons.warning_amber_rounded
+                              : Icons.account_balance_wallet_outlined,
+                          color: remaining < 0 ? veriExpense : veriIncome,
+                        ),
+                        _BudgetMetricTile(
+                          label: '剩余日均',
+                          value: formatAmount(dailyAvailable),
+                          icon: Icons.today_outlined,
+                          color: veriRoyal,
+                        ),
+                        _BudgetMetricTile(
+                          label: '预算金额',
+                          value: formatAmount(budget),
+                          icon: Icons.flag_outlined,
+                          color: veriBlue,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+              _BudgetInsightCard(
+                budget: budget,
+                expense: monthExpense,
+                remaining: remaining,
+                ratio: ratio,
+                remainingDays: remainingDays,
+              ),
+              const SizedBox(height: 10),
+              VeriCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      '设置预算',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
                     TextField(
                       controller: _amountController,
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
+                      onChanged: (_) => setState(() {}),
                       decoration: const InputDecoration(
                         labelText: '月份预算金额',
+                        helperText: '预算为 0 时仅记录支出，不计算剩余日均。',
                         prefixIcon: Icon(Icons.currency_yuan),
                       ),
                     ),
@@ -1216,6 +1420,196 @@ class _BudgetSideStat extends StatelessWidget {
       ],
     );
   }
+}
+
+class _BudgetMetricTile extends StatelessWidget {
+  const _BudgetMetricTile({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(veriRadiusSm),
+        border: Border.all(color: color.withValues(alpha: 0.10)),
+      ),
+      child: Row(
+        children: <Widget>[
+          VeriIconBox(icon: icon, color: color, size: 28),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.50),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BudgetInsightCard extends StatelessWidget {
+  const _BudgetInsightCard({
+    required this.budget,
+    required this.expense,
+    required this.remaining,
+    required this.ratio,
+    required this.remainingDays,
+  });
+
+  final double budget;
+  final double expense;
+  final double remaining;
+  final double ratio;
+  final int remainingDays;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _budgetProgressColor(budget, remaining, ratio);
+    final (title, description, icon) = _budgetInsight(
+      budget: budget,
+      expense: expense,
+      remaining: remaining,
+      ratio: ratio,
+      remainingDays: remainingDays,
+    );
+
+    return VeriCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          VeriIconBox(icon: icon, color: color, size: 32),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  title,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.58),
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+Color _budgetProgressColor(double budget, double remaining, double ratio) {
+  if (budget <= 0) {
+    return veriLine;
+  }
+  if (remaining < 0 || ratio >= 1) {
+    return veriExpense;
+  }
+  if (ratio >= 0.85) {
+    return veriWarning;
+  }
+  return veriRoyal;
+}
+
+String _budgetPeriodLabel(
+  int remainingDays,
+  bool isPastMonth,
+  bool isCurrentMonth,
+) {
+  if (isPastMonth) {
+    return '月份已结束';
+  }
+  if (isCurrentMonth) {
+    return '含今天还剩 $remainingDays 天';
+  }
+  return '本月共 $remainingDays 天';
+}
+
+(String, String, IconData) _budgetInsight({
+  required double budget,
+  required double expense,
+  required double remaining,
+  required double ratio,
+  required int remainingDays,
+}) {
+  if (budget <= 0) {
+    return (
+      '还没有设置预算',
+      '设置本月预算后，首页和这里会同步展示预算进度、剩余额度和剩余日均。',
+      Icons.flag_outlined,
+    );
+  }
+  if (remaining < 0) {
+    return (
+      '预算已经超出',
+      '本月支出已超过预算 ${formatAmount(remaining.abs())}，后续支出会继续计入本月统计。',
+      Icons.warning_amber_rounded,
+    );
+  }
+  if (ratio >= 0.85) {
+    return (
+      '预算接近用完',
+      '本月预算已使用 ${(ratio * 100).toStringAsFixed(0)}%，剩余 ${formatAmount(remaining)}。',
+      Icons.error_outline,
+    );
+  }
+  if (remainingDays > 0) {
+    return (
+      '预算状态正常',
+      '按当前预算，本月剩余每天约可支出 ${formatAmount(remaining / remainingDays)}。',
+      Icons.check_circle_outline,
+    );
+  }
+  return (
+    '本月预算已结算',
+    '这个月份已结束，可切换到其他月份继续查看或调整预算。',
+    Icons.event_available_outlined,
+  );
 }
 
 enum TransactionTimeFilter {

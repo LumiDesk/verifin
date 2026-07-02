@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:verifin/app/common_widgets.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/app/veri_fin_controller.dart';
 import 'package:verifin/local_storage/local_storage.dart';
@@ -94,6 +95,39 @@ void main() {
     expect(find.text('收支统计'), findsOneWidget);
     expect(find.text('-0'), findsNothing);
     expect(find.text('0'), findsWidgets);
+  });
+
+  testWidgets('edits monthly budget from the home budget card', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const VeriFinApp());
+
+    await tester.scrollUntilVisible(
+      find.byType(BudgetPanel),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byType(BudgetPanel));
+    await tester.pumpAndSettle();
+
+    expect(find.text('预算设置'), findsOneWidget);
+    expect(find.text('本月支出'), findsOneWidget);
+    expect(find.text('剩余日均'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).last, '2400');
+    await tester.pump();
+    expect(find.text('2400'), findsAtLeastNWidgets(1));
+
+    final saveAction = tester.widget<HeaderAction>(
+      find.byWidgetPredicate(
+        (widget) => widget is HeaderAction && widget.tooltip == '保存预算',
+      ),
+    );
+    saveAction.onPressed?.call();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BudgetPanel), findsOneWidget);
+    expect(find.text('预算 2400'), findsOneWidget);
   });
 
   testWidgets('creates an entry through the quick entry flow', (

@@ -969,7 +969,7 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                     : () => widget.onDayTap!(date),
                 child: Container(
                   alignment: Alignment.topCenter,
-                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  padding: const EdgeInsets.symmetric(vertical: 2),
                   decoration: BoxDecoration(
                     color:
                         day == now.day &&
@@ -990,7 +990,7 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                   child: Column(
                     children: <Widget>[
                       SizedBox(
-                        height: 17,
+                        height: 16,
                         child: Text(
                           '$day',
                           style: Theme.of(context).textTheme.titleSmall
@@ -1006,7 +1006,7 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                         ),
                       ),
                       SizedBox(
-                        height: 13,
+                        height: 12,
                         child: expense <= 0
                             ? const SizedBox.shrink()
                             : Text(
@@ -1016,7 +1016,7 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                               ),
                       ),
                       SizedBox(
-                        height: 13,
+                        height: 12,
                         child: income <= 0
                             ? const SizedBox.shrink()
                             : Text(
