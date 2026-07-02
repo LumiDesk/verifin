@@ -186,11 +186,13 @@ class AccountGroupCard extends StatelessWidget {
     required this.title,
     required this.accounts,
     required this.balances,
+    this.onAccountTap,
   });
 
   final String title;
   final List<Account> accounts;
   final Map<Account, double> balances;
+  final ValueChanged<Account>? onAccountTap;
 
   @override
   Widget build(BuildContext context) {
@@ -206,19 +208,28 @@ class AccountGroupCard extends StatelessWidget {
           SectionTitle(title: title, trailing: formatAmount(total)),
           const SizedBox(height: 12),
           ...accounts.map(
-            (account) => ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: CircleAvatar(
-                backgroundColor: veriBlue.withValues(alpha: 0.16),
-                child: Icon(iconForCode(account.iconCode), color: veriBlue),
-              ),
-              title: Text(account.name),
-              trailing: Text(
-                formatAmount(balances[account] ?? 0),
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: (balances[account] ?? 0) < 0
-                      ? const Color(0xFFE84D6A)
-                      : veriMint,
+            (account) => Material(
+              color: Colors.transparent,
+              child: ListTile(
+                dense: true,
+                visualDensity: const VisualDensity(horizontal: 0, vertical: -2),
+                contentPadding: EdgeInsets.zero,
+                onTap: onAccountTap == null
+                    ? null
+                    : () => onAccountTap!(account),
+                leading: CircleAvatar(
+                  radius: 18,
+                  backgroundColor: veriBlue.withValues(alpha: 0.16),
+                  child: Icon(iconForCode(account.iconCode), color: veriBlue),
+                ),
+                title: Text(account.name),
+                trailing: Text(
+                  formatAmount(balances[account] ?? 0),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: (balances[account] ?? 0) < 0
+                        ? const Color(0xFFE84D6A)
+                        : veriMint,
+                  ),
                 ),
               ),
             ),

@@ -73,6 +73,12 @@ class VeriFinController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void deleteAccount(String accountId) {
+    _accounts.removeWhere((account) => account.id == accountId);
+    _persistAccounts();
+    notifyListeners();
+  }
+
   void addAccountGroup(String name) {
     final trimmedName = name.trim();
     if (trimmedName.isEmpty) {
