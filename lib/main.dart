@@ -20,7 +20,7 @@ import 'app/platform_bridge.dart';
 import 'app/veri_fin_controller.dart';
 import 'local_storage/local_storage.dart';
 
-const String appVersionLabel = 'v1.1.0+7';
+const String appVersionLabel = 'v1.1.1+8';
 const double assetCoverAspectRatio = 1200 / 760;
 const int assetCoverTargetWidth = 1200;
 const int assetCoverTargetHeight = 760;
