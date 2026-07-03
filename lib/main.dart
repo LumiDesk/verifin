@@ -19,7 +19,7 @@ import 'app/platform_bridge.dart';
 import 'app/veri_fin_controller.dart';
 import 'local_storage/local_storage.dart';
 
-const String appVersionLabel = 'v1.0.1+3';
+const String appVersionLabel = 'v1.0.2+4';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
