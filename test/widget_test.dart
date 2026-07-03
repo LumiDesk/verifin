@@ -1149,4 +1149,66 @@ void main() {
     expect(values.first, -200);
     expect(values.last, -200);
   });
+
+  test('isolates budgets between ledger books', () {
+    final controller = VeriFinController(LocalKeyValueStore());
+    final month = DateTime(2026, 7);
+    controller.setMonthlyBudget(month, 5000);
+    controller.setCategoryBudget(month, 'dining', 600);
+
+    controller.addLedgerBook('旅行账本');
+
+    expect(controller.monthlyBudget(month), 800);
+    expect(controller.categoryBudget(month, 'dining'), 0);
+
+    controller.setMonthlyBudget(month, 1200);
+    controller.switchLedgerBook('default');
+
+    expect(controller.monthlyBudget(month), 5000);
+    expect(controller.categoryBudget(month, 'dining'), 600);
+    controller.dispose();
+  });
+
+  test('migrates legacy budget keys to the default book', () {
+    final store = LocalKeyValueStore();
+    store.write('verifin.monthly_budgets.v1', '{"2026-07": 3000}');
+    store.write('verifin.category_budgets.v1', '{"2026-07:dining": 450}');
+
+    final controller = VeriFinController(store);
+
+    expect(controller.monthlyBudget(DateTime(2026, 7)), 3000);
+    expect(controller.categoryBudget(DateTime(2026, 7), 'dining'), 450);
+    controller.dispose();
+  });
+
+  test('rebase balance updates initial balance without a transaction', () {
+    final controller = VeriFinController(LocalKeyValueStore());
+    final account = Account(
+      id: 'rebase-acc',
+      bookId: controller.activeBook.id,
+      name: '现金',
+      type: AccountType.cash,
+      groupId: null,
+      initialBalance: 100,
+      iconCode: 'wallet',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+    );
+    controller.addAccount(account);
+
+    controller.rebaseAccountBalance(account, 250);
+
+    expect(controller.entries, isEmpty);
+    expect(controller.accountBalance(controller.accounts.single), 250);
+    expect(controller.accounts.single.initialBalance, 250);
+    controller.dispose();
+  });
+
+  test('bookkeeping duration switches to years after one year', () {
+    expect(bookkeepingDurationStat(20), ('20', '记账天数'));
+    expect(bookkeepingDurationStat(365), ('365', '记账天数'));
+    expect(bookkeepingDurationStat(438), ('1.2', '记账年数'));
+    expect(bookkeepingDurationStat(730), ('2', '记账年数'));
+  });
 }
