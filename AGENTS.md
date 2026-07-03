@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## 项目结构与模块组织
-本项目是 Flutter 应用，包名为 `verifin`。主要 Dart 源码位于 `lib/`，入口文件是 `lib/main.dart`。测试代码位于 `test/`，当前包含 `test/widget_test.dart`。Web 平台文件位于 `web/`，Android 平台工程位于 `android/`。依赖与项目配置集中在 `pubspec.yaml`、`pubspec.lock` 和 `analysis_options.yaml`。
+本项目是 Flutter 应用，包名为 `verifin`。主要 Dart 源码位于 `lib/`：入口文件 `lib/main.dart` 只保留应用入口与根组件，页面按功能拆分在 `lib/pages/`（首页、预算、交易、资产、看板、我的、记账详情、底部导航壳、共享弹窗），领域层在 `lib/app/`（模型、`VeriFinController` 状态控制、主题、工具函数、通用组件；`app_version.dart` 由发布脚本更新版本号）。测试代码位于 `test/`，当前包含 `test/widget_test.dart`。Web 平台文件位于 `web/`，Android 平台工程位于 `android/`。依赖与项目配置集中在 `pubspec.yaml`、`pubspec.lock` 和 `analysis_options.yaml`。
 
 ## 开发、测试与预览命令
 - `flutter pub get`：安装或刷新 Flutter/Dart 依赖。
