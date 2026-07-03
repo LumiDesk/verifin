@@ -464,42 +464,147 @@
       }
     ],
     "categories": [
-      { "id": "dining", "label": "餐饮", "type": "expense", "iconCode": "dining" },
-      { "id": "transport", "label": "交通", "type": "expense", "iconCode": "transport" },
-      { "id": "shopping", "label": "购物", "type": "expense", "iconCode": "shopping" },
-      { "id": "housing", "label": "居住", "type": "expense", "iconCode": "housing" },
-      { "id": "entertainment", "label": "娱乐", "type": "expense", "iconCode": "entertainment" },
-      { "id": "medical", "label": "医疗", "type": "expense", "iconCode": "medical" },
-      { "id": "coffee", "label": "咖啡", "type": "expense", "iconCode": "dining" },
-      { "id": "pet", "label": "宠物", "type": "expense", "iconCode": "category" },
-      { "id": "travel", "label": "旅行", "type": "expense", "iconCode": "transport" },
-      { "id": "balance_adjust_expense", "label": "余额调整", "type": "expense", "iconCode": "adjust" },
-      { "id": "salary", "label": "工资", "type": "income", "iconCode": "salary" },
-      { "id": "living", "label": "生活费", "type": "income", "iconCode": "savings" },
-      { "id": "interest", "label": "利息", "type": "income", "iconCode": "interest" },
-      { "id": "investment", "label": "投资", "type": "income", "iconCode": "investment" },
-      { "id": "bonus", "label": "奖金", "type": "income", "iconCode": "bonus" },
-      { "id": "part_time", "label": "兼职", "type": "income", "iconCode": "work" },
-      { "id": "reimbursement", "label": "报销", "type": "income", "iconCode": "work" },
-      { "id": "balance_adjust_income", "label": "余额调整", "type": "income", "iconCode": "adjust" },
-      { "id": "transfer_out", "label": "转出", "type": "transfer", "iconCode": "transfer_out" },
-      { "id": "transfer_in", "label": "转入", "type": "transfer", "iconCode": "transfer_in" },
-      { "id": "repayment", "label": "还款", "type": "transfer", "iconCode": "repayment" }
+      {
+        "id": "dining",
+        "label": "餐饮",
+        "type": "expense",
+        "iconCode": "dining"
+      },
+      {
+        "id": "transport",
+        "label": "交通",
+        "type": "expense",
+        "iconCode": "transport"
+      },
+      {
+        "id": "shopping",
+        "label": "购物",
+        "type": "expense",
+        "iconCode": "shopping"
+      },
+      {
+        "id": "housing",
+        "label": "居住",
+        "type": "expense",
+        "iconCode": "housing"
+      },
+      {
+        "id": "entertainment",
+        "label": "娱乐",
+        "type": "expense",
+        "iconCode": "entertainment"
+      },
+      {
+        "id": "medical",
+        "label": "医疗",
+        "type": "expense",
+        "iconCode": "medical"
+      },
+      {
+        "id": "coffee",
+        "label": "咖啡",
+        "type": "expense",
+        "iconCode": "dining"
+      },
+      {
+        "id": "pet",
+        "label": "宠物",
+        "type": "expense",
+        "iconCode": "category"
+      },
+      {
+        "id": "travel",
+        "label": "旅行",
+        "type": "expense",
+        "iconCode": "transport"
+      },
+      {
+        "id": "balance_adjust_expense",
+        "label": "余额调整",
+        "type": "expense",
+        "iconCode": "adjust"
+      },
+      {
+        "id": "salary",
+        "label": "工资",
+        "type": "income",
+        "iconCode": "salary"
+      },
+      {
+        "id": "living",
+        "label": "生活费",
+        "type": "income",
+        "iconCode": "savings"
+      },
+      {
+        "id": "interest",
+        "label": "利息",
+        "type": "income",
+        "iconCode": "interest"
+      },
+      {
+        "id": "investment",
+        "label": "投资",
+        "type": "income",
+        "iconCode": "investment"
+      },
+      {
+        "id": "bonus",
+        "label": "奖金",
+        "type": "income",
+        "iconCode": "bonus"
+      },
+      {
+        "id": "part_time",
+        "label": "兼职",
+        "type": "income",
+        "iconCode": "work"
+      },
+      {
+        "id": "reimbursement",
+        "label": "报销",
+        "type": "income",
+        "iconCode": "work"
+      },
+      {
+        "id": "balance_adjust_income",
+        "label": "余额调整",
+        "type": "income",
+        "iconCode": "adjust"
+      },
+      {
+        "id": "transfer_out",
+        "label": "转出",
+        "type": "transfer",
+        "iconCode": "transfer_out"
+      },
+      {
+        "id": "transfer_in",
+        "label": "转入",
+        "type": "transfer",
+        "iconCode": "transfer_in"
+      },
+      {
+        "id": "repayment",
+        "label": "还款",
+        "type": "transfer",
+        "iconCode": "repayment"
+      }
     ],
     "monthlyBudgets": {
-      "2026-05": 5200.0,
-      "2026-06": 5600.0,
-      "2026-07": 6200.0
+      "default:2026-05": 5200.0,
+      "default:2026-06": 5600.0,
+      "default:2026-07": 6200.0
     },
     "categoryBudgets": {
-      "2026-07:dining": 1200.0,
-      "2026-07:shopping": 900.0,
-      "2026-07:transport": 350.0,
-      "2026-07:coffee": 260.0,
-      "2026-07:pet": 500.0,
-      "2026-06:dining": 1000.0,
-      "2026-06:shopping": 800.0,
-      "2026-06:transport": 300.0
+      "default:2026-07:dining": 1200.0,
+      "default:2026-07:shopping": 900.0,
+      "default:2026-07:transport": 350.0,
+      "default:2026-07:coffee": 260.0,
+      "default:2026-07:pet": 500.0,
+      "default:2026-06:dining": 1000.0,
+      "default:2026-06:shopping": 800.0,
+      "default:2026-06:transport": 300.0
     },
     "profile": {
       "nickname": "Veri Fin 测试用户",
@@ -518,13 +623,35 @@
       "default:type:investment"
     ],
     "assetAccountOrders": {
-      "default:type:onlinePayment": ["acc_wechat", "acc_alipay"],
-      "default:type:investment": ["acc_fund", "acc_savings"],
-      "default:group:group_daily": ["acc_wechat", "acc_alipay", "acc_gift"]
+      "default:type:onlinePayment": [
+        "acc_wechat",
+        "acc_alipay"
+      ],
+      "default:type:investment": [
+        "acc_fund",
+        "acc_savings"
+      ],
+      "default:group:group_daily": [
+        "acc_wechat",
+        "acc_alipay",
+        "acc_gift"
+      ]
     },
     "assetSectionOrders": {
-      "default:type": ["onlinePayment", "debitCard", "creditCard", "cash", "investment"],
-      "default:group": ["group_daily", "group_bank", "group_credit", "ungrouped", "group_invest"]
+      "default:type": [
+        "onlinePayment",
+        "debitCard",
+        "creditCard",
+        "cash",
+        "investment"
+      ],
+      "default:group": [
+        "group_daily",
+        "group_bank",
+        "group_credit",
+        "ungrouped",
+        "group_invest"
+      ]
     }
   }
 }

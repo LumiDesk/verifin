@@ -103,21 +103,28 @@ class VeriFinController extends ChangeNotifier {
   }
 
   double monthlyBudget(DateTime month) {
-    return _monthlyBudgets[_monthKey(month)] ?? 800;
+    return _monthlyBudgets['$_activeBookId:${_monthKey(month)}'] ?? 800;
   }
 
   void setMonthlyBudget(DateTime month, double amount) {
-    _monthlyBudgets[_monthKey(month)] = amount <= 0 ? 0 : amount;
+    _monthlyBudgets['$_activeBookId:${_monthKey(month)}'] = amount <= 0
+        ? 0
+        : amount;
     _persistBudgets();
     notifyListeners();
   }
 
   double categoryBudget(DateTime month, String categoryId) {
-    return _categoryBudgets[_categoryBudgetKey(month, categoryId)] ?? 0;
+    return _categoryBudgets[_categoryBudgetKey(
+          _activeBookId,
+          month,
+          categoryId,
+        )] ??
+        0;
   }
 
   void setCategoryBudget(DateTime month, String categoryId, double amount) {
-    final key = _categoryBudgetKey(month, categoryId);
+    final key = _categoryBudgetKey(_activeBookId, month, categoryId);
     if (amount <= 0) {
       _categoryBudgets.remove(key);
     } else {
@@ -358,6 +365,8 @@ class VeriFinController extends ChangeNotifier {
     _collapsedAssetSections.removeWhere((key) => key.startsWith('$bookId:'));
     _assetAccountOrders.removeWhere((key, _) => key.startsWith('$bookId:'));
     _assetSectionOrders.removeWhere((key, _) => key.startsWith('$bookId:'));
+    _monthlyBudgets.removeWhere((key, _) => key.startsWith('$bookId:'));
+    _categoryBudgets.removeWhere((key, _) => key.startsWith('$bookId:'));
     if (_activeBookId == bookId) {
       _activeBookId = defaultLedgerBookId;
       _store.write(_activeBookKey, _activeBookId);
@@ -369,6 +378,8 @@ class VeriFinController extends ChangeNotifier {
     _persistAssetSectionCollapsed();
     _persistAssetAccountOrders();
     _persistAssetSectionOrders();
+    _persistBudgets();
+    _persistCategoryBudgets();
     notifyListeners();
     return true;
   }
@@ -781,8 +792,12 @@ class VeriFinController extends ChangeNotifier {
     final nextCategories = <Category>[
       ...(importedCategories.isEmpty ? defaultCategories : importedCategories),
     ];
-    final nextMonthlyBudgets = _decodeBudgets(data['monthlyBudgets']);
-    final nextCategoryBudgets = _decodeBudgets(data['categoryBudgets']);
+    final nextMonthlyBudgets = _bookScopedBudgets(
+      _decodeBudgets(data['monthlyBudgets']),
+    );
+    final nextCategoryBudgets = _bookScopedBudgets(
+      _decodeBudgets(data['categoryBudgets']),
+    );
 
     final profileValue = data['profile'];
     final nextProfile = profileValue is Map
@@ -1079,8 +1094,10 @@ class VeriFinController extends ChangeNotifier {
       _monthlyBudgets
         ..clear()
         ..addAll(
-          decoded.map(
-            (key, value) => MapEntry(key, (value as num? ?? 0).toDouble()),
+          _bookScopedBudgets(
+            decoded.map(
+              (key, value) => MapEntry(key, (value as num? ?? 0).toDouble()),
+            ),
           ),
         );
     } catch (_) {
@@ -1097,7 +1114,7 @@ class VeriFinController extends ChangeNotifier {
     try {
       _categoryBudgets
         ..clear()
-        ..addAll(_decodeBudgets(jsonDecode(rawBudgets)));
+        ..addAll(_bookScopedBudgets(_decodeBudgets(jsonDecode(rawBudgets))));
     } catch (_) {
       _store.delete(_categoryBudgetsKey);
     }
@@ -1288,8 +1305,20 @@ Map<String, List<String>> _decodeStringListMap(Object? value) {
   });
 }
 
-String _categoryBudgetKey(DateTime month, String categoryId) {
-  return '${_monthKey(month)}:$categoryId';
+String _categoryBudgetKey(String bookId, DateTime month, String categoryId) {
+  return '$bookId:${_monthKey(month)}:$categoryId';
+}
+
+/// 预算键按账本隔离,格式为 `bookId:yyyy-MM[:categoryId]`。
+/// 旧版本数据没有 bookId 前缀,加载/导入时归入默认账本。
+Map<String, double> _bookScopedBudgets(Map<String, double> raw) {
+  final legacyKey = RegExp(r'^\d{4}-\d{2}(:|$)');
+  return raw.map(
+    (key, value) => MapEntry(
+      legacyKey.hasMatch(key) ? '$defaultLedgerBookId:$key' : key,
+      value,
+    ),
+  );
 }
 
 List<T> _decodeModelList<T>(
