@@ -439,7 +439,26 @@ class VeriFinController extends ChangeNotifier {
         occurredAt: now,
       ),
     );
+    _entries.sort(_compareEntriesLatestFirst);
     _persistEntries();
+    notifyListeners();
+  }
+
+  /// 不生成交易,直接调整初始余额,使当前余额等于目标值。
+  void rebaseAccountBalance(Account account, double targetBalance) {
+    final currentBalance = accountBalance(account);
+    final difference = targetBalance - currentBalance;
+    if (difference.abs() < 0.005) {
+      return;
+    }
+    final index = _accounts.indexWhere((item) => item.id == account.id);
+    if (index == -1) {
+      return;
+    }
+    _accounts[index] = _accounts[index].copyWith(
+      initialBalance: _accounts[index].initialBalance + difference,
+    );
+    _persistAccounts();
     notifyListeners();
   }
 

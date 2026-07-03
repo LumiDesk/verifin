@@ -1542,7 +1542,51 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
     if (amount == null || !mounted) {
       return;
     }
-    VeriFinScope.of(context).adjustAccountBalance(account, amount);
+    var recordEntry = true;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('是否确认修改余额？'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text('将把「${account.name}」的余额调整为 ${formatAmount(amount)}。'),
+              const SizedBox(height: 8),
+              CheckboxListTile(
+                value: recordEntry,
+                onChanged: (value) =>
+                    setDialogState(() => recordEntry = value ?? true),
+                title: const Text('计入收支'),
+                subtitle: const Text('生成一笔余额调整交易；不勾选则直接修改账户初始余额，不影响收支统计。'),
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('确认'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+    final controller = VeriFinScope.of(context);
+    if (recordEntry) {
+      controller.adjustAccountBalance(account, amount);
+    } else {
+      controller.rebaseAccountBalance(account, amount);
+    }
   }
 
   Future<void> _startEntryForAccount(
