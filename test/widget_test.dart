@@ -63,7 +63,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.settings_outlined));
     await tester.pumpAndSettle();
     expect(find.text('触感反馈'), findsOneWidget);
-    expect(find.text('VeriFin v1.0.0+2'), findsOneWidget);
+    expect(find.text('VeriFin $appVersionLabel'), findsOneWidget);
     expect(find.text('同步方式'), findsNothing);
     expect(find.text('Android 打包'), findsNothing);
 

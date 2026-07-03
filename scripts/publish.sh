@@ -97,6 +97,8 @@ PY
 
 dart format lib/main.dart
 flutter pub get
+flutter analyze
+flutter test
 
 git add pubspec.yaml pubspec.lock lib/main.dart
 git commit -m "chore: release $tag"
