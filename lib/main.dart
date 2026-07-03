@@ -1094,6 +1094,11 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
       monthEntries: monthEntries,
       previousMonthEntries: previousMonthEntries,
     );
+    final recentBudgetMonths = _budgetMonthSnapshots(
+      controller: controller,
+      anchor: _month,
+      count: 6,
+    );
     final budgetedCategoryCount = categoryBudgetSnapshots
         .where((snapshot) => snapshot.hasBudget)
         .length;
@@ -1289,6 +1294,8 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
                 remainingDays: remainingDays,
               ),
               const SizedBox(height: 10),
+              _BudgetTrendCard(months: recentBudgetMonths),
+              const SizedBox(height: 10),
               _BudgetHistoryCard(
                 currentMonth: _month,
                 previousMonth: previousMonth,
@@ -1296,6 +1303,7 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
                 previousExpense: previousMonthExpense,
                 currentBudget: budget,
                 previousBudget: previousBudget,
+                onHistoryTap: _openBudgetHistory,
               ),
               if (categoryBudgetRisk != null ||
                   budgetedCategoryCount > 0) ...<Widget>[
@@ -1426,6 +1434,14 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
       double.tryParse(amountText) ?? 0,
     );
   }
+
+  void _openBudgetHistory() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => BudgetHistoryPage(anchorMonth: _month),
+      ),
+    );
+  }
 }
 
 class _MonthSwitcher extends StatelessWidget {
@@ -1461,6 +1477,71 @@ class _MonthSwitcher extends StatelessWidget {
           icon: const Icon(Icons.chevron_right),
         ),
       ],
+    );
+  }
+}
+
+class BudgetHistoryPage extends StatelessWidget {
+  const BudgetHistoryPage({super.key, required this.anchorMonth});
+
+  final DateTime anchorMonth;
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = VeriFinScope.of(context);
+    final months = _budgetMonthSnapshots(
+      controller: controller,
+      anchor: anchorMonth,
+      count: 12,
+    ).reversed.toList(growable: false);
+
+    return Scaffold(
+      body: SafeArea(
+        child: VeriPage(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
+            children: <Widget>[
+              const VeriHeader(
+                title: '预算历史',
+                subtitle: '最近 12 个月',
+                showBack: true,
+              ),
+              const SizedBox(height: 10),
+              _BudgetTrendCard(
+                months: months.take(6).toList().reversed.toList(),
+              ),
+              const SizedBox(height: 10),
+              VeriCard(
+                padding: const EdgeInsets.fromLTRB(13, 12, 13, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      '月份汇总',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    for (final item in months)
+                      _BudgetMonthRow(
+                        snapshot: item,
+                        onTap: () {
+                          Navigator.of(context).push<void>(
+                            MaterialPageRoute<void>(
+                              builder: (context) =>
+                                  BudgetSettingsPage(initialMonth: item.month),
+                            ),
+                          );
+                        },
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1650,6 +1731,227 @@ class _BudgetMetricTile extends StatelessWidget {
   }
 }
 
+class _BudgetTrendCard extends StatelessWidget {
+  const _BudgetTrendCard({required this.months});
+
+  final List<BudgetMonthSnapshot> months;
+
+  @override
+  Widget build(BuildContext context) {
+    final maxValue = months.fold<double>(
+      0,
+      (max, item) => math.max(max, math.max(item.expense, item.budget)),
+    );
+    return VeriCard(
+      padding: const EdgeInsets.fromLTRB(13, 12, 13, 13),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  '近 6 月趋势',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+                ),
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  _ChartLegendDot(color: veriRoyal, label: '预算'),
+                  const SizedBox(width: 8),
+                  _ChartLegendDot(color: veriExpense, label: '支出'),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 132,
+            child: CustomPaint(
+              painter: _BudgetTrendPainter(
+                months: months,
+                labelColor: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.50),
+                yLabels: reportAxisLabels(maxValue),
+              ),
+              child: const SizedBox.expand(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChartLegendDot extends StatelessWidget {
+  const _ChartLegendDot({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.48),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BudgetTrendPainter extends CustomPainter {
+  const _BudgetTrendPainter({
+    required this.months,
+    required this.labelColor,
+    required this.yLabels,
+  });
+
+  final List<BudgetMonthSnapshot> months;
+  final Color labelColor;
+  final List<String> yLabels;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const leftInset = 30.0;
+    const rightInset = 8.0;
+    const bottomInset = 22.0;
+    final chartRect = Rect.fromLTWH(
+      leftInset,
+      0,
+      size.width - leftInset - rightInset,
+      size.height - bottomInset,
+    );
+    final axisPaint = Paint()
+      ..color = labelColor.withValues(alpha: 0.14)
+      ..strokeWidth = 1;
+    for (var i = 0; i < 4; i += 1) {
+      final y = chartRect.bottom - chartRect.height * i / 3;
+      canvas.drawLine(
+        Offset(chartRect.left, y),
+        Offset(chartRect.right, y),
+        axisPaint,
+      );
+    }
+
+    final maxValue = math.max(
+      months.fold<double>(
+        0,
+        (max, item) => math.max(max, math.max(item.expense, item.budget)),
+      ),
+      1,
+    );
+    final gap = chartRect.width / math.max(months.length, 1);
+    final barPaint = Paint()
+      ..shader = LinearGradient(
+        colors: <Color>[
+          veriExpense.withValues(alpha: 0.82),
+          veriExpense.withValues(alpha: 0.30),
+        ],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      ).createShader(chartRect);
+    final linePaint = Paint()
+      ..color = veriRoyal
+      ..strokeWidth = 2.2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    final pointPaint = Paint()..color = veriRoyal;
+    final path = Path();
+
+    for (var i = 0; i < months.length; i += 1) {
+      final item = months[i];
+      final centerX = chartRect.left + gap * i + gap / 2;
+      final barHeight = item.expense / maxValue * chartRect.height * 0.86;
+      final barRect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          centerX - gap * 0.16,
+          chartRect.bottom - barHeight,
+          gap * 0.32,
+          barHeight,
+        ),
+        const Radius.circular(6),
+      );
+      canvas.drawRRect(barRect, barPaint);
+
+      final budgetY =
+          chartRect.bottom - item.budget / maxValue * chartRect.height * 0.86;
+      if (i == 0) {
+        path.moveTo(centerX, budgetY);
+      } else {
+        path.lineTo(centerX, budgetY);
+      }
+    }
+    canvas.drawPath(path, linePaint);
+    for (var i = 0; i < months.length; i += 1) {
+      final item = months[i];
+      final centerX = chartRect.left + gap * i + gap / 2;
+      final budgetY =
+          chartRect.bottom - item.budget / maxValue * chartRect.height * 0.86;
+      canvas.drawCircle(Offset(centerX, budgetY), 2.4, pointPaint);
+    }
+
+    _drawBudgetTrendLabels(canvas, chartRect);
+  }
+
+  void _drawBudgetTrendLabels(Canvas canvas, Rect chartRect) {
+    final labelStyle = TextStyle(
+      color: labelColor,
+      fontSize: 10,
+      fontWeight: FontWeight.w600,
+    );
+    for (var i = 0; i < yLabels.length; i += 1) {
+      final painter = TextPainter(
+        text: TextSpan(text: yLabels[i], style: labelStyle),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+      )..layout(maxWidth: chartRect.left - 4);
+      final y = chartRect.bottom - chartRect.height * i / (yLabels.length - 1);
+      painter.paint(canvas, Offset(0, y - painter.height / 2));
+    }
+
+    if (months.isEmpty) {
+      return;
+    }
+    final gap = chartRect.width / months.length;
+    for (var i = 0; i < months.length; i += 1) {
+      final label = '${months[i].month.month}月';
+      final painter = TextPainter(
+        text: TextSpan(text: label, style: labelStyle),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+      )..layout(maxWidth: gap);
+      final x = chartRect.left + gap * i + gap / 2 - painter.width / 2;
+      painter.paint(canvas, Offset(x, chartRect.bottom + 6));
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _BudgetTrendPainter oldDelegate) {
+    return oldDelegate.months != months ||
+        oldDelegate.labelColor != labelColor ||
+        oldDelegate.yLabels != yLabels;
+  }
+}
+
 class _BudgetHistoryCard extends StatelessWidget {
   const _BudgetHistoryCard({
     required this.currentMonth,
@@ -1658,6 +1960,7 @@ class _BudgetHistoryCard extends StatelessWidget {
     required this.previousExpense,
     required this.currentBudget,
     required this.previousBudget,
+    required this.onHistoryTap,
   });
 
   final DateTime currentMonth;
@@ -1666,6 +1969,7 @@ class _BudgetHistoryCard extends StatelessWidget {
   final double previousExpense;
   final double currentBudget;
   final double previousBudget;
+  final VoidCallback onHistoryTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1698,13 +2002,16 @@ class _BudgetHistoryCard extends StatelessWidget {
                   ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
                 ),
               ),
-              Text(
-                '${previousMonth.month}月 → ${currentMonth.month}月',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Theme.of(
+              TextButton.icon(
+                onPressed: onHistoryTap,
+                icon: const Icon(Icons.history, size: 15),
+                label: Text('${previousMonth.month}月 → ${currentMonth.month}月'),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: const Size(44, 32),
+                  textStyle: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.48),
-                  fontWeight: FontWeight.w700,
+                  ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w800),
                 ),
               ),
             ],
@@ -1762,6 +2069,96 @@ class _BudgetHistoryCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _BudgetMonthRow extends StatelessWidget {
+  const _BudgetMonthRow({required this.snapshot, required this.onTap});
+
+  final BudgetMonthSnapshot snapshot;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = snapshot.budget <= 0
+        ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.58)
+        : snapshot.overBudget
+        ? veriExpense
+        : veriIncome;
+    final status = snapshot.budget <= 0
+        ? '未设置预算'
+        : snapshot.overBudget
+        ? '超出 ${formatAmount(snapshot.expense - snapshot.budget)}'
+        : '剩余 ${formatAmount(snapshot.remaining)}';
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(veriRadiusSm),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          child: Row(
+            children: <Widget>[
+              VeriIconBox(
+                icon: Icons.calendar_month_outlined,
+                color: color,
+                size: 30,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Text(
+                            '${snapshot.month.year}年${snapshot.month.month}月',
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                        Text(
+                          status,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(
+                                color: color,
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                        const SizedBox(width: 2),
+                        Icon(
+                          Icons.chevron_right,
+                          size: 17,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.36),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '预算 ${formatAmount(snapshot.budget)} · 支出 ${formatExpenseAmount(snapshot.expense)} · 已用 ${(snapshot.ratio * 100).toStringAsFixed(0)}%',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.50),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -2181,6 +2578,42 @@ class CategoryBudgetSnapshot {
   bool get nearLimit => hasBudget && !overBudget && ratio >= 0.85;
 
   bool get needsAttention => overBudget || nearLimit;
+}
+
+class BudgetMonthSnapshot {
+  const BudgetMonthSnapshot({
+    required this.month,
+    required this.budget,
+    required this.expense,
+  });
+
+  final DateTime month;
+  final double budget;
+  final double expense;
+
+  double get remaining => budget - expense;
+
+  double get ratio => budget <= 0 ? 0 : expense / budget;
+
+  bool get overBudget => budget > 0 && expense > budget;
+}
+
+List<BudgetMonthSnapshot> _budgetMonthSnapshots({
+  required VeriFinController controller,
+  required DateTime anchor,
+  required int count,
+}) {
+  return List<BudgetMonthSnapshot>.generate(count, (index) {
+    final month = DateTime(anchor.year, anchor.month - count + 1 + index);
+    final entries = controller.entries
+        .where((entry) => _isInMonth(entry, month))
+        .toList(growable: false);
+    return BudgetMonthSnapshot(
+      month: month,
+      budget: controller.monthlyBudget(month),
+      expense: sumByType(entries, EntryType.expense),
+    );
+  });
 }
 
 List<CategoryBudgetSnapshot> _categoryBudgetSnapshots({

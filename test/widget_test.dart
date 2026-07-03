@@ -113,6 +113,7 @@ void main() {
     expect(find.text('预算设置'), findsOneWidget);
     expect(find.text('本月支出'), findsAtLeastNWidgets(1));
     expect(find.text('剩余日均'), findsOneWidget);
+    expect(find.text('近 6 月趋势'), findsOneWidget);
 
     await tester.scrollUntilVisible(
       find.text('设置预算'),
@@ -202,7 +203,20 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('预算设置'), findsOneWidget);
+    expect(find.text('近 6 月趋势'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('历史对比'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('历史对比'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.history));
+    await tester.pumpAndSettle();
+    expect(find.text('预算历史'), findsOneWidget);
+    expect(find.text('月份汇总'), findsOneWidget);
+    Navigator.of(tester.element(find.text('预算历史'))).pop();
+    await tester.pumpAndSettle();
+
     await tester.scrollUntilVisible(
       find.text('餐饮已超支'),
       200,
