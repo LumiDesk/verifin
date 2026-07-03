@@ -56,8 +56,7 @@ class _AssetsPageState extends State<AssetsPage> {
     ),
   ];
 
-  bool _reorderingSections = false;
-  bool _sectionDragPrimed = false;
+  bool _sortingSections = false;
 
   @override
   Widget build(BuildContext context) {
@@ -142,6 +141,8 @@ class _AssetsPageState extends State<AssetsPage> {
     final visibleAssetSections = assetSections
         .where((section) => section.accounts.isNotEmpty)
         .toList(growable: false);
+    final canSortSections = visibleAssetSections.length >= 2;
+    final sortingSections = _sortingSections && canSortSections;
 
     return VeriPage(
       child: ListView(
@@ -280,7 +281,34 @@ class _AssetsPageState extends State<AssetsPage> {
             ),
             const SizedBox(height: 12),
           ],
-          if (visibleAssetSections.isNotEmpty)
+          if (visibleAssetSections.isNotEmpty) ...<Widget>[
+            if (canSortSections)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: <Widget>[
+                    if (sortingSections)
+                      Expanded(
+                        child: Text(
+                          '拖动右侧手柄调整分组顺序',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.52),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      )
+                    else
+                      const Spacer(),
+                    _SectionSortButton(
+                      sorting: sortingSections,
+                      onTap: () =>
+                          setState(() => _sortingSections = !sortingSections),
+                    ),
+                  ],
+                ),
+              ),
             ReorderableListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -311,14 +339,8 @@ class _AssetsPageState extends State<AssetsPage> {
                   ),
                 );
               },
-              onReorderStart: (_) => _startSectionReorder(controller),
-              onReorderEnd: (_) {
-                _triggerSelectionHaptic(controller);
-                setState(() {
-                  _reorderingSections = false;
-                  _sectionDragPrimed = false;
-                });
-              },
+              onReorderStart: (_) => _triggerSelectionHaptic(controller),
+              onReorderEnd: (_) => _triggerSelectionHaptic(controller),
               onReorderItem: (oldIndex, newIndex) {
                 _triggerSelectionHaptic(controller);
                 controller.reorderAssetSections<_AssetAccountSection>(
@@ -340,20 +362,20 @@ class _AssetsPageState extends State<AssetsPage> {
                     accounts: section.accounts,
                     balances: balances,
                     collapsed:
-                        _reorderingSections ||
+                        sortingSections ||
                         controller.isAssetSectionCollapsed(
                           mode: viewMode,
                           sectionId: section.id,
                         ),
-                    sectionDragIndex: index,
+                    sectionDragIndex: sortingSections ? index : null,
+                    sectionDragImmediate: true,
                     hapticsEnabled: controller.hapticsEnabled,
-                    onSectionDragPointerDown: _primeSectionDrag,
-                    onSectionDragPointerUp: _cancelPrimedSectionDrag,
-                    onToggleCollapsed: () =>
-                        controller.toggleAssetSectionCollapsed(
-                          mode: viewMode,
-                          sectionId: section.id,
-                        ),
+                    onToggleCollapsed: sortingSections
+                        ? null
+                        : () => controller.toggleAssetSectionCollapsed(
+                            mode: viewMode,
+                            sectionId: section.id,
+                          ),
                     onReorderAccounts: (oldIndex, newIndex) =>
                         controller.reorderAssetAccounts(
                           mode: viewMode,
@@ -362,18 +384,21 @@ class _AssetsPageState extends State<AssetsPage> {
                           oldIndex: oldIndex,
                           newIndex: newIndex,
                         ),
-                    onAccountTap: (account) {
-                      Navigator.of(context).push<void>(
-                        MaterialPageRoute<void>(
-                          builder: (context) =>
-                              AccountDetailPage(account: account),
-                        ),
-                      );
-                    },
+                    onAccountTap: sortingSections
+                        ? null
+                        : (account) {
+                            Navigator.of(context).push<void>(
+                              MaterialPageRoute<void>(
+                                builder: (context) =>
+                                    AccountDetailPage(account: account),
+                              ),
+                            );
+                          },
                   ),
                 );
               },
             ),
+          ],
           if (hiddenAccounts.isNotEmpty) ...<Widget>[
             VeriCard(
               onTap: () {
@@ -419,34 +444,6 @@ class _AssetsPageState extends State<AssetsPage> {
         ],
       ),
     );
-  }
-
-  void _primeSectionDrag() {
-    if (_reorderingSections && _sectionDragPrimed) {
-      return;
-    }
-    setState(() {
-      _reorderingSections = true;
-      _sectionDragPrimed = true;
-    });
-  }
-
-  void _startSectionReorder(VeriFinController controller) {
-    _triggerSelectionHaptic(controller);
-    setState(() {
-      _reorderingSections = true;
-      _sectionDragPrimed = false;
-    });
-  }
-
-  void _cancelPrimedSectionDrag() {
-    if (!_sectionDragPrimed) {
-      return;
-    }
-    setState(() {
-      _reorderingSections = false;
-      _sectionDragPrimed = false;
-    });
   }
 
   void _triggerSelectionHaptic(VeriFinController controller) {
@@ -569,6 +566,34 @@ class _AssetsPageState extends State<AssetsPage> {
     if (selected == 'switch_view') {
       controller.toggleAssetAccountViewMode();
     }
+  }
+}
+
+class _SectionSortButton extends StatelessWidget {
+  const _SectionSortButton({required this.sorting, required this.onTap});
+
+  final bool sorting;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton.icon(
+      onPressed: onTap,
+      icon: Icon(sorting ? Icons.check : Icons.swap_vert, size: 16),
+      label: Text(sorting ? '完成' : '排序'),
+      style: TextButton.styleFrom(
+        visualDensity: VisualDensity.compact,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        foregroundColor: sorting
+            ? veriRoyal
+            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+        textStyle: Theme.of(
+          context,
+        ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+      ),
+    );
   }
 }
 

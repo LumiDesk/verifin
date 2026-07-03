@@ -825,9 +825,8 @@ class AccountGroupCard extends StatelessWidget {
     required this.balances,
     this.collapsed = false,
     this.sectionDragIndex,
+    this.sectionDragImmediate = false,
     this.onToggleCollapsed,
-    this.onSectionDragPointerDown,
-    this.onSectionDragPointerUp,
     this.onReorderAccounts,
     this.onAccountTap,
     this.hapticsEnabled = true,
@@ -838,9 +837,8 @@ class AccountGroupCard extends StatelessWidget {
   final Map<Account, double> balances;
   final bool collapsed;
   final int? sectionDragIndex;
+  final bool sectionDragImmediate;
   final VoidCallback? onToggleCollapsed;
-  final VoidCallback? onSectionDragPointerDown;
-  final VoidCallback? onSectionDragPointerUp;
   final ReorderCallback? onReorderAccounts;
   final ValueChanged<Account>? onAccountTap;
   final bool hapticsEnabled;
@@ -881,30 +879,7 @@ class AccountGroupCard extends StatelessWidget {
                   ),
                   if (sectionDragIndex != null) ...<Widget>[
                     const SizedBox(width: 6),
-                    Listener(
-                      behavior: HitTestBehavior.opaque,
-                      onPointerDown: (_) {
-                        onSectionDragPointerDown?.call();
-                        if (hapticsEnabled) {
-                          HapticFeedback.selectionClick();
-                        }
-                      },
-                      onPointerUp: (_) => onSectionDragPointerUp?.call(),
-                      onPointerCancel: (_) => onSectionDragPointerUp?.call(),
-                      child: ReorderableDelayedDragStartListener(
-                        index: sectionDragIndex!,
-                        child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Icon(
-                            Icons.drag_indicator,
-                            size: 18,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withValues(alpha: 0.34),
-                          ),
-                        ),
-                      ),
-                    ),
+                    _buildSectionDragHandle(context),
                   ],
                   const SizedBox(width: 4),
                   Text(
@@ -1001,6 +976,27 @@ class AccountGroupCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSectionDragHandle(BuildContext context) {
+    final handle = Padding(
+      padding: const EdgeInsets.all(8),
+      child: Icon(
+        Icons.drag_indicator,
+        size: 18,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.34),
+      ),
+    );
+    if (sectionDragImmediate) {
+      return ReorderableDragStartListener(
+        index: sectionDragIndex!,
+        child: handle,
+      );
+    }
+    return ReorderableDelayedDragStartListener(
+      index: sectionDragIndex!,
+      child: handle,
     );
   }
 }
