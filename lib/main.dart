@@ -1057,14 +1057,19 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
     final monthEntries = controller.entries
-        .where(
-          (entry) =>
-              entry.occurredAt.year == _month.year &&
-              entry.occurredAt.month == _month.month,
-        )
+        .where((entry) => _isInMonth(entry, _month))
+        .toList(growable: false);
+    final previousMonth = DateTime(_month.year, _month.month - 1);
+    final previousMonthEntries = controller.entries
+        .where((entry) => _isInMonth(entry, previousMonth))
         .toList(growable: false);
     final monthExpense = sumByType(monthEntries, EntryType.expense);
+    final previousMonthExpense = sumByType(
+      previousMonthEntries,
+      EntryType.expense,
+    );
     final budget = double.tryParse(_amountController.text) ?? 0;
+    final previousBudget = controller.monthlyBudget(previousMonth);
     final remaining = budget - monthExpense;
     final ratio = budget <= 0
         ? 0.0
@@ -1087,6 +1092,7 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
       controller: controller,
       month: _month,
       monthEntries: monthEntries,
+      previousMonthEntries: previousMonthEntries,
     );
     final budgetedCategoryCount = categoryBudgetSnapshots
         .where((snapshot) => snapshot.hasBudget)
@@ -1281,6 +1287,15 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
                 remaining: remaining,
                 ratio: ratio,
                 remainingDays: remainingDays,
+              ),
+              const SizedBox(height: 10),
+              _BudgetHistoryCard(
+                currentMonth: _month,
+                previousMonth: previousMonth,
+                currentExpense: monthExpense,
+                previousExpense: previousMonthExpense,
+                currentBudget: budget,
+                previousBudget: previousBudget,
               ),
               if (categoryBudgetRisk != null ||
                   budgetedCategoryCount > 0) ...<Widget>[
@@ -1635,6 +1650,186 @@ class _BudgetMetricTile extends StatelessWidget {
   }
 }
 
+class _BudgetHistoryCard extends StatelessWidget {
+  const _BudgetHistoryCard({
+    required this.currentMonth,
+    required this.previousMonth,
+    required this.currentExpense,
+    required this.previousExpense,
+    required this.currentBudget,
+    required this.previousBudget,
+  });
+
+  final DateTime currentMonth;
+  final DateTime previousMonth;
+  final double currentExpense;
+  final double previousExpense;
+  final double currentBudget;
+  final double previousBudget;
+
+  @override
+  Widget build(BuildContext context) {
+    final expenseDelta = currentExpense - previousExpense;
+    final currentUsage = currentBudget <= 0
+        ? 0.0
+        : currentExpense / currentBudget;
+    final previousUsage = previousBudget <= 0
+        ? 0.0
+        : previousExpense / previousBudget;
+    final usageDelta = currentUsage - previousUsage;
+    final deltaColor = isZeroAmount(expenseDelta)
+        ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54)
+        : expenseDelta > 0
+        ? veriExpense
+        : veriIncome;
+
+    return VeriCard(
+      padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  '历史对比',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+                ),
+              ),
+              Text(
+                '${previousMonth.month}月 → ${currentMonth.month}月',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.48),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _BudgetCompareTile(
+                  label: '本月支出',
+                  value: formatExpenseAmount(currentExpense),
+                  detail: _expenseDeltaLabel(expenseDelta),
+                  color: deltaColor,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _BudgetCompareTile(
+                  label: '上月支出',
+                  value: formatExpenseAmount(previousExpense),
+                  detail: previousExpense <= 0 ? '暂无支出' : '对比基准',
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(99),
+            child: LinearProgressIndicator(
+              value: currentUsage.clamp(0, 1).toDouble(),
+              minHeight: 5,
+              backgroundColor: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.55),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                currentUsage >= 1
+                    ? veriExpense
+                    : currentUsage >= 0.85
+                    ? veriWarning
+                    : veriRoyal,
+              ),
+            ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            '预算使用率 ${(currentUsage * 100).toStringAsFixed(0)}%，较上月 ${_usageDeltaLabel(usageDelta)}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.54),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BudgetCompareTile extends StatelessWidget {
+  const _BudgetCompareTile({
+    required this.label,
+    required this.value,
+    required this.detail,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final String detail;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.34),
+        borderRadius: BorderRadius.circular(veriRadiusSm),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.50),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            detail,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.44),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _CategoryBudgetAlertCard extends StatelessWidget {
   const _CategoryBudgetAlertCard({
     required this.snapshot,
@@ -1724,6 +1919,9 @@ class _CategoryBudgetRow extends StatelessWidget {
         : snapshot.remaining >= 0
         ? '剩余 ${formatAmount(snapshot.remaining)} · 已用 ${(snapshot.ratio * 100).toStringAsFixed(0)}%'
         : '超出 ${formatAmount(snapshot.remaining.abs())} · 已用 ${(snapshot.ratio * 100).toStringAsFixed(0)}%';
+    final previousText = snapshot.previousSpent <= 0
+        ? '上月无支出'
+        : '上月 ${formatAmount(snapshot.previousSpent)}';
 
     return Material(
       color: Colors.transparent,
@@ -1789,6 +1987,18 @@ class _CategoryBudgetRow extends StatelessWidget {
                           context,
                         ).colorScheme.onSurface.withValues(alpha: 0.52),
                         fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      previousText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.38),
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 7),
@@ -1950,11 +2160,13 @@ class CategoryBudgetSnapshot {
     required this.category,
     required this.spent,
     required this.budget,
+    required this.previousSpent,
   });
 
   final Category category;
   final double spent;
   final double budget;
+  final double previousSpent;
 
   bool get hasBudget => budget > 0;
 
@@ -1975,12 +2187,23 @@ List<CategoryBudgetSnapshot> _categoryBudgetSnapshots({
   required VeriFinController controller,
   required DateTime month,
   required List<LedgerEntry> monthEntries,
+  List<LedgerEntry> previousMonthEntries = const <LedgerEntry>[],
 }) {
   final spentByCategory = <String, double>{};
   for (final entry in monthEntries.where(
     (entry) => entry.type == EntryType.expense,
   )) {
     spentByCategory.update(
+      entry.categoryId,
+      (amount) => amount + entry.amount,
+      ifAbsent: () => entry.amount,
+    );
+  }
+  final previousSpentByCategory = <String, double>{};
+  for (final entry in previousMonthEntries.where(
+    (entry) => entry.type == EntryType.expense,
+  )) {
+    previousSpentByCategory.update(
       entry.categoryId,
       (amount) => amount + entry.amount,
       ifAbsent: () => entry.amount,
@@ -1995,6 +2218,7 @@ List<CategoryBudgetSnapshot> _categoryBudgetSnapshots({
           category: category,
           spent: spentByCategory[category.id] ?? 0,
           budget: controller.categoryBudget(month, category.id),
+          previousSpent: previousSpentByCategory[category.id] ?? 0,
         ),
       )
       .toList(growable: false);
@@ -2047,6 +2271,29 @@ int _categoryBudgetSortRank(CategoryBudgetSnapshot snapshot) {
     return 3;
   }
   return 4;
+}
+
+bool _isInMonth(LedgerEntry entry, DateTime month) {
+  return entry.occurredAt.year == month.year &&
+      entry.occurredAt.month == month.month;
+}
+
+String _expenseDeltaLabel(double delta) {
+  if (isZeroAmount(delta)) {
+    return '与上月持平';
+  }
+  if (delta > 0) {
+    return '比上月多 ${formatAmount(delta)}';
+  }
+  return '比上月少 ${formatAmount(delta.abs())}';
+}
+
+String _usageDeltaLabel(double delta) {
+  final points = (delta.abs() * 100).toStringAsFixed(0);
+  if (points == '0') {
+    return '持平';
+  }
+  return delta > 0 ? '增加 $points 个点' : '降低 $points 个点';
 }
 
 enum TransactionTimeFilter {
@@ -4723,6 +4970,17 @@ class ReportsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
     final entries = controller.entries;
+    final now = DateTime.now();
+    final monthEntries = entries
+        .where((entry) => _isInMonth(entry, now))
+        .toList(growable: false);
+    final monthExpense = sumByType(monthEntries, EntryType.expense);
+    final monthlyBudget = controller.monthlyBudget(now);
+    final categoryBudgetSnapshots = _categoryBudgetSnapshots(
+      controller: controller,
+      month: now,
+      monthEntries: monthEntries,
+    );
     final expenseEntries = entries
         .where((entry) => entry.type == EntryType.expense)
         .toList(growable: false);
@@ -4750,6 +5008,12 @@ class ReportsPage extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(14, 8, 14, 82),
         children: <Widget>[
           const PageHeader(title: '看板', subtitle: '数据看板'),
+          const SizedBox(height: 10),
+          _BudgetExecutionCard(
+            budget: monthlyBudget,
+            expense: monthExpense,
+            snapshots: categoryBudgetSnapshots,
+          ),
           const SizedBox(height: 10),
           VeriCard(
             child: Column(
@@ -4865,6 +5129,210 @@ class ReportsPage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _BudgetExecutionCard extends StatelessWidget {
+  const _BudgetExecutionCard({
+    required this.budget,
+    required this.expense,
+    required this.snapshots,
+  });
+
+  final double budget;
+  final double expense;
+  final List<CategoryBudgetSnapshot> snapshots;
+
+  @override
+  Widget build(BuildContext context) {
+    final ratio = budget <= 0 ? 0.0 : expense / budget;
+    final remaining = budget - expense;
+    final budgetedCount = snapshots
+        .where((snapshot) => snapshot.hasBudget)
+        .length;
+    final overBudgetCount = snapshots
+        .where((snapshot) => snapshot.overBudget)
+        .length;
+    final color = budget <= 0
+        ? veriLine
+        : remaining < 0
+        ? veriExpense
+        : ratio >= 0.85
+        ? veriWarning
+        : veriRoyal;
+
+    return VeriCard(
+      padding: const EdgeInsets.fromLTRB(13, 12, 13, 13),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  '预算执行',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+                ),
+              ),
+              Text(
+                '${DateTime.now().month}月',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.48),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: <Widget>[
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      budget <= 0
+                          ? '未设置预算'
+                          : remaining < 0
+                          ? '已超预算'
+                          : '剩余预算',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.50),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      budget <= 0
+                          ? formatExpenseAmount(expense)
+                          : remaining < 0
+                          ? formatExpenseAmount(remaining.abs())
+                          : formatAmount(remaining),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(color: color, fontWeight: FontWeight.w900),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                budget <= 0
+                    ? '仅记录支出'
+                    : '已用 ${(ratio * 100).toStringAsFixed(0)}%',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.48),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(99),
+            child: LinearProgressIndicator(
+              value: budget <= 0 ? 0 : ratio.clamp(0, 1).toDouble(),
+              minHeight: 6,
+              backgroundColor: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.56),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _BudgetExecutionMetric(
+                  label: '本月预算',
+                  value: formatAmount(budget),
+                ),
+              ),
+              Expanded(
+                child: _BudgetExecutionMetric(
+                  label: '本月支出',
+                  value: formatExpenseAmount(expense),
+                ),
+              ),
+              Expanded(
+                child: _BudgetExecutionMetric(
+                  label: '分类预算',
+                  value: '$budgetedCount 个',
+                  accent: overBudgetCount > 0 ? '$overBudgetCount 个超支' : '正常',
+                  accentColor: overBudgetCount > 0 ? veriExpense : veriIncome,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BudgetExecutionMetric extends StatelessWidget {
+  const _BudgetExecutionMetric({
+    required this.label,
+    required this.value,
+    this.accent,
+    this.accentColor,
+  });
+
+  final String label;
+  final String value;
+  final String? accent;
+  final Color? accentColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: <Widget>[
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.48),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+        ),
+        if (accent != null) ...<Widget>[
+          const SizedBox(height: 2),
+          Text(
+            accent!,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color:
+                  accentColor ??
+                  Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.44),
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

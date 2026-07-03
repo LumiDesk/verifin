@@ -111,7 +111,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('预算设置'), findsOneWidget);
-    expect(find.text('本月支出'), findsOneWidget);
+    expect(find.text('本月支出'), findsAtLeastNWidgets(1));
     expect(find.text('剩余日均'), findsOneWidget);
 
     await tester.scrollUntilVisible(
@@ -160,6 +160,7 @@ void main() {
     final store = LocalKeyValueStore();
     final controller = VeriFinController(store);
     final now = DateTime.now();
+    final previousMonth = DateTime(now.year, now.month - 1, 12);
     controller
       ..addEntry(
         LedgerEntry(
@@ -173,6 +174,19 @@ void main() {
           occurredAt: now,
         ),
       )
+      ..addEntry(
+        LedgerEntry(
+          id: 'dining-previous',
+          bookId: controller.activeBook.id,
+          type: EntryType.expense,
+          amount: 40,
+          categoryId: 'dining',
+          accountId: 'cash-test',
+          note: '上月晚餐',
+          occurredAt: previousMonth,
+        ),
+      )
+      ..setMonthlyBudget(now, 100)
       ..setCategoryBudget(now, 'dining', 50)
       ..dispose();
 
@@ -184,14 +198,31 @@ void main() {
     );
 
     expect(find.text('餐饮超出 25'), findsOneWidget);
-    await tester.ensureVisible(find.text('餐饮超出 25'));
+    tester.widget<BudgetPanel>(find.byType(BudgetPanel)).onTap();
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('餐饮超出 25'));
-    await tester.pumpAndSettle();
-
+    expect(find.text('预算设置'), findsOneWidget);
+    expect(find.text('历史对比'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('餐饮已超支'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('餐饮已超支'), findsOneWidget);
     expect(find.textContaining('已超出 25'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('上月 40'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('上月 40'), findsOneWidget);
+
+    Navigator.of(tester.element(find.text('上月 40'))).pop();
+    await tester.pumpAndSettle();
+    await tapBottomTab(tester, 2);
+
+    expect(find.text('预算执行'), findsOneWidget);
+    expect(find.text('1 个超支'), findsOneWidget);
   });
 
   testWidgets('creates an entry through the quick entry flow', (
