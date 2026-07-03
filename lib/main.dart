@@ -22,6 +22,7 @@ import 'app/platform_bridge.dart';
 import 'app/veri_fin_controller.dart';
 import 'app/veri_fin_scope.dart';
 import 'local_storage/local_storage.dart';
+import 'pages/sheets.dart';
 
 const double assetCoverAspectRatio = 1200 / 760;
 const int assetCoverTargetWidth = 1200;
@@ -1009,7 +1010,7 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
   }
 
   Future<void> _pickEntryType() async {
-    final selected = await _showOptionSheet<EntryType>(
+    final selected = await showOptionSheet<EntryType>(
       context: context,
       title: '统计类型',
       values: EntryType.values,
@@ -1473,7 +1474,7 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
   Future<void> _editCategoryBudget(Category category) async {
     final controller = VeriFinScope.of(context);
     final currentBudget = controller.categoryBudget(_month, category.id);
-    final amountText = await _showTextInputDialog(
+    final amountText = await showTextInputDialog(
       context: context,
       title: '设置${category.label}预算',
       label: '分类预算金额',
@@ -3109,7 +3110,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
   }
 
   Future<void> _pickTimeFilter() async {
-    final selected = await _showOptionSheet<TransactionTimeFilter>(
+    final selected = await showOptionSheet<TransactionTimeFilter>(
       context: context,
       title: '筛选时间',
       values: TransactionTimeFilter.values,
@@ -3126,7 +3127,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
   }
 
   Future<void> _pickSortOrder() async {
-    final selected = await _showOptionSheet<TransactionSortOrder>(
+    final selected = await showOptionSheet<TransactionSortOrder>(
       context: context,
       title: '排序方式',
       values: TransactionSortOrder.values,
@@ -3143,7 +3144,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
       _allFilterValue,
       for (final account in controller.accounts) account.id,
     ];
-    final selected = await _showOptionSheet<String>(
+    final selected = await showOptionSheet<String>(
       context: context,
       title: '筛选账户',
       values: values,
@@ -3164,7 +3165,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
       _allFilterValue,
       for (final category in controller.categories) category.id,
     ];
-    final selected = await _showOptionSheet<String>(
+    final selected = await showOptionSheet<String>(
       context: context,
       title: '筛选分类',
       values: values,
@@ -3488,251 +3489,6 @@ class _DateFilterBar extends StatelessWidget {
   }
 }
 
-Future<T?> _showOptionSheet<T>({
-  required BuildContext context,
-  required String title,
-  required List<T> values,
-  required T selected,
-  required String Function(T value) labelOf,
-  bool showSelectedMarker = true,
-}) {
-  return showModalBottomSheet<T>(
-    context: context,
-    showDragHandle: true,
-    backgroundColor: Theme.of(context).colorScheme.surface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(veriRadiusLg)),
-    ),
-    builder: (context) {
-      final maxHeight = MediaQuery.sizeOf(context).height * 0.72;
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxHeight),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Flexible(
-                  child: ListView(
-                    shrinkWrap: true,
-                    children: <Widget>[
-                      for (final value in values)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Material(
-                            color: showSelectedMarker && value == selected
-                                ? veriRoyal.withValues(alpha: 0.12)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(veriRadiusSm),
-                            child: ListTile(
-                              minTileHeight: 44,
-                              dense: true,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                  veriRadiusSm,
-                                ),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                              ),
-                              title: Text(
-                                labelOf(value),
-                                style: Theme.of(context).textTheme.titleSmall
-                                    ?.copyWith(
-                                      fontWeight:
-                                          showSelectedMarker &&
-                                              value == selected
-                                          ? FontWeight.w800
-                                          : FontWeight.w600,
-                                    ),
-                              ),
-                              trailing: showSelectedMarker && value == selected
-                                  ? const Icon(
-                                      Icons.check,
-                                      color: veriRoyal,
-                                      size: 18,
-                                    )
-                                  : null,
-                              onTap: () => Navigator.of(context).pop(value),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    },
-  );
-}
-
-Future<String?> _showAccountIconSheet({
-  required BuildContext context,
-  required String selected,
-}) {
-  final choices = <_AccountIconChoice>[
-    for (final code in accountIconCodes)
-      _AccountIconChoice(
-        code: code,
-        label: iconLabelForCode(code),
-        group: '通用图标',
-      ),
-    for (final option in accountAssetIconOptions)
-      _AccountIconChoice(
-        code: option.code,
-        label: option.label,
-        group: option.group,
-      ),
-  ];
-
-  return showModalBottomSheet<String>(
-    context: context,
-    showDragHandle: true,
-    backgroundColor: Theme.of(context).colorScheme.surface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(veriRadiusLg)),
-    ),
-    builder: (context) {
-      final maxHeight = MediaQuery.sizeOf(context).height * 0.74;
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxHeight),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  '选择账户图标',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Flexible(
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: choices.length,
-                    separatorBuilder: (_, _) => Divider(
-                      height: 1,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.06),
-                    ),
-                    itemBuilder: (context, index) {
-                      final choice = choices[index];
-                      final isSelected = choice.code == selected;
-                      return Material(
-                        color: isSelected
-                            ? veriRoyal.withValues(alpha: 0.12)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(veriRadiusSm),
-                        child: ListTile(
-                          minTileHeight: 48,
-                          dense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                          ),
-                          leading: AccountIconBox(
-                            iconCode: choice.code,
-                            size: 34,
-                          ),
-                          title: Text(
-                            choice.label,
-                            style: Theme.of(context).textTheme.titleSmall
-                                ?.copyWith(
-                                  fontWeight: isSelected
-                                      ? FontWeight.w800
-                                      : FontWeight.w600,
-                                ),
-                          ),
-                          subtitle: Text(choice.group),
-                          trailing: isSelected
-                              ? const Icon(
-                                  Icons.check,
-                                  color: veriRoyal,
-                                  size: 18,
-                                )
-                              : null,
-                          onTap: () => Navigator.of(context).pop(choice.code),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    },
-  );
-}
-
-class _AccountIconChoice {
-  const _AccountIconChoice({
-    required this.code,
-    required this.label,
-    required this.group,
-  });
-
-  final String code;
-  final String label;
-  final String group;
-}
-
-Future<String?> _showTextInputDialog({
-  required BuildContext context,
-  required String title,
-  required String label,
-  String initialValue = '',
-  bool allowEmpty = false,
-  TextInputType? keyboardType,
-}) async {
-  final controller = TextEditingController(text: initialValue);
-  final result = await showDialog<String>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text(title),
-      content: TextField(
-        controller: controller,
-        autofocus: true,
-        keyboardType: keyboardType,
-        decoration: InputDecoration(labelText: label),
-      ),
-      actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(controller.text),
-          child: const Text('确认'),
-        ),
-      ],
-    ),
-  );
-  WidgetsBinding.instance.addPostFrameCallback((_) => controller.dispose());
-  final trimmed = result?.trim();
-  if (trimmed == null || (!allowEmpty && trimmed.isEmpty)) {
-    return null;
-  }
-  return trimmed;
-}
-
 class _DateEntryGroup {
   const _DateEntryGroup({required this.date, required this.entries});
 
@@ -4030,7 +3786,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
   }
 
   Future<void> _pickType() async {
-    final selected = await _showOptionSheet<EntryType>(
+    final selected = await showOptionSheet<EntryType>(
       context: context,
       title: '选择类型',
       values: EntryType.values,
@@ -4065,7 +3821,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
   }
 
   Future<void> _pickAccount(List<Account> accounts) async {
-    final selected = await _showOptionSheet<Account>(
+    final selected = await showOptionSheet<Account>(
       context: context,
       title: '选择账户',
       values: accounts,
@@ -4087,7 +3843,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     if (selectableAccounts.isEmpty) {
       return;
     }
-    final selected = await _showOptionSheet<Account>(
+    final selected = await showOptionSheet<Account>(
       context: context,
       title: '选择转入账户',
       values: selectableAccounts,
@@ -4159,7 +3915,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
   }
 
   Future<void> _editNote() async {
-    final note = await _showTextInputDialog(
+    final note = await showTextInputDialog(
       context: context,
       title: '编辑备注',
       label: '备注',
@@ -4227,78 +3983,6 @@ Future<void> _confirmDeleteEntry(
   controller.deleteEntry(entry.id);
   Navigator.of(context).pop();
 }
-
-Future<void> _confirmDeleteAccount(
-  BuildContext context,
-  Account account,
-  List<LedgerEntry> entries,
-) async {
-  final controller = VeriFinScope.of(context);
-  if (entries.isNotEmpty) {
-    final action = await showDialog<_AccountDeleteAction>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('处理此账户？'),
-        content: Text(
-          '账户「${account.name}」已有 ${entries.length} 笔相关交易。你可以隐藏账户，或删除账户并同步删除这些交易记录。',
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () =>
-                Navigator.of(context).pop(_AccountDeleteAction.hide),
-            child: const Text('隐藏账户'),
-          ),
-          FilledButton(
-            onPressed: () =>
-                Navigator.of(context).pop(_AccountDeleteAction.delete),
-            style: FilledButton.styleFrom(backgroundColor: veriExpense),
-            child: const Text('删除账户和交易'),
-          ),
-        ],
-      ),
-    );
-    if (!context.mounted || action == null) {
-      return;
-    }
-    if (action == _AccountDeleteAction.hide) {
-      controller.updateAccount(account.copyWith(hidden: true));
-      Navigator.of(context).pop();
-      return;
-    }
-    controller.deleteAccountAndRelatedEntries(account.id);
-    Navigator.of(context).pop();
-    return;
-  }
-
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('删除此账户？'),
-      content: Text('账户「${account.name}」删除后无法恢复。'),
-      actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('取消'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('删除'),
-        ),
-      ],
-    ),
-  );
-  if (!context.mounted || confirmed != true) {
-    return;
-  }
-  controller.deleteAccount(account.id);
-  Navigator.of(context).pop();
-}
-
-enum _AccountDeleteAction { hide, delete }
 
 void _openEntryDetail(BuildContext context, LedgerEntry entry) {
   Navigator.of(context).push<void>(
@@ -4802,7 +4486,7 @@ class _AssetsPageState extends State<AssetsPage> {
     BuildContext context,
     VeriFinController controller,
   ) async {
-    final action = await _showOptionSheet<String>(
+    final action = await showOptionSheet<String>(
       context: context,
       title: '资产卡片背景',
       values: const <String>['online', 'custom_url', 'local', 'clear'],
@@ -4823,7 +4507,7 @@ class _AssetsPageState extends State<AssetsPage> {
 
     switch (action) {
       case 'online':
-        final selected = await _showOptionSheet<_AssetCoverPreset>(
+        final selected = await showOptionSheet<_AssetCoverPreset>(
           context: context,
           title: '选择线上图片',
           values: _coverPresets,
@@ -4837,7 +4521,7 @@ class _AssetsPageState extends State<AssetsPage> {
           controller.setAssetCoverUrl(selected.url);
         }
       case 'custom_url':
-        final url = await _showTextInputDialog(
+        final url = await showTextInputDialog(
           context: context,
           title: '自定义图片',
           label: '图片链接',
@@ -4880,7 +4564,7 @@ class _AssetsPageState extends State<AssetsPage> {
 
   Future<void> _showAssetActions(BuildContext context) async {
     final controller = VeriFinScope.of(context);
-    final selected = await _showOptionSheet<String>(
+    final selected = await showOptionSheet<String>(
       context: context,
       title: '资产操作',
       values: const <String>['add_account', 'manage_groups', 'switch_view'],
@@ -5258,7 +4942,7 @@ class _AccountGroupsPageState extends State<AccountGroupsPage> {
     final current = controller.accountGroups
         .where((group) => group.id == groupId)
         .firstOrNull;
-    final iconCode = await _showOptionSheet<String>(
+    final iconCode = await showOptionSheet<String>(
       context: context,
       title: '选择分组图标',
       values: accountIconCodes,
@@ -5276,47 +4960,6 @@ class AddAccountPage extends StatefulWidget {
 
   @override
   State<AddAccountPage> createState() => _AddAccountPageState();
-}
-
-class _SelectField extends StatelessWidget {
-  const _SelectField({
-    super.key,
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.onTap,
-  });
-
-  final String label;
-  final String value;
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(veriRadiusMd),
-        onTap: onTap,
-        child: InputDecorator(
-          decoration: InputDecoration(
-            labelText: label,
-            prefixIcon: Icon(icon),
-            suffixIcon: const Icon(Icons.keyboard_arrow_down),
-          ),
-          child: Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _AccountIconSelectField extends StatelessWidget {
@@ -5415,7 +5058,7 @@ class _AddAccountPageState extends State<AddAccountPage> {
                   ],
                 ),
                 const SizedBox(height: 10),
-                _SelectField(
+                SelectField(
                   label: '账户类型',
                   value: _type.label,
                   icon: Icons.category_outlined,
@@ -5479,7 +5122,7 @@ class _AddAccountPageState extends State<AddAccountPage> {
                   decoration: const InputDecoration(labelText: '账户备注'),
                 ),
                 const SizedBox(height: 10),
-                _SelectField(
+                SelectField(
                   label: '账户分组',
                   value: _groupLabel(groups),
                   icon: Icons.folder_outlined,
@@ -5494,7 +5137,7 @@ class _AddAccountPageState extends State<AddAccountPage> {
   }
 
   Future<void> _pickAccountType() async {
-    final selected = await _showOptionSheet<AccountType>(
+    final selected = await showOptionSheet<AccountType>(
       context: context,
       title: '选择账户类型',
       values: AccountType.values,
@@ -5512,7 +5155,7 @@ class _AddAccountPageState extends State<AddAccountPage> {
   }
 
   Future<void> _pickAccountIcon() async {
-    final selected = await _showAccountIconSheet(
+    final selected = await showAccountIconSheet(
       context: context,
       selected: _iconCode,
     );
@@ -5537,7 +5180,7 @@ class _AddAccountPageState extends State<AddAccountPage> {
 
   Future<void> _pickAccountGroup(List<AccountGroup> groups) async {
     final values = <String>['ungrouped', ...groups.map((group) => group.id)];
-    final selected = await _showOptionSheet<String>(
+    final selected = await showOptionSheet<String>(
       context: context,
       title: '选择账户分组',
       values: values,
@@ -5801,7 +5444,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
               VeriCard(
                 child: Column(
                   children: <Widget>[
-                    _CompactSwitchRow(
+                    CompactSwitchRow(
                       icon: Icons.account_balance_wallet_outlined,
                       title: const Text('计入资产'),
                       value: currentAccount.includeInAssets,
@@ -5812,7 +5455,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                       },
                     ),
                     const Divider(height: 1),
-                    _CompactSwitchRow(
+                    CompactSwitchRow(
                       icon: Icons.visibility_off_outlined,
                       title: const Text('隐藏账户'),
                       value: currentAccount.hidden,
@@ -5894,7 +5537,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                       title: '删除账户',
                       trailing: entries.isEmpty ? '可删除' : '已有交易',
                       trailingIcon: Icons.chevron_right,
-                      onTap: () => _confirmDeleteAccount(
+                      onTap: () => confirmDeleteAccount(
                         context,
                         currentAccount,
                         entries,
@@ -5956,7 +5599,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
   }
 
   Future<void> _pickAccountType(Account account) async {
-    final selected = await _showOptionSheet<AccountType>(
+    final selected = await showOptionSheet<AccountType>(
       context: context,
       title: '选择账户类型',
       values: AccountType.values,
@@ -5974,7 +5617,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
   }
 
   Future<void> _editAccountName(Account account) async {
-    final name = await _showTextInputDialog(
+    final name = await showTextInputDialog(
       context: context,
       title: '编辑账户名称',
       label: '账户名称',
@@ -5989,7 +5632,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
   }
 
   Future<void> _editCardLast4(Account account) async {
-    final cardLast4 = await _showTextInputDialog(
+    final cardLast4 = await showTextInputDialog(
       context: context,
       title: '编辑卡号后四位',
       label: '卡号后四位',
@@ -6011,7 +5654,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
   }
 
   Future<void> _pickAccountIcon(Account account) async {
-    final selected = await _showAccountIconSheet(
+    final selected = await showAccountIconSheet(
       context: context,
       selected: account.iconCode,
     );
@@ -6023,7 +5666,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
   }
 
   Future<void> _editAccountNote(Account account) async {
-    final note = await _showTextInputDialog(
+    final note = await showTextInputDialog(
       context: context,
       title: '编辑账户备注',
       label: '备注',
@@ -6039,7 +5682,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
     final controller = VeriFinScope.of(context);
     final groups = controller.accountGroups;
     final values = <String>['ungrouped', ...groups.map((group) => group.id)];
-    final selected = await _showOptionSheet<String>(
+    final selected = await showOptionSheet<String>(
       context: context,
       title: '选择账户分组',
       values: values,
@@ -6130,46 +5773,6 @@ class _MiniSegmentButton extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _CompactSwitchRow extends StatelessWidget {
-  const _CompactSwitchRow({
-    required this.icon,
-    required this.title,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final IconData icon;
-  final Widget title;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: <Widget>[
-          VeriIconBox(icon: icon, size: 28),
-          const SizedBox(width: 10),
-          Expanded(
-            child: DefaultTextStyle.merge(
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              child: title,
-            ),
-          ),
-          Transform.scale(
-            scale: 0.82,
-            alignment: Alignment.centerRight,
-            child: Switch(value: value, onChanged: onChanged),
-          ),
-        ],
       ),
     );
   }
@@ -7239,7 +6842,7 @@ class LedgerBooksPage extends StatelessWidget {
   }
 
   Future<void> _createBook(BuildContext context) async {
-    final name = await _showTextInputDialog(
+    final name = await showTextInputDialog(
       context: context,
       title: '新增账本',
       label: '账本名称',
@@ -7333,7 +6936,7 @@ class _LedgerBookRow extends StatelessWidget {
   }
 
   Future<void> _renameBook(BuildContext context) async {
-    final name = await _showTextInputDialog(
+    final name = await showTextInputDialog(
       context: context,
       title: '重命名账本',
       label: '账本名称',
@@ -7449,7 +7052,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
   }
 
   Future<void> _createCategory() async {
-    final label = await _showTextInputDialog(
+    final label = await showTextInputDialog(
       context: context,
       title: '新增${_type.label}分类',
       label: '分类名称',
@@ -7467,7 +7070,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
   }
 
   Future<void> _showCategoryActions(Category category) async {
-    final selected = await _showOptionSheet<String>(
+    final selected = await showOptionSheet<String>(
       context: context,
       title: category.label,
       values: const <String>['rename', 'icon', 'delete'],
@@ -7494,7 +7097,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
   }
 
   Future<void> _renameCategory(Category category) async {
-    final label = await _showTextInputDialog(
+    final label = await showTextInputDialog(
       context: context,
       title: '重命名分类',
       label: '分类名称',
@@ -7515,7 +7118,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
   }
 
   Future<String?> _pickCategoryIcon({required String selected}) {
-    return _showOptionSheet<String>(
+    return showOptionSheet<String>(
       context: context,
       title: '选择图标',
       values: categoryIconCodes,
@@ -7740,14 +7343,14 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
                 decoration: const InputDecoration(labelText: '简介'),
               ),
               const SizedBox(height: 10),
-              _SelectField(
+              SelectField(
                 label: '性别',
                 value: _gender.label,
                 icon: Icons.person_outline,
                 onTap: _pickGender,
               ),
               const SizedBox(height: 10),
-              _SelectField(
+              SelectField(
                 label: '生日',
                 value: _birthday.isEmpty ? '不设置' : _birthday,
                 icon: Icons.cake_outlined,
@@ -7773,7 +7376,7 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
   }
 
   Future<void> _pickGender() async {
-    final selected = await _showOptionSheet<ProfileGender>(
+    final selected = await showOptionSheet<ProfileGender>(
       context: context,
       title: '选择性别',
       values: ProfileGender.values,
@@ -7875,7 +7478,7 @@ class SettingsPage extends StatelessWidget {
                       onTap: () => _pickThemePreference(context, controller),
                     ),
                     const Divider(height: 1),
-                    _CompactSwitchRow(
+                    CompactSwitchRow(
                       icon: Icons.touch_app_outlined,
                       title: const Text('触感反馈'),
                       value: controller.hapticsEnabled,
@@ -7951,7 +7554,7 @@ class SettingsPage extends StatelessWidget {
     BuildContext context,
     VeriFinController controller,
   ) async {
-    final selected = await _showOptionSheet<ThemePreference>(
+    final selected = await showOptionSheet<ThemePreference>(
       context: context,
       title: '选择主题模式',
       values: ThemePreference.values,
@@ -8454,7 +8057,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                   ),
                   const SizedBox(height: 18),
                   if (hasAccounts && _type == EntryType.transfer) ...<Widget>[
-                    _SelectField(
+                    SelectField(
                       key: const Key('account_dropdown'),
                       label: '转出账户',
                       value:
@@ -8463,7 +8066,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                       onTap: () => _pickAccount(accounts),
                     ),
                     const SizedBox(height: 10),
-                    _SelectField(
+                    SelectField(
                       key: const Key('to_account_dropdown'),
                       label: '转入账户',
                       value: _toAccountId == null
@@ -8475,7 +8078,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                           : () => _pickToAccount(accounts),
                     ),
                   ] else if (hasAccounts)
-                    _SelectField(
+                    SelectField(
                       key: const Key('account_dropdown'),
                       label: '账户',
                       value:
@@ -8586,7 +8189,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   }
 
   Future<void> _pickAccount(List<Account> accounts) async {
-    final selected = await _showOptionSheet<Account>(
+    final selected = await showOptionSheet<Account>(
       context: context,
       title: '选择账户',
       values: accounts,
@@ -8609,7 +8212,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     if (selectableAccounts.isEmpty) {
       return;
     }
-    final selected = await _showOptionSheet<Account>(
+    final selected = await showOptionSheet<Account>(
       context: context,
       title: '选择转入账户',
       values: selectableAccounts,
