@@ -1,0 +1,522 @@
+{
+  "app": "verifin",
+  "version": 1,
+  "exportedAt": "2026-07-03T16:00:00.000",
+  "data": {
+    "ledgerBooks": [
+      {
+        "id": "default",
+        "name": "日常账本",
+        "createdAt": "2026-01-01T00:00:00.000",
+        "isDefault": true
+      },
+      {
+        "id": "book_travel",
+        "name": "旅行测试账本",
+        "createdAt": "2026-06-01T09:00:00.000",
+        "isDefault": false
+      }
+    ],
+    "activeBookId": "default",
+    "entries": [
+      {
+        "id": "entry_20260703_001",
+        "bookId": "default",
+        "type": "expense",
+        "amount": 28.5,
+        "categoryId": "dining",
+        "accountId": "acc_alipay",
+        "toAccountId": null,
+        "note": "午餐套餐",
+        "occurredAt": "2026-07-03T12:20:00.000"
+      },
+      {
+        "id": "entry_20260703_002",
+        "bookId": "default",
+        "type": "expense",
+        "amount": 16.0,
+        "categoryId": "coffee",
+        "accountId": "acc_wechat",
+        "toAccountId": null,
+        "note": "下午咖啡",
+        "occurredAt": "2026-07-03T15:12:00.000"
+      },
+      {
+        "id": "entry_20260703_003",
+        "bookId": "default",
+        "type": "transfer",
+        "amount": 500.0,
+        "categoryId": "transfer_out",
+        "accountId": "acc_debit",
+        "toAccountId": "acc_alipay",
+        "note": "银行卡转入支付宝",
+        "occurredAt": "2026-07-03T18:00:00.000"
+      },
+      {
+        "id": "entry_20260702_001",
+        "bookId": "default",
+        "type": "expense",
+        "amount": 68.0,
+        "categoryId": "shopping",
+        "accountId": "acc_credit",
+        "toAccountId": null,
+        "note": "日用品",
+        "occurredAt": "2026-07-02T20:10:00.000"
+      },
+      {
+        "id": "entry_20260702_002",
+        "bookId": "default",
+        "type": "income",
+        "amount": 8200.0,
+        "categoryId": "salary",
+        "accountId": "acc_debit",
+        "toAccountId": null,
+        "note": "7月工资",
+        "occurredAt": "2026-07-02T09:30:00.000"
+      },
+      {
+        "id": "entry_20260701_001",
+        "bookId": "default",
+        "type": "expense",
+        "amount": 1880.0,
+        "categoryId": "housing",
+        "accountId": "acc_debit",
+        "toAccountId": null,
+        "note": "房租",
+        "occurredAt": "2026-07-01T08:40:00.000"
+      },
+      {
+        "id": "entry_20260701_002",
+        "bookId": "default",
+        "type": "expense",
+        "amount": 42.0,
+        "categoryId": "transport",
+        "accountId": "acc_alipay",
+        "toAccountId": null,
+        "note": "地铁充值",
+        "occurredAt": "2026-07-01T19:05:00.000"
+      },
+      {
+        "id": "entry_20260630_001",
+        "bookId": "default",
+        "type": "expense",
+        "amount": 129.0,
+        "categoryId": "entertainment",
+        "accountId": "acc_wechat",
+        "toAccountId": null,
+        "note": "电影和饮料",
+        "occurredAt": "2026-06-30T21:18:00.000"
+      },
+      {
+        "id": "entry_20260629_001",
+        "bookId": "default",
+        "type": "expense",
+        "amount": 256.8,
+        "categoryId": "medical",
+        "accountId": "acc_debit",
+        "toAccountId": null,
+        "note": "体检复查",
+        "occurredAt": "2026-06-29T10:30:00.000"
+      },
+      {
+        "id": "entry_20260628_001",
+        "bookId": "default",
+        "type": "income",
+        "amount": 260.0,
+        "categoryId": "part_time",
+        "accountId": "acc_wechat",
+        "toAccountId": null,
+        "note": "周末兼职",
+        "occurredAt": "2026-06-28T22:00:00.000"
+      },
+      {
+        "id": "entry_20260627_001",
+        "bookId": "default",
+        "type": "expense",
+        "amount": 320.0,
+        "categoryId": "pet",
+        "accountId": "acc_alipay",
+        "toAccountId": null,
+        "note": "宠物粮和驱虫",
+        "occurredAt": "2026-06-27T16:20:00.000"
+      },
+      {
+        "id": "entry_20260626_001",
+        "bookId": "default",
+        "type": "expense",
+        "amount": 88.0,
+        "categoryId": "dining",
+        "accountId": "acc_cash",
+        "toAccountId": null,
+        "note": "朋友聚餐 AA",
+        "occurredAt": "2026-06-26T19:45:00.000"
+      },
+      {
+        "id": "entry_20260625_001",
+        "bookId": "default",
+        "type": "transfer",
+        "amount": 1200.0,
+        "categoryId": "repayment",
+        "accountId": "acc_debit",
+        "toAccountId": "acc_credit",
+        "note": "信用卡还款",
+        "occurredAt": "2026-06-25T11:00:00.000"
+      },
+      {
+        "id": "entry_20260620_001",
+        "bookId": "default",
+        "type": "income",
+        "amount": 58.2,
+        "categoryId": "interest",
+        "accountId": "acc_savings",
+        "toAccountId": null,
+        "note": "理财利息",
+        "occurredAt": "2026-06-20T08:00:00.000"
+      },
+      {
+        "id": "entry_20260618_001",
+        "bookId": "default",
+        "type": "income",
+        "amount": 1200.0,
+        "categoryId": "bonus",
+        "accountId": "acc_debit",
+        "toAccountId": null,
+        "note": "项目奖金",
+        "occurredAt": "2026-06-18T17:30:00.000"
+      },
+      {
+        "id": "entry_20260615_001",
+        "bookId": "default",
+        "type": "expense",
+        "amount": 400.0,
+        "categoryId": "balance_adjust_expense",
+        "accountId": "acc_cash",
+        "toAccountId": null,
+        "note": "余额调整",
+        "occurredAt": "2026-06-15T21:00:00.000"
+      },
+      {
+        "id": "entry_20260612_001",
+        "bookId": "default",
+        "type": "income",
+        "amount": 300.0,
+        "categoryId": "balance_adjust_income",
+        "accountId": "acc_alipay",
+        "toAccountId": null,
+        "note": "余额调整",
+        "occurredAt": "2026-06-12T21:00:00.000"
+      },
+      {
+        "id": "entry_20260608_001",
+        "bookId": "default",
+        "type": "expense",
+        "amount": 760.0,
+        "categoryId": "shopping",
+        "accountId": "acc_credit",
+        "toAccountId": null,
+        "note": "夏季衣物",
+        "occurredAt": "2026-06-08T14:25:00.000"
+      },
+      {
+        "id": "entry_20260605_001",
+        "bookId": "default",
+        "type": "expense",
+        "amount": 138.0,
+        "categoryId": "transport",
+        "accountId": "acc_debit",
+        "toAccountId": null,
+        "note": "高铁票",
+        "occurredAt": "2026-06-05T07:50:00.000"
+      },
+      {
+        "id": "entry_20260530_001",
+        "bookId": "default",
+        "type": "expense",
+        "amount": 233.0,
+        "categoryId": "dining",
+        "accountId": "acc_wechat",
+        "toAccountId": null,
+        "note": "家庭聚餐",
+        "occurredAt": "2026-05-30T18:45:00.000"
+      },
+      {
+        "id": "entry_20260525_001",
+        "bookId": "default",
+        "type": "expense",
+        "amount": 96.0,
+        "categoryId": "coffee",
+        "accountId": "acc_alipay",
+        "toAccountId": null,
+        "note": "咖啡豆",
+        "occurredAt": "2026-05-25T10:10:00.000"
+      },
+      {
+        "id": "entry_20260520_001",
+        "bookId": "default",
+        "type": "income",
+        "amount": 600.0,
+        "categoryId": "reimbursement",
+        "accountId": "acc_debit",
+        "toAccountId": null,
+        "note": "差旅报销",
+        "occurredAt": "2026-05-20T16:20:00.000"
+      },
+      {
+        "id": "entry_20260515_001",
+        "bookId": "default",
+        "type": "expense",
+        "amount": 1500.0,
+        "categoryId": "investment",
+        "accountId": "acc_debit",
+        "toAccountId": null,
+        "note": "基金定投",
+        "occurredAt": "2026-05-15T09:40:00.000"
+      },
+      {
+        "id": "entry_travel_001",
+        "bookId": "book_travel",
+        "type": "expense",
+        "amount": 680.0,
+        "categoryId": "travel",
+        "accountId": "acc_travel_cash",
+        "toAccountId": null,
+        "note": "酒店预付",
+        "occurredAt": "2026-06-10T21:30:00.000"
+      },
+      {
+        "id": "entry_travel_002",
+        "bookId": "book_travel",
+        "type": "expense",
+        "amount": 128.0,
+        "categoryId": "dining",
+        "accountId": "acc_travel_card",
+        "toAccountId": null,
+        "note": "旅行晚餐",
+        "occurredAt": "2026-06-11T20:10:00.000"
+      }
+    ],
+    "accounts": [
+      {
+        "id": "acc_alipay",
+        "bookId": "default",
+        "name": "支付宝",
+        "type": "onlinePayment",
+        "groupId": "group_daily",
+        "initialBalance": 1280.0,
+        "iconCode": "alipay",
+        "note": "日常小额付款",
+        "includeInAssets": true,
+        "hidden": false
+      },
+      {
+        "id": "acc_wechat",
+        "bookId": "default",
+        "name": "微信支付",
+        "type": "onlinePayment",
+        "groupId": "group_daily",
+        "initialBalance": 860.0,
+        "iconCode": "wechat_pay",
+        "note": "社交场景付款",
+        "includeInAssets": true,
+        "hidden": false
+      },
+      {
+        "id": "acc_credit",
+        "bookId": "default",
+        "name": "招商信用卡",
+        "type": "creditCard",
+        "groupId": "group_credit",
+        "initialBalance": -2680.0,
+        "iconCode": "cmb",
+        "note": "每月 25 日还款",
+        "includeInAssets": true,
+        "hidden": false
+      },
+      {
+        "id": "acc_debit",
+        "bookId": "default",
+        "name": "工资储蓄卡",
+        "type": "debitCard",
+        "groupId": "group_bank",
+        "initialBalance": 12600.0,
+        "iconCode": "icbc",
+        "note": "工资和主要转账账户",
+        "includeInAssets": true,
+        "hidden": false
+      },
+      {
+        "id": "acc_savings",
+        "bookId": "default",
+        "name": "定期存款",
+        "type": "investment",
+        "groupId": "group_invest",
+        "initialBalance": 30000.0,
+        "iconCode": "savings",
+        "note": "计入净资产",
+        "includeInAssets": true,
+        "hidden": false
+      },
+      {
+        "id": "acc_fund",
+        "bookId": "default",
+        "name": "基金账户",
+        "type": "investment",
+        "groupId": "group_invest",
+        "initialBalance": 18500.0,
+        "iconCode": "investment",
+        "note": "波动资产测试",
+        "includeInAssets": true,
+        "hidden": false
+      },
+      {
+        "id": "acc_cash",
+        "bookId": "default",
+        "name": "现金钱包",
+        "type": "cash",
+        "groupId": null,
+        "initialBalance": 620.0,
+        "iconCode": "cash",
+        "note": "未分组账户",
+        "includeInAssets": true,
+        "hidden": false
+      },
+      {
+        "id": "acc_gift",
+        "bookId": "default",
+        "name": "礼品卡",
+        "type": "cash",
+        "groupId": "group_daily",
+        "initialBalance": 350.0,
+        "iconCode": "card",
+        "note": "不计入净资产，用于测试灰色余额",
+        "includeInAssets": false,
+        "hidden": false
+      },
+      {
+        "id": "acc_old",
+        "bookId": "default",
+        "name": "旧银行卡",
+        "type": "debitCard",
+        "groupId": "group_bank",
+        "initialBalance": 12.34,
+        "iconCode": "bank",
+        "note": "隐藏账户测试",
+        "includeInAssets": true,
+        "hidden": true
+      },
+      {
+        "id": "acc_travel_cash",
+        "bookId": "book_travel",
+        "name": "旅行现金",
+        "type": "cash",
+        "groupId": null,
+        "initialBalance": 2000.0,
+        "iconCode": "cash",
+        "note": "旅行账本测试账户",
+        "includeInAssets": true,
+        "hidden": false
+      },
+      {
+        "id": "acc_travel_card",
+        "bookId": "book_travel",
+        "name": "旅行信用卡",
+        "type": "creditCard",
+        "groupId": null,
+        "initialBalance": -300.0,
+        "iconCode": "credit",
+        "note": "旅行账本信用卡",
+        "includeInAssets": true,
+        "hidden": false
+      }
+    ],
+    "accountGroups": [
+      {
+        "id": "group_daily",
+        "bookId": "default",
+        "name": "日常支付",
+        "iconCode": "wallet",
+        "sortOrder": 0
+      },
+      {
+        "id": "group_credit",
+        "bookId": "default",
+        "name": "信用账户",
+        "iconCode": "credit",
+        "sortOrder": 1
+      },
+      {
+        "id": "group_bank",
+        "bookId": "default",
+        "name": "银行卡",
+        "iconCode": "bank",
+        "sortOrder": 2
+      },
+      {
+        "id": "group_invest",
+        "bookId": "default",
+        "name": "投资储蓄",
+        "iconCode": "investment",
+        "sortOrder": 3
+      }
+    ],
+    "categories": [
+      { "id": "dining", "label": "餐饮", "type": "expense", "iconCode": "dining" },
+      { "id": "transport", "label": "交通", "type": "expense", "iconCode": "transport" },
+      { "id": "shopping", "label": "购物", "type": "expense", "iconCode": "shopping" },
+      { "id": "housing", "label": "居住", "type": "expense", "iconCode": "housing" },
+      { "id": "entertainment", "label": "娱乐", "type": "expense", "iconCode": "entertainment" },
+      { "id": "medical", "label": "医疗", "type": "expense", "iconCode": "medical" },
+      { "id": "coffee", "label": "咖啡", "type": "expense", "iconCode": "dining" },
+      { "id": "pet", "label": "宠物", "type": "expense", "iconCode": "category" },
+      { "id": "travel", "label": "旅行", "type": "expense", "iconCode": "transport" },
+      { "id": "balance_adjust_expense", "label": "余额调整", "type": "expense", "iconCode": "adjust" },
+      { "id": "salary", "label": "工资", "type": "income", "iconCode": "salary" },
+      { "id": "living", "label": "生活费", "type": "income", "iconCode": "savings" },
+      { "id": "interest", "label": "利息", "type": "income", "iconCode": "interest" },
+      { "id": "investment", "label": "投资", "type": "income", "iconCode": "investment" },
+      { "id": "bonus", "label": "奖金", "type": "income", "iconCode": "bonus" },
+      { "id": "part_time", "label": "兼职", "type": "income", "iconCode": "work" },
+      { "id": "reimbursement", "label": "报销", "type": "income", "iconCode": "work" },
+      { "id": "balance_adjust_income", "label": "余额调整", "type": "income", "iconCode": "adjust" },
+      { "id": "transfer_out", "label": "转出", "type": "transfer", "iconCode": "transfer_out" },
+      { "id": "transfer_in", "label": "转入", "type": "transfer", "iconCode": "transfer_in" },
+      { "id": "repayment", "label": "还款", "type": "transfer", "iconCode": "repayment" }
+    ],
+    "monthlyBudgets": {
+      "2026-05": 5200.0,
+      "2026-06": 5600.0,
+      "2026-07": 6200.0
+    },
+    "categoryBudgets": {
+      "2026-07:dining": 1200.0,
+      "2026-07:shopping": 900.0,
+      "2026-07:transport": 350.0,
+      "2026-07:coffee": 260.0,
+      "2026-07:pet": 500.0,
+      "2026-06:dining": 1000.0,
+      "2026-06:shopping": 800.0,
+      "2026-06:transport": 300.0
+    },
+    "profile": {
+      "nickname": "Veri Fin 测试用户",
+      "bio": "用于验证资产、预算、看板、账本和导入导出流程",
+      "avatarDataUrl": ""
+    },
+    "themePreference": "system",
+    "assetCoverUrl": "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1200&q=80",
+    "hapticsEnabled": true,
+    "assetAccountViewMode": "type",
+    "collapsedAssetSections": [
+      "default:type:investment"
+    ],
+    "assetAccountOrders": {
+      "default:type:onlinePayment": ["acc_wechat", "acc_alipay"],
+      "default:type:investment": ["acc_fund", "acc_savings"],
+      "default:group:group_daily": ["acc_wechat", "acc_alipay", "acc_gift"]
+    },
+    "assetSectionOrders": {
+      "default:type": ["onlinePayment", "debitCard", "creditCard", "cash", "investment"],
+      "default:group": ["group_daily", "group_bank", "group_credit", "ungrouped", "group_invest"]
+    }
+  }
+}

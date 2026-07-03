@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -689,6 +691,46 @@ void main() {
     expect(sorted, <String>['creditCard', 'debitCard', 'onlinePayment']);
 
     target.dispose();
+  });
+
+  test('sample backup imports into controller', () {
+    final rawJson = File(
+      'docs/dev/verifin-sample-backup.json',
+    ).readAsStringSync();
+    final controller = VeriFinController(LocalKeyValueStore());
+
+    controller.importDataJson(rawJson);
+
+    expect(controller.accounts.length, greaterThanOrEqualTo(8));
+    expect(controller.entries.length, greaterThanOrEqualTo(20));
+    expect(controller.accountGroups.length, greaterThanOrEqualTo(4));
+    expect(
+      controller.categories.any((category) => category.id == 'coffee'),
+      isTrue,
+    );
+    expect(
+      controller.categoryBudget(DateTime(2026, 7), 'dining'),
+      greaterThan(0),
+    );
+    expect(
+      controller.isAssetSectionCollapsed(
+        mode: AssetAccountViewMode.type,
+        sectionId: AccountType.investment.name,
+      ),
+      isTrue,
+    );
+    expect(
+      controller
+          .sortedAssetSections<String>(
+            mode: AssetAccountViewMode.type,
+            sections: AccountType.values.map((type) => type.name).toList(),
+            idOf: (section) => section,
+          )
+          .first,
+      AccountType.onlinePayment.name,
+    );
+
+    controller.dispose();
   });
 
   test(
