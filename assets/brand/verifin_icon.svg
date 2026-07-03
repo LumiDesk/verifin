@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="tessera-sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="112" height="112" rx="30" fill="#eef4fb"/>
+  <rect x="34" y="34" width="46" height="46" rx="12" fill="#49B1F5" fill-opacity=".62" transform="rotate(-14 57 57)"/>
+  <rect x="50" y="46" width="46" height="46" rx="12" fill="#00C4B6" fill-opacity=".58" transform="rotate(9 73 69)"/>
+  <rect x="40" y="54" width="46" height="46" rx="12" fill="#7C53D0" fill-opacity=".5" transform="rotate(-3 63 77)"/>
+  <rect x="8" y="8" width="112" height="58" rx="30" fill="url(#tessera-sheen)"/>
+</svg>
