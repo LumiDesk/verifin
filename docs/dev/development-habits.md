@@ -16,5 +16,17 @@ python3 -m http.server 8080 --bind 0.0.0.0
 ## 提交节奏
 不要把所有改动混到最后一次提交。每完成一个相对独立的模块就提交一次，例如数据模型、页面结构、样式优化、文档同步分别提交。提交信息保持 `type: summary` 格式，不包含 AI 或 Codex 署名。
 
+## CI 与发布
+Android 安装包只通过 GitHub Actions 生成，不在本机作为交付依据。`.github/workflows/flutter.yml` 会在 PR 和 `main` 推送时运行分析、测试和 Web 构建；非 PR 事件还会构建 release APK 并上传 artifact。
+
+需要发布版本时，推送 `v*` 标签，例如：
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+标签触发后，CI 会创建 GitHub Release 并附加 Android APK。发版前仍应确认 README、产品文档、UI 规范和验收清单已经同步。
+
 ## 文档同步
 每次修改功能、开发流程、数据结构或预览方式，都要同步检查 `README.md`、`AGENTS.md`、`docs/product.md` 和 `docs/dev/`。如果行为或流程变化已经影响用户测试或后续开发，需要在同一次变更里更新文档。

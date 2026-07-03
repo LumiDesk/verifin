@@ -75,6 +75,16 @@ python3 -m http.server 8080 --bind 0.0.0.0
 
 Android 安装包不在本机打包，后续通过 GitHub CI 生成。
 
+## GitHub CI 与发布
+
+仓库包含 `.github/workflows/flutter.yml`：
+
+- Pull Request 和 `main` 推送会执行 `flutter analyze`、`flutter test` 和 `flutter build web --pwa-strategy=none`。
+- `main` 推送、手动触发和 `v*` 标签会在 GitHub Actions 中执行 `flutter build apk --release`，并上传 `verifin-android-apk` artifact。
+- 推送形如 `v0.1.0` 的标签时，CI 会创建 GitHub Release，并把 release APK 附加到发布页。
+
+本机仍不进行 Android 交付打包；需要发版时使用 GitHub Actions 产物。
+
 ## 文档
 
 - 产品说明：`docs/product.md`
