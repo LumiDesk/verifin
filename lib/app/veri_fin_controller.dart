@@ -502,11 +502,16 @@ class VeriFinController extends ChangeNotifier {
     return b.id.compareTo(a.id);
   }
 
+  /// 记账后回调（新增交易时触发），供自动备份「每次记账后」挂钩。
+  /// 由应用根组件注入，控制器本身不做文件 I/O，测试宿主保持为空。
+  VoidCallback? onEntryAdded;
+
   void addEntry(LedgerEntry entry) {
     _entries.insert(0, entry);
     _entries.sort(_compareEntriesLatestFirst);
     _persistEntries();
     notifyListeners();
+    onEntryAdded?.call();
   }
 
   void updateEntry(LedgerEntry entry) {

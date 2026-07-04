@@ -44,7 +44,10 @@ class SqliteLedgerRepository implements LedgerRepository {
 
   @override
   Future<List<LedgerEntry>> loadEntries() async {
-    final rows = await _db.query('entries', orderBy: 'occurred_at DESC, id DESC');
+    final rows = await _db.query(
+      'entries',
+      orderBy: 'occurred_at DESC, id DESC',
+    );
     return rows.map(_entryFromRow).toList();
   }
 
@@ -153,11 +156,7 @@ class SqliteLedgerRepository implements LedgerRepository {
       await txn.delete(table);
       final batch = txn.batch();
       for (final row in rowList) {
-        batch.insert(
-          table,
-          row,
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
+        batch.insert(table, row, conflictAlgorithm: ConflictAlgorithm.replace);
       }
       await batch.commit(noResult: true);
     });

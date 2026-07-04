@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app/app_theme.dart';
+import 'app/backup/backup_coordinator.dart';
 import 'app/models.dart';
 import 'app/veri_fin_controller.dart';
 import 'app/veri_fin_scope.dart';
@@ -32,11 +33,35 @@ class VeriFinApp extends StatefulWidget {
   State<VeriFinApp> createState() => _VeriFinAppState();
 }
 
-class _VeriFinAppState extends State<VeriFinApp> {
+class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
   late final VeriFinController _controller = widget.controller;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // 记账后自动备份挂钩；应用打开时按配置尝试一次自动备份。
+    _controller.onEntryAdded = _handleEntryAdded;
+    BackupCoordinator.maybeBackupOnOpen(_controller);
+  }
+
+  void _handleEntryAdded() {
+    BackupCoordinator.maybeBackupAfterEntry(_controller);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      BackupCoordinator.maybeBackupOnOpen(_controller);
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    if (_controller.onEntryAdded == _handleEntryAdded) {
+      _controller.onEntryAdded = null;
+    }
     _controller.dispose();
     super.dispose();
   }

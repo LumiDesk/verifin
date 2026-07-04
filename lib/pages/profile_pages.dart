@@ -1094,6 +1094,43 @@ class DataManagementPage extends StatelessWidget {
                   ],
                 ),
               ),
+              if (controller.backupSettings.hasDirectory) ...<Widget>[
+                const SizedBox(height: 10),
+                _sectionLabel(context, '自动备份'),
+                VeriCard(
+                  child: Column(
+                    children: <Widget>[
+                      SettingsRow(
+                        icon: Icons.schedule_outlined,
+                        title: '备份频率',
+                        trailing: controller.backupSettings.frequency.label,
+                        trailingIcon: Icons.chevron_right,
+                        onTap: () => _pickBackupFrequency(context, controller),
+                      ),
+                      if (controller.backupSettings.frequency ==
+                          BackupFrequency.everyNHours) ...<Widget>[
+                        const Divider(),
+                        SettingsRow(
+                          icon: Icons.hourglass_bottom_outlined,
+                          title: '备份间隔',
+                          trailing:
+                              '每 ${controller.backupSettings.intervalHours} 小时',
+                          trailingIcon: Icons.chevron_right,
+                          onTap: () => _pickBackupInterval(context, controller),
+                        ),
+                      ],
+                      const Divider(),
+                      SettingsRow(
+                        icon: Icons.inventory_2_outlined,
+                        title: '保留份数',
+                        trailing: '最近 ${controller.backupSettings.retention} 份',
+                        trailingIcon: Icons.chevron_right,
+                        onTap: () => _pickBackupRetention(context, controller),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 10),
               VeriCard(
                 child: SettingsRow(
@@ -1194,6 +1231,60 @@ class DataManagementPage extends StatelessWidget {
         ? error.toString().replaceFirst('Exception: ', '')
         : '备份操作失败，请稍后再试';
     return message.isEmpty ? '备份操作失败，请稍后再试' : message;
+  }
+
+  Future<void> _pickBackupFrequency(
+    BuildContext context,
+    VeriFinController controller,
+  ) async {
+    final selected = await showOptionSheet<BackupFrequency>(
+      context: context,
+      title: '选择自动备份频率',
+      values: BackupFrequency.values,
+      selected: controller.backupSettings.frequency,
+      labelOf: (value) => value.label,
+    );
+    if (selected != null) {
+      controller.setBackupFrequency(selected);
+    }
+  }
+
+  Future<void> _pickBackupInterval(
+    BuildContext context,
+    VeriFinController controller,
+  ) async {
+    const options = <int>[1, 3, 6, 12, 24, 48, 72];
+    final selected = await showOptionSheet<int>(
+      context: context,
+      title: '每隔多久备份一次',
+      values: options,
+      selected: options.contains(controller.backupSettings.intervalHours)
+          ? controller.backupSettings.intervalHours
+          : 24,
+      labelOf: (value) => '每 $value 小时',
+    );
+    if (selected != null) {
+      controller.setBackupIntervalHours(selected);
+    }
+  }
+
+  Future<void> _pickBackupRetention(
+    BuildContext context,
+    VeriFinController controller,
+  ) async {
+    const options = <int>[3, 5, 10, 20, 50];
+    final selected = await showOptionSheet<int>(
+      context: context,
+      title: '保留最近几份备份',
+      values: options,
+      selected: options.contains(controller.backupSettings.retention)
+          ? controller.backupSettings.retention
+          : 10,
+      labelOf: (value) => '最近 $value 份',
+    );
+    if (selected != null) {
+      controller.setBackupRetention(selected);
+    }
   }
 
   Future<void> _exportData(
