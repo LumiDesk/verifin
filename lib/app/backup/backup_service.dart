@@ -1,3 +1,4 @@
+import 'backup_crypto.dart';
 import 'backup_settings.dart';
 import 'backup_storage.dart';
 
@@ -37,17 +38,27 @@ class BackupService {
     return '$autoBackupFilePrefix$stamp.json';
   }
 
-  /// 写入手动备份到目录。
+  /// 按需加密备份内容；[passphrase] 为空则原样返回明文。
+  static Future<String> prepareContent(String content, String passphrase) {
+    if (passphrase.isEmpty) {
+      return Future<String>.value(content);
+    }
+    return encryptBackup(content, passphrase);
+  }
+
+  /// 写入手动备份到目录。[passphrase] 非空则加密后写入。
   static Future<BackupWriteResult> writeManualBackup({
     required BackupSettings settings,
     required String content,
     required DateTime now,
+    String passphrase = '',
   }) async {
     final filename = manualBackupFilename(now);
+    final payload = await prepareContent(content, passphrase);
     final uri = await writeBackupFile(
       directoryUri: settings.directoryUri,
       filename: filename,
-      content: content,
+      content: payload,
     );
     return BackupWriteResult(filename: filename, fileUri: uri);
   }
@@ -57,12 +68,14 @@ class BackupService {
     required BackupSettings settings,
     required String content,
     required DateTime now,
+    String passphrase = '',
   }) async {
     final filename = autoBackupFilename(now);
+    final payload = await prepareContent(content, passphrase);
     final uri = await writeBackupFile(
       directoryUri: settings.directoryUri,
       filename: filename,
-      content: content,
+      content: payload,
     );
     await _pruneOldAutoBackups(settings);
     return BackupWriteResult(filename: filename, fileUri: uri);

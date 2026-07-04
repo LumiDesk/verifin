@@ -37,6 +37,7 @@ class BackupCoordinator {
         settings: settings,
         content: controller.exportDataJson(),
         now: now,
+        passphrase: controller.backupPassphrase,
       );
       controller.recordBackupTime(now);
     } catch (_) {

@@ -46,6 +46,7 @@ class VeriFinController extends ChangeNotifier {
   static const String _homePanelsKey = 'verifin.home_panels.v1';
   static const String _reportPanelsKey = 'verifin.report_panels.v1';
   static const String _backupSettingsKey = 'verifin.backup_settings.v1';
+  static const String _backupPassphraseKey = 'verifin.backup_passphrase.v1';
 
   static String _panelsKeyFor(PanelPageKind page) {
     switch (page) {
@@ -90,6 +91,7 @@ class VeriFinController extends ChangeNotifier {
   AppLockConfig _appLockConfig = const AppLockConfig.none();
   AssetAccountViewMode _assetAccountViewMode = AssetAccountViewMode.type;
   BackupSettings _backupSettings = const BackupSettings();
+  String _backupPassphrase = '';
 
   List<LedgerEntry> get entries => List<LedgerEntry>.unmodifiable(
     _entries.where((entry) => entry.bookId == _activeBookId),
@@ -183,6 +185,25 @@ class VeriFinController extends ChangeNotifier {
     _persistBackupSettings();
     notifyListeners();
   }
+
+  /// 备份加密口令（明文存本机 KV，供自动备份无人值守加密；空表示不加密）。
+  /// 保护的是离开设备的备份文件，本机数据本身已在应用私有存储内。
+  String get backupPassphrase => _backupPassphrase;
+
+  bool get backupEncryptionEnabled => _backupPassphrase.isNotEmpty;
+
+  void setBackupPassphrase(String passphrase) {
+    _backupPassphrase = passphrase;
+    if (passphrase.isEmpty) {
+      _store.delete(_backupPassphraseKey);
+    } else {
+      _store.write(_backupPassphraseKey, passphrase);
+    }
+    notifyListeners();
+  }
+
+  /// 清除加密口令：后续备份不再加密（已加密的旧文件仍需原口令导入）。
+  void clearBackupPassphrase() => setBackupPassphrase('');
 
   List<Category> categoriesForType(EntryType type) {
     return categoriesFor(type, categories);
@@ -1159,6 +1180,7 @@ class VeriFinController extends ChangeNotifier {
     _loadAssetSectionOrders();
     _loadPagePanels();
     _backupSettings = BackupSettings.decode(_store.read(_backupSettingsKey));
+    _backupPassphrase = _store.read(_backupPassphraseKey) ?? '';
   }
 
   /// 从 SQLite 载入账目类数据；全新数据库首启动写入默认账本/账户/分组/分类。

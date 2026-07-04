@@ -50,6 +50,8 @@ dependencies:
   sqflite_common: ^2.5.11
   # 应用锁 PIN/图案的加盐哈希（不存明文）。
   crypto: ^3.0.6
+  # 备份加密：AES-GCM 认证加密 + PBKDF2 密钥派生（纯 Dart，全平台）。
+  cryptography: ^2.7.0
   # 生物识别（仅指纹）快捷解锁，调用系统能力，不保存任何生物特征数据。
   local_auth: ^2.3.0
 

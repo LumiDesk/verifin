@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 import '../app/app_version.dart';
 import '../app/avatar_picker.dart';
+import '../app/backup/backup_crypto.dart';
 import '../app/backup/backup_service.dart';
 import '../app/backup/backup_settings.dart';
 import '../app/common_widgets.dart';
@@ -1132,6 +1133,35 @@ class DataManagementPage extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 10),
+              _sectionLabel(context, '备份加密'),
+              VeriCard(
+                child: Column(
+                  children: <Widget>[
+                    SettingsRow(
+                      icon: Icons.enhanced_encryption_outlined,
+                      title: '加密密钥',
+                      trailing: controller.backupEncryptionEnabled
+                          ? '已开启'
+                          : '未设置',
+                      trailingIcon: Icons.chevron_right,
+                      onTap: () => _editBackupPassphrase(context, controller),
+                    ),
+                    if (controller.backupEncryptionEnabled) ...<Widget>[
+                      const Divider(),
+                      SettingsRow(
+                        icon: Icons.no_encryption_outlined,
+                        title: '清除加密密钥',
+                        trailing: '后续备份不加密',
+                        trailingIcon: Icons.chevron_right,
+                        contentColor: veriExpense,
+                        onTap: () =>
+                            _confirmClearPassphrase(context, controller),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
               VeriCard(
                 child: SettingsRow(
                   icon: Icons.restart_alt,
@@ -1210,6 +1240,7 @@ class DataManagementPage extends StatelessWidget {
         settings: controller.backupSettings,
         content: controller.exportDataJson(),
         now: now,
+        passphrase: controller.backupPassphrase,
       );
       controller.recordBackupTime(now);
       if (context.mounted) {
@@ -1293,14 +1324,19 @@ class DataManagementPage extends StatelessWidget {
   ) async {
     final date = DateTime.now().toIso8601String().substring(0, 10);
     try {
+      final content = await BackupService.prepareContent(
+        controller.exportDataJson(),
+        controller.backupPassphrase,
+      );
       final saved = await downloadTextFile(
         filename: 'verifin-backup-$date.json',
-        content: controller.exportDataJson(),
+        content: content,
       );
       if (saved && context.mounted) {
+        final hint = controller.backupEncryptionEnabled ? '（已加密）' : '';
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('已导出本地数据备份，位置：下载目录')));
+        ).showSnackBar(SnackBar(content: Text('已导出本地数据备份$hint，位置：下载目录')));
       }
     } catch (_) {
       if (context.mounted) {
@@ -1308,6 +1344,184 @@ class DataManagementPage extends StatelessWidget {
           context,
         ).showSnackBar(const SnackBar(content: Text('导出失败，请稍后再试')));
       }
+    }
+  }
+
+  /// 处理加密备份的解密：先尝试已保存口令，失败或未设置则弹窗要求输入，
+  /// 输入错误可重试。返回明文；用户取消返回 null。
+  Future<String?> _decryptForImport(
+    BuildContext context,
+    VeriFinController controller,
+    String content,
+  ) async {
+    final saved = controller.backupPassphrase;
+    if (saved.isNotEmpty) {
+      try {
+        return await decryptBackup(content, saved);
+      } on BackupCryptoException {
+        // 已保存口令不匹配（可能来自其他设备/旧口令），改为手动输入。
+      }
+    }
+    var errorText = '';
+    while (true) {
+      if (!context.mounted) {
+        return null;
+      }
+      final passphrase = await _promptPassphrase(
+        context,
+        title: '输入备份密钥',
+        message: '该备份已加密，请输入导出时设置的密钥。',
+        errorText: errorText,
+      );
+      if (passphrase == null) {
+        return null;
+      }
+      try {
+        return await decryptBackup(content, passphrase);
+      } on BackupCryptoException catch (error) {
+        errorText = error.message;
+      }
+    }
+  }
+
+  Future<String?> _promptPassphrase(
+    BuildContext context, {
+    required String title,
+    required String message,
+    String errorText = '',
+  }) {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(message),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: '备份密钥',
+                errorText: errorText.isEmpty ? null : errorText,
+              ),
+            ),
+          ],
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _editBackupPassphrase(
+    BuildContext context,
+    VeriFinController controller,
+  ) async {
+    final keyController = TextEditingController();
+    final confirmController = TextEditingController();
+    final isChange = controller.backupEncryptionEnabled;
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        String? errorText;
+        return StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: Text(isChange ? '修改加密密钥' : '设置加密密钥'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                const Text('设置后，导出与备份文件会用该密钥加密；导入时需要输入相同密钥。密钥仅存于本机，忘记只能清除后重设。'),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: keyController,
+                  autofocus: true,
+                  obscureText: true,
+                  decoration: const InputDecoration(labelText: '密钥（至少 4 位）'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: confirmController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: '再次输入密钥',
+                    errorText: errorText,
+                  ),
+                ),
+              ],
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('取消'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  final key = keyController.text;
+                  if (key.length < 4) {
+                    setState(() => errorText = '密钥至少 4 位');
+                    return;
+                  }
+                  if (key != confirmController.text) {
+                    setState(() => errorText = '两次输入不一致');
+                    return;
+                  }
+                  Navigator.of(context).pop(key);
+                },
+                child: const Text('保存'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (result != null && result.isNotEmpty) {
+      controller.setBackupPassphrase(result);
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('已设置备份加密密钥')));
+      }
+    }
+  }
+
+  Future<void> _confirmClearPassphrase(
+    BuildContext context,
+    VeriFinController controller,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('清除加密密钥？'),
+        content: const Text('清除后新的导出与备份将不再加密。已经用旧密钥加密的备份文件，导入时仍需输入当时的密钥。'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: veriExpense),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('清除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      controller.clearBackupPassphrase();
     }
   }
 
@@ -1344,7 +1558,18 @@ class DataManagementPage extends StatelessWidget {
       if (content.trim().isEmpty) {
         throw const FormatException('空备份文件');
       }
-      controller.importDataJson(content);
+      var plaintext = content;
+      if (isEncryptedBackup(content)) {
+        if (!context.mounted) {
+          return;
+        }
+        final decrypted = await _decryptForImport(context, controller, content);
+        if (decrypted == null) {
+          return;
+        }
+        plaintext = decrypted;
+      }
+      controller.importDataJson(plaintext);
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
