@@ -335,7 +335,9 @@
         "note": "每月 25 日还款",
         "includeInAssets": true,
         "hidden": false,
-        "cardLast4": "8321"
+        "cardLast4": "8321",
+        "statementDay": 5,
+        "dueDay": 25
       },
       {
         "id": "acc_debit",

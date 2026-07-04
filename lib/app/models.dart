@@ -494,6 +494,8 @@ class Account {
     required this.includeInAssets,
     required this.hidden,
     this.cardLast4 = '',
+    this.statementDay,
+    this.dueDay,
   });
 
   final String id;
@@ -508,6 +510,12 @@ class Account {
   final bool hidden;
   final String cardLast4;
 
+  /// 信用卡账单日（每月 1–28，可选）。花呗类用户可不设置。
+  final int? statementDay;
+
+  /// 信用卡还款日（每月 1–28，可选）。设置后展示还款提醒。
+  final int? dueDay;
+
   Account copyWith({
     String? id,
     String? bookId,
@@ -520,6 +528,10 @@ class Account {
     bool? includeInAssets,
     bool? hidden,
     String? cardLast4,
+    int? statementDay,
+    bool clearStatementDay = false,
+    int? dueDay,
+    bool clearDueDay = false,
   }) {
     return Account(
       id: id ?? this.id,
@@ -533,6 +545,10 @@ class Account {
       includeInAssets: includeInAssets ?? this.includeInAssets,
       hidden: hidden ?? this.hidden,
       cardLast4: cardLast4 ?? this.cardLast4,
+      statementDay: clearStatementDay
+          ? null
+          : statementDay ?? this.statementDay,
+      dueDay: clearDueDay ? null : dueDay ?? this.dueDay,
     );
   }
 
@@ -549,6 +565,8 @@ class Account {
       'includeInAssets': includeInAssets,
       'hidden': hidden,
       'cardLast4': cardLast4,
+      if (statementDay != null) 'statementDay': statementDay,
+      if (dueDay != null) 'dueDay': dueDay,
     };
   }
 
@@ -565,6 +583,8 @@ class Account {
       includeInAssets: json['includeInAssets'] as bool? ?? true,
       hidden: json['hidden'] as bool? ?? false,
       cardLast4: json['cardLast4'] as String? ?? '',
+      statementDay: (json['statementDay'] as num?)?.toInt(),
+      dueDay: (json['dueDay'] as num?)?.toInt(),
     );
   }
 }

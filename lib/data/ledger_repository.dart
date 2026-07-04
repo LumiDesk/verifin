@@ -375,6 +375,8 @@ class SqliteLedgerRepository implements LedgerRepository {
         'hidden': a.hidden ? 1 : 0,
         'card_last4': a.cardLast4,
         'sort_order': index,
+        'statement_day': a.statementDay,
+        'due_day': a.dueDay,
       };
 
   static Account _accountFromRow(Map<String, Object?> row) => Account(
@@ -389,6 +391,8 @@ class SqliteLedgerRepository implements LedgerRepository {
     includeInAssets: (row['include_in_assets'] as int) != 0,
     hidden: (row['hidden'] as int) != 0,
     cardLast4: row['card_last4'] as String? ?? '',
+    statementDay: (row['statement_day'] as num?)?.toInt(),
+    dueDay: (row['due_day'] as num?)?.toInt(),
   );
 
   static Map<String, Object?> _groupToRow(AccountGroup g) => <String, Object?>{

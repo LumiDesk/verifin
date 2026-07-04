@@ -172,12 +172,13 @@ void main() {
       AccountType.onlinePayment.name,
     );
     expect(controller.profile.occupation, '产品设计师');
-    expect(
-      controller.accounts
-          .firstWhere((account) => account.id == 'acc_credit')
-          .cardLast4,
-      '8321',
+    final creditAccount = controller.accounts.firstWhere(
+      (account) => account.id == 'acc_credit',
     );
+    expect(creditAccount.cardLast4, '8321');
+    // 信用卡账期：样例信用卡设了账单日/还款日，导入后应保留。
+    expect(creditAccount.statementDay, 5);
+    expect(creditAccount.dueDay, 25);
     expect(controller.enabledPanelIds(PanelPageKind.home), <String>[
       'trend',
       'budget',

@@ -13,7 +13,7 @@ class AppDatabase {
   final Database db;
 
   static const String defaultDatabaseName = 'verifin.db';
-  static const int schemaVersion = 7;
+  static const int schemaVersion = 8;
 
   /// 打开（或创建）数据库。测试通过 [factory]/[path] 注入 ffi 与内存路径；
   /// 真实平台留空则由 [resolveDatabaseFactory]/[resolveDatabasePath] 决定。
@@ -97,6 +97,11 @@ class AppDatabase {
     if (oldVersion < 7) {
       await db.execute(_recurringRulesTable);
     }
+    // v7 → v8：信用卡账单日/还款日（可选）。
+    if (oldVersion < 8) {
+      await db.execute('ALTER TABLE accounts ADD COLUMN statement_day INTEGER');
+      await db.execute('ALTER TABLE accounts ADD COLUMN due_day INTEGER');
+    }
   }
 
   static const String _recurringRulesTable = '''
@@ -161,7 +166,9 @@ class AppDatabase {
       include_in_assets INTEGER NOT NULL,
       hidden INTEGER NOT NULL,
       card_last4 TEXT NOT NULL,
-      sort_order INTEGER NOT NULL
+      sort_order INTEGER NOT NULL,
+      statement_day INTEGER,
+      due_day INTEGER
     )
     ''',
     'CREATE INDEX idx_accounts_book ON accounts (book_id)',

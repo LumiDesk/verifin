@@ -6,6 +6,18 @@ import 'package:verifin/app/models.dart';
 import 'package:verifin/data/app_database.dart';
 import 'package:verifin/data/ledger_repository.dart';
 
+/// 旧版 accounts 表（无 statement_day/due_day）。迁移测试的桩库都需要它，
+/// 因为 v7→v8 会 ALTER accounts。
+const String _legacyAccountsTable = '''
+  CREATE TABLE accounts (
+    id TEXT PRIMARY KEY, book_id TEXT NOT NULL, name TEXT NOT NULL,
+    type TEXT NOT NULL, group_id TEXT, initial_balance REAL NOT NULL,
+    icon_code TEXT NOT NULL, note TEXT NOT NULL,
+    include_in_assets INTEGER NOT NULL, hidden INTEGER NOT NULL,
+    card_last4 TEXT NOT NULL, sort_order INTEGER NOT NULL
+  )
+''';
+
 void main() {
   setUpAll(sqfliteFfiInit);
 
@@ -205,6 +217,7 @@ void main() {
       options: OpenDatabaseOptions(
         version: 1,
         onCreate: (db, _) async {
+          await db.execute(_legacyAccountsTable);
           await db.execute('''
             CREATE TABLE categories (
               id TEXT PRIMARY KEY,
@@ -294,6 +307,64 @@ void main() {
     expect(untagged.tagIds, isEmpty);
   });
 
+  test('信用卡账单日/还款日往返，v7→v8 迁移旧账户默认 null', () async {
+    final repo = await openRepo();
+    await repo.saveAccounts(<Account>[
+      const Account(
+        id: 'credit',
+        bookId: defaultLedgerBookId,
+        name: '信用卡',
+        type: AccountType.creditCard,
+        groupId: null,
+        initialBalance: 0,
+        iconCode: 'card',
+        note: '',
+        includeInAssets: true,
+        hidden: false,
+        statementDay: 5,
+        dueDay: 25,
+      ),
+    ]);
+    final loaded = await repo.loadAccounts().then((v) => v.single);
+    expect(loaded.statementDay, 5);
+    expect(loaded.dueDay, 25);
+
+    // v7 库（accounts 无 statement_day/due_day）升级后旧账户为 null。
+    final dir = await Directory.systemTemp.createTemp('verifin_mig8');
+    final path = '${dir.path}/mig8.db';
+    final v7 = await databaseFactoryFfi.openDatabase(
+      path,
+      options: OpenDatabaseOptions(
+        version: 7,
+        onCreate: (db, _) async {
+          await db.execute(_legacyAccountsTable);
+        },
+      ),
+    );
+    await v7.insert('accounts', <String, Object?>{
+      'id': 'a',
+      'book_id': 'default',
+      'name': '旧卡',
+      'type': 'creditCard',
+      'group_id': null,
+      'initial_balance': 0,
+      'icon_code': 'card',
+      'note': '',
+      'include_in_assets': 1,
+      'hidden': 0,
+      'card_last4': '',
+      'sort_order': 0,
+    });
+    await v7.close();
+
+    final db = await AppDatabase.open(factory: databaseFactoryFfi, path: path);
+    final migrated = await SqliteLedgerRepository(db).loadAccounts();
+    expect(migrated.single.statementDay, isNull);
+    expect(migrated.single.dueDay, isNull);
+    await db.close();
+    await dir.delete(recursive: true);
+  });
+
   test('周期记账规则 recurring_rules 表往返', () async {
     final repo = await openRepo();
     await repo.saveRecurringRules(<RecurringRule>[
@@ -324,6 +395,7 @@ void main() {
       options: OpenDatabaseOptions(
         version: 6,
         onCreate: (db, _) async {
+          await db.execute(_legacyAccountsTable);
           // 一张占位表即可，迁移只新增 recurring_rules。
           await db.execute('CREATE TABLE placeholder (id TEXT PRIMARY KEY)');
         },
@@ -365,6 +437,7 @@ void main() {
       options: OpenDatabaseOptions(
         version: 4,
         onCreate: (db, _) async {
+          await db.execute(_legacyAccountsTable);
           await db.execute('''
             CREATE TABLE entries (
               id TEXT PRIMARY KEY, book_id TEXT NOT NULL, type TEXT NOT NULL,
@@ -425,6 +498,7 @@ void main() {
       options: OpenDatabaseOptions(
         version: 3,
         onCreate: (db, _) async {
+          await db.execute(_legacyAccountsTable);
           await db.execute('''
             CREATE TABLE entries (
               id TEXT PRIMARY KEY, book_id TEXT NOT NULL, type TEXT NOT NULL,
@@ -466,6 +540,7 @@ void main() {
       options: OpenDatabaseOptions(
         version: 2,
         onCreate: (db, _) async {
+          await db.execute(_legacyAccountsTable);
           await db.execute('''
             CREATE TABLE entries (
               id TEXT PRIMARY KEY, book_id TEXT NOT NULL, type TEXT NOT NULL,

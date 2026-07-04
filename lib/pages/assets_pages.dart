@@ -6,6 +6,7 @@ import '../app/app_theme.dart';
 import '../app/avatar_picker.dart';
 import '../app/chart_painters.dart';
 import '../app/common_widgets.dart';
+import '../app/credit_card.dart';
 import '../app/demo_data.dart';
 import '../app/entry_sheets.dart';
 import '../app/image_cropper.dart';
@@ -1313,6 +1314,11 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                 ],
               ),
               const SizedBox(height: 10),
+              if (currentAccount.type == AccountType.creditCard &&
+                  currentAccount.dueDay != null) ...<Widget>[
+                _CreditCardDueBanner(dueDay: currentAccount.dueDay!),
+                const SizedBox(height: 10),
+              ],
               VeriCard(
                 onTap: () => _editBalance(currentAccount, balance),
                 child: Row(
@@ -1514,6 +1520,29 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                             : currentAccount.cardLast4,
                         trailingIcon: Icons.chevron_right,
                         onTap: () => _editCardLast4(currentAccount),
+                      ),
+                      const Divider(),
+                    ],
+                    if (currentAccount.type ==
+                        AccountType.creditCard) ...<Widget>[
+                      SettingsRow(
+                        icon: Icons.event_note_outlined,
+                        title: '账单日',
+                        trailing: currentAccount.statementDay == null
+                            ? '未设置'
+                            : '每月 ${currentAccount.statementDay} 日',
+                        trailingIcon: Icons.chevron_right,
+                        onTap: () => _pickBillingDay(currentAccount, false),
+                      ),
+                      const Divider(),
+                      SettingsRow(
+                        icon: Icons.event_available_outlined,
+                        title: '还款日',
+                        trailing: currentAccount.dueDay == null
+                            ? '未设置'
+                            : '每月 ${currentAccount.dueDay} 日',
+                        trailingIcon: Icons.chevron_right,
+                        onTap: () => _pickBillingDay(currentAccount, true),
                       ),
                       const Divider(),
                     ],
@@ -1723,6 +1752,39 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
       VeriFinScope.of(
         context,
       ).updateAccount(account.copyWith(iconCode: selected));
+    }
+  }
+
+  /// 选择信用卡账单日 / 还款日（1–28 或不设置）。
+  Future<void> _pickBillingDay(Account account, bool isDue) async {
+    const clearValue = 0;
+    final current =
+        (isDue ? account.dueDay : account.statementDay) ?? clearValue;
+    final selected = await showOptionSheet<int>(
+      context: context,
+      title: isDue ? '选择还款日' : '选择账单日',
+      values: <int>[clearValue, for (var d = 1; d <= 28; d++) d],
+      selected: current,
+      labelOf: (value) => value == clearValue ? '不设置' : '每月 $value 日',
+    );
+    if (selected == null || !mounted) {
+      return;
+    }
+    final controller = VeriFinScope.of(context);
+    if (isDue) {
+      controller.updateAccount(
+        account.copyWith(
+          dueDay: selected == clearValue ? null : selected,
+          clearDueDay: selected == clearValue,
+        ),
+      );
+    } else {
+      controller.updateAccount(
+        account.copyWith(
+          statementDay: selected == clearValue ? null : selected,
+          clearStatementDay: selected == clearValue,
+        ),
+      );
     }
   }
 
@@ -1961,6 +2023,59 @@ class AccountReportPage extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// 信用卡还款提醒条：展示下一个还款日与剩余天数。
+class _CreditCardDueBanner extends StatelessWidget {
+  const _CreditCardDueBanner({required this.dueDay});
+
+  final int dueDay;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final due = nextDueDate(dueDay, now);
+    final days = daysUntilDue(dueDay, now);
+    final urgent = days <= 3;
+    final color = urgent ? veriExpense : veriRoyal;
+    final daysText = days == 0 ? '就是今天' : '还有 $days 天';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(veriRadiusMd),
+      ),
+      child: Row(
+        children: <Widget>[
+          Icon(Icons.event_available_outlined, color: color, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  '还款日 ${due.month}月${due.day}日 · $daysText',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '每月 $dueDay 日还款',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
