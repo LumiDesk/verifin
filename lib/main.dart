@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'app/app_theme.dart';
 import 'app/models.dart';
 import 'app/veri_fin_controller.dart';
 import 'app/veri_fin_scope.dart';
+import 'l10n/app_localizations.dart';
 import 'local_storage/local_storage.dart';
 import 'pages/shell.dart';
 
@@ -46,18 +46,12 @@ class _VeriFinAppState extends State<VeriFinApp> {
         valueListenable: _controller.themePreferenceListenable,
         builder: (context, themePreference, _) {
           return MaterialApp(
-            title: 'Veri Fin',
+            onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
             debugShowCheckedModeBanner: false,
-            locale: const Locale('zh', 'CN'),
-            supportedLocales: const <Locale>[
-              Locale('zh', 'CN'),
-              Locale('en', 'US'),
-            ],
-            localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
-              GlobalMaterialLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-            ],
+            // 语言暂固定中文;应用内语言切换在 i18n 文案迁移完成后提供。
+            locale: const Locale('zh'),
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
             themeMode: themePreference.themeMode,
             theme: buildVeriFinTheme(Brightness.light),
             darkTheme: buildVeriFinTheme(Brightness.dark),

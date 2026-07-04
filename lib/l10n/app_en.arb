@@ -1,0 +1,10 @@
+{
+  "@@locale": "en",
+  "appTitle": "Veri Fin",
+  "tabHome": "Home",
+  "tabAssets": "Assets",
+  "tabReports": "Reports",
+  "tabProfile": "Me",
+  "quickEntry": "Quick Entry",
+  "pressBackAgainToExit": "Press back again to exit"
+}

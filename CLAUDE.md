@@ -56,9 +56,17 @@ Web/移动/测试差异统一用条件导出模式（`stub` + `if (dart.library.
 
 [lib/main.dart](lib/main.dart) 只保留应用入口与根组件。页面按功能拆分在 `lib/pages/`：`shell.dart` 是底部四 Tab 导航壳（首页/资产/看板/我的），`home_page.dart`、`budget_pages.dart`、`transactions_pages.dart`、`assets_pages.dart`、`reports_page.dart`、`profile_pages.dart`、`entry_detail_page.dart` 各自承载一个功能域，跨页面共享的底部弹窗/对话框在 `sheets.dart`。模型（含 JSON 序列化）在 [lib/app/models.dart](lib/app/models.dart)，通用组件在 `lib/app/common_widgets.dart`，底部弹窗在 `lib/app/entry_sheets.dart`，自绘图表及其交互组件（`InteractiveTrendChart`/`InteractiveBarChart`、数据气泡、命中测试）在 `lib/app/chart_painters.dart`，图表序列/坐标轴纯函数在 `lib/app/series_math.dart`。所有图表都必须支持点击展示数据，规范见 `docs/ui-guidelines.md` 的“图表交互”一节。只有出现明确复用或复杂度上升时再抽取组件。
 
+### 国际化
+
+使用 Flutter 内置 gen-l10n：ARB 文件在 `lib/l10n/`（`app_zh.arb` 为模板 + `app_en.arb`），`flutter pub get` 时自动生成 `AppLocalizations`（生成文件同目录，已提交）。**新增用户可见文案必须写入 ARB（zh + en 同步）并通过 `AppLocalizations.of(context)` 引用**，存量硬编码中文随功能改动逐步迁移。应用语言暂固定中文（`main.dart` 中 `locale: Locale('zh')`），语言切换待文案迁移完成后提供。
+
 ### 测试
 
 全部测试在 [test/widget_test.dart](test/widget_test.dart)，使用内存 stub 存储。测试覆盖用户可见行为（渲染、交互、导航、表单校验）。修改功能后至少运行 `flutter analyze` 和 `flutter test`。
+
+### 长期路线
+
+功能演进计划与技术决策记录在根目录 [TODO.md](TODO.md)，每完成一项勾选并独立提交。
 
 ## 关键约束
 

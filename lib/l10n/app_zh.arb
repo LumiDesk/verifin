@@ -1,0 +1,31 @@
+{
+  "@@locale": "zh",
+  "appTitle": "Veri Fin",
+  "@appTitle": {
+    "description": "应用名称"
+  },
+  "tabHome": "首页",
+  "@tabHome": {
+    "description": "底部导航:首页"
+  },
+  "tabAssets": "资产",
+  "@tabAssets": {
+    "description": "底部导航:资产"
+  },
+  "tabReports": "看板",
+  "@tabReports": {
+    "description": "底部导航:看板"
+  },
+  "tabProfile": "我的",
+  "@tabProfile": {
+    "description": "底部导航:我的"
+  },
+  "quickEntry": "快速记账",
+  "@quickEntry": {
+    "description": "快速记账入口(FAB 提示与数字键盘标题)"
+  },
+  "pressBackAgainToExit": "再次返回退出程序",
+  "@pressBackAgainToExit": {
+    "description": "首页按返回键时的退出提示"
+  }
+}

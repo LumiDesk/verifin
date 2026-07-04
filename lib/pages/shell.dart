@@ -5,6 +5,7 @@ import '../app/app_theme.dart';
 import '../app/entry_sheets.dart';
 import '../app/platform_bridge.dart';
 import '../app/veri_fin_scope.dart';
+import '../l10n/app_localizations.dart';
 import 'assets_pages.dart';
 import 'entry_detail_page.dart';
 import 'home_page.dart';
@@ -62,7 +63,7 @@ class _VeriFinShellState extends State<VeriFinShell> {
             ? FloatingActionButton(
                 key: const Key('quick_entry_fab'),
                 onPressed: () => _startQuickEntry(context),
-                tooltip: '快速记账',
+                tooltip: AppLocalizations.of(context).quickEntry,
                 child: const Icon(Icons.add),
               )
             : null,
@@ -88,9 +89,11 @@ class _VeriFinShellState extends State<VeriFinShell> {
       return;
     }
     _lastBackPressedAt = now;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('再次返回退出程序')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context).pressBackAgainToExit),
+      ),
+    );
   }
 
   Future<void> _startQuickEntry(BuildContext context) async {
@@ -99,7 +102,7 @@ class _VeriFinShellState extends State<VeriFinShell> {
       showDragHandle: true,
       isScrollControlled: true,
       builder: (context) => NumberPadSheet(
-        title: '快速记账',
+        title: AppLocalizations.of(context).quickEntry,
         hapticsEnabled: VeriFinScope.of(context).hapticsEnabled,
       ),
     );
@@ -140,19 +143,19 @@ class VeriBottomNav extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
 
-  static const _items = <_NavItem>[
-    _NavItem(Icons.home_outlined, Icons.home, '首页'),
-    _NavItem(
-      Icons.account_balance_wallet_outlined,
-      Icons.account_balance_wallet,
-      '资产',
-    ),
-    _NavItem(Icons.bar_chart_outlined, Icons.bar_chart, '看板'),
-    _NavItem(Icons.person_outline, Icons.person, '我的'),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final items = <_NavItem>[
+      _NavItem(Icons.home_outlined, Icons.home, l10n.tabHome),
+      _NavItem(
+        Icons.account_balance_wallet_outlined,
+        Icons.account_balance_wallet,
+        l10n.tabAssets,
+      ),
+      _NavItem(Icons.bar_chart_outlined, Icons.bar_chart, l10n.tabReports),
+      _NavItem(Icons.person_outline, Icons.person, l10n.tabProfile),
+    ];
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return DecoratedBox(
       key: const Key('main_bottom_nav'),
@@ -168,11 +171,11 @@ class VeriBottomNav extends StatelessWidget {
           height: 56,
           child: Row(
             children: <Widget>[
-              for (var index = 0; index < _items.length; index += 1)
+              for (var index = 0; index < items.length; index += 1)
                 Expanded(
                   child: _BottomNavButton(
                     key: Key('main_tab_$index'),
-                    item: _items[index],
+                    item: items[index],
                     selected: currentIndex == index,
                     onTap: () => onTap(index),
                   ),

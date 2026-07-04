@@ -33,6 +33,8 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   flutter_svg: ^2.2.3
+  # 版本由 flutter_localizations 固定,供 gen-l10n 生成代码使用。
+  intl: any
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -63,6 +65,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # 由 lib/l10n/*.arb 生成本地化代码(见 l10n.yaml)。
+  generate: true
 
   assets:
     - assets/account_icons/
