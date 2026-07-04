@@ -79,6 +79,30 @@ void main() {
       expect(controller.appLockEnabled, isTrue);
       expect(controller.verifyAppLock('135790'), isTrue);
     });
+
+    test(
+      'biometric requires a lock and clears when lock is disabled',
+      () async {
+        final store = LocalKeyValueStore();
+        final controller = await makeController(store);
+
+        // 未启用应用锁时不能开启生物识别。
+        controller.setBiometricUnlockEnabled(true);
+        expect(controller.biometricUnlockEnabled, isFalse);
+
+        controller.setAppLock(kind: AppLockKind.pin, secret: '112233');
+        controller.setBiometricUnlockEnabled(true);
+        expect(controller.biometricUnlockEnabled, isTrue);
+
+        // 持久化：重载后仍开启。
+        final reloaded = await makeController(store);
+        expect(reloaded.biometricUnlockEnabled, isTrue);
+
+        // 关闭应用锁同时关闭生物识别。
+        reloaded.disableAppLock();
+        expect(reloaded.biometricUnlockEnabled, isFalse);
+      },
+    );
   });
 
   testWidgets('enables PIN lock from settings', (WidgetTester tester) async {
@@ -102,6 +126,27 @@ void main() {
     expect(controller.appLockEnabled, isTrue);
     expect(controller.appLockKind, AppLockKind.pin);
     expect(controller.verifyAppLock('123456'), isTrue);
+  });
+
+  testWidgets('hides fingerprint switch when biometrics unavailable', (
+    WidgetTester tester,
+  ) async {
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store);
+    controller.setAppLock(kind: AppLockKind.pin, secret: '778899');
+    await pumpApp(tester, store);
+    await tester.pumpAndSettle();
+    await _enterPin(tester, '778899'); // 先解锁冷启动锁屏
+
+    await tapBottomTab(tester, 3);
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('应用锁'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('锁定方式与密码'), findsOneWidget);
+    // 测试宿主没有生物识别，指纹开关不应出现。
+    expect(find.text('指纹解锁'), findsNothing);
   });
 
   testWidgets('unlocks with a pattern gesture', (WidgetTester tester) async {
@@ -147,7 +192,7 @@ void main() {
 
     // 错误密码给出提示，仍锁定。
     await _enterPin(tester, '000000');
-    expect(find.text('密码错误，请重试'), findsOneWidget);
+    expect(find.text('验证失败，请重试'), findsOneWidget);
     expect(find.text('输入密码'), findsOneWidget);
 
     // 正确密码解锁。

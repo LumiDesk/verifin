@@ -25,7 +25,7 @@
 - [ ] 1.2 应用锁（分步）：
   - [x] 1.2.1 数字 PIN 密码（设置、验证、修改、关闭；启动与回前台时校验）：6 位 PIN，加盐 SHA-256（`crypto`）存 `verifin.app_lock.v1`，绝不存明文；`AppLockGate` 放在 `MaterialApp.builder` 覆盖根 Navigator，冷启动与回前台（`paused/hidden`→`resumed`）锁定；设置页「应用锁」入口开关/修改；初始化数据不清除锁配置，忘记密码只能初始化后重设
   - [x] 1.2.2 图案密码：3×3 连线图案（`PatternInputView` 自绘 + 手势），点序列（如 `0-1-2-4-8`）复用同一加盐哈希与 `AppLockConfig`（`kind=pattern`）；设置页开启/修改时可在数字密码与图案间选择，锁屏、设置、验证页按 `kind` 复用 `buildAppLockInput`
-  - [ ] 1.2.3 生物识别（指纹 / 面部，`local_auth`，作为 PIN/图案之上的快捷解锁）
+  - [x] 1.2.3 生物识别（**仅指纹**，`local_auth`，作为 PIN/图案之上的快捷解锁）：`lib/app/biometric_auth*.dart` 条件导入（web=stub、io=local_auth，非移动平台一律不可用）；只调用系统能力、不保存任何生物特征数据，系统指纹变化后需重新验证；开关在应用锁设置页（仅设备可用时显示），锁屏出现即自动发起一次指纹验证并提供手动按钮；Android 端 `FlutterFragmentActivity` + `USE_BIOMETRIC` + `minSdk≥23`。注：`local_auth` 在 Android 无法严格排除人脸，尽力用系统指纹，文案统一「指纹解锁」
 
 ## 阶段 2：数据管理中心
 

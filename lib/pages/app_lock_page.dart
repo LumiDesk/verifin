@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../app/app_lock.dart';
 import '../app/app_theme.dart';
+import '../app/biometric_auth.dart';
 import '../app/common_widgets.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
@@ -408,32 +409,67 @@ Widget buildAppLockInput({
 }
 
 /// 全屏锁定界面（由 AppLockGate 覆盖在应用之上）。校验通过后回调 [onUnlocked]。
-///
-/// [biometricAction] 供 1.2.3 注入指纹快捷解锁按钮；为空时不展示。
+/// 开启生物识别（仅指纹）时，出现锁屏即自动发起一次指纹验证，并提供手动重试按钮。
 class AppLockScreen extends StatefulWidget {
-  const AppLockScreen({
-    super.key,
-    required this.onUnlocked,
-    this.biometricAction,
-  });
+  const AppLockScreen({super.key, required this.onUnlocked});
 
   final VoidCallback onUnlocked;
-  final Widget? biometricAction;
 
   @override
   State<AppLockScreen> createState() => _AppLockScreenState();
 }
 
 class _AppLockScreenState extends State<AppLockScreen> {
+  final BiometricAuth _biometric = const BiometricAuth();
   String? _error;
+  bool _biometricAvailable = false;
+  bool _authInProgress = false;
 
-  void _submit(String pin) {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initBiometric());
+  }
+
+  Future<void> _initBiometric() async {
+    if (!mounted) {
+      return;
+    }
+    if (!VeriFinScope.of(context).biometricUnlockEnabled) {
+      return;
+    }
+    final available = await _biometric.isAvailable();
+    if (!mounted) {
+      return;
+    }
+    setState(() => _biometricAvailable = available);
+    if (available) {
+      _runBiometric();
+    }
+  }
+
+  Future<void> _runBiometric() async {
+    if (_authInProgress) {
+      return;
+    }
+    setState(() => _authInProgress = true);
+    final ok = await _biometric.authenticate(reason: '验证指纹以解锁 Veri Fin');
+    if (!mounted) {
+      return;
+    }
+    setState(() => _authInProgress = false);
+    if (ok) {
+      widget.onUnlocked();
+    }
+  }
+
+  void _submit(String secret) {
     final controller = VeriFinScope.of(context);
-    if (controller.verifyAppLock(pin)) {
+    if (controller.verifyAppLock(secret)) {
       widget.onUnlocked();
       return;
     }
-    setState(() => _error = '密码错误，请重试');
+    setState(() => _error = '验证失败，请重试');
   }
 
   @override
@@ -472,8 +508,15 @@ class _AppLockScreenState extends State<AppLockScreen> {
                   onCompleted: _submit,
                   errorText: _error,
                   hapticsEnabled: controller.hapticsEnabled,
-                  footer: widget.biometricAction,
                 ),
+                if (_biometricAvailable) ...<Widget>[
+                  const SizedBox(height: 16),
+                  TextButton.icon(
+                    onPressed: _authInProgress ? null : _runBiometric,
+                    icon: const Icon(Icons.fingerprint),
+                    label: const Text('指纹解锁'),
+                  ),
+                ],
               ],
             ),
           ),
@@ -614,9 +657,30 @@ class _AppLockVerifyPageState extends State<AppLockVerifyPage> {
   }
 }
 
-/// 应用锁设置页：开关应用锁、修改密码。
-class AppLockSettingsPage extends StatelessWidget {
+/// 应用锁设置页：开关应用锁、修改锁定方式与密码、开关指纹解锁。
+class AppLockSettingsPage extends StatefulWidget {
   const AppLockSettingsPage({super.key});
+
+  @override
+  State<AppLockSettingsPage> createState() => _AppLockSettingsPageState();
+}
+
+class _AppLockSettingsPageState extends State<AppLockSettingsPage> {
+  final BiometricAuth _biometric = const BiometricAuth();
+  bool _biometricAvailable = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBiometricAvailability();
+  }
+
+  Future<void> _loadBiometricAvailability() async {
+    final available = await _biometric.isAvailable();
+    if (mounted) {
+      setState(() => _biometricAvailable = available);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -642,7 +706,7 @@ class AppLockSettingsPage extends StatelessWidget {
                       icon: Icons.lock_outline,
                       title: const Text('应用锁'),
                       value: enabled,
-                      onChanged: (value) => _toggle(context, controller, value),
+                      onChanged: (value) => _toggle(controller, value),
                     ),
                     if (enabled) ...<Widget>[
                       const Divider(height: 1),
@@ -651,15 +715,26 @@ class AppLockSettingsPage extends StatelessWidget {
                         title: '锁定方式与密码',
                         trailing: controller.appLockKind.label,
                         trailingIcon: Icons.chevron_right,
-                        onTap: () => _change(context, controller),
+                        onTap: () => _change(controller),
                       ),
+                      if (_biometricAvailable) ...<Widget>[
+                        const Divider(height: 1),
+                        CompactSwitchRow(
+                          icon: Icons.fingerprint,
+                          title: const Text('指纹解锁'),
+                          value: controller.biometricUnlockEnabled,
+                          onChanged: (value) =>
+                              _toggleBiometric(controller, value),
+                        ),
+                      ],
                     ],
                   ],
                 ),
               ),
               const SizedBox(height: 10),
               Text(
-                '支持 6 位数字密码或 3×3 图案。密钥仅以加盐哈希保存在本机，不会上传，也无法找回；忘记时可在设置页初始化数据后重新设置。',
+                '支持 6 位数字密码或 3×3 图案。密钥仅以加盐哈希保存在本机，不会上传，也无法找回；忘记时可在设置页初始化数据后重新设置。'
+                '指纹解锁调用系统指纹，本应用不保存任何指纹数据；系统指纹变化后需重新验证。',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: Theme.of(
                     context,
@@ -673,14 +748,29 @@ class AppLockSettingsPage extends StatelessWidget {
     );
   }
 
-  Future<void> _toggle(
-    BuildContext context,
+  Future<void> _toggleBiometric(
     VeriFinController controller,
     bool value,
   ) async {
+    if (!value) {
+      controller.setBiometricUnlockEnabled(false);
+      return;
+    }
+    // 开启前先验证一次指纹，确认可用。
+    final ok = await _biometric.authenticate(reason: '验证指纹以开启指纹解锁');
+    if (ok) {
+      controller.setBiometricUnlockEnabled(true);
+    } else if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('指纹验证未通过，未开启')));
+    }
+  }
+
+  Future<void> _toggle(VeriFinController controller, bool value) async {
     if (value) {
-      final kind = await _pickKind(context);
-      if (kind == null || !context.mounted) {
+      final kind = await _pickKind();
+      if (kind == null || !mounted) {
         return;
       }
       await Navigator.of(context).push<bool>(
@@ -700,20 +790,17 @@ class AppLockSettingsPage extends StatelessWidget {
     }
   }
 
-  Future<void> _change(
-    BuildContext context,
-    VeriFinController controller,
-  ) async {
+  Future<void> _change(VeriFinController controller) async {
     final verified = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (context) => const AppLockVerifyPage(title: '修改应用锁'),
       ),
     );
-    if (verified != true || !context.mounted) {
+    if (verified != true || !mounted) {
       return;
     }
-    final kind = await _pickKind(context);
-    if (kind == null || !context.mounted) {
+    final kind = await _pickKind();
+    if (kind == null || !mounted) {
       return;
     }
     final changed = await Navigator.of(context).push<bool>(
@@ -721,7 +808,7 @@ class AppLockSettingsPage extends StatelessWidget {
         builder: (context) => AppLockSetupPage(kind: kind),
       ),
     );
-    if (changed == true && context.mounted) {
+    if (changed == true && mounted) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('应用锁已更新')));
@@ -729,7 +816,7 @@ class AppLockSettingsPage extends StatelessWidget {
   }
 
   /// 选择锁定方式（数字密码 / 图案）。
-  Future<AppLockKind?> _pickKind(BuildContext context) {
+  Future<AppLockKind?> _pickKind() {
     return showModalBottomSheet<AppLockKind>(
       context: context,
       showDragHandle: true,

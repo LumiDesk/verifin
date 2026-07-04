@@ -50,8 +50,11 @@ Web/移动/测试差异统一用条件导出模式（`stub` + `if (dart.library.
 - [lib/data/database_factory.dart](lib/data/database_factory.dart)：SQLite `DatabaseFactory` 与路径解析 — io 用 `sqflite` 原生、web 用 `sqflite_common_ffi_web`（依赖 `web/sqlite3.wasm`）、stub 抛错（测试注入 `databaseFactoryFfi`）。
 - `lib/app/avatar_picker_*.dart`：本地图片选择。
 - `lib/app/data_file_port_*.dart`：JSON 备份导出/导入（Android 默认写系统 Downloads）。
+- `lib/app/biometric_auth_*.dart`：应用锁的指纹解锁 — io 用 `local_auth`（仅 Android/iOS 生效，不保存生物特征数据），stub（含 Web 与测试宿主）一律不可用。Android 端依赖 `FlutterFragmentActivity`、`USE_BIOMETRIC` 权限与 `minSdk≥23`。
 
 [lib/app/platform_bridge.dart](lib/app/platform_bridge.dart) 是 Android MethodChannel 桥（快速记账磁贴入口、GitHub Release 更新检查与下载）。
+
+应用锁（PIN/图案/指纹）：加盐哈希（`lib/app/app_lock.dart`）存 KV，UI 与门卫在 `lib/pages/app_lock_page.dart` 与 `app_lock_gate.dart`（门卫放在 `MaterialApp.builder` 覆盖根 Navigator，冷启动与回前台锁定）。
 
 ### 页面层
 

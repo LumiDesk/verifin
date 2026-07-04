@@ -13,7 +13,7 @@ import android.provider.Settings
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import org.json.JSONObject
@@ -21,7 +21,8 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 
-class MainActivity : FlutterActivity() {
+// local_auth 需要宿主是 FragmentActivity，故继承 FlutterFragmentActivity。
+class MainActivity : FlutterFragmentActivity() {
     private var channel: MethodChannel? = null
     private var pendingQuickEntryIntent = false
     private var pendingDownloadsWrite: PendingDownloadsWrite? = null
