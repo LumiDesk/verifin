@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/app_lock.dart';
 import 'package:verifin/local_storage/local_storage.dart';
+import 'package:verifin/pages/app_lock_page.dart';
 
 import 'support/test_harness.dart';
 
@@ -92,11 +93,44 @@ void main() {
     await tester.tap(find.byType(Switch));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byKey(const Key('pick_lock_pin')));
+    await tester.pumpAndSettle();
+
     await _enterPin(tester, '123456'); // 首次输入
     await _enterPin(tester, '123456'); // 确认
 
     expect(controller.appLockEnabled, isTrue);
+    expect(controller.appLockKind, AppLockKind.pin);
     expect(controller.verifyAppLock('123456'), isTrue);
+  });
+
+  testWidgets('unlocks with a pattern gesture', (WidgetTester tester) async {
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store);
+    controller.setAppLock(kind: AppLockKind.pattern, secret: '0-1-2-4-8');
+    await pumpApp(tester, store);
+    await tester.pumpAndSettle();
+
+    expect(find.text('输入密码'), findsOneWidget);
+    expect(find.text('请绘制图案解锁'), findsOneWidget);
+
+    final area = find.byKey(const Key('pattern_area'));
+    final topLeft = tester.getTopLeft(area);
+    Offset dot(int index) =>
+        topLeft + patternDotCenter(index, kPatternAreaSize);
+
+    final gesture = await tester.startGesture(dot(0));
+    // 先移出触摸 slop（仍在 0 号点命中范围内）触发 panStart。
+    await gesture.moveBy(const Offset(20, 0));
+    await tester.pump();
+    for (final index in <int>[1, 2, 4, 8]) {
+      await gesture.moveTo(dot(index));
+      await tester.pump();
+    }
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(find.text('输入密码'), findsNothing);
   });
 
   testWidgets('locks on background and unlocks with correct PIN', (

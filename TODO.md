@@ -24,7 +24,7 @@
 - [x] 1.1 隐私政策与用户协议：政策文案（`lib/app/legal_content.dart`）、首次启动同意弹窗（不同意则 `SystemNavigator.pop()` 退出应用，同意后持久化 `verifin.privacy_consent.v1`，初始化数据不清除同意标记）、设置页可再次查看《隐私政策》《用户协议》
 - [ ] 1.2 应用锁（分步）：
   - [x] 1.2.1 数字 PIN 密码（设置、验证、修改、关闭；启动与回前台时校验）：6 位 PIN，加盐 SHA-256（`crypto`）存 `verifin.app_lock.v1`，绝不存明文；`AppLockGate` 放在 `MaterialApp.builder` 覆盖根 Navigator，冷启动与回前台（`paused/hidden`→`resumed`）锁定；设置页「应用锁」入口开关/修改；初始化数据不清除锁配置，忘记密码只能初始化后重设
-  - [ ] 1.2.2 图案密码
+  - [x] 1.2.2 图案密码：3×3 连线图案（`PatternInputView` 自绘 + 手势），点序列（如 `0-1-2-4-8`）复用同一加盐哈希与 `AppLockConfig`（`kind=pattern`）；设置页开启/修改时可在数字密码与图案间选择，锁屏、设置、验证页按 `kind` 复用 `buildAppLockInput`
   - [ ] 1.2.3 生物识别（指纹 / 面部，`local_auth`，作为 PIN/图案之上的快捷解锁）
 
 ## 阶段 2：数据管理中心

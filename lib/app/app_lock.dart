@@ -5,9 +5,14 @@ import 'package:crypto/crypto.dart';
 
 /// 应用锁的锁类型。生物识别不是独立锁，只是 PIN/图案之上的快捷解锁，因此不在此枚举。
 enum AppLockKind {
-  none,
-  pin,
-  pattern;
+  none('无'),
+  pin('数字密码'),
+  pattern('图案密码');
+
+  const AppLockKind(this.label);
+
+  /// 用户可见的锁类型名称。
+  final String label;
 
   static AppLockKind fromName(String? name) {
     return AppLockKind.values.firstWhere(

@@ -198,6 +198,215 @@ class _DigitKey extends StatelessWidget {
   }
 }
 
+/// 图案区域边长（正方形），供绘制与测试计算点位。
+const double kPatternAreaSize = 264;
+
+/// 索引 [index]（0-8，行优先）在边长 [size] 的图案区域内的圆心坐标。
+Offset patternDotCenter(int index, double size) {
+  final cell = size / 3;
+  return Offset((index % 3 + 0.5) * cell, (index ~/ 3 + 0.5) * cell);
+}
+
+/// 3×3 图案输入视图：拖动连接圆点。松手时若连接点数 ≥ [kAppLockPatternMinPoints]
+/// 则回调 [onCompleted]（点序列以 `-` 连接，如 `0-1-2-4-8`），否则提示过短并重置。
+class PatternInputView extends StatefulWidget {
+  const PatternInputView({
+    super.key,
+    required this.onCompleted,
+    this.errorText,
+    this.hapticsEnabled = true,
+  });
+
+  final ValueChanged<String> onCompleted;
+  final String? errorText;
+  final bool hapticsEnabled;
+
+  @override
+  State<PatternInputView> createState() => _PatternInputViewState();
+}
+
+class _PatternInputViewState extends State<PatternInputView> {
+  final List<int> _selected = <int>[];
+  Offset? _pointer;
+  String? _tooShort;
+
+  void _hitTest(Offset local) {
+    for (var i = 0; i < 9; i += 1) {
+      final center = patternDotCenter(i, kPatternAreaSize);
+      if ((local - center).distance <= kPatternAreaSize / 6 * 0.62) {
+        if (!_selected.contains(i)) {
+          if (widget.hapticsEnabled) {
+            HapticFeedback.selectionClick();
+          }
+          setState(() => _selected.add(i));
+        }
+        return;
+      }
+    }
+  }
+
+  void _start(Offset local) {
+    setState(() {
+      _selected.clear();
+      _tooShort = null;
+      _pointer = local;
+    });
+    _hitTest(local);
+  }
+
+  void _update(Offset local) {
+    setState(() => _pointer = local);
+    _hitTest(local);
+  }
+
+  void _end() {
+    final sequence = _selected.join('-');
+    final count = _selected.length;
+    if (count < kAppLockPatternMinPoints) {
+      setState(() {
+        _selected.clear();
+        _pointer = null;
+        _tooShort = '至少连接 $kAppLockPatternMinPoints 个点';
+      });
+      return;
+    }
+    setState(() {
+      _selected.clear();
+      _pointer = null;
+    });
+    widget.onCompleted(sequence);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final error = widget.errorText ?? _tooShort;
+    final dotColor = Theme.of(context).colorScheme.onSurface;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        SizedBox(
+          width: kPatternAreaSize,
+          height: kPatternAreaSize,
+          child: GestureDetector(
+            key: const Key('pattern_area'),
+            behavior: HitTestBehavior.opaque,
+            onPanStart: (details) => _start(details.localPosition),
+            onPanUpdate: (details) => _update(details.localPosition),
+            onPanEnd: (_) => _end(),
+            child: CustomPaint(
+              painter: _PatternPainter(
+                selected: _selected,
+                pointer: _pointer,
+                accent: veriRoyal,
+                dotColor: dotColor,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        SizedBox(
+          height: 20,
+          child: error == null
+              ? null
+              : Text(
+                  error,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: veriExpense,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PatternPainter extends CustomPainter {
+  _PatternPainter({
+    required this.selected,
+    required this.pointer,
+    required this.accent,
+    required this.dotColor,
+  });
+
+  final List<int> selected;
+  final Offset? pointer;
+  final Color accent;
+  final Color dotColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final linePaint = Paint()
+      ..color = accent
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    for (var i = 0; i < selected.length - 1; i += 1) {
+      canvas.drawLine(
+        patternDotCenter(selected[i], size.width),
+        patternDotCenter(selected[i + 1], size.width),
+        linePaint,
+      );
+    }
+    if (selected.isNotEmpty && pointer != null) {
+      canvas.drawLine(
+        patternDotCenter(selected.last, size.width),
+        pointer!,
+        linePaint,
+      );
+    }
+
+    for (var i = 0; i < 9; i += 1) {
+      final center = patternDotCenter(i, size.width);
+      final active = selected.contains(i);
+      canvas.drawCircle(
+        center,
+        active ? 9 : 6,
+        Paint()..color = active ? accent : dotColor.withValues(alpha: 0.28),
+      );
+      if (active) {
+        canvas.drawCircle(
+          center,
+          16,
+          Paint()
+            ..color = accent
+            ..strokeWidth = 2
+            ..style = PaintingStyle.stroke,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_PatternPainter oldDelegate) {
+    return oldDelegate.selected != selected || oldDelegate.pointer != pointer;
+  }
+}
+
+/// 按锁类型构建输入视图。[footer]（如生物识别按钮）仅数字密码键盘支持。
+Widget buildAppLockInput({
+  required AppLockKind kind,
+  required ValueChanged<String> onCompleted,
+  String? errorText,
+  bool hapticsEnabled = true,
+  Widget? footer,
+}) {
+  if (kind == AppLockKind.pattern) {
+    return PatternInputView(
+      onCompleted: onCompleted,
+      errorText: errorText,
+      hapticsEnabled: hapticsEnabled,
+    );
+  }
+  return PinInputView(
+    onCompleted: onCompleted,
+    errorText: errorText,
+    hapticsEnabled: hapticsEnabled,
+    footer: footer,
+  );
+}
+
 /// 全屏锁定界面（由 AppLockGate 覆盖在应用之上）。校验通过后回调 [onUnlocked]。
 ///
 /// [biometricAction] 供 1.2.3 注入指纹快捷解锁按钮；为空时不展示。
@@ -248,7 +457,9 @@ class _AppLockScreenState extends State<AppLockScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '请输入 6 位数字密码解锁',
+                  controller.appLockKind == AppLockKind.pattern
+                      ? '请绘制图案解锁'
+                      : '请输入 6 位数字密码解锁',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(
                       context,
@@ -256,7 +467,8 @@ class _AppLockScreenState extends State<AppLockScreen> {
                   ),
                 ),
                 const SizedBox(height: 28),
-                PinInputView(
+                buildAppLockInput(
+                  kind: controller.appLockKind,
                   onCompleted: _submit,
                   errorText: _error,
                   hapticsEnabled: controller.hapticsEnabled,
@@ -271,59 +483,70 @@ class _AppLockScreenState extends State<AppLockScreen> {
   }
 }
 
-/// 设置或修改 PIN：输入两遍确认后保存。保存成功 pop(true)。
+/// 设置或修改密钥：输入两遍确认后保存。保存成功 pop(true)。支持数字密码与图案。
 class AppLockSetupPage extends StatefulWidget {
-  const AppLockSetupPage({super.key});
+  const AppLockSetupPage({super.key, this.kind = AppLockKind.pin});
+
+  final AppLockKind kind;
 
   @override
   State<AppLockSetupPage> createState() => _AppLockSetupPageState();
 }
 
 class _AppLockSetupPageState extends State<AppLockSetupPage> {
-  String? _firstPin;
+  String? _first;
   String? _error;
 
-  void _onCompleted(String pin) {
-    final first = _firstPin;
+  bool get _isPattern => widget.kind == AppLockKind.pattern;
+
+  void _onCompleted(String secret) {
+    final first = _first;
     if (first == null) {
       setState(() {
-        _firstPin = pin;
+        _first = secret;
         _error = null;
       });
       return;
     }
-    if (pin != first) {
+    if (secret != first) {
       setState(() {
-        _firstPin = null;
-        _error = '两次输入不一致，请重新设置';
+        _first = null;
+        _error = _isPattern ? '两次图案不一致，请重新绘制' : '两次输入不一致，请重新设置';
       });
       return;
     }
-    VeriFinScope.of(context).setAppLock(kind: AppLockKind.pin, secret: pin);
+    VeriFinScope.of(context).setAppLock(kind: widget.kind, secret: secret);
     Navigator.of(context).pop(true);
   }
 
   @override
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
-    final confirming = _firstPin != null;
+    final confirming = _first != null;
+    final String hint;
+    if (_isPattern) {
+      hint = confirming ? '再次绘制以确认' : '绘制解锁图案（至少 4 个点）';
+    } else {
+      hint = confirming ? '再次输入以确认' : '设置 6 位数字密码';
+    }
     return Scaffold(
       body: SafeArea(
         child: VeriPage(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
             children: <Widget>[
-              const VeriHeader(title: '设置密码', showBack: true),
+              VeriHeader(title: _isPattern ? '设置图案' : '设置密码', showBack: true),
               const SizedBox(height: 30),
               Text(
-                confirming ? '再次输入以确认' : '设置 6 位数字密码',
+                hint,
                 textAlign: TextAlign.center,
                 style: Theme.of(
                   context,
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 28),
-              PinInputView(
+              buildAppLockInput(
+                kind: widget.kind,
                 onCompleted: _onCompleted,
                 errorText: _error,
                 hapticsEnabled: controller.hapticsEnabled,
@@ -349,17 +572,18 @@ class AppLockVerifyPage extends StatefulWidget {
 class _AppLockVerifyPageState extends State<AppLockVerifyPage> {
   String? _error;
 
-  void _onCompleted(String pin) {
-    if (VeriFinScope.of(context).verifyAppLock(pin)) {
+  void _onCompleted(String secret) {
+    if (VeriFinScope.of(context).verifyAppLock(secret)) {
       Navigator.of(context).pop(true);
       return;
     }
-    setState(() => _error = '密码错误，请重试');
+    setState(() => _error = '验证失败，请重试');
   }
 
   @override
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
+    final isPattern = controller.appLockKind == AppLockKind.pattern;
     return Scaffold(
       body: SafeArea(
         child: VeriPage(
@@ -369,14 +593,15 @@ class _AppLockVerifyPageState extends State<AppLockVerifyPage> {
               VeriHeader(title: widget.title, showBack: true),
               const SizedBox(height: 30),
               Text(
-                '请输入当前 6 位数字密码',
+                isPattern ? '请绘制当前解锁图案' : '请输入当前 6 位数字密码',
                 textAlign: TextAlign.center,
                 style: Theme.of(
                   context,
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 28),
-              PinInputView(
+              buildAppLockInput(
+                kind: controller.appLockKind,
                 onCompleted: _onCompleted,
                 errorText: _error,
                 hapticsEnabled: controller.hapticsEnabled,
@@ -415,7 +640,7 @@ class AppLockSettingsPage extends StatelessWidget {
                   children: <Widget>[
                     CompactSwitchRow(
                       icon: Icons.lock_outline,
-                      title: const Text('数字密码'),
+                      title: const Text('应用锁'),
                       value: enabled,
                       onChanged: (value) => _toggle(context, controller, value),
                     ),
@@ -423,10 +648,10 @@ class AppLockSettingsPage extends StatelessWidget {
                       const Divider(height: 1),
                       SettingsRow(
                         icon: Icons.password_outlined,
-                        title: '修改密码',
-                        trailing: '',
+                        title: '锁定方式与密码',
+                        trailing: controller.appLockKind.label,
                         trailingIcon: Icons.chevron_right,
-                        onTap: () => _changePin(context, controller),
+                        onTap: () => _change(context, controller),
                       ),
                     ],
                   ],
@@ -434,7 +659,7 @@ class AppLockSettingsPage extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                '密码仅以加盐哈希保存在本机，不会上传，也无法找回；忘记密码时可在设置页初始化数据后重新设置。',
+                '支持 6 位数字密码或 3×3 图案。密钥仅以加盐哈希保存在本机，不会上传，也无法找回；忘记时可在设置页初始化数据后重新设置。',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: Theme.of(
                     context,
@@ -454,8 +679,14 @@ class AppLockSettingsPage extends StatelessWidget {
     bool value,
   ) async {
     if (value) {
+      final kind = await _pickKind(context);
+      if (kind == null || !context.mounted) {
+        return;
+      }
       await Navigator.of(context).push<bool>(
-        MaterialPageRoute<bool>(builder: (context) => const AppLockSetupPage()),
+        MaterialPageRoute<bool>(
+          builder: (context) => AppLockSetupPage(kind: kind),
+        ),
       );
       return;
     }
@@ -469,25 +700,60 @@ class AppLockSettingsPage extends StatelessWidget {
     }
   }
 
-  Future<void> _changePin(
+  Future<void> _change(
     BuildContext context,
     VeriFinController controller,
   ) async {
     final verified = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
-        builder: (context) => const AppLockVerifyPage(title: '修改密码'),
+        builder: (context) => const AppLockVerifyPage(title: '修改应用锁'),
       ),
     );
     if (verified != true || !context.mounted) {
       return;
     }
+    final kind = await _pickKind(context);
+    if (kind == null || !context.mounted) {
+      return;
+    }
     final changed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(builder: (context) => const AppLockSetupPage()),
+      MaterialPageRoute<bool>(
+        builder: (context) => AppLockSetupPage(kind: kind),
+      ),
     );
     if (changed == true && context.mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('密码已更新')));
+      ).showSnackBar(const SnackBar(content: Text('应用锁已更新')));
     }
+  }
+
+  /// 选择锁定方式（数字密码 / 图案）。
+  Future<AppLockKind?> _pickKind(BuildContext context) {
+    return showModalBottomSheet<AppLockKind>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            ListTile(
+              key: const Key('pick_lock_pin'),
+              leading: const Icon(Icons.password_outlined),
+              title: Text(AppLockKind.pin.label),
+              subtitle: const Text('6 位数字'),
+              onTap: () => Navigator.of(context).pop(AppLockKind.pin),
+            ),
+            ListTile(
+              key: const Key('pick_lock_pattern'),
+              leading: const Icon(Icons.pattern),
+              title: Text(AppLockKind.pattern.label),
+              subtitle: const Text('3×3 连线图案'),
+              onTap: () => Navigator.of(context).pop(AppLockKind.pattern),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
