@@ -68,6 +68,8 @@ class _TransactionsPageState extends State<TransactionsPage> {
   String? _selectedCategoryId;
   String? _selectedTagId;
   bool _onlyReimbursable = false;
+  bool _selectionMode = false;
+  final Set<String> _selectedIds = <String>{};
 
   @override
   void initState() {
@@ -92,17 +94,55 @@ class _TransactionsPageState extends State<TransactionsPage> {
     return Theme(
       data: buildVeriFinTheme(Brightness.dark),
       child: Scaffold(
+        bottomNavigationBar: _selectionMode
+            ? _BatchActionBar(
+                count: _selectedIds.length,
+                onSelectAll: () => setState(() {
+                  _selectedIds
+                    ..clear()
+                    ..addAll(entries.map((e) => e.id));
+                }),
+                onDelete: _selectedIds.isEmpty ? null : _batchDelete,
+                onChangeCategory: _selectedIds.isEmpty
+                    ? null
+                    : () => _batchChangeCategory(controller),
+                onChangeAccount: _selectedIds.isEmpty
+                    ? null
+                    : () => _batchChangeAccount(controller),
+              )
+            : null,
         body: SafeArea(
           child: VeriPage(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
               children: <Widget>[
                 VeriHeader(
-                  title: widget.title ?? (_dateMode ? '当日交易' : '交易明细'),
-                  subtitle: _dateMode
-                      ? '${_visibleDate.month}.${_visibleDate.day}'
-                      : null,
+                  title: _selectionMode
+                      ? '已选 ${_selectedIds.length} 项'
+                      : (widget.title ?? (_dateMode ? '当日交易' : '交易明细')),
+                  subtitle: _selectionMode
+                      ? null
+                      : (_dateMode
+                            ? '${_visibleDate.month}.${_visibleDate.day}'
+                            : null),
                   showBack: true,
+                  actions: <Widget>[
+                    if (_selectionMode)
+                      HeaderAction(
+                        icon: Icons.close,
+                        tooltip: '退出多选',
+                        onPressed: () => setState(() {
+                          _selectionMode = false;
+                          _selectedIds.clear();
+                        }),
+                      )
+                    else if (entries.isNotEmpty)
+                      HeaderAction(
+                        icon: Icons.checklist,
+                        tooltip: '多选',
+                        onPressed: () => setState(() => _selectionMode = true),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 if (_dateMode)
@@ -244,7 +284,21 @@ class _TransactionsPageState extends State<TransactionsPage> {
                       entries: group.entries,
                       accounts: controller.accounts,
                       categories: controller.categories,
-                      onEntryTap: (entry) => openEntryDetail(context, entry),
+                      selectionMode: _selectionMode,
+                      selectedIds: _selectedIds,
+                      onEntryTap: (entry) {
+                        if (_selectionMode) {
+                          _toggleSelected(entry.id);
+                        } else {
+                          openEntryDetail(context, entry);
+                        }
+                      },
+                      onEntryLongPress: (entry) {
+                        setState(() {
+                          _selectionMode = true;
+                          _selectedIds.add(entry.id);
+                        });
+                      },
                     ),
                     const SizedBox(height: 18),
                   ],
@@ -478,6 +532,96 @@ class _TransactionsPageState extends State<TransactionsPage> {
       return '标签';
     }
     return controller.tagById(tagId)?.label ?? '标签';
+  }
+
+  void _toggleSelected(String id) {
+    setState(() {
+      if (!_selectedIds.remove(id)) {
+        _selectedIds.add(id);
+      }
+    });
+  }
+
+  void _exitSelection() {
+    setState(() {
+      _selectionMode = false;
+      _selectedIds.clear();
+    });
+  }
+
+  Future<void> _batchDelete() async {
+    final count = _selectedIds.length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('删除 $count 笔交易？'),
+        content: const Text('删除后无法恢复，相关图片附件也会一并移除。'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) {
+      return;
+    }
+    VeriFinScope.of(context).deleteEntries(Set<String>.of(_selectedIds));
+    _exitSelection();
+  }
+
+  Future<void> _batchChangeCategory(VeriFinController controller) async {
+    final selected = await showOptionSheet<String>(
+      context: context,
+      title: '改分类（仅改同类型交易）',
+      values: controller.categories.map((c) => c.id).toList(),
+      selected: controller.categories.first.id,
+      labelOf: (id) => controller.categoryById(id).label,
+    );
+    if (selected == null || !mounted) {
+      return;
+    }
+    final changed = controller.setEntriesCategory(
+      Set<String>.of(_selectedIds),
+      selected,
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('已修改 $changed 笔交易的分类')));
+    }
+    _exitSelection();
+  }
+
+  Future<void> _batchChangeAccount(VeriFinController controller) async {
+    if (controller.accounts.isEmpty) {
+      return;
+    }
+    final selected = await showOptionSheet<String>(
+      context: context,
+      title: '改账户',
+      values: controller.accounts.map((a) => a.id).toList(),
+      selected: controller.accounts.first.id,
+      labelOf: (id) => accountById(controller.accounts, id).name,
+    );
+    if (selected == null || !mounted) {
+      return;
+    }
+    final changed = controller.setEntriesAccount(
+      Set<String>.of(_selectedIds),
+      selected,
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('已修改 $changed 笔交易的账户')));
+    }
+    _exitSelection();
   }
 
   DateWindow? _activePeriod() {
@@ -1450,4 +1594,111 @@ String _relativeDay(DateTime date) {
     return '昨天';
   }
   return '';
+}
+
+/// 多选模式底部操作栏：全选 / 删除 / 改分类 / 改账户。
+class _BatchActionBar extends StatelessWidget {
+  const _BatchActionBar({
+    required this.count,
+    required this.onSelectAll,
+    required this.onDelete,
+    required this.onChangeCategory,
+    required this.onChangeAccount,
+  });
+
+  final int count;
+  final VoidCallback onSelectAll;
+  final VoidCallback? onDelete;
+  final VoidCallback? onChangeCategory;
+  final VoidCallback? onChangeAccount;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          border: Border(
+            top: BorderSide(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.08),
+            ),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: <Widget>[
+            _BatchAction(
+              icon: Icons.select_all,
+              label: '全选',
+              onTap: onSelectAll,
+            ),
+            _BatchAction(
+              icon: Icons.category_outlined,
+              label: '改分类',
+              onTap: onChangeCategory,
+            ),
+            _BatchAction(
+              icon: Icons.account_balance_wallet_outlined,
+              label: '改账户',
+              onTap: onChangeAccount,
+            ),
+            _BatchAction(
+              icon: Icons.delete_outline,
+              label: '删除',
+              destructive: true,
+              onTap: onDelete,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BatchAction extends StatelessWidget {
+  const _BatchAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.destructive = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    final base = destructive
+        ? veriExpense
+        : Theme.of(context).colorScheme.onSurface;
+    final color = enabled ? base : base.withValues(alpha: 0.3);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(veriRadiusSm),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

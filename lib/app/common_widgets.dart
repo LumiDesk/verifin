@@ -17,12 +17,20 @@ class TransactionTile extends StatelessWidget {
     required this.accounts,
     required this.categories,
     this.onTap,
+    this.onLongPress,
+    this.selectionMode = false,
+    this.selected = false,
   });
 
   final LedgerEntry entry;
   final List<Account> accounts;
   final List<Category> categories;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+
+  /// 多选模式：行首展示勾选圈，命中项高亮。
+  final bool selectionMode;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -40,14 +48,28 @@ class TransactionTile extends StatelessWidget {
         : account.name;
 
     return Material(
-      color: Colors.transparent,
+      color: selected ? veriRoyal.withValues(alpha: 0.08) : Colors.transparent,
+      borderRadius: BorderRadius.circular(veriRadiusSm),
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(veriRadiusSm),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
           child: Row(
             children: <Widget>[
+              if (selectionMode) ...<Widget>[
+                Icon(
+                  selected ? Icons.check_circle : Icons.radio_button_unchecked,
+                  size: 20,
+                  color: selected
+                      ? veriRoyal
+                      : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.3),
+                ),
+                const SizedBox(width: 10),
+              ],
               VeriIconBox(
                 icon: iconForCode(category.iconCode),
                 color: amountColor,
@@ -175,12 +197,18 @@ class TransactionListCard extends StatelessWidget {
     required this.accounts,
     required this.categories,
     this.onEntryTap,
+    this.onEntryLongPress,
+    this.selectionMode = false,
+    this.selectedIds = const <String>{},
   });
 
   final List<LedgerEntry> entries;
   final List<Account> accounts;
   final List<Category> categories;
   final ValueChanged<LedgerEntry>? onEntryTap;
+  final ValueChanged<LedgerEntry>? onEntryLongPress;
+  final bool selectionMode;
+  final Set<String> selectedIds;
 
   @override
   Widget build(BuildContext context) {
@@ -192,7 +220,12 @@ class TransactionListCard extends StatelessWidget {
               item.$2,
               accounts: accounts,
               categories: categories,
+              selectionMode: selectionMode,
+              selected: selectedIds.contains(item.$2.id),
               onTap: onEntryTap == null ? null : () => onEntryTap!(item.$2),
+              onLongPress: onEntryLongPress == null
+                  ? null
+                  : () => onEntryLongPress!(item.$2),
             ),
             if (item.$1 != entries.length - 1)
               Divider(

@@ -901,6 +901,64 @@ class VeriFinController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 批量删除交易（连同附件级联清理）。
+  void deleteEntries(Set<String> entryIds) {
+    if (entryIds.isEmpty) {
+      return;
+    }
+    _entries.removeWhere((entry) => entryIds.contains(entry.id));
+    _persistEntries();
+    if (_removeAttachmentsForEntries(entryIds)) {
+      _persistAttachments();
+    }
+    notifyListeners();
+  }
+
+  /// 批量改分类：只改与目标分类同类型的交易（类型不符的跳过）。返回改动数量。
+  int setEntriesCategory(Set<String> entryIds, String categoryId) {
+    final category = _categories.where((c) => c.id == categoryId).firstOrNull;
+    if (category == null || entryIds.isEmpty) {
+      return 0;
+    }
+    var changed = 0;
+    for (var i = 0; i < _entries.length; i++) {
+      final entry = _entries[i];
+      if (entryIds.contains(entry.id) && entry.type == category.type) {
+        _entries[i] = entry.copyWith(categoryId: categoryId);
+        changed += 1;
+      }
+    }
+    if (changed > 0) {
+      _persistEntries();
+      notifyListeners();
+    }
+    return changed;
+  }
+
+  /// 批量改账户：设置选中交易的（转出）账户。返回改动数量。
+  int setEntriesAccount(Set<String> entryIds, String accountId) {
+    if (entryIds.isEmpty) {
+      return 0;
+    }
+    var changed = 0;
+    for (var i = 0; i < _entries.length; i++) {
+      final entry = _entries[i];
+      // 转账时目标账户不能与转出账户相同。
+      if (entryIds.contains(entry.id) &&
+          entry.accountId != accountId &&
+          !(entry.type == EntryType.transfer &&
+              entry.toAccountId == accountId)) {
+        _entries[i] = entry.copyWith(accountId: accountId);
+        changed += 1;
+      }
+    }
+    if (changed > 0) {
+      _persistEntries();
+      notifyListeners();
+    }
+    return changed;
+  }
+
   void addAccount(Account account) {
     _accounts.add(account);
     _persistAccounts();
