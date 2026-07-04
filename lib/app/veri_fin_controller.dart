@@ -1,18 +1,36 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart' hide Category;
 
+import '../data/ledger_repository.dart';
 import '../local_storage/local_storage.dart';
 import 'demo_data.dart';
 import 'ledger_math.dart';
 import 'models.dart';
 
 class VeriFinController extends ChangeNotifier {
-  VeriFinController(this._store) {
+  VeriFinController(LocalKeyValueStore store, {LedgerRepository? repository})
+    : this._(store, repository);
+
+  VeriFinController._(this._store, this._repository) {
     _load();
     themePreferenceListenable = ValueNotifier<ThemePreference>(
       _themePreference,
     );
+  }
+
+  /// 异步创建控制器：在同步载入 KV 数据后，接入 SQLite 仓储，完成首启动迁移
+  /// 并以库中数据覆盖对应内存列表。[repository] 为空时退化为纯 KV 存储（测试用）。
+  static Future<VeriFinController> create(
+    LocalKeyValueStore store, {
+    LedgerRepository? repository,
+  }) async {
+    final controller = VeriFinController(store, repository: repository);
+    if (repository != null) {
+      await controller._migrateAndLoadFromRepository(repository);
+    }
+    return controller;
   }
 
   static const String _entriesKey = 'verifin.entries.v1';
@@ -34,6 +52,8 @@ class VeriFinController extends ChangeNotifier {
   static const String _assetSectionOrderKey = 'verifin.asset_section_order.v1';
   static const String _homePanelsKey = 'verifin.home_panels.v1';
   static const String _reportPanelsKey = 'verifin.report_panels.v1';
+  // 首启动 KV→SQLite 迁移标记，按实体分步设置。
+  static const String _entriesMigratedKey = 'verifin.migration.entries.v1';
 
   static String _panelsKeyFor(PanelPageKind page) {
     switch (page) {
@@ -45,6 +65,10 @@ class VeriFinController extends ChangeNotifier {
   }
 
   final LocalKeyValueStore _store;
+
+  /// SQLite 仓储；为空时账目数据落 KV（测试 / 数据库不可用时的回退路径）。
+  final LedgerRepository? _repository;
+
   final List<LedgerEntry> _entries = <LedgerEntry>[];
   final List<LedgerBook> _ledgerBooks = <LedgerBook>[];
   final List<Account> _accounts = <Account>[];
@@ -1010,25 +1034,50 @@ class VeriFinController extends ChangeNotifier {
     _loadAssetAccountOrders();
     _loadAssetSectionOrders();
     _loadPagePanels();
-    final rawEntries = _store.read(_entriesKey);
-    if (rawEntries == null || rawEntries.isEmpty) {
-      return;
-    }
-
-    try {
-      final decoded = jsonDecode(rawEntries) as List<dynamic>;
+    // 有 SQLite 仓储时交易由 create() 异步从库中载入；否则走 KV。
+    if (_repository == null) {
       _entries
         ..clear()
-        ..addAll(
-          decoded.map(
+        ..addAll(_decodeEntriesFromKv());
+    }
+  }
+
+  /// 从 KV 解析交易列表；数据缺失或损坏时返回空列表并清理脏数据。
+  List<LedgerEntry> _decodeEntriesFromKv() {
+    final rawEntries = _store.read(_entriesKey);
+    if (rawEntries == null || rawEntries.isEmpty) {
+      return <LedgerEntry>[];
+    }
+    try {
+      final decoded = jsonDecode(rawEntries) as List<dynamic>;
+      return decoded
+          .map(
             (item) => LedgerEntry.fromJson(
               Map<String, Object?>.from(item as Map<dynamic, dynamic>),
             ),
-          ),
-        );
+          )
+          .toList();
     } catch (_) {
       _store.delete(_entriesKey);
+      return <LedgerEntry>[];
     }
+  }
+
+  /// 首启动把 KV 中的交易导入 SQLite（仅一次），随后以库中数据为准载入内存。
+  Future<void> _migrateAndLoadFromRepository(LedgerRepository repository) async {
+    if (_store.read(_entriesMigratedKey) != 'true') {
+      final legacy = _decodeEntriesFromKv();
+      if (legacy.isNotEmpty) {
+        await repository.saveEntries(legacy);
+      }
+      _store.write(_entriesMigratedKey, 'true');
+    }
+    final entries = await repository.loadEntries()
+      ..sort(_compareEntriesLatestFirst);
+    _entries
+      ..clear()
+      ..addAll(entries);
+    notifyListeners();
   }
 
   void _removeAccountFromOrders(String accountId) {
@@ -1261,11 +1310,28 @@ class VeriFinController extends ChangeNotifier {
   }
 
   void _persistEntries() {
+    final repository = _repository;
+    if (repository != null) {
+      _trackWrite(repository.saveEntries(List<LedgerEntry>.of(_entries)));
+      return;
+    }
     _store.write(
       _entriesKey,
       jsonEncode(_entries.map((entry) => entry.toJson()).toList()),
     );
   }
+
+  // 记录最近一次 SQLite 写入，供测试等待其落库。写入按连接串行，等待最新即可。
+  Future<void> _pendingWrite = Future<void>.value();
+
+  void _trackWrite(Future<void> write) {
+    _pendingWrite = write;
+    unawaited(write);
+  }
+
+  /// 等待挂起的 SQLite 写入落库（仅测试使用）。
+  @visibleForTesting
+  Future<void> waitForPendingWrites() => _pendingWrite;
 
   void _persistLedgerBooks() {
     _store.write(
