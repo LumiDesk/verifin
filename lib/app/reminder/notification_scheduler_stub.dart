@@ -1,6 +1,6 @@
 import 'reminder_settings.dart';
 
-/// 非移动平台（Web / 测试宿主）的通知占位实现：一律不可用、不做任何调度。
+/// 非移动平台（测试宿主）的通知占位实现：一律不可用、不做任何调度。
 class NotificationScheduler {
   const NotificationScheduler();
 

@@ -1,4 +1,4 @@
-/// 非移动平台（Web）的生物识别占位实现：始终不可用。
+/// 非移动平台（测试宿主）的生物识别占位实现：始终不可用。
 class BiometricAuth {
   const BiometricAuth();
 
