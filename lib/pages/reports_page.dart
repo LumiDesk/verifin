@@ -13,6 +13,7 @@ import '../app/series_math.dart';
 import '../app/veri_fin_scope.dart';
 import 'budget_pages.dart';
 import 'panel_settings_page.dart';
+import 'report_analysis_page.dart';
 
 class ReportsPage extends StatelessWidget {
   const ReportsPage({super.key});
@@ -222,7 +223,19 @@ class ReportsPage extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(14, 8, 14, 82),
         children: <Widget>[
-          const PageHeader(title: '看板', subtitle: '数据看板'),
+          PageHeader(
+            title: '看板',
+            subtitle: '数据看板',
+            trailing: HeaderAction(
+              icon: Icons.insights_outlined,
+              tooltip: '统计分析',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const ReportAnalysisPage(),
+                ),
+              ),
+            ),
+          ),
           for (final id in panelIds) ...<Widget>[
             const SizedBox(height: 10),
             panelFor(id),

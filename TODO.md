@@ -53,7 +53,7 @@
 
 ## 阶段 4：报表与体验
 
-- [ ] 4.1 报表增强：年度报表、自定义时间范围、收入维度报表
+- [x] 4.1 报表增强：看板右上角「统计分析」入口进入 `ReportAnalysisPage`；时间范围可选本月 / 本年 / 自定义（`showDateRangePicker`），维度可选支出 / 收入；展示收支概览、趋势曲线（短范围按天、整年/跨多月按月，`ReportTrend`）、分类排行（按顶级分类聚合净额）；纯函数在 `lib/app/report_analysis.dart`（`ReportRange`/`reportSummary`/`reportCategoryStats`/`reportTrend`）
 - [ ] 4.2 同比 / 环比分析（本月 vs 上月 vs 去年同期）
 - [ ] 4.3 记账提醒：用户自定义每日提醒时间，本地通知
 - [ ] 4.4 我的页改版：宫格等更现代的布局，容纳新增功能入口，优化整体展示
