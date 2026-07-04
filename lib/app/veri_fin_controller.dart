@@ -7,6 +7,7 @@ import '../data/ledger_repository.dart';
 import '../local_storage/local_storage.dart';
 import 'app_lock.dart';
 import 'backup/backup_settings.dart';
+import 'backup/transaction_import.dart';
 import 'demo_data.dart';
 import 'ledger_math.dart';
 import 'models.dart';
@@ -533,6 +534,41 @@ class VeriFinController extends ChangeNotifier {
     _persistEntries();
     notifyListeners();
     onEntryAdded?.call();
+  }
+
+  /// 解析 CSV 文本并把交易导入当前账本；匹配不到的账户/分类按名称新建。
+  /// 返回导入计划（含成功笔数与逐行错误）供 UI 反馈。解析失败抛 [FormatException]。
+  ImportPlan importTransactionsFromCsv(String content) {
+    final rows = parseCsv(content);
+    final plan = buildImportPlan(
+      rows: rows,
+      bookId: _activeBookId,
+      existingAccounts: accounts,
+      existingCategories: categories,
+      now: DateTime.now(),
+    );
+    _applyImportPlan(plan);
+    return plan;
+  }
+
+  void _applyImportPlan(ImportPlan plan) {
+    if (plan.entries.isEmpty) {
+      return;
+    }
+    _accounts.addAll(plan.newAccounts);
+    if (plan.newCategories.isNotEmpty) {
+      // 首次导入前若仍是默认分类占位，先落地为真实列表再追加。
+      if (_categories.isEmpty) {
+        _categories.addAll(defaultCategories);
+      }
+      _categories.addAll(plan.newCategories);
+    }
+    _entries.addAll(plan.entries);
+    _entries.sort(_compareEntriesLatestFirst);
+    _persistAccounts();
+    _persistCategories();
+    _persistEntries();
+    notifyListeners();
   }
 
   void updateEntry(LedgerEntry entry) {

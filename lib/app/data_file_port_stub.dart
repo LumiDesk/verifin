@@ -9,3 +9,7 @@ Future<bool> downloadTextFile({
 Future<String?> pickTextFile() async {
   throw UnsupportedError('当前平台暂不支持文件选择');
 }
+
+Future<String?> pickCsvFile() async {
+  throw UnsupportedError('当前平台暂不支持文件选择');
+}

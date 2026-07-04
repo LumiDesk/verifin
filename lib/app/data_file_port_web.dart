@@ -17,10 +17,15 @@ Future<bool> downloadTextFile({
   return true;
 }
 
-Future<String?> pickTextFile() {
+Future<String?> pickTextFile() => _pickFileAsText('.json,application/json');
+
+Future<String?> pickCsvFile() =>
+    _pickFileAsText('.csv,.txt,text/csv,text/plain');
+
+Future<String?> _pickFileAsText(String accept) {
   final completer = Completer<String?>();
   final input = html.FileUploadInputElement()
-    ..accept = '.json,application/json'
+    ..accept = accept
     ..multiple = false;
 
   input.onChange.first.then((_) {

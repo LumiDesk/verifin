@@ -43,3 +43,13 @@ Future<String?> pickTextFile() async {
   );
   return file?.readAsString();
 }
+
+Future<String?> pickCsvFile() async {
+  const csvGroup = XTypeGroup(
+    label: 'CSV',
+    extensions: <String>['csv', 'txt'],
+    mimeTypes: <String>['text/csv', 'text/plain'],
+  );
+  final file = await openFile(acceptedTypeGroups: const <XTypeGroup>[csvGroup]);
+  return file?.readAsString();
+}

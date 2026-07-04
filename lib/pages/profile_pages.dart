@@ -6,6 +6,7 @@ import '../app/avatar_picker.dart';
 import '../app/backup/backup_crypto.dart';
 import '../app/backup/backup_service.dart';
 import '../app/backup/backup_settings.dart';
+import '../app/backup/transaction_import.dart';
 import '../app/common_widgets.dart';
 import '../app/data_file_port.dart';
 import '../app/demo_data.dart';
@@ -1060,6 +1061,29 @@ class DataManagementPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
+              _sectionLabel(context, '从表格导入交易'),
+              VeriCard(
+                child: Column(
+                  children: <Widget>[
+                    SettingsRow(
+                      icon: Icons.table_chart_outlined,
+                      title: '导入 CSV 交易',
+                      trailing: '按模板',
+                      trailingIcon: Icons.chevron_right,
+                      onTap: () => _importCsv(context, controller),
+                    ),
+                    const Divider(),
+                    SettingsRow(
+                      icon: Icons.file_download_outlined,
+                      title: '下载 CSV 模板',
+                      trailing: 'Excel 可另存为 CSV',
+                      trailingIcon: Icons.chevron_right,
+                      onTap: () => _downloadCsvTemplate(context),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
               _sectionLabel(context, '备份到本地目录'),
               VeriCard(
                 child: Column(
@@ -1523,6 +1547,117 @@ class DataManagementPage extends StatelessWidget {
     if (confirmed == true) {
       controller.clearBackupPassphrase();
     }
+  }
+
+  Future<void> _downloadCsvTemplate(BuildContext context) async {
+    try {
+      final saved = await downloadTextFile(
+        filename: 'verifin-import-template.csv',
+        content: transactionCsvTemplate(),
+        mimeType: 'text/csv',
+      );
+      if (saved && context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('已保存 CSV 模板，位置：下载目录')));
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('保存模板失败，请稍后再试')));
+      }
+    }
+  }
+
+  Future<void> _importCsv(
+    BuildContext context,
+    VeriFinController controller,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('导入 CSV 交易？'),
+        content: const Text(
+          '将按模板列（日期、类型、金额、分类、账户、转入账户、备注）把交易追加到当前账本；'
+          '匹配不到的账户和分类会按名称自动新建。不会删除现有数据。',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('选择文件'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) {
+      return;
+    }
+    try {
+      final content = await pickCsvFile();
+      if (content == null) {
+        return;
+      }
+      if (content.trim().isEmpty) {
+        throw const FormatException('空文件');
+      }
+      final plan = controller.importTransactionsFromCsv(content);
+      if (!context.mounted) {
+        return;
+      }
+      if (plan.importedCount == 0 && plan.errorCount > 0) {
+        await _showImportResult(context, plan);
+        return;
+      }
+      final suffix = plan.errorCount > 0 ? '，${plan.errorCount} 行跳过' : '';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已导入 ${plan.importedCount} 笔交易$suffix')),
+      );
+      if (plan.errorCount > 0) {
+        await _showImportResult(context, plan);
+      }
+    } on FormatException catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('导入失败：${error.message}')));
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('导入失败，请检查文件后重试')));
+      }
+    }
+  }
+
+  Future<void> _showImportResult(BuildContext context, ImportPlan plan) {
+    final lines = plan.errors
+        .take(10)
+        .map((e) => '第 ${e.line} 行：${e.message}')
+        .join('\n');
+    final more = plan.errorCount > 10 ? '\n… 其余 ${plan.errorCount - 10} 行' : '';
+    return showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('导入完成（成功 ${plan.importedCount} 笔）'),
+        content: SingleChildScrollView(
+          child: Text(
+            plan.errorCount == 0 ? '全部导入成功。' : '以下行被跳过：\n$lines$more',
+          ),
+        ),
+        actions: <Widget>[
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('知道了'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _confirmImport(
