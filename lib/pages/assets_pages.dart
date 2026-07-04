@@ -58,6 +58,9 @@ class _AssetsPageState extends State<AssetsPage> {
   ];
 
   bool _sortingSections = false;
+  // 当前可见分组数，供「资产操作」菜单里的「排序分组」判断能否进入排序模式
+  // （<2 个分组无从排序）。在 build 中同步。
+  int _visibleSectionCount = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -144,6 +147,7 @@ class _AssetsPageState extends State<AssetsPage> {
         .toList(growable: false);
     final canSortSections = visibleAssetSections.length >= 2;
     final sortingSections = _sortingSections && canSortSections;
+    _visibleSectionCount = visibleAssetSections.length;
 
     return VeriPage(
       child: ListView(
@@ -289,30 +293,27 @@ class _AssetsPageState extends State<AssetsPage> {
             const SizedBox(height: 12),
           ],
           if (visibleAssetSections.isNotEmpty) ...<Widget>[
-            if (canSortSections)
+            // 排序入口常驻「资产操作」菜单（不受分组数影响，可发现）；进入排序模式后
+            // 才在此显示提示与「完成」按钮退出。
+            if (sortingSections)
               Padding(
                 padding: const EdgeInsets.only(bottom: 6),
                 child: Row(
                   children: <Widget>[
-                    if (sortingSections)
-                      Expanded(
-                        child: Text(
-                          '拖动右侧手柄调整分组顺序',
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurface.withValues(alpha: 0.52),
-                                fontWeight: FontWeight.w700,
-                              ),
+                    Expanded(
+                      child: Text(
+                        '拖动右侧手柄调整分组顺序',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.52),
+                          fontWeight: FontWeight.w700,
                         ),
-                      )
-                    else
-                      const Spacer(),
+                      ),
+                    ),
                     _SectionSortButton(
-                      sorting: sortingSections,
-                      onTap: () =>
-                          setState(() => _sortingSections = !sortingSections),
+                      sorting: true,
+                      onTap: () => setState(() => _sortingSections = false),
                     ),
                   ],
                 ),
@@ -549,13 +550,19 @@ class _AssetsPageState extends State<AssetsPage> {
     final selected = await showOptionSheet<String>(
       context: context,
       title: '资产操作',
-      values: const <String>['add_account', 'manage_groups', 'switch_view'],
+      values: const <String>[
+        'add_account',
+        'manage_groups',
+        'switch_view',
+        'sort_sections',
+      ],
       selected: 'add_account',
       labelOf: (value) {
         return switch (value) {
           'add_account' => '添加账户',
           'manage_groups' => '管理分组',
           'switch_view' => controller.assetAccountViewMode.toggleLabel,
+          'sort_sections' => '排序分组',
           _ => value,
         };
       },
@@ -577,6 +584,15 @@ class _AssetsPageState extends State<AssetsPage> {
     }
     if (selected == 'switch_view') {
       controller.toggleAssetAccountViewMode();
+    }
+    if (selected == 'sort_sections') {
+      if (_visibleSectionCount >= 2) {
+        setState(() => _sortingSections = true);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('至少有 2 个分组才能排序')),
+        );
+      }
     }
   }
 }

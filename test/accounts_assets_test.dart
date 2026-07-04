@@ -4,6 +4,7 @@ import 'package:verifin/app/app_theme.dart';
 import 'package:verifin/app/common_widgets.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/local_storage/local_storage.dart';
+import 'package:verifin/main.dart';
 
 import 'support/test_harness.dart';
 
@@ -345,5 +346,56 @@ void main() {
     expect(sorted, <String>['creditCard', 'debitCard', 'onlinePayment']);
 
     target.dispose();
+  });
+
+  testWidgets('sort entry lives in asset actions menu and enters sort mode', (
+    WidgetTester tester,
+  ) async {
+    final controller = await makeController();
+    final bookId = controller.activeBook.id;
+    controller
+      ..addAccount(
+        Account(
+          id: 'a-cash',
+          bookId: bookId,
+          name: '现金',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 10,
+          iconCode: 'wallet',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+        ),
+      )
+      ..addAccount(
+        Account(
+          id: 'a-credit',
+          bookId: bookId,
+          name: '信用卡',
+          type: AccountType.creditCard,
+          groupId: null,
+          initialBalance: 0,
+          iconCode: 'card',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+        ),
+      );
+    await tester.pumpWidget(VeriFinApp(controller: controller));
+    await tester.pumpAndSettle();
+
+    await tapBottomTab(tester, 1);
+    await tester.tap(find.byTooltip('资产操作'));
+    await tester.pumpAndSettle();
+
+    // 排序入口常驻资产操作菜单（不再因分组数不足而消失）。
+    expect(find.text('排序分组'), findsOneWidget);
+    await tester.tap(find.text('排序分组'));
+    await tester.pumpAndSettle();
+
+    // 两个及以上分组时进入排序模式，出现提示与「完成」按钮。
+    expect(find.text('拖动右侧手柄调整分组顺序'), findsOneWidget);
+    expect(find.text('完成'), findsOneWidget);
   });
 }
