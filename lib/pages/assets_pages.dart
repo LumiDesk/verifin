@@ -520,16 +520,20 @@ class _AssetsPageState extends State<AssetsPage> {
           title: '裁剪资产背景',
           aspectRatio: assetCoverAspectRatio,
         );
-        if (crop == null) {
+        if (crop == null || !context.mounted) {
           return;
         }
-        final dataUrl = await cropImageDataUrl(
-          sourceDataUrl: rawImage,
-          targetWidth: assetCoverTargetWidth,
-          targetHeight: assetCoverTargetHeight,
-          zoom: crop.zoom,
-          offsetX: crop.offsetX,
-          offsetY: crop.offsetY,
+        final dataUrl = await runWithLoadingDialog<String?>(
+          context: context,
+          message: '正在生成背景图…',
+          task: () => cropImageDataUrl(
+            sourceDataUrl: rawImage,
+            targetWidth: assetCoverTargetWidth,
+            targetHeight: assetCoverTargetHeight,
+            zoom: crop.zoom,
+            offsetX: crop.offsetX,
+            offsetY: crop.offsetY,
+          ),
         );
         if (dataUrl != null) {
           controller.setAssetCoverUrl(dataUrl);

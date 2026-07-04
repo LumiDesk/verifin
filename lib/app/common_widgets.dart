@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -1498,5 +1500,46 @@ class CompactSwitchRow extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// 在执行耗时任务期间显示不可关闭的加载对话框,任务结束后自动关闭并返回结果。
+/// 用于图片裁剪等短时重计算,避免用户以为程序卡死。
+Future<T> runWithLoadingDialog<T>({
+  required BuildContext context,
+  required Future<T> Function() task,
+  String message = '正在处理…',
+}) async {
+  final navigator = Navigator.of(context, rootNavigator: true);
+  var dialogOpen = true;
+  unawaited(
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (context) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          content: Row(
+            children: <Widget>[
+              const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2.6),
+              ),
+              const SizedBox(width: 14),
+              Expanded(child: Text(message)),
+            ],
+          ),
+        ),
+      ),
+    ).whenComplete(() => dialogOpen = false),
+  );
+  try {
+    return await task();
+  } finally {
+    if (dialogOpen && navigator.mounted) {
+      navigator.pop();
+    }
   }
 }

@@ -831,16 +831,20 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
       aspectRatio: 1,
       circlePreview: true,
     );
-    if (crop == null) {
+    if (crop == null || !mounted) {
       return;
     }
-    final avatar = await cropImageDataUrl(
-      sourceDataUrl: rawImage,
-      targetWidth: 512,
-      targetHeight: 512,
-      zoom: crop.zoom,
-      offsetX: crop.offsetX,
-      offsetY: crop.offsetY,
+    final avatar = await runWithLoadingDialog<String?>(
+      context: context,
+      message: '正在生成头像…',
+      task: () => cropImageDataUrl(
+        sourceDataUrl: rawImage,
+        targetWidth: 512,
+        targetHeight: 512,
+        zoom: crop.zoom,
+        offsetX: crop.offsetX,
+        offsetY: crop.offsetY,
+      ),
     );
     if (avatar != null && mounted) {
       setState(() => _avatarDataUrl = avatar);

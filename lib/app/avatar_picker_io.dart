@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:math' as math;
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 
@@ -28,8 +28,46 @@ Future<String?> cropImageDataUrl({
   required double zoom,
   required double offsetX,
   required double offsetY,
-}) async {
-  final bytes = _bytesFromDataUrl(sourceDataUrl);
+}) {
+  // 解码/裁剪/缩放/编码是纯 CPU 重活,放到后台 isolate,避免阻塞 UI 线程掉帧。
+  return compute(
+    _cropImageDataUrlSync,
+    _CropRequest(
+      sourceDataUrl: sourceDataUrl,
+      targetWidth: targetWidth,
+      targetHeight: targetHeight,
+      zoom: zoom,
+      offsetX: offsetX,
+      offsetY: offsetY,
+    ),
+  );
+}
+
+class _CropRequest {
+  const _CropRequest({
+    required this.sourceDataUrl,
+    required this.targetWidth,
+    required this.targetHeight,
+    required this.zoom,
+    required this.offsetX,
+    required this.offsetY,
+  });
+
+  final String sourceDataUrl;
+  final int targetWidth;
+  final int targetHeight;
+  final double zoom;
+  final double offsetX;
+  final double offsetY;
+}
+
+String? _cropImageDataUrlSync(_CropRequest request) {
+  final targetWidth = request.targetWidth;
+  final targetHeight = request.targetHeight;
+  final zoom = request.zoom;
+  final offsetX = request.offsetX;
+  final offsetY = request.offsetY;
+  final bytes = _bytesFromDataUrl(request.sourceDataUrl);
   if (bytes == null) {
     return null;
   }
