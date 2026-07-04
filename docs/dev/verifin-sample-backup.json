@@ -28,7 +28,8 @@
         "accountId": "acc_alipay",
         "toAccountId": null,
         "note": "午餐套餐",
-        "occurredAt": "2026-07-03T12:20:00.000"
+        "occurredAt": "2026-07-03T12:20:00.000",
+        "tagIds": ["tag_work_meal"]
       },
       {
         "id": "entry_20260703_002",
@@ -592,6 +593,10 @@
         "type": "transfer",
         "iconCode": "repayment"
       }
+    ],
+    "tags": [
+      { "id": "tag_work_meal", "label": "工作餐" },
+      { "id": "tag_reimbursable", "label": "可报销" }
     ],
     "monthlyBudgets": {
       "default:2026-05": 5200.0,

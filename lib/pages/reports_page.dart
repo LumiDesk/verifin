@@ -36,6 +36,7 @@ class ReportsPage extends StatelessWidget {
         .where((entry) => entry.type == EntryType.expense)
         .toList(growable: false);
     final categoryStats = _categoryStats(expenseEntries, controller.categories);
+    final tagStats = _tagStats(expenseEntries, controller.tags, monthExpense);
     final trendWindow = sevenDayWindowFor(DateTime.now());
     final trendValues = valuesForTypeInWindow(
       entries,
@@ -191,6 +192,24 @@ class ReportsPage extends StatelessWidget {
                     ),
                   ),
                 ),
+              ],
+            ),
+          );
+        case 'tag_stats':
+          return VeriCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                const SectionTitle(title: '标签统计', trailing: '本月支出'),
+                const SizedBox(height: 8),
+                if (tagStats.isEmpty)
+                  const EmptyState(
+                    icon: Icons.label_outline,
+                    title: '暂无标签数据',
+                    description: '给交易打上标签后，会在这里按标签汇总支出。',
+                  )
+                else
+                  ...tagStats.take(8).map((stat) => _TagStatTile(stat: stat)),
               ],
             ),
           );
@@ -850,6 +869,71 @@ class _CategoryStatTile extends StatelessWidget {
   }
 }
 
+class _TagStatTile extends StatelessWidget {
+  const _TagStatTile({required this.stat});
+
+  final _TagStat stat;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: <Widget>[
+          VeriIconBox(icon: Icons.label, color: veriRoyal, size: 30),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        stat.tag.label,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '-${formatAmount(stat.amount)}',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: veriExpense,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                LinearProgressIndicator(
+                  value: stat.percent.clamp(0, 1).toDouble(),
+                  minHeight: 5,
+                  borderRadius: BorderRadius.circular(999),
+                  color: veriRoyal,
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '占支出 ${(stat.percent * 100).toStringAsFixed(1)}% · ${stat.count}笔',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.46),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// 分类统计：多级分类按层级聚合，即每笔交易的金额归总到其**顶级祖先**分类，
 /// 子分类的支出滚动计入所属顶级分类。
 List<_CategoryStat> _categoryStats(
@@ -876,6 +960,60 @@ List<_CategoryStat> _categoryStats(
               category: categoryById(entry.key, categories),
               amount: entry.value,
               percent: total <= 0 ? 0 : entry.value / total,
+              count: counts[entry.key] ?? 0,
+            ),
+          )
+          .toList()
+        ..sort((a, b) => b.amount.compareTo(a.amount));
+  return stats;
+}
+
+class _TagStat {
+  const _TagStat({
+    required this.tag,
+    required this.amount,
+    required this.percent,
+    required this.count,
+  });
+
+  final Tag tag;
+  final double amount;
+
+  /// 该标签支出占本月总支出的比例（多标签交易会分别计入各标签，故各项之和可能 >1）。
+  final double percent;
+  final int count;
+}
+
+/// 标签统计：每笔支出计入其携带的**每个**标签；[totalExpense] 为本月总支出，
+/// 用作占比分母（表示该标签覆盖了本月多少支出）。
+List<_TagStat> _tagStats(
+  List<LedgerEntry> entries,
+  List<Tag> tags,
+  double totalExpense,
+) {
+  final labelById = <String, Tag>{for (final tag in tags) tag.id: tag};
+  final totals = <String, double>{};
+  final counts = <String, int>{};
+  for (final entry in entries) {
+    for (final tagId in entry.tagIds) {
+      if (!labelById.containsKey(tagId)) {
+        continue;
+      }
+      totals.update(
+        tagId,
+        (value) => value + entry.amount,
+        ifAbsent: () => entry.amount,
+      );
+      counts.update(tagId, (value) => value + 1, ifAbsent: () => 1);
+    }
+  }
+  final stats =
+      totals.entries
+          .map(
+            (entry) => _TagStat(
+              tag: labelById[entry.key]!,
+              amount: entry.value,
+              percent: totalExpense <= 0 ? 0 : entry.value / totalExpense,
               count: counts[entry.key] ?? 0,
             ),
           )

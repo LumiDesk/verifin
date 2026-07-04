@@ -577,6 +577,7 @@ const List<PagePanelSpec> reportPanelSpecs = <PagePanelSpec>[
   ),
   PagePanelSpec(id: 'category_ring', label: '分类统计', description: '本月支出分类占比环形图'),
   PagePanelSpec(id: 'category_rank', label: '分类明细', description: '本月支出分类排行与占比'),
+  PagePanelSpec(id: 'tag_stats', label: '标签统计', description: '本月各标签的支出金额与占比'),
   PagePanelSpec(id: 'daily_trend', label: '日趋势', description: '近 7 天每日支出趋势'),
   PagePanelSpec(
     id: 'monthly_structure',

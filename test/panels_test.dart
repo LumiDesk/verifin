@@ -83,7 +83,7 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('5个看板面板'), findsOneWidget);
+    expect(find.text('6个看板面板'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('panel_settings_entry_reports')));
     await tester.pumpAndSettle();
@@ -92,7 +92,7 @@ void main() {
     // 进入排序模式后出现拖动手柄,拖动第一个面板到第二位。
     await tester.tap(find.byKey(const Key('panel_sort_toggle')));
     await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.drag_indicator), findsNWidgets(5));
+    expect(find.byIcon(Icons.drag_indicator), findsNWidgets(6));
 
     final firstHandle = tester.getCenter(
       find.byIcon(Icons.drag_indicator).first,

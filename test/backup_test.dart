@@ -129,6 +129,12 @@ void main() {
       controller.childCategories('dining').map((c) => c.id),
       contains('coffee'),
     );
+    // 标签系统：样例含标签，且首条交易带 tagIds，导入后应保留。
+    expect(controller.tags.map((t) => t.label), contains('工作餐'));
+    expect(
+      controller.entries.firstWhere((e) => e.id == 'entry_20260703_001').tagIds,
+      contains('tag_work_meal'),
+    );
     expect(
       controller.categoryBudget(DateTime(2026, 7), 'dining'),
       greaterThan(0),
@@ -167,6 +173,8 @@ void main() {
       'budget_execution',
       'category_rank',
       'monthly_structure',
+      // tag_stats 是样例备份没有的新面板，归一化时按默认开启追加到末尾。
+      'tag_stats',
     ]);
 
     controller.dispose();
