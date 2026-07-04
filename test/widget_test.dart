@@ -11,44 +11,18 @@ import 'package:verifin/app/common_widgets.dart';
 import 'package:verifin/app/ledger_math.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/app/series_math.dart';
-import 'package:verifin/app/veri_fin_controller.dart';
 import 'package:verifin/local_storage/local_storage.dart';
-import 'package:verifin/main.dart';
 import 'package:verifin/pages/home_page.dart';
 
-Future<void> tapBottomTab(WidgetTester tester, int index) async {
-  await tester.tap(find.byKey(Key('main_tab_$index')));
-  await tester.pumpAndSettle();
-}
-
-Future<void> addTestAccount(WidgetTester tester, String name) async {
-  await tapBottomTab(tester, 1);
-  await tester.tap(find.byTooltip('资产操作'));
-  await tester.pumpAndSettle();
-  await tester.tap(find.text('添加账户'));
-  await tester.pumpAndSettle();
-  await tester.enterText(find.byType(TextFormField).first, name);
-  await tester.tap(find.byTooltip('保存账户'));
-  await tester.pumpAndSettle();
-}
-
-Future<void> createQuickEntry(WidgetTester tester) async {
-  await tester.tap(find.byKey(const Key('quick_entry_fab')));
-  await tester.pumpAndSettle();
-
-  await tester.tap(find.byKey(const Key('number_key_4')));
-  await tester.pump();
-  await tester.tap(find.byKey(const Key('number_key_5')));
-  await tester.pump();
-  await tester.tap(find.byKey(const Key('number_pad_ok')));
-  await tester.pumpAndSettle();
-}
+import 'support/test_harness.dart';
 
 void main() {
+  useTestDatabases();
+
   testWidgets('shows the main tabs and switches between pages', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const VeriFinApp());
+    await pumpApp(tester);
 
     expect(find.text('日常账本'), findsOneWidget);
 
@@ -65,7 +39,7 @@ void main() {
   testWidgets('changes theme preference from the profile page', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const VeriFinApp());
+    await pumpApp(tester);
 
     await tapBottomTab(tester, 3);
     await tester.tap(find.byIcon(Icons.settings_outlined));
@@ -87,7 +61,7 @@ void main() {
   testWidgets('requires double confirmation before resetting data', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const VeriFinApp());
+    await pumpApp(tester);
 
     await tapBottomTab(tester, 3);
     await tester.tap(find.byIcon(Icons.settings_outlined));
@@ -106,7 +80,7 @@ void main() {
   testWidgets('opens account icon picker from add account page', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const VeriFinApp());
+    await pumpApp(tester);
 
     await tapBottomTab(tester, 1);
     await tester.tap(find.byTooltip('资产操作'));
@@ -129,7 +103,7 @@ void main() {
   testWidgets('suggests bank icon from account name', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const VeriFinApp());
+    await pumpApp(tester);
 
     await tapBottomTab(tester, 1);
     await tester.tap(find.byTooltip('资产操作'));
@@ -145,7 +119,7 @@ void main() {
   testWidgets('opens asset cover selector from the assets page', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const VeriFinApp());
+    await pumpApp(tester);
 
     await tapBottomTab(tester, 1);
     await tester.tap(find.byTooltip('更换资产卡片背景'));
@@ -159,7 +133,7 @@ void main() {
   testWidgets('shows neutral zero in income expense stats', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const VeriFinApp());
+    await pumpApp(tester);
 
     await tester.tap(find.text('支出走势'));
     await tester.pumpAndSettle();
@@ -172,7 +146,7 @@ void main() {
   testWidgets('home trend chart tap shows data instead of navigating', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const VeriFinApp());
+    await pumpApp(tester);
 
     // 点击图表区域只选中数据点,不进入收支统计页。
     await tester.tap(find.byType(InteractiveTrendChart).first);
@@ -189,7 +163,7 @@ void main() {
   testWidgets('edits monthly budget from the home budget card', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const VeriFinApp());
+    await pumpApp(tester);
 
     await tester.scrollUntilVisible(
       find.byType(BudgetPanel),
@@ -244,7 +218,7 @@ void main() {
     WidgetTester tester,
   ) async {
     final store = LocalKeyValueStore();
-    final controller = VeriFinController(store);
+    final controller = await makeController(store);
     final now = DateTime.now();
     final previousMonth = DateTime(now.year, now.month - 1, 12);
     controller
@@ -276,7 +250,7 @@ void main() {
       ..setCategoryBudget(now, 'dining', 50)
       ..dispose();
 
-    await tester.pumpWidget(VeriFinApp(store: store));
+    await pumpApp(tester, store);
     await tester.scrollUntilVisible(
       find.byType(BudgetPanel),
       300,
@@ -327,7 +301,7 @@ void main() {
   testWidgets('creates an entry through the quick entry flow', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const VeriFinApp());
+    await pumpApp(tester);
     await addTestAccount(tester, '现金账户');
     await tapBottomTab(tester, 0);
 
@@ -347,7 +321,7 @@ void main() {
   testWidgets('entry detail amount color follows type and shows account info', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const VeriFinApp());
+    await pumpApp(tester);
     await addTestAccount(tester, '现金账户');
     await addTestAccount(tester, '备用账户');
     await tapBottomTab(tester, 0);
@@ -399,7 +373,7 @@ void main() {
   testWidgets('opens and deletes an entry from the transaction detail page', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const VeriFinApp());
+    await pumpApp(tester);
     await addTestAccount(tester, '现金账户');
     await tapBottomTab(tester, 0);
 
@@ -426,7 +400,7 @@ void main() {
     WidgetTester tester,
   ) async {
     final store = LocalKeyValueStore();
-    final controller = VeriFinController(store);
+    final controller = await makeController(store);
     final now = DateTime.now();
     controller
       ..addAccount(
@@ -483,7 +457,7 @@ void main() {
       )
       ..dispose();
 
-    await tester.pumpWidget(VeriFinApp(store: store));
+    await pumpApp(tester, store);
     await tester.tap(find.text('最近交易'));
     await tester.pumpAndSettle();
 
@@ -512,7 +486,7 @@ void main() {
   });
 
   testWidgets('starts with no default accounts', (WidgetTester tester) async {
-    await tester.pumpWidget(const VeriFinApp());
+    await pumpApp(tester);
 
     await tapBottomTab(tester, 1);
 
@@ -524,7 +498,7 @@ void main() {
   testWidgets('shows empty state on account groups page', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const VeriFinApp());
+    await pumpApp(tester);
 
     await tapBottomTab(tester, 1);
     await tester.tap(find.byTooltip('资产操作'));
@@ -539,7 +513,7 @@ void main() {
   testWidgets('shows accounts by type in the assets page by default', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const VeriFinApp());
+    await pumpApp(tester);
     await addTestAccount(tester, '现金账户');
 
     expect(find.text('网络支付'), findsOneWidget);
@@ -631,7 +605,7 @@ void main() {
     WidgetTester tester,
   ) async {
     final store = LocalKeyValueStore();
-    final controller = VeriFinController(store);
+    final controller = await makeController(store);
     controller
       ..addAccount(
         Account(
@@ -649,7 +623,7 @@ void main() {
       )
       ..dispose();
 
-    await tester.pumpWidget(VeriFinApp(store: store));
+    await pumpApp(tester, store);
     await tapBottomTab(tester, 1);
 
     await tester.tap(find.byTooltip('资产操作'));
@@ -665,7 +639,7 @@ void main() {
     expect(find.text('支付宝账户'), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pumpWidget(VeriFinApp(store: store));
+    await pumpApp(tester, store);
     await tapBottomTab(tester, 1);
 
     expect(find.text('未分组'), findsOneWidget);
@@ -676,7 +650,7 @@ void main() {
     WidgetTester tester,
   ) async {
     final store = LocalKeyValueStore();
-    await tester.pumpWidget(VeriFinApp(store: store));
+    await pumpApp(tester, store);
 
     await tester.scrollUntilVisible(
       find.byKey(const Key('panel_settings_entry_home')),
@@ -727,7 +701,7 @@ void main() {
 
     // 面板配置持久化:重启后仍然生效。
     await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pumpWidget(VeriFinApp(store: store));
+    await pumpApp(tester, store);
     await tester.pumpAndSettle();
     expect(find.byType(BudgetPanel), findsNothing);
     expect(find.byType(HomeTrendPanel), findsOneWidget);
@@ -737,7 +711,7 @@ void main() {
     WidgetTester tester,
   ) async {
     final store = LocalKeyValueStore();
-    await tester.pumpWidget(VeriFinApp(store: store));
+    await pumpApp(tester, store);
     await tapBottomTab(tester, 2);
 
     await tester.scrollUntilVisible(
@@ -772,7 +746,7 @@ void main() {
     await tester.tap(find.byKey(const Key('panel_sort_toggle')));
     await tester.pumpAndSettle();
 
-    final controller = VeriFinController(store);
+    final controller = await makeController(store);
     expect(
       controller
           .panelSettings(PanelPageKind.reports)
@@ -787,13 +761,13 @@ void main() {
     WidgetTester tester,
   ) async {
     final store = LocalKeyValueStore();
-    final seed = VeriFinController(store);
+    final seed = await makeController(store);
     seed
       ..setPanelEnabled(PanelPageKind.home, 'calendar', false)
       ..reorderPanels(PanelPageKind.home, 0, 2)
       ..dispose();
 
-    await tester.pumpWidget(VeriFinApp(store: store));
+    await pumpApp(tester, store);
     await tester.scrollUntilVisible(
       find.byKey(const Key('panel_settings_entry_home')),
       200,
@@ -810,7 +784,7 @@ void main() {
     await tester.tap(find.text('取消'));
     await tester.pumpAndSettle();
 
-    final beforeReset = VeriFinController(store);
+    final beforeReset = await makeController(store);
     expect(beforeReset.enabledPanelIds(PanelPageKind.home).length, 3);
     beforeReset.dispose();
 
@@ -820,7 +794,7 @@ void main() {
     await tester.tap(find.text('恢复默认'));
     await tester.pumpAndSettle();
 
-    final afterReset = VeriFinController(store);
+    final afterReset = await makeController(store);
     expect(
       afterReset.panelSettings(PanelPageKind.home).map((panel) => panel.id),
       homePanelSpecs.map((spec) => spec.id),
@@ -835,7 +809,7 @@ void main() {
   testWidgets('isolates accounts between ledger books', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const VeriFinApp());
+    await pumpApp(tester);
     await addTestAccount(tester, '默认账本账户');
 
     await tapBottomTab(tester, 3);
@@ -857,7 +831,7 @@ void main() {
   testWidgets('adds a custom category from the profile page', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const VeriFinApp());
+    await pumpApp(tester);
 
     await tapBottomTab(tester, 3);
     await tester.tap(find.text('分类管理'));
@@ -877,8 +851,8 @@ void main() {
     expect(find.text('咖啡'), findsOneWidget);
   });
 
-  test('exports and imports a local data backup', () {
-    final source = VeriFinController(LocalKeyValueStore());
+  test('exports and imports a local data backup', () async {
+    final source = await makeController();
     final account = Account(
       id: 'cash-test',
       bookId: source.activeBook.id,
@@ -916,7 +890,7 @@ void main() {
     source.reorderCategories(EntryType.expense, coffeeIndex, 0);
 
     final backup = source.exportDataJson();
-    final target = VeriFinController(LocalKeyValueStore());
+    final target = await makeController();
     target.importDataJson(backup);
 
     expect(target.accounts.single.name, '现金账户');
@@ -942,9 +916,9 @@ void main() {
     target.dispose();
   });
 
-  test('persists asset account view mode collapse and manual ordering', () {
+  test('persists asset account view mode collapse and manual ordering', () async {
     final store = LocalKeyValueStore();
-    final source = VeriFinController(store);
+    final source = await makeController(store);
     final first = Account(
       id: 'order-a',
       bookId: source.activeBook.id,
@@ -991,7 +965,7 @@ void main() {
       )
       ..dispose();
 
-    final target = VeriFinController(store);
+    final target = await makeController(store);
     final targetSorted = target.sortedAccountsForAssetSection(
       mode: AssetAccountViewMode.type,
       sectionId: AccountType.cash.name,
@@ -1014,9 +988,9 @@ void main() {
     target.dispose();
   });
 
-  test('persists manual asset section ordering', () {
+  test('persists manual asset section ordering', () async {
     final store = LocalKeyValueStore();
-    final source = VeriFinController(store);
+    final source = await makeController(store);
     const sections = <String>['onlinePayment', 'creditCard', 'debitCard'];
     source
       ..reorderAssetSections<String>(
@@ -1028,7 +1002,7 @@ void main() {
       )
       ..dispose();
 
-    final target = VeriFinController(store);
+    final target = await makeController(store);
     final sorted = target.sortedAssetSections<String>(
       mode: AssetAccountViewMode.type,
       sections: sections,
@@ -1040,9 +1014,9 @@ void main() {
     target.dispose();
   });
 
-  test('panel settings toggle, keep-one guard, reorder and persist', () {
+  test('panel settings toggle, keep-one guard, reorder and persist', () async {
     final store = LocalKeyValueStore();
-    final controller = VeriFinController(store);
+    final controller = await makeController(store);
 
     expect(controller.enabledPanelIds(PanelPageKind.home), <String>[
       'trend',
@@ -1070,7 +1044,7 @@ void main() {
       ..reorderPanels(PanelPageKind.reports, 0, 2)
       ..dispose();
 
-    final reloaded = VeriFinController(store);
+    final reloaded = await makeController(store);
     expect(reloaded.enabledPanelIds(PanelPageKind.home), <String>['trend']);
     expect(
       reloaded
@@ -1093,15 +1067,15 @@ void main() {
     reloaded.dispose();
   });
 
-  test('panel settings survive export and import', () {
-    final source = VeriFinController(LocalKeyValueStore());
+  test('panel settings survive export and import', () async {
+    final source = await makeController();
     source
       ..setPanelEnabled(PanelPageKind.home, 'calendar', false)
       ..reorderPanels(PanelPageKind.home, 0, 2);
     final exported = source.exportDataJson();
     source.dispose();
 
-    final target = VeriFinController(LocalKeyValueStore());
+    final target = await makeController();
     target.importDataJson(exported);
 
     expect(target.enabledPanelIds(PanelPageKind.home), <String>[
@@ -1117,8 +1091,8 @@ void main() {
     target.dispose();
   });
 
-  test('legacy backup without panel fields falls back to defaults', () {
-    final source = VeriFinController(LocalKeyValueStore());
+  test('legacy backup without panel fields falls back to defaults', () async {
+    final source = await makeController();
     final exported = source.exportDataJson();
     source.dispose();
 
@@ -1131,7 +1105,7 @@ void main() {
         }),
     );
 
-    final target = VeriFinController(LocalKeyValueStore());
+    final target = await makeController();
     target.importDataJson(legacyJson);
 
     expect(
@@ -1146,11 +1120,11 @@ void main() {
     target.dispose();
   });
 
-  test('sample backup imports into controller', () {
+  test('sample backup imports into controller', () async {
     final rawJson = File(
       'docs/dev/verifin-sample-backup.json',
     ).readAsStringSync();
-    final controller = VeriFinController(LocalKeyValueStore());
+    final controller = await makeController();
 
     controller.importDataJson(rawJson);
 
@@ -1204,7 +1178,7 @@ void main() {
     controller.dispose();
   });
 
-  test('android package name is not the Flutter template package', () {
+  test('android package name is not the Flutter template package', () async {
     final buildGradle = File('android/app/build.gradle.kts').readAsStringSync();
     final mainActivity = File(
       'android/app/src/main/kotlin/top/talyra42/verifin/MainActivity.kt',
@@ -1217,8 +1191,8 @@ void main() {
 
   test(
     'deleting account with related entries removes touched transfers too',
-    () {
-      final controller = VeriFinController(LocalKeyValueStore());
+    () async {
+      final controller = await makeController();
       final cash = Account(
         id: 'delete-cash-test',
         bookId: controller.activeBook.id,
@@ -1299,8 +1273,8 @@ void main() {
 
   test(
     'transfer entries update both account balances without income expense',
-    () {
-      final source = VeriFinController(LocalKeyValueStore());
+    () async {
+      final source = await makeController();
       final cash = Account(
         id: 'transfer-cash-test',
         bookId: source.activeBook.id,
@@ -1348,7 +1322,7 @@ void main() {
       expect(sumByType(source.entries, EntryType.income), 0);
 
       final backup = source.exportDataJson();
-      final target = VeriFinController(LocalKeyValueStore());
+      final target = await makeController();
       target.importDataJson(backup);
 
       expect(target.entries.single.toAccountId, card.id);
@@ -1360,8 +1334,8 @@ void main() {
     },
   );
 
-  test('addEntry keeps entries sorted latest first', () {
-    final controller = VeriFinController(LocalKeyValueStore());
+  test('addEntry keeps entries sorted latest first', () async {
+    final controller = await makeController();
     final bookId = controller.activeBook.id;
     LedgerEntry entryAt(String id, DateTime when) => LedgerEntry(
       id: id,
@@ -1383,20 +1357,9 @@ void main() {
     controller.dispose();
   });
 
-  test('recovers from structurally corrupt persisted entries', () {
+  test('deleting a ledger book removes its asset view preferences', () async {
     final store = LocalKeyValueStore();
-    store.write('verifin.entries.v1', '[{"id":"broken"}]');
-
-    final controller = VeriFinController(store);
-
-    expect(controller.entries, isEmpty);
-    expect(store.read('verifin.entries.v1'), isNull);
-    controller.dispose();
-  });
-
-  test('deleting a ledger book removes its asset view preferences', () {
-    final store = LocalKeyValueStore();
-    final controller = VeriFinController(store);
+    final controller = await makeController(store);
     controller.addLedgerBook('临时账本');
     final bookId = controller.activeBook.id;
     controller.toggleAssetSectionCollapsed(
@@ -1414,7 +1377,7 @@ void main() {
     controller.dispose();
   });
 
-  test('account balance series keeps history baseline and sign', () {
+  test('account balance series keeps history baseline and sign', () async {
     final now = DateTime.now();
     final account = Account(
       id: 'acc-series',
@@ -1461,7 +1424,7 @@ void main() {
     expect(values.last, -250);
   });
 
-  test('monthly net asset series includes prior year history', () {
+  test('monthly net asset series includes prior year history', () async {
     final now = DateTime.now();
     final account = Account(
       id: 'acc-net',
@@ -1494,8 +1457,8 @@ void main() {
     expect(values.last, -200);
   });
 
-  test('isolates budgets between ledger books', () {
-    final controller = VeriFinController(LocalKeyValueStore());
+  test('isolates budgets between ledger books', () async {
+    final controller = await makeController();
     final month = DateTime(2026, 7);
     controller.setMonthlyBudget(month, 5000);
     controller.setCategoryBudget(month, 'dining', 600);
@@ -1513,20 +1476,25 @@ void main() {
     controller.dispose();
   });
 
-  test('migrates legacy budget keys to the default book', () {
-    final store = LocalKeyValueStore();
-    store.write('verifin.monthly_budgets.v1', '{"2026-07": 3000}');
-    store.write('verifin.category_budgets.v1', '{"2026-07:dining": 450}');
-
-    final controller = VeriFinController(store);
+  test('imports legacy backup budget keys into the default book', () async {
+    // 旧备份里预算键没有 bookId 前缀，导入时应归入默认账本。
+    final controller = await makeController();
+    controller.importDataJson(
+      jsonEncode(<String, Object?>{
+        'data': <String, Object?>{
+          'monthlyBudgets': <String, Object?>{'2026-07': 3000},
+          'categoryBudgets': <String, Object?>{'2026-07:dining': 450},
+        },
+      }),
+    );
 
     expect(controller.monthlyBudget(DateTime(2026, 7)), 3000);
     expect(controller.categoryBudget(DateTime(2026, 7), 'dining'), 450);
     controller.dispose();
   });
 
-  test('rebase balance updates initial balance without a transaction', () {
-    final controller = VeriFinController(LocalKeyValueStore());
+  test('rebase balance updates initial balance without a transaction', () async {
+    final controller = await makeController();
     final account = Account(
       id: 'rebase-acc',
       bookId: controller.activeBook.id,
@@ -1549,7 +1517,7 @@ void main() {
     controller.dispose();
   });
 
-  test('bookkeeping duration switches to years after one year', () {
+  test('bookkeeping duration switches to years after one year', () async {
     expect(bookkeepingDurationStat(20), ('20', '记账天数'));
     expect(bookkeepingDurationStat(365), ('365', '记账天数'));
     expect(bookkeepingDurationStat(438), ('1.2', '记账年数'));

@@ -13,42 +13,26 @@ import 'pages/shell.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final store = await LocalKeyValueStore.create();
-  LedgerRepository? repository;
-  try {
-    final database = await AppDatabase.open();
-    repository = LedgerRepository(database);
-  } catch (error, stack) {
-    // 数据库不可用时回退到 KV，保证应用可启动而非白屏。
-    debugPrint('SQLite 初始化失败，回退到 KV 存储：$error\n$stack');
-  }
+  final database = await AppDatabase.open();
   final controller = await VeriFinController.create(
     store,
-    repository: repository,
+    repository: SqliteLedgerRepository(database),
   );
   runApp(VeriFinApp(controller: controller));
 }
 
 class VeriFinApp extends StatefulWidget {
-  const VeriFinApp({super.key, this.store, this.controller});
+  const VeriFinApp({super.key, required this.controller});
 
-  /// 预先构建好的控制器（应用入口使用）。为空时由 [store] 现场构建（测试使用）。
-  final VeriFinController? controller;
-  final LocalKeyValueStore? store;
+  /// 预先构建好的控制器（账目类数据已从 SQLite 载入）。
+  final VeriFinController controller;
 
   @override
   State<VeriFinApp> createState() => _VeriFinAppState();
 }
 
 class _VeriFinAppState extends State<VeriFinApp> {
-  late final VeriFinController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller =
-        widget.controller ??
-        VeriFinController(widget.store ?? LocalKeyValueStore());
-  }
+  late final VeriFinController _controller = widget.controller;
 
   @override
   void dispose() {

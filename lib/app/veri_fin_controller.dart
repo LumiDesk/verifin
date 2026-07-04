@@ -10,40 +10,29 @@ import 'ledger_math.dart';
 import 'models.dart';
 
 class VeriFinController extends ChangeNotifier {
-  VeriFinController(LocalKeyValueStore store, {LedgerRepository? repository})
-    : this._(store, repository);
-
   VeriFinController._(this._store, this._repository) {
-    _load();
+    _loadPreferences();
     themePreferenceListenable = ValueNotifier<ThemePreference>(
       _themePreference,
     );
   }
 
-  /// 异步创建控制器：在同步载入 KV 数据后，接入 SQLite 仓储，完成首启动迁移
-  /// 并以库中数据覆盖对应内存列表。[repository] 为空时退化为纯 KV 存储（测试用）。
+  /// 唯一的构造入口：同步载入偏好类 KV 数据后，从 SQLite 载入账目类数据
+  /// （全新数据库首启动写入默认数据）。账目类数据只以 SQLite 为准。
   static Future<VeriFinController> create(
     LocalKeyValueStore store, {
-    LedgerRepository? repository,
+    required LedgerRepository repository,
   }) async {
-    final controller = VeriFinController(store, repository: repository);
-    if (repository != null) {
-      await controller._migrateAndLoadFromRepository(repository);
-    }
+    final controller = VeriFinController._(store, repository);
+    await controller._loadFromRepository();
     return controller;
   }
 
-  static const String _entriesKey = 'verifin.entries.v1';
+  // 账目类数据（交易/账户/分组/账本/分类/预算）存 SQLite；以下仅为偏好类小数据的 KV 键。
   static const String _themeKey = 'verifin.theme.v1';
-  static const String _accountsKey = 'verifin.accounts.v1';
-  static const String _accountGroupsKey = 'verifin.account_groups.v1';
   static const String _profileKey = 'verifin.profile.v1';
-  static const String _budgetsKey = 'verifin.monthly_budgets.v1';
-  static const String _ledgerBooksKey = 'verifin.ledger_books.v1';
   static const String _activeBookKey = 'verifin.active_book.v1';
   static const String _assetCoverKey = 'verifin.asset_cover.v1';
-  static const String _categoriesKey = 'verifin.categories.v1';
-  static const String _categoryBudgetsKey = 'verifin.category_budgets.v1';
   static const String _hapticsKey = 'verifin.haptics.v1';
   static const String _assetViewModeKey = 'verifin.asset_view_mode.v1';
   static const String _assetSectionCollapsedKey =
@@ -52,17 +41,6 @@ class VeriFinController extends ChangeNotifier {
   static const String _assetSectionOrderKey = 'verifin.asset_section_order.v1';
   static const String _homePanelsKey = 'verifin.home_panels.v1';
   static const String _reportPanelsKey = 'verifin.report_panels.v1';
-  // 首启动 KV→SQLite 迁移标记，按实体独立设置，便于分步上线与回退。
-  static const String _entriesMigratedKey = 'verifin.migration.entries.v1';
-  static const String _booksMigratedKey = 'verifin.migration.books.v1';
-  static const String _accountsMigratedKey = 'verifin.migration.accounts.v1';
-  static const String _groupsMigratedKey = 'verifin.migration.groups.v1';
-  static const String _categoriesMigratedKey =
-      'verifin.migration.categories.v1';
-  static const String _monthlyBudgetsMigratedKey =
-      'verifin.migration.monthly_budgets.v1';
-  static const String _categoryBudgetsMigratedKey =
-      'verifin.migration.category_budgets.v1';
 
   static String _panelsKeyFor(PanelPageKind page) {
     switch (page) {
@@ -75,8 +53,8 @@ class VeriFinController extends ChangeNotifier {
 
   final LocalKeyValueStore _store;
 
-  /// SQLite 仓储；为空时账目数据落 KV（测试 / 数据库不可用时的回退路径）。
-  final LedgerRepository? _repository;
+  /// SQLite 仓储，账目类数据的唯一存储。
+  final LedgerRepository _repository;
 
   final List<LedgerEntry> _entries = <LedgerEntry>[];
   final List<LedgerBook> _ledgerBooks = <LedgerBook>[];
@@ -767,18 +745,12 @@ class VeriFinController extends ChangeNotifier {
   }
 
   void resetAllData() {
+    // 偏好类 KV 键清空；账目类数据在下方以默认状态写回 SQLite。
     for (final key in <String>[
-      _entriesKey,
       _themeKey,
-      _accountsKey,
-      _accountGroupsKey,
       _profileKey,
-      _budgetsKey,
-      _ledgerBooksKey,
       _activeBookKey,
       _assetCoverKey,
-      _categoriesKey,
-      _categoryBudgetsKey,
       _hapticsKey,
       _assetViewModeKey,
       _assetSectionCollapsedKey,
@@ -816,16 +788,14 @@ class VeriFinController extends ChangeNotifier {
     for (final page in PanelPageKind.values) {
       _pagePanels[page] = _defaultPanelSettings(page.specs);
     }
-    // 有仓储时把重置后的状态写回 SQLite（否则库中仍是旧数据）。
-    if (_repository != null) {
-      _persistEntries();
-      _persistLedgerBooks();
-      _persistAccounts();
-      _persistAccountGroups();
-      _persistCategories();
-      _persistBudgets();
-      _persistCategoryBudgets();
-    }
+    // 把重置后的默认状态写回 SQLite。
+    _persistEntries();
+    _persistLedgerBooks();
+    _persistAccounts();
+    _persistAccountGroups();
+    _persistCategories();
+    _persistBudgets();
+    _persistCategoryBudgets();
     themePreferenceListenable.value = _themePreference;
     notifyListeners();
   }
@@ -1035,15 +1005,11 @@ class VeriFinController extends ChangeNotifier {
     return balance;
   }
 
-  void _load() {
+  /// 载入偏好类小数据（KV）。账目类数据由 [_loadFromRepository] 从 SQLite 载入。
+  void _loadPreferences() {
     _themePreference = ThemePreference.fromStorage(_store.read(_themeKey));
-    _loadLedgerBooks();
-    _loadCategories();
-    _loadAccountGroups();
-    _loadAccounts();
     _loadProfile();
-    _loadBudgets();
-    _loadCategoryBudgets();
+    _activeBookId = _store.read(_activeBookKey) ?? defaultLedgerBookId;
     _assetCoverUrl = _store.read(_assetCoverKey) ?? '';
     _hapticsEnabled = _store.read(_hapticsKey) != 'false';
     _assetAccountViewMode = AssetAccountViewMode.fromStorage(
@@ -1053,274 +1019,69 @@ class VeriFinController extends ChangeNotifier {
     _loadAssetAccountOrders();
     _loadAssetSectionOrders();
     _loadPagePanels();
-    _entries
-      ..clear()
-      ..addAll(_decodeEntriesFromKv());
   }
 
-  /// 从 KV 解析交易列表；数据缺失或损坏时返回空列表并清理脏数据。
-  List<LedgerEntry> _decodeEntriesFromKv() {
-    final rawEntries = _store.read(_entriesKey);
-    if (rawEntries == null || rawEntries.isEmpty) {
-      return <LedgerEntry>[];
-    }
-    try {
-      final decoded = jsonDecode(rawEntries) as List<dynamic>;
-      return decoded
-          .map(
-            (item) => LedgerEntry.fromJson(
-              Map<String, Object?>.from(item as Map<dynamic, dynamic>),
-            ),
-          )
-          .toList();
-    } catch (_) {
-      _store.delete(_entriesKey);
-      return <LedgerEntry>[];
-    }
-  }
-
-  /// 首启动把 KV 中已载入并归一化的内存数据写入 SQLite（每类只一次），
-  /// 随后以库中数据为准覆盖内存列表。偏好类小数据仍留在 KV。
-  Future<void> _migrateAndLoadFromRepository(LedgerRepository repository) async {
-    final entries = await _loadOrMigrate(
-      _entriesMigratedKey,
-      repository.loadEntries,
-      () => repository.saveEntries(_entries),
-      _entries,
-    );
-    _entries
-      ..clear()
-      ..addAll(entries..sort(_compareEntriesLatestFirst));
-
-    final books = await _loadOrMigrate(
-      _booksMigratedKey,
-      repository.loadBooks,
-      () => repository.saveBooks(_ledgerBooks),
-      _ledgerBooks,
-    );
-    if (books.isNotEmpty) {
+  /// 从 SQLite 载入账目类数据；全新数据库首启动写入默认账本/账户/分组/分类。
+  Future<void> _loadFromRepository() async {
+    final books = await _repository.loadBooks();
+    if (books.isEmpty) {
+      _ledgerBooks
+        ..clear()
+        ..addAll(defaultLedgerBooks);
+      _accounts
+        ..clear()
+        ..addAll(defaultAccounts);
+      _accountGroups
+        ..clear()
+        ..addAll(defaultAccountGroups);
+      _categories
+        ..clear()
+        ..addAll(defaultCategories);
+      _normalizeGroupOrder();
+      await _repository.saveBooks(_ledgerBooks);
+      await _repository.saveAccounts(_accounts);
+      await _repository.saveAccountGroups(_accountGroups);
+      await _repository.saveCategories(_categories);
+    } else {
       _ledgerBooks
         ..clear()
         ..addAll(books);
       if (!_ledgerBooks.any((book) => book.id == defaultLedgerBookId)) {
         _ledgerBooks.insert(0, defaultLedgerBooks.first);
       }
-      if (!_ledgerBooks.any((book) => book.id == _activeBookId)) {
-        _activeBookId = defaultLedgerBookId;
-        _store.write(_activeBookKey, _activeBookId);
-      }
+      _accounts
+        ..clear()
+        ..addAll(await _repository.loadAccounts());
+      _accountGroups
+        ..clear()
+        ..addAll(await _repository.loadAccountGroups());
+      _normalizeGroupOrder();
+      final categories = await _repository.loadCategories();
+      _categories
+        ..clear()
+        ..addAll(categories.isEmpty ? defaultCategories : categories);
     }
-
-    final accounts = await _loadOrMigrate(
-      _accountsMigratedKey,
-      repository.loadAccounts,
-      () => repository.saveAccounts(_accounts),
-      _accounts,
-    );
-    _accounts
+    if (!_ledgerBooks.any((book) => book.id == _activeBookId)) {
+      _activeBookId = defaultLedgerBookId;
+      _store.write(_activeBookKey, _activeBookId);
+    }
+    final entries = await _repository.loadEntries();
+    entries.sort(_compareEntriesLatestFirst);
+    _entries
       ..clear()
-      ..addAll(accounts);
-
-    final groups = await _loadOrMigrate(
-      _groupsMigratedKey,
-      repository.loadAccountGroups,
-      () => repository.saveAccountGroups(_accountGroups),
-      _accountGroups,
-    );
-    _accountGroups
-      ..clear()
-      ..addAll(groups);
-    _normalizeGroupOrder();
-
-    final categories = await _loadOrMigrate(
-      _categoriesMigratedKey,
-      repository.loadCategories,
-      () => repository.saveCategories(_categories),
-      _categories,
-    );
-    _categories
-      ..clear()
-      ..addAll(categories);
-
-    final monthlyBudgets = await _loadOrMigrateMap(
-      _monthlyBudgetsMigratedKey,
-      repository.loadMonthlyBudgets,
-      () => repository.saveMonthlyBudgets(_monthlyBudgets),
-      _monthlyBudgets,
-    );
+      ..addAll(entries);
     _monthlyBudgets
       ..clear()
-      ..addAll(_bookScopedBudgets(monthlyBudgets));
-
-    final categoryBudgets = await _loadOrMigrateMap(
-      _categoryBudgetsMigratedKey,
-      repository.loadCategoryBudgets,
-      () => repository.saveCategoryBudgets(_categoryBudgets),
-      _categoryBudgets,
-    );
+      ..addAll(_bookScopedBudgets(await _repository.loadMonthlyBudgets()));
     _categoryBudgets
       ..clear()
-      ..addAll(_bookScopedBudgets(categoryBudgets));
-
-    _cleanupMigratedKvBlobs();
+      ..addAll(_bookScopedBudgets(await _repository.loadCategoryBudgets()));
     notifyListeners();
-  }
-
-  /// 迁移完成后清理 KV 中已进库的冗余数据（偏好类小数据保留）。
-  /// 仅删除对应迁移标记已置位的键，确保数据已安全落库。
-  void _cleanupMigratedKvBlobs() {
-    final migrated = <(String, String)>[
-      (_entriesMigratedKey, _entriesKey),
-      (_booksMigratedKey, _ledgerBooksKey),
-      (_accountsMigratedKey, _accountsKey),
-      (_groupsMigratedKey, _accountGroupsKey),
-      (_categoriesMigratedKey, _categoriesKey),
-      (_monthlyBudgetsMigratedKey, _budgetsKey),
-      (_categoryBudgetsMigratedKey, _categoryBudgetsKey),
-    ];
-    for (final (flagKey, dataKey) in migrated) {
-      if (_store.read(flagKey) == 'true') {
-        _store.delete(dataKey);
-      }
-    }
-  }
-
-  /// 单类实体的载入 / 一次性迁移，返回权威数据（供覆盖内存列表）：
-  /// - 已迁移过（标记置位）：库为准，直接返回库中数据（可能为空）。
-  /// - 未迁移且库已有数据：采用库中数据（避免覆盖，如 KV 被清但库仍在）。
-  /// - 未迁移且库为空：把内存（KV 载入）数据搬入库，返回其副本。
-  Future<List<T>> _loadOrMigrate<T>(
-    String flagKey,
-    Future<List<T>> Function() load,
-    Future<void> Function() migrate,
-    List<T> inMemory,
-  ) async {
-    if (_store.read(flagKey) == 'true') {
-      return load();
-    }
-    final existing = await load();
-    _store.write(flagKey, 'true');
-    if (existing.isNotEmpty) {
-      return existing;
-    }
-    await migrate();
-    return List<T>.of(inMemory);
-  }
-
-  /// [_loadOrMigrate] 的键值映射版本（用于预算）。
-  Future<Map<String, double>> _loadOrMigrateMap(
-    String flagKey,
-    Future<Map<String, double>> Function() load,
-    Future<void> Function() migrate,
-    Map<String, double> inMemory,
-  ) async {
-    if (_store.read(flagKey) == 'true') {
-      return load();
-    }
-    final existing = await load();
-    _store.write(flagKey, 'true');
-    if (existing.isNotEmpty) {
-      return existing;
-    }
-    await migrate();
-    return Map<String, double>.of(inMemory);
   }
 
   void _removeAccountFromOrders(String accountId) {
     for (final order in _assetAccountOrders.values) {
       order.remove(accountId);
-    }
-  }
-
-  void _loadLedgerBooks() {
-    final rawBooks = _store.read(_ledgerBooksKey);
-    if (rawBooks == null || rawBooks.isEmpty) {
-      _ledgerBooks
-        ..clear()
-        ..addAll(defaultLedgerBooks);
-    } else {
-      try {
-        final decoded = jsonDecode(rawBooks) as List<dynamic>;
-        _ledgerBooks
-          ..clear()
-          ..addAll(
-            decoded.map(
-              (item) => LedgerBook.fromJson(
-                Map<String, Object?>.from(item as Map<dynamic, dynamic>),
-              ),
-            ),
-          );
-      } catch (_) {
-        _store.delete(_ledgerBooksKey);
-        _ledgerBooks
-          ..clear()
-          ..addAll(defaultLedgerBooks);
-      }
-    }
-    if (!_ledgerBooks.any((book) => book.id == defaultLedgerBookId)) {
-      _ledgerBooks.insert(0, defaultLedgerBooks.first);
-    }
-    _activeBookId = _store.read(_activeBookKey) ?? defaultLedgerBookId;
-    if (!_ledgerBooks.any((book) => book.id == _activeBookId)) {
-      _activeBookId = defaultLedgerBookId;
-      _store.write(_activeBookKey, _activeBookId);
-    }
-  }
-
-  void _loadAccounts() {
-    final rawAccounts = _store.read(_accountsKey);
-    if (rawAccounts == null || rawAccounts.isEmpty) {
-      _accounts
-        ..clear()
-        ..addAll(defaultAccounts);
-      return;
-    }
-
-    try {
-      final decoded = jsonDecode(rawAccounts) as List<dynamic>;
-      _accounts
-        ..clear()
-        ..addAll(
-          decoded.map(
-            (item) => Account.fromJson(
-              Map<String, Object?>.from(item as Map<dynamic, dynamic>),
-            ),
-          ),
-        );
-    } catch (_) {
-      _store.delete(_accountsKey);
-      _accounts
-        ..clear()
-        ..addAll(defaultAccounts);
-    }
-  }
-
-  void _loadAccountGroups() {
-    final rawGroups = _store.read(_accountGroupsKey);
-    if (rawGroups == null || rawGroups.isEmpty) {
-      _accountGroups
-        ..clear()
-        ..addAll(defaultAccountGroups);
-      return;
-    }
-
-    try {
-      final decoded = jsonDecode(rawGroups) as List<dynamic>;
-      _accountGroups
-        ..clear()
-        ..addAll(
-          decoded.map(
-            (item) => AccountGroup.fromJson(
-              Map<String, Object?>.from(item as Map<dynamic, dynamic>),
-            ),
-          ),
-        );
-      _normalizeGroupOrder();
-    } catch (_) {
-      _store.delete(_accountGroupsKey);
-      _accountGroups
-        ..clear()
-        ..addAll(defaultAccountGroups);
     }
   }
 
@@ -1340,76 +1101,6 @@ class VeriFinController extends ChangeNotifier {
     } catch (_) {
       _store.delete(_profileKey);
       _profile = defaultUserProfile;
-    }
-  }
-
-  void _loadCategories() {
-    final rawCategories = _store.read(_categoriesKey);
-    if (rawCategories == null || rawCategories.isEmpty) {
-      _categories
-        ..clear()
-        ..addAll(defaultCategories);
-      return;
-    }
-
-    try {
-      final decoded = jsonDecode(rawCategories) as List<dynamic>;
-      _categories
-        ..clear()
-        ..addAll(
-          decoded.map(
-            (item) => Category.fromJson(
-              Map<String, Object?>.from(item as Map<dynamic, dynamic>),
-            ),
-          ),
-        );
-      if (_categories.isEmpty) {
-        _categories.addAll(defaultCategories);
-      }
-    } catch (_) {
-      _store.delete(_categoriesKey);
-      _categories
-        ..clear()
-        ..addAll(defaultCategories);
-    }
-  }
-
-  void _loadBudgets() {
-    final rawBudgets = _store.read(_budgetsKey);
-    if (rawBudgets == null || rawBudgets.isEmpty) {
-      return;
-    }
-
-    try {
-      final decoded = Map<String, Object?>.from(
-        jsonDecode(rawBudgets) as Map<dynamic, dynamic>,
-      );
-      _monthlyBudgets
-        ..clear()
-        ..addAll(
-          _bookScopedBudgets(
-            decoded.map(
-              (key, value) => MapEntry(key, (value as num? ?? 0).toDouble()),
-            ),
-          ),
-        );
-    } catch (_) {
-      _store.delete(_budgetsKey);
-    }
-  }
-
-  void _loadCategoryBudgets() {
-    final rawBudgets = _store.read(_categoryBudgetsKey);
-    if (rawBudgets == null || rawBudgets.isEmpty) {
-      return;
-    }
-
-    try {
-      _categoryBudgets
-        ..clear()
-        ..addAll(_bookScopedBudgets(_decodeBudgets(jsonDecode(rawBudgets))));
-    } catch (_) {
-      _store.delete(_categoryBudgetsKey);
     }
   }
 
@@ -1456,15 +1147,7 @@ class VeriFinController extends ChangeNotifier {
   }
 
   void _persistEntries() {
-    final repository = _repository;
-    if (repository != null) {
-      _trackWrite(repository.saveEntries(List<LedgerEntry>.of(_entries)));
-      return;
-    }
-    _store.write(
-      _entriesKey,
-      jsonEncode(_entries.map((entry) => entry.toJson()).toList()),
-    );
+    _trackWrite(_repository.saveEntries(List<LedgerEntry>.of(_entries)));
   }
 
   // 记录最近一次 SQLite 写入，供测试等待其落库。写入按连接串行，等待最新即可。
@@ -1480,77 +1163,33 @@ class VeriFinController extends ChangeNotifier {
   Future<void> waitForPendingWrites() => _pendingWrite;
 
   void _persistLedgerBooks() {
-    final repository = _repository;
-    if (repository != null) {
-      _trackWrite(repository.saveBooks(List<LedgerBook>.of(_ledgerBooks)));
-      return;
-    }
-    _store.write(
-      _ledgerBooksKey,
-      jsonEncode(_ledgerBooks.map((book) => book.toJson()).toList()),
-    );
+    _trackWrite(_repository.saveBooks(List<LedgerBook>.of(_ledgerBooks)));
   }
 
   void _persistAccounts() {
-    final repository = _repository;
-    if (repository != null) {
-      _trackWrite(repository.saveAccounts(List<Account>.of(_accounts)));
-      return;
-    }
-    _store.write(
-      _accountsKey,
-      jsonEncode(_accounts.map((account) => account.toJson()).toList()),
-    );
+    _trackWrite(_repository.saveAccounts(List<Account>.of(_accounts)));
   }
 
   void _persistAccountGroups() {
-    final repository = _repository;
-    if (repository != null) {
-      _trackWrite(
-        repository.saveAccountGroups(List<AccountGroup>.of(_accountGroups)),
-      );
-      return;
-    }
-    _store.write(
-      _accountGroupsKey,
-      jsonEncode(_accountGroups.map((group) => group.toJson()).toList()),
+    _trackWrite(
+      _repository.saveAccountGroups(List<AccountGroup>.of(_accountGroups)),
     );
   }
 
   void _persistCategories() {
-    final repository = _repository;
-    if (repository != null) {
-      _trackWrite(repository.saveCategories(List<Category>.of(_categories)));
-      return;
-    }
-    _store.write(
-      _categoriesKey,
-      jsonEncode(_categories.map((category) => category.toJson()).toList()),
-    );
+    _trackWrite(_repository.saveCategories(List<Category>.of(_categories)));
   }
 
   void _persistBudgets() {
-    final repository = _repository;
-    if (repository != null) {
-      _trackWrite(
-        repository.saveMonthlyBudgets(Map<String, double>.of(_monthlyBudgets)),
-      );
-      return;
-    }
-    _store.write(_budgetsKey, jsonEncode(_monthlyBudgets));
+    _trackWrite(
+      _repository.saveMonthlyBudgets(Map<String, double>.of(_monthlyBudgets)),
+    );
   }
 
   void _persistCategoryBudgets() {
-    final repository = _repository;
-    if (repository != null) {
-      _trackWrite(
-        repository.saveCategoryBudgets(
-          Map<String, double>.of(_categoryBudgets),
-        ),
-      );
-      return;
-    }
-    _store.write(_categoryBudgetsKey, jsonEncode(_categoryBudgets));
+    _trackWrite(
+      _repository.saveCategoryBudgets(Map<String, double>.of(_categoryBudgets)),
+    );
   }
 
   void _persistAssetSectionCollapsed() {

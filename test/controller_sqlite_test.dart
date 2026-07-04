@@ -27,7 +27,7 @@ void main() {
       path: inMemoryDatabasePath,
     );
     opened.add(db);
-    return LedgerRepository(db);
+    return SqliteLedgerRepository(db);
   }
 
   LedgerEntry entry(String id, {double amount = 10}) => LedgerEntry(
@@ -60,39 +60,13 @@ void main() {
     expect(reloaded.entries.single.id, '1');
   });
 
-  test('首启动把 KV 历史交易迁移进 SQLite', () async {
-    final store = LocalKeyValueStore();
-    store.write(
-      'verifin.entries.v1',
-      jsonEncode(<Map<String, Object?>>[
-        entry('2', amount: 8).toJson(),
-        entry('3', amount: 9).toJson(),
-      ]),
-    );
-    final repo = await openRepo();
-    final controller = await VeriFinController.create(store, repository: repo);
-
-    expect(controller.entries.length, 2);
-    expect((await repo.loadEntries()).length, 2);
-    // 迁移标记落位，二次创建不重复导入。
-    expect(store.read('verifin.migration.entries.v1'), 'true');
-
-    controller.deleteEntry('2');
-    await controller.waitForPendingWrites();
-    final again = await VeriFinController.create(
-      LocalKeyValueStore()..write('verifin.migration.entries.v1', 'true'),
-      repository: repo,
-    );
-    expect(again.entries.single.id, '3');
-  });
-
   test('账本/账户/分组写入 SQLite 并被新控制器读回', () async {
     final repo = await openRepo();
     final controller = await VeriFinController.create(
       LocalKeyValueStore(),
       repository: repo,
     );
-    // 默认账本已在首启动迁移进库（默认账户为空，用户新增后才有）。
+    // 全新数据库首启动已播种默认账本（默认账户为空，用户新增后才有）。
     expect(await repo.loadBooks(), isNotEmpty);
 
     controller.addLedgerBook('旅行账本');
@@ -217,18 +191,5 @@ void main() {
       repository: repo,
     );
     expect(reloaded.entries, isEmpty);
-  });
-
-  test('迁移完成后清理 KV 中已进库的冗余数据', () async {
-    final store = LocalKeyValueStore();
-    store.write(
-      'verifin.entries.v1',
-      jsonEncode(<Map<String, Object?>>[entry('5').toJson()]),
-    );
-    final repo = await openRepo();
-    await VeriFinController.create(store, repository: repo);
-
-    expect(store.read('verifin.migration.entries.v1'), 'true');
-    expect(store.read('verifin.entries.v1'), isNull);
   });
 }

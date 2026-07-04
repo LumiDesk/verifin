@@ -3,87 +3,128 @@ import 'package:sqflite_common/sqlite_api.dart';
 import '../app/models.dart';
 import 'app_database.dart';
 
-/// 账目类数据的 SQLite 仓储层。
+/// 账目类数据仓储接口。生产实现为 [SqliteLedgerRepository]；测试可注入内存实现，
+/// 避免真实异步 I/O 与 widget 测试的 fake-async 冲突。
 ///
-/// 沿用 controller 既有的「整表覆盖」持久化语义：每次写入以事务批量清空并重建
-/// 对应表，与旧版把整个列表 JSON 覆盖写 KV 的行为一致，迁移期间行为可预期。
-/// 列表顺序通过 sort_order 列保留（entries 除外，其顺序由 occurred_at 决定）。
-class LedgerRepository {
-  LedgerRepository(this._database);
+/// 语义为「整表覆盖」：每次 saveX 以传入列表整体替换该类数据。
+abstract interface class LedgerRepository {
+  Future<List<LedgerEntry>> loadEntries();
+  Future<void> saveEntries(List<LedgerEntry> entries);
+
+  Future<List<LedgerBook>> loadBooks();
+  Future<void> saveBooks(List<LedgerBook> books);
+
+  Future<List<Account>> loadAccounts();
+  Future<void> saveAccounts(List<Account> accounts);
+
+  Future<List<AccountGroup>> loadAccountGroups();
+  Future<void> saveAccountGroups(List<AccountGroup> groups);
+
+  Future<List<Category>> loadCategories();
+  Future<void> saveCategories(List<Category> categories);
+
+  Future<Map<String, double>> loadMonthlyBudgets();
+  Future<void> saveMonthlyBudgets(Map<String, double> budgets);
+
+  Future<Map<String, double>> loadCategoryBudgets();
+  Future<void> saveCategoryBudgets(Map<String, double> budgets);
+
+  Future<bool> hasAnyData();
+}
+
+/// 基于 SQLite 的仓储实现。每次写入以事务批量清空并重建对应表；列表顺序通过
+/// sort_order 列保留（entries 除外，其顺序由 occurred_at 决定）。
+class SqliteLedgerRepository implements LedgerRepository {
+  SqliteLedgerRepository(this._database);
 
   final AppDatabase _database;
   Database get _db => _database.db;
 
   // ---- 交易 ----
 
+  @override
   Future<List<LedgerEntry>> loadEntries() async {
     final rows = await _db.query('entries', orderBy: 'occurred_at DESC, id DESC');
     return rows.map(_entryFromRow).toList();
   }
 
+  @override
   Future<void> saveEntries(List<LedgerEntry> entries) async {
     await _replaceAll('entries', entries.map(_entryToRow));
   }
 
   // ---- 账本 ----
 
+  @override
   Future<List<LedgerBook>> loadBooks() async {
     final rows = await _db.query('ledger_books', orderBy: 'sort_order ASC');
     return rows.map(_bookFromRow).toList();
   }
 
+  @override
   Future<void> saveBooks(List<LedgerBook> books) async {
     await _replaceAll('ledger_books', _indexed(books, _bookToRow));
   }
 
   // ---- 账户 ----
 
+  @override
   Future<List<Account>> loadAccounts() async {
     final rows = await _db.query('accounts', orderBy: 'sort_order ASC');
     return rows.map(_accountFromRow).toList();
   }
 
+  @override
   Future<void> saveAccounts(List<Account> accounts) async {
     await _replaceAll('accounts', _indexed(accounts, _accountToRow));
   }
 
   // ---- 账户分组 ----
 
+  @override
   Future<List<AccountGroup>> loadAccountGroups() async {
     final rows = await _db.query('account_groups', orderBy: 'sort_order ASC');
     return rows.map(_groupFromRow).toList();
   }
 
+  @override
   Future<void> saveAccountGroups(List<AccountGroup> groups) async {
     await _replaceAll('account_groups', groups.map(_groupToRow));
   }
 
   // ---- 分类 ----
 
+  @override
   Future<List<Category>> loadCategories() async {
     final rows = await _db.query('categories', orderBy: 'sort_order ASC');
     return rows.map(_categoryFromRow).toList();
   }
 
+  @override
   Future<void> saveCategories(List<Category> categories) async {
     await _replaceAll('categories', _indexed(categories, _categoryToRow));
   }
 
   // ---- 预算（键值对：月度 / 分类）----
 
+  @override
   Future<Map<String, double>> loadMonthlyBudgets() =>
       _loadBudgetMap('monthly_budgets');
 
+  @override
   Future<void> saveMonthlyBudgets(Map<String, double> budgets) =>
       _saveBudgetMap('monthly_budgets', budgets);
 
+  @override
   Future<Map<String, double>> loadCategoryBudgets() =>
       _loadBudgetMap('category_budgets');
 
+  @override
   Future<void> saveCategoryBudgets(Map<String, double> budgets) =>
       _saveBudgetMap('category_budgets', budgets);
 
   /// 是否已存在任何账目数据（用于判断迁移是否有内容写入）。
+  @override
   Future<bool> hasAnyData() async {
     for (final table in const <String>[
       'entries',

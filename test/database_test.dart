@@ -22,7 +22,7 @@ void main() {
       path: inMemoryDatabasePath,
     );
     opened.add(db);
-    return LedgerRepository(db);
+    return SqliteLedgerRepository(db);
   }
 
   test('新建数据库为空', () async {
