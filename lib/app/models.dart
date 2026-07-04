@@ -487,6 +487,89 @@ class UserProfile {
   }
 }
 
+/// 支持面板管理的主页面。
+enum PanelPageKind {
+  home,
+  reports;
+
+  String get label {
+    switch (this) {
+      case PanelPageKind.home:
+        return '首页';
+      case PanelPageKind.reports:
+        return '看板';
+    }
+  }
+
+  List<PagePanelSpec> get specs {
+    switch (this) {
+      case PanelPageKind.home:
+        return homePanelSpecs;
+      case PanelPageKind.reports:
+        return reportPanelSpecs;
+    }
+  }
+}
+
+/// 面板目录项:id 是持久化标识,名称与描述用于面板管理页展示。
+class PagePanelSpec {
+  const PagePanelSpec({
+    required this.id,
+    required this.label,
+    required this.description,
+  });
+
+  final String id;
+  final String label;
+  final String description;
+}
+
+const List<PagePanelSpec> homePanelSpecs = <PagePanelSpec>[
+  PagePanelSpec(id: 'trend', label: '支出走势', description: '按 7 天周期展示支出趋势与结余'),
+  PagePanelSpec(id: 'recent', label: '最近交易', description: '展示最近 5 条交易记录'),
+  PagePanelSpec(id: 'budget', label: '月度预算', description: '本月预算进度与分类超支提醒'),
+  PagePanelSpec(id: 'calendar', label: '日历', description: '按日历查看每天的收支情况'),
+];
+
+const List<PagePanelSpec> reportPanelSpecs = <PagePanelSpec>[
+  PagePanelSpec(
+    id: 'budget_execution',
+    label: '预算执行',
+    description: '本月预算、支出与分类预算执行情况',
+  ),
+  PagePanelSpec(id: 'category_ring', label: '分类统计', description: '本月支出分类占比环形图'),
+  PagePanelSpec(id: 'category_rank', label: '分类明细', description: '本月支出分类排行与占比'),
+  PagePanelSpec(id: 'daily_trend', label: '日趋势', description: '近 7 天每日支出趋势'),
+  PagePanelSpec(
+    id: 'monthly_structure',
+    label: '月度收支',
+    description: '今年每月支出结构柱状图',
+  ),
+];
+
+/// 页面面板的开关状态,列表顺序即页面渲染顺序。
+class PagePanelSetting {
+  const PagePanelSetting({required this.id, required this.enabled});
+
+  final String id;
+  final bool enabled;
+
+  PagePanelSetting copyWith({bool? enabled}) {
+    return PagePanelSetting(id: id, enabled: enabled ?? this.enabled);
+  }
+
+  Map<String, Object?> toJson() {
+    return <String, Object?>{'id': id, 'enabled': enabled};
+  }
+
+  static PagePanelSetting fromJson(Map<String, Object?> json) {
+    return PagePanelSetting(
+      id: json['id'] as String? ?? '',
+      enabled: json['enabled'] as bool? ?? true,
+    );
+  }
+}
+
 class Category {
   const Category({
     required this.id,

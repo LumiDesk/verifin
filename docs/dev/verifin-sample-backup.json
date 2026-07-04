@@ -652,6 +652,46 @@
         "ungrouped",
         "group_invest"
       ]
-    }
+    },
+    "homePanels": [
+      {
+        "id": "trend",
+        "enabled": true
+      },
+      {
+        "id": "budget",
+        "enabled": true
+      },
+      {
+        "id": "recent",
+        "enabled": true
+      },
+      {
+        "id": "calendar",
+        "enabled": false
+      }
+    ],
+    "reportPanels": [
+      {
+        "id": "category_ring",
+        "enabled": true
+      },
+      {
+        "id": "budget_execution",
+        "enabled": true
+      },
+      {
+        "id": "category_rank",
+        "enabled": true
+      },
+      {
+        "id": "daily_trend",
+        "enabled": false
+      },
+      {
+        "id": "monthly_structure",
+        "enabled": true
+      }
+    ]
   }
 }

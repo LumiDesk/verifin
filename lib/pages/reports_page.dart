@@ -11,6 +11,7 @@ import '../app/models.dart';
 import '../app/series_math.dart';
 import '../app/veri_fin_scope.dart';
 import 'budget_pages.dart';
+import 'panel_settings_page.dart';
 
 class ReportsPage extends StatelessWidget {
   const ReportsPage({super.key});
@@ -53,20 +54,19 @@ class ReportsPage extends StatelessWidget {
       0,
       (max, value) => value > max ? value : max,
     );
+    final panelIds = controller.enabledPanelIds(PanelPageKind.reports);
 
-    return VeriPage(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(14, 8, 14, 82),
-        children: <Widget>[
-          const PageHeader(title: '看板', subtitle: '数据看板'),
-          const SizedBox(height: 10),
-          _BudgetExecutionCard(
+    // 面板 id 对应的卡片,渲染顺序与开关由面板管理页配置。
+    Widget panelFor(String id) {
+      switch (id) {
+        case 'budget_execution':
+          return _BudgetExecutionCard(
             budget: monthlyBudget,
             expense: monthExpense,
             snapshots: categoryBudgetSnapshots,
-          ),
-          const SizedBox(height: 10),
-          VeriCard(
+          );
+        case 'category_ring':
+          return VeriCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
@@ -88,9 +88,9 @@ class ReportsPage extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 10),
-          VeriCard(
+          );
+        case 'category_rank':
+          return VeriCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
@@ -108,9 +108,9 @@ class ReportsPage extends StatelessWidget {
                       .map((stat) => _CategoryStatTile(stat: stat)),
               ],
             ),
-          ),
-          const SizedBox(height: 10),
-          VeriCard(
+          );
+        case 'daily_trend':
+          return VeriCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
@@ -149,9 +149,9 @@ class ReportsPage extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 10),
-          VeriCard(
+          );
+        case 'monthly_structure':
+          return VeriCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
@@ -192,7 +192,23 @@ class ReportsPage extends StatelessWidget {
                 ),
               ],
             ),
-          ),
+          );
+        default:
+          return const SizedBox.shrink();
+      }
+    }
+
+    return VeriPage(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(14, 8, 14, 82),
+        children: <Widget>[
+          const PageHeader(title: '看板', subtitle: '数据看板'),
+          for (final id in panelIds) ...<Widget>[
+            const SizedBox(height: 10),
+            panelFor(id),
+          ],
+          const SizedBox(height: 8),
+          const PanelSettingsEntry(kind: PanelPageKind.reports),
         ],
       ),
     );

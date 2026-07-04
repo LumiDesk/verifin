@@ -32,6 +32,17 @@ class VeriFinController extends ChangeNotifier {
       'verifin.asset_section_collapsed.v1';
   static const String _assetAccountOrderKey = 'verifin.asset_account_order.v1';
   static const String _assetSectionOrderKey = 'verifin.asset_section_order.v1';
+  static const String _homePanelsKey = 'verifin.home_panels.v1';
+  static const String _reportPanelsKey = 'verifin.report_panels.v1';
+
+  static String _panelsKeyFor(PanelPageKind page) {
+    switch (page) {
+      case PanelPageKind.home:
+        return _homePanelsKey;
+      case PanelPageKind.reports:
+        return _reportPanelsKey;
+    }
+  }
 
   final LocalKeyValueStore _store;
   final List<LedgerEntry> _entries = <LedgerEntry>[];
@@ -46,6 +57,11 @@ class VeriFinController extends ChangeNotifier {
       <String, List<String>>{};
   final Map<String, List<String>> _assetSectionOrders =
       <String, List<String>>{};
+  final Map<PanelPageKind, List<PagePanelSetting>> _pagePanels =
+      <PanelPageKind, List<PagePanelSetting>>{
+        for (final page in PanelPageKind.values)
+          page: _defaultPanelSettings(page.specs),
+      };
 
   late final ValueNotifier<ThemePreference> themePreferenceListenable;
 
@@ -281,6 +297,49 @@ class VeriFinController extends ChangeNotifier {
     _assetSectionOrders[_assetSectionOrderKeyForMode(_activeBookId, mode)] =
         next.map(idOf).toList();
     _persistAssetSectionOrders();
+    notifyListeners();
+  }
+
+  /// 页面的面板配置(含关闭项),顺序即渲染顺序。
+  List<PagePanelSetting> panelSettings(PanelPageKind page) {
+    return List<PagePanelSetting>.unmodifiable(_pagePanels[page]!);
+  }
+
+  /// 页面当前开启的面板 id,按渲染顺序返回。
+  List<String> enabledPanelIds(PanelPageKind page) {
+    return _pagePanels[page]!
+        .where((item) => item.enabled)
+        .map((item) => item.id)
+        .toList(growable: false);
+  }
+
+  /// 开关面板;为避免页面变空,最后一个开启的面板不允许关闭,返回 false。
+  bool setPanelEnabled(PanelPageKind page, String panelId, bool enabled) {
+    final panels = _pagePanels[page]!;
+    final index = panels.indexWhere((item) => item.id == panelId);
+    if (index == -1 || panels[index].enabled == enabled) {
+      return true;
+    }
+    if (!enabled && panels.where((item) => item.enabled).length <= 1) {
+      return false;
+    }
+    panels[index] = panels[index].copyWith(enabled: enabled);
+    _persistPagePanels(page);
+    notifyListeners();
+    return true;
+  }
+
+  void reorderPanels(PanelPageKind page, int oldIndex, int newIndex) {
+    final panels = _pagePanels[page]!;
+    if (oldIndex < 0 ||
+        oldIndex >= panels.length ||
+        newIndex < 0 ||
+        newIndex > panels.length) {
+      return;
+    }
+    final moved = panels.removeAt(oldIndex);
+    panels.insert(newIndex.clamp(0, panels.length).toInt(), moved);
+    _persistPagePanels(page);
     notifyListeners();
   }
 
@@ -685,6 +744,8 @@ class VeriFinController extends ChangeNotifier {
       _assetSectionCollapsedKey,
       _assetAccountOrderKey,
       _assetSectionOrderKey,
+      _homePanelsKey,
+      _reportPanelsKey,
     ]) {
       _store.delete(key);
     }
@@ -712,6 +773,9 @@ class VeriFinController extends ChangeNotifier {
     _collapsedAssetSections.clear();
     _assetAccountOrders.clear();
     _assetSectionOrders.clear();
+    for (final page in PanelPageKind.values) {
+      _pagePanels[page] = _defaultPanelSettings(page.specs);
+    }
     themePreferenceListenable.value = _themePreference;
     notifyListeners();
   }
@@ -738,6 +802,12 @@ class VeriFinController extends ChangeNotifier {
         'collapsedAssetSections': _collapsedAssetSections.toList(),
         'assetAccountOrders': _assetAccountOrders,
         'assetSectionOrders': _assetSectionOrders,
+        'homePanels': _pagePanels[PanelPageKind.home]!
+            .map((item) => item.toJson())
+            .toList(),
+        'reportPanels': _pagePanels[PanelPageKind.reports]!
+            .map((item) => item.toJson())
+            .toList(),
       },
     };
     return const JsonEncoder.withIndent('  ').convert(payload);
@@ -820,6 +890,21 @@ class VeriFinController extends ChangeNotifier {
     final nextAssetSectionOrders = _decodeStringListMap(
       data['assetSectionOrders'],
     );
+    // 旧备份没有面板字段,归一化会补全默认开启的面板。
+    final nextHomePanels = _normalizePanelSettings(
+      _decodeModelList<PagePanelSetting>(
+        data['homePanels'],
+        PagePanelSetting.fromJson,
+      ),
+      homePanelSpecs,
+    );
+    final nextReportPanels = _normalizePanelSettings(
+      _decodeModelList<PagePanelSetting>(
+        data['reportPanels'],
+        PagePanelSetting.fromJson,
+      ),
+      reportPanelSpecs,
+    );
 
     _ledgerBooks
       ..clear()
@@ -858,6 +943,8 @@ class VeriFinController extends ChangeNotifier {
     _assetSectionOrders
       ..clear()
       ..addAll(nextAssetSectionOrders);
+    _pagePanels[PanelPageKind.home] = nextHomePanels;
+    _pagePanels[PanelPageKind.reports] = nextReportPanels;
 
     _persistLedgerBooks();
     _store.write(_activeBookKey, _activeBookId);
@@ -874,6 +961,9 @@ class VeriFinController extends ChangeNotifier {
     _persistAssetSectionCollapsed();
     _persistAssetAccountOrders();
     _persistAssetSectionOrders();
+    for (final page in PanelPageKind.values) {
+      _persistPagePanels(page);
+    }
     if (_assetCoverUrl.isEmpty) {
       _store.delete(_assetCoverKey);
     } else {
@@ -912,6 +1002,7 @@ class VeriFinController extends ChangeNotifier {
     _loadAssetSectionCollapsed();
     _loadAssetAccountOrders();
     _loadAssetSectionOrders();
+    _loadPagePanels();
     final rawEntries = _store.read(_entriesKey);
     if (rawEntries == null || rawEntries.isEmpty) {
       return;
@@ -1220,6 +1311,36 @@ class VeriFinController extends ChangeNotifier {
     _store.write(_assetSectionOrderKey, jsonEncode(_assetSectionOrders));
   }
 
+  void _loadPagePanels() {
+    for (final page in PanelPageKind.values) {
+      final key = _panelsKeyFor(page);
+      final raw = _store.read(key);
+      if (raw == null || raw.isEmpty) {
+        _pagePanels[page] = _defaultPanelSettings(page.specs);
+        continue;
+      }
+      try {
+        _pagePanels[page] = _normalizePanelSettings(
+          _decodeModelList<PagePanelSetting>(
+            jsonDecode(raw),
+            PagePanelSetting.fromJson,
+          ),
+          page.specs,
+        );
+      } catch (_) {
+        _store.delete(key);
+        _pagePanels[page] = _defaultPanelSettings(page.specs);
+      }
+    }
+  }
+
+  void _persistPagePanels(PanelPageKind page) {
+    _store.write(
+      _panelsKeyFor(page),
+      jsonEncode(_pagePanels[page]!.map((item) => item.toJson()).toList()),
+    );
+  }
+
   void _normalizeGroupOrder() {
     final grouped = <String, List<AccountGroup>>{};
     for (final group in _accountGroups) {
@@ -1337,6 +1458,35 @@ List<T> _decodeModelList<T>(
     }
     return fromJson(Map<String, Object?>.from(item));
   }).toList();
+}
+
+List<PagePanelSetting> _defaultPanelSettings(List<PagePanelSpec> specs) {
+  return specs
+      .map((spec) => PagePanelSetting(id: spec.id, enabled: true))
+      .toList();
+}
+
+/// 面板设置归一化:丢弃目录外的 id 并去重,目录新增的面板默认追加为开启;
+/// 若结果全部关闭则强制开启第一个,保证页面至少保留一个面板。
+List<PagePanelSetting> _normalizePanelSettings(
+  List<PagePanelSetting> stored,
+  List<PagePanelSpec> specs,
+) {
+  final specIds = <String>{for (final spec in specs) spec.id};
+  final seen = <String>{};
+  final result = <PagePanelSetting>[
+    for (final item in stored)
+      if (specIds.contains(item.id) && seen.add(item.id)) item,
+  ];
+  for (final spec in specs) {
+    if (seen.add(spec.id)) {
+      result.add(PagePanelSetting(id: spec.id, enabled: true));
+    }
+  }
+  if (result.every((item) => !item.enabled)) {
+    result[0] = result[0].copyWith(enabled: true);
+  }
+  return result;
 }
 
 Map<String, double> _decodeBudgets(Object? value) {

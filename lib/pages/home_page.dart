@@ -10,6 +10,7 @@ import '../app/models.dart';
 import '../app/series_math.dart';
 import '../app/veri_fin_scope.dart';
 import 'budget_pages.dart';
+import 'panel_settings_page.dart';
 import 'sheets.dart';
 import 'transactions_pages.dart';
 
@@ -41,14 +42,13 @@ class HomePage extends StatelessWidget {
       monthEntries: monthEntries,
     );
     final categoryBudgetRisk = topCategoryBudgetRisk(categoryBudgetSnapshots);
+    final panelIds = controller.enabledPanelIds(PanelPageKind.home);
 
-    return VeriPage(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(14, 8, 14, 82),
-        children: <Widget>[
-          const PageHeader(title: '首页', subtitle: '日常账本'),
-          const SizedBox(height: 10),
-          HomeTrendPanel(
+    // 面板 id 对应的卡片,渲染顺序与开关由面板管理页配置。
+    Widget panelFor(String id) {
+      switch (id) {
+        case 'trend':
+          return HomeTrendPanel(
             window: trendWindow,
             expense: trendExpense,
             income: trendIncome,
@@ -64,9 +64,9 @@ class HomePage extends StatelessWidget {
                 ),
               );
             },
-          ),
-          const SizedBox(height: 10),
-          VeriCard(
+          );
+        case 'recent':
+          return VeriCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
@@ -113,9 +113,9 @@ class HomePage extends StatelessWidget {
                   ],
               ],
             ),
-          ),
-          const SizedBox(height: 10),
-          BudgetPanel(
+          );
+        case 'budget':
+          return BudgetPanel(
             month: now,
             expense: monthExpense,
             budget: monthlyBudget,
@@ -127,9 +127,9 @@ class HomePage extends StatelessWidget {
                 ),
               );
             },
-          ),
-          const SizedBox(height: 10),
-          CalendarPreview(
+          );
+        case 'calendar':
+          return CalendarPreview(
             entries: entries,
             onDayTap: (date) {
               Navigator.of(context).push<void>(
@@ -138,7 +138,23 @@ class HomePage extends StatelessWidget {
                 ),
               );
             },
-          ),
+          );
+        default:
+          return const SizedBox.shrink();
+      }
+    }
+
+    return VeriPage(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(14, 8, 14, 82),
+        children: <Widget>[
+          const PageHeader(title: '首页', subtitle: '日常账本'),
+          for (final id in panelIds) ...<Widget>[
+            const SizedBox(height: 10),
+            panelFor(id),
+          ],
+          const SizedBox(height: 8),
+          const PanelSettingsEntry(kind: PanelPageKind.home),
         ],
       ),
     );
