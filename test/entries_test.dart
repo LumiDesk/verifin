@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/app_theme.dart';
@@ -223,7 +222,7 @@ void main() {
     expect(find.text('分类管理'), findsOneWidget);
     expect(find.text('餐饮'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('新增分类'));
+    await tester.tap(find.byTooltip('新增顶级分类'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, '咖啡');
     await tester.tap(find.text('确认'));
@@ -232,6 +231,31 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('咖啡'), findsOneWidget);
+  });
+
+  testWidgets('adds a sub-category under an existing category', (
+    WidgetTester tester,
+  ) async {
+    await pumpApp(tester);
+
+    await tapBottomTab(tester, 3);
+    await tester.tap(find.text('分类管理'));
+    await tester.pumpAndSettle();
+
+    // 点击「餐饮」打开操作表，选择「新增子分类」。
+    await tester.tap(find.text('餐饮'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('新增子分类'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, '早餐');
+    await tester.tap(find.text('确认'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('分类').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('早餐'), findsOneWidget);
+    // 子分类的副标题显示所属父分类下的层级信息（父分类出现「个子分类」）。
+    expect(find.textContaining('个子分类'), findsWidgets);
   });
 
   test('addEntry keeps entries sorted latest first', () async {

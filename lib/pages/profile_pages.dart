@@ -9,6 +9,7 @@ import '../app/backup/backup_settings.dart';
 import '../app/backup/transaction_import.dart';
 import '../app/backup/webdav_client.dart';
 import '../app/backup/webdav_config.dart';
+import '../app/category_tree.dart';
 import '../app/common_widgets.dart';
 import '../app/data_file_port.dart';
 import '../app/demo_data.dart';
@@ -421,10 +422,13 @@ class CategoryManagementPage extends StatefulWidget {
 class _CategoryManagementPageState extends State<CategoryManagementPage> {
   EntryType _type = EntryType.expense;
 
+  // 收起的父分类 id（默认全部展开，收起后隐藏其子树）。
+  final Set<String> _collapsed = <String>{};
+
   @override
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
-    final categories = controller.categoriesForType(_type);
+    final roots = controller.rootCategoriesForType(_type);
 
     return Scaffold(
       body: SafeArea(
@@ -434,13 +438,13 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
             children: <Widget>[
               VeriHeader(
                 title: '分类管理',
-                subtitle: '用于记账和统计',
+                subtitle: '支持多级分类，用于记账和统计',
                 showBack: true,
                 actions: <Widget>[
                   HeaderAction(
                     icon: Icons.add,
-                    tooltip: '新增分类',
-                    onPressed: _createCategory,
+                    tooltip: '新增顶级分类',
+                    onPressed: () => _createCategory(),
                   ),
                 ],
               ),
@@ -462,30 +466,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
               const SizedBox(height: 10),
               VeriCard(
                 padding: EdgeInsets.zero,
-                child: ReorderableListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  buildDefaultDragHandles: false,
-                  itemCount: categories.length,
-                  onReorderItem: (oldIndex, newIndex) {
-                    controller.reorderCategories(
-                      _type,
-                      null,
-                      oldIndex,
-                      newIndex,
-                    );
-                  },
-                  itemBuilder: (context, index) {
-                    final category = categories[index];
-                    return _CategoryManageRow(
-                      key: ValueKey(category.id),
-                      index: index,
-                      category: category,
-                      usageCount: controller.categoryUsageCount(category.id),
-                      onTap: () => _showCategoryActions(category),
-                    );
-                  },
-                ),
+                child: _buildLevel(controller, roots, null, 0),
               ),
             ],
           ),
@@ -494,10 +475,61 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
     );
   }
 
-  Future<void> _createCategory() async {
+  /// 递归渲染某父级（[parentId] 为 null 即顶级）下的同级分类，
+  /// 展开的父分类下方缩进渲染其子级。每级各自是一个可拖拽重排的列表。
+  Widget _buildLevel(
+    VeriFinController controller,
+    List<Category> siblings,
+    String? parentId,
+    int depth,
+  ) {
+    return ReorderableListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      buildDefaultDragHandles: false,
+      itemCount: siblings.length,
+      onReorderItem: (oldIndex, newIndex) {
+        controller.reorderCategories(_type, parentId, oldIndex, newIndex);
+      },
+      itemBuilder: (context, index) {
+        final category = siblings[index];
+        final children = controller.childCategories(category.id);
+        final collapsed = _collapsed.contains(category.id);
+        return Column(
+          key: ValueKey<String>(category.id),
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            _CategoryManageRow(
+              index: index,
+              depth: depth,
+              category: category,
+              childCount: children.length,
+              usageCount: controller.categoryUsageCount(category.id),
+              collapsed: collapsed,
+              onToggle: children.isEmpty
+                  ? null
+                  : () => setState(() {
+                      if (collapsed) {
+                        _collapsed.remove(category.id);
+                      } else {
+                        _collapsed.add(category.id);
+                      }
+                    }),
+              onTap: () => _showCategoryActions(category),
+            ),
+            if (children.isNotEmpty && !collapsed)
+              _buildLevel(controller, children, category.id, depth + 1),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _createCategory({Category? parent}) async {
+    final typeLabel = (parent?.type ?? _type).label;
     final label = await showTextInputDialog(
       context: context,
-      title: '新增${_type.label}分类',
+      title: parent == null ? '新增$typeLabel分类' : '在「${parent.label}」下新增子分类',
       label: '分类名称',
     );
     if (!mounted || label == null) {
@@ -507,21 +539,37 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
     if (!mounted || iconCode == null) {
       return;
     }
-    VeriFinScope.of(
-      context,
-    ).addCategory(type: _type, label: label, iconCode: iconCode);
+    VeriFinScope.of(context).addCategory(
+      type: parent?.type ?? _type,
+      label: label,
+      iconCode: iconCode,
+      parentId: parent?.id,
+    );
+    // 新建子分类后确保父分类展开可见。
+    if (parent != null && mounted) {
+      setState(() => _collapsed.remove(parent.id));
+    }
   }
 
   Future<void> _showCategoryActions(Category category) async {
+    final protected = _isProtectedCategory(category.id);
     final selected = await showOptionSheet<String>(
       context: context,
       title: category.label,
-      values: const <String>['rename', 'icon', 'delete'],
+      values: <String>[
+        'rename',
+        'icon',
+        'add_sub',
+        if (!protected) 'move',
+        if (!protected) 'delete',
+      ],
       selected: 'rename',
       showSelectedMarker: false,
       labelOf: (value) => switch (value) {
         'rename' => '重命名',
         'icon' => '更换图标',
+        'add_sub' => '新增子分类',
+        'move' => '移动到…',
         'delete' => '删除分类',
         _ => value,
       },
@@ -534,8 +582,59 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
         await _renameCategory(category);
       case 'icon':
         await _changeCategoryIcon(category);
+      case 'add_sub':
+        await _createCategory(parent: category);
+      case 'move':
+        await _moveCategory(category);
       case 'delete':
         await _deleteCategory(category);
+    }
+  }
+
+  Future<void> _moveCategory(Category category) async {
+    final controller = VeriFinScope.of(context);
+    final all = controller.categories;
+    // 候选父级：同类型、非自身、非自身后代、且不是当前父级。另加「移到顶级」。
+    final candidates = controller
+        .categoriesForType(category.type)
+        .where(
+          (c) =>
+              c.id != category.id &&
+              c.id != category.parentId &&
+              !isDescendantOf(all, c.id, category.id),
+        )
+        .toList();
+    final values = <String>[
+      if (category.parentId != null) _moveToRootValue,
+      ...candidates.map((c) => c.id),
+    ];
+    if (values.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('没有可移动到的目标')));
+      return;
+    }
+    final selected = await showOptionSheet<String>(
+      context: context,
+      title: '移动「${category.label}」到',
+      values: values,
+      selected: values.first,
+      showSelectedMarker: false,
+      labelOf: (value) => value == _moveToRootValue
+          ? '顶级分类'
+          : controller.categoryPathLabel(value),
+    );
+    if (!mounted || selected == null) {
+      return;
+    }
+    final moved = controller.moveCategory(
+      category.id,
+      selected == _moveToRootValue ? null : selected,
+    );
+    if (!moved && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('该分类无法移动到此处')));
     }
   }
 
@@ -585,6 +684,12 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
       ).showSnackBar(SnackBar(content: Text('已有 $usageCount 笔交易使用该分类，不能删除')));
       return;
     }
+    if (controller.childCategories(category.id).isNotEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请先移动或删除其子分类')));
+      return;
+    }
     if (controller.categoriesForType(category.type).length <= 1) {
       ScaffoldMessenger.of(
         context,
@@ -626,31 +731,73 @@ bool _isProtectedCategory(String categoryId) {
       categoryId == 'balance_adjust_income';
 }
 
+/// 「移到顶级」在移动选项中的占位值（区别于任何真实分类 id）。
+const String _moveToRootValue = '__root__';
+
 class _CategoryManageRow extends StatelessWidget {
   const _CategoryManageRow({
-    super.key,
     required this.index,
+    required this.depth,
     required this.category,
+    required this.childCount,
     required this.usageCount,
+    required this.collapsed,
+    required this.onToggle,
     required this.onTap,
   });
 
   final int index;
+  final int depth;
   final Category category;
+  final int childCount;
   final int usageCount;
+  final bool collapsed;
+
+  /// 展开/收起子分类；无子分类时为 null（不显示折叠箭头）。
+  final VoidCallback? onToggle;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final subtitle = childCount > 0
+        ? '${category.type.label} · $childCount 个子分类 · $usageCount 笔'
+        : '${category.type.label} · $usageCount 笔交易';
     return Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(veriRadiusSm),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+          padding: EdgeInsets.fromLTRB(14 + depth * 22, 10, 8, 10),
           child: Row(
             children: <Widget>[
+              SizedBox(
+                width: 24,
+                child: onToggle == null
+                    ? (depth > 0
+                          ? Icon(
+                              Icons.subdirectory_arrow_right,
+                              size: 16,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.3),
+                            )
+                          : null)
+                    : IconButton(
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        iconSize: 22,
+                        onPressed: onToggle,
+                        icon: Icon(
+                          collapsed ? Icons.chevron_right : Icons.expand_more,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.55),
+                        ),
+                      ),
+              ),
+              const SizedBox(width: 4),
               VeriIconBox(icon: iconForCode(category.iconCode), size: 30),
               const SizedBox(width: 10),
               Expanded(
@@ -665,7 +812,7 @@ class _CategoryManageRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '${category.type.label} · $usageCount 笔交易',
+                      subtitle,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: Theme.of(
                           context,
