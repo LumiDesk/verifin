@@ -142,6 +142,12 @@ void main() {
       controller.entries.firstWhere((e) => e.id == 'entry_20260703_003').fee,
       2.0,
     );
+    // 报销/退款：样例首条支出标记待报销并部分退款，净额应为 28.5 - 8.5 = 20。
+    final reimbursed = controller.entries.firstWhere(
+      (e) => e.id == 'entry_20260703_001',
+    );
+    expect(reimbursed.reimbursable, isTrue);
+    expect(reimbursed.netAmount, 20.0);
     expect(
       controller.categoryBudget(DateTime(2026, 7), 'dining'),
       greaterThan(0),

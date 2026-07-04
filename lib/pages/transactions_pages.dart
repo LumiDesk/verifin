@@ -67,6 +67,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
   String? _selectedAccountId;
   String? _selectedCategoryId;
   String? _selectedTagId;
+  bool _onlyReimbursable = false;
 
   @override
   void initState() {
@@ -172,9 +173,13 @@ class _TransactionsPageState extends State<TransactionsPage> {
                             }
                             _selectedCategoryId = null;
                             _selectedTagId = null;
+                            _onlyReimbursable = false;
                           });
                         }
                       : null,
+                  reimbursableOnly: _onlyReimbursable,
+                  onToggleReimbursable: () =>
+                      setState(() => _onlyReimbursable = !_onlyReimbursable),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -295,7 +300,8 @@ class _TransactionsPageState extends State<TransactionsPage> {
       _query.isNotEmpty ||
       (widget.accountId == null && _selectedAccountId != null) ||
       _selectedCategoryId != null ||
-      _selectedTagId != null;
+      _selectedTagId != null ||
+      _onlyReimbursable;
 
   bool _matchesSecondaryFilters(
     LedgerEntry entry,
@@ -310,6 +316,11 @@ class _TransactionsPageState extends State<TransactionsPage> {
       return false;
     }
     if (_selectedTagId != null && !entry.tagIds.contains(_selectedTagId)) {
+      return false;
+    }
+    // 待报销：仅显示标记待报销、且尚未完全冲抵的支出。
+    if (_onlyReimbursable &&
+        !(entry.reimbursable && entry.refundedAmount < entry.amount)) {
       return false;
     }
     return true;
@@ -636,6 +647,8 @@ class _TransactionSearchFilters extends StatelessWidget {
     this.tagLabel,
     this.tagSelected = false,
     this.onPickTag,
+    this.reimbursableOnly = false,
+    this.onToggleReimbursable,
     this.onClear,
   });
 
@@ -651,6 +664,8 @@ class _TransactionSearchFilters extends StatelessWidget {
   final String? tagLabel;
   final bool tagSelected;
   final VoidCallback? onPickTag;
+  final bool reimbursableOnly;
+  final VoidCallback? onToggleReimbursable;
   final VoidCallback? onClear;
 
   @override
@@ -732,6 +747,15 @@ class _TransactionSearchFilters extends StatelessWidget {
                     label: tagLabel ?? '标签',
                     icon: tagSelected ? Icons.label : Icons.label_outline,
                     onTap: onPickTag,
+                  ),
+                if (onToggleReimbursable != null)
+                  FilterPill(
+                    label: '待报销',
+                    icon: reimbursableOnly
+                        ? Icons.check_circle
+                        : Icons.receipt_long_outlined,
+                    onTap: onToggleReimbursable,
+                    showChevron: false,
                   ),
               ],
             ),
@@ -843,6 +867,8 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
   late DateTime _occurredAt;
   late List<String> _tagIds;
   late double _fee;
+  late bool _reimbursable;
+  late double _refundedAmount;
   late final TextEditingController _noteController;
 
   @override
@@ -866,6 +892,8 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     _occurredAt = entry.occurredAt;
     _tagIds = List<String>.of(entry.tagIds);
     _fee = entry.fee;
+    _reimbursable = entry.reimbursable;
+    _refundedAmount = entry.refundedAmount;
     _noteController = TextEditingController(text: entry.note);
   }
 
@@ -1061,6 +1089,29 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                         placeholder: _tagLabels(controller).isEmpty,
                         onTap: _pickTags,
                       ),
+                      if (_type == EntryType.expense) ...<Widget>[
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: <Widget>[
+                              const Expanded(child: Text('标记待报销')),
+                              Switch(
+                                value: _reimbursable,
+                                onChanged: (value) =>
+                                    setState(() => _reimbursable = value),
+                              ),
+                            ],
+                          ),
+                        ),
+                        DetailInfoRow(
+                          label: '退款 / 报销回款',
+                          value: _refundedAmount > 0
+                              ? '已冲抵 ${formatAmount(_refundedAmount)}'
+                              : '无',
+                          placeholder: _refundedAmount <= 0,
+                          onTap: _editRefund,
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -1124,6 +1175,25 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       return;
     }
     setState(() => _fee = fee);
+  }
+
+  Future<void> _editRefund() async {
+    final refunded = await showModalBottomSheet<double>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => NumberPadSheet(
+        title: '退款 / 报销回款金额',
+        initialAmount: _refundedAmount > 0 ? _refundedAmount : null,
+        allowZero: true,
+        hapticsEnabled: VeriFinScope.of(context).hapticsEnabled,
+      ),
+    );
+    if (refunded == null || refunded < 0 || !mounted) {
+      return;
+    }
+    // 冲抵金额不超过原支出金额。
+    setState(() => _refundedAmount = refunded.clamp(0, _amount).toDouble());
   }
 
   Future<void> _pickType() async {
@@ -1292,6 +1362,8 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
         occurredAt: _occurredAt,
         tagIds: _tagIds,
         fee: _type == EntryType.transfer ? _fee : 0,
+        reimbursable: _type == EntryType.expense && _reimbursable,
+        refundedAmount: _type == EntryType.expense ? _refundedAmount : 0,
       ),
     );
     Navigator.of(context).pop();

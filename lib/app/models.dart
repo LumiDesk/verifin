@@ -147,6 +147,8 @@ class LedgerEntry {
     required this.occurredAt,
     this.tagIds = const <String>[],
     this.fee = 0,
+    this.reimbursable = false,
+    this.refundedAmount = 0,
   });
 
   final String id;
@@ -166,6 +168,18 @@ class LedgerEntry {
   /// 转出账户余额额外减少该金额，转入账户不变。
   final double fee;
 
+  /// 是否标记为「待报销」（仅支出有意义）。仅作标记，不影响金额；
+  /// 报销/退款到账通过 [refundedAmount] 冲抵原交易。
+  final bool reimbursable;
+
+  /// 已被退款 / 报销回款冲抵的金额（仅支出有意义，回到原账户）。
+  /// 统计与账户余额都按「金额 − 已冲抵」的净额计算。
+  final double refundedAmount;
+
+  /// 净支出额（原金额减去已退款/报销回款）。非支出返回原金额。
+  double get netAmount =>
+      type == EntryType.expense ? amount - refundedAmount : amount;
+
   LedgerEntry copyWith({
     String? id,
     String? bookId,
@@ -179,6 +193,8 @@ class LedgerEntry {
     DateTime? occurredAt,
     List<String>? tagIds,
     double? fee,
+    bool? reimbursable,
+    double? refundedAmount,
   }) {
     return LedgerEntry(
       id: id ?? this.id,
@@ -192,6 +208,8 @@ class LedgerEntry {
       occurredAt: occurredAt ?? this.occurredAt,
       tagIds: tagIds ?? this.tagIds,
       fee: fee ?? this.fee,
+      reimbursable: reimbursable ?? this.reimbursable,
+      refundedAmount: refundedAmount ?? this.refundedAmount,
     );
   }
 
@@ -208,6 +226,8 @@ class LedgerEntry {
       'occurredAt': occurredAt.toIso8601String(),
       if (tagIds.isNotEmpty) 'tagIds': tagIds,
       if (fee != 0) 'fee': fee,
+      if (reimbursable) 'reimbursable': true,
+      if (refundedAmount != 0) 'refundedAmount': refundedAmount,
     };
   }
 
@@ -226,6 +246,8 @@ class LedgerEntry {
           DateTime.now(),
       tagIds: _stringList(json['tagIds']),
       fee: (json['fee'] as num?)?.toDouble() ?? 0,
+      reimbursable: json['reimbursable'] as bool? ?? false,
+      refundedAmount: (json['refundedAmount'] as num?)?.toDouble() ?? 0,
     );
   }
 }

@@ -13,7 +13,7 @@ class AppDatabase {
   final Database db;
 
   static const String defaultDatabaseName = 'verifin.db';
-  static const int schemaVersion = 5;
+  static const int schemaVersion = 6;
 
   /// 打开（或创建）数据库。测试通过 [factory]/[path] 注入 ffi 与内存路径；
   /// 真实平台留空则由 [resolveDatabaseFactory]/[resolveDatabasePath] 决定。
@@ -84,6 +84,15 @@ class AppDatabase {
         'ALTER TABLE entries ADD COLUMN fee REAL NOT NULL DEFAULT 0',
       );
     }
+    // v5 → v6：报销/退款。交易新增待报销标记与已冲抵金额。
+    if (oldVersion < 6) {
+      await db.execute(
+        'ALTER TABLE entries ADD COLUMN reimbursable INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE entries ADD COLUMN refunded_amount REAL NOT NULL DEFAULT 0',
+      );
+    }
   }
 
   /// 当前完整建表语句（供全新数据库 onCreate 用）。字段命名用 snake_case；
@@ -110,7 +119,9 @@ class AppDatabase {
       note TEXT NOT NULL,
       occurred_at INTEGER NOT NULL,
       tag_ids TEXT,
-      fee REAL NOT NULL DEFAULT 0
+      fee REAL NOT NULL DEFAULT 0,
+      reimbursable INTEGER NOT NULL DEFAULT 0,
+      refunded_amount REAL NOT NULL DEFAULT 0
     )
     ''',
     'CREATE INDEX idx_entries_book ON entries (book_id)',

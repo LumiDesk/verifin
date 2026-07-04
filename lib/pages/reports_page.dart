@@ -944,10 +944,11 @@ List<_CategoryStat> _categoryStats(
   final counts = <String, int>{};
   for (final entry in entries) {
     final rootId = rootIdOf(categories, entry.categoryId);
+    // 退款/报销回款按净额计入分类统计。
     totals.update(
       rootId,
-      (value) => value + entry.amount,
-      ifAbsent: () => entry.amount,
+      (value) => value + entry.netAmount,
+      ifAbsent: () => entry.netAmount,
     );
     counts.update(rootId, (value) => value + 1, ifAbsent: () => 1);
   }
@@ -1001,8 +1002,8 @@ List<_TagStat> _tagStats(
       }
       totals.update(
         tagId,
-        (value) => value + entry.amount,
-        ifAbsent: () => entry.amount,
+        (value) => value + entry.netAmount,
+        ifAbsent: () => entry.netAmount,
       );
       counts.update(tagId, (value) => value + 1, ifAbsent: () => 1);
     }

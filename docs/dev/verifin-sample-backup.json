@@ -29,7 +29,9 @@
         "toAccountId": null,
         "note": "午餐套餐",
         "occurredAt": "2026-07-03T12:20:00.000",
-        "tagIds": ["tag_work_meal"]
+        "tagIds": ["tag_work_meal"],
+        "reimbursable": true,
+        "refundedAmount": 8.5
       },
       {
         "id": "entry_20260703_002",

@@ -688,6 +688,31 @@ class VeriFinController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 标记 / 取消标记支出为「待报销」。仅支出有效。
+  void setEntryReimbursable(String entryId, bool reimbursable) {
+    final index = _entries.indexWhere((item) => item.id == entryId);
+    if (index == -1 || _entries[index].type != EntryType.expense) {
+      return;
+    }
+    _entries[index] = _entries[index].copyWith(reimbursable: reimbursable);
+    _persistEntries();
+    notifyListeners();
+  }
+
+  /// 设置支出被退款 / 报销回款冲抵的金额（回到原账户）。
+  /// [amount] 会被限制在 `[0, 原金额]`；设为 0 即撤销冲抵。
+  void setEntryRefundedAmount(String entryId, double amount) {
+    final index = _entries.indexWhere((item) => item.id == entryId);
+    if (index == -1 || _entries[index].type != EntryType.expense) {
+      return;
+    }
+    final entry = _entries[index];
+    final clamped = amount.clamp(0, entry.amount).toDouble();
+    _entries[index] = entry.copyWith(refundedAmount: clamped);
+    _persistEntries();
+    notifyListeners();
+  }
+
   void addLedgerBook(String name) {
     final trimmedName = name.trim();
     if (trimmedName.isEmpty) {

@@ -1626,8 +1626,8 @@ List<CategoryBudgetSnapshot> computeCategoryBudgetSnapshots({
       for (final id in chain) {
         into.update(
           id,
-          (amount) => amount + entry.amount,
-          ifAbsent: () => entry.amount,
+          (amount) => amount + entry.netAmount,
+          ifAbsent: () => entry.netAmount,
         );
       }
     }
