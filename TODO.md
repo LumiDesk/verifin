@@ -30,12 +30,12 @@
 ## 阶段 2：数据管理中心
 
 - [x] 2.1 数据管理页：我的页新增「数据管理」入口（`DataManagementPage`），迁移现有「导出 / 导入 / 初始化数据」到该页；设置页仅保留主题/触感/应用锁/检查更新/法律文档
-- [ ] 2.2 手动备份：用户选择备份目录（SAF），「立即备份」写入该目录（即原导出功能，文件名与自动备份区分）
-- [ ] 2.3 自动备份:频率可选（每次打开应用 / 每次记账后 / 每 N 小时），保留最近 N 份，展示上次备份时间
-- [ ] 2.4 备份加密：可选设置加密密钥，导出/导入使用；支持重置或清除密钥（忘记密码时允许清除重设）
-- [ ] 2.5 CSV / Excel 导入：提供模板文件供用户填写；从模板导入交易
-- [ ] 2.6 从其他记账软件导入（按市场主流应用的导出格式做适配，如钱迹、随手记）
-- [ ] 2.7 WebDAV 备份：配置服务器地址/账号，手动+自动上传备份，从 WebDAV 恢复
+- [x] 2.2 手动备份：选择备份目录（Android SAF / 桌面目录，`lib/app/backup/backup_storage_*.dart`），「立即备份」写入该目录（`verifin-backup-<时间>.json`，与自动备份 `verifin-auto-` 前缀区分），展示上次备份时间，可清除目录
+- [x] 2.3 自动备份：频率可选（每次打开应用 / 每次记账后 / 每 N 小时），保留最近 N 份（超出自动清理），`BackupCoordinator` 在打开/回前台/记账后触发，失败静默
+- [x] 2.4 备份加密：可选 AES-GCM+PBKDF2 密钥（`backup_crypto.dart`），导出/备份加密、导入自动解密（已存密钥先试、失败手动输入），可清除重设
+- [x] 2.5 CSV 导入：模板下载 + CSV 解析（`transaction_import.dart`），名称自动建账户/分类，逐行错误反馈；Excel 经「另存为 CSV」导入
+- [x] 2.6 从其他记账软件导入：表头别名 + 来源识别（钱迹/随手记），复用 CSV 导入流程，结果提示识别来源
+- [x] 2.7 WebDAV 备份：配置地址/账号（可测试连接，`webdav_client_*.dart`），手动上传 + 从列表恢复 + 自动上传（随自动备份触发，遵循加密设置）；Web 因跨域不支持
 
 ## 阶段 3：记账核心增强（依赖 0.3）
 
@@ -86,3 +86,5 @@
 | 测试仓储 | widget/控制器逻辑测试注入 `InMemoryLedgerRepository`（同步、无真实 I/O），数据层真实 SQLite 用 ffi 单独覆盖 | sqflite 的后台 isolate 与 `testWidgets` 的 fake-async 会死锁；内存实现规避且更快 |
 | 备份目录 | Android 走 SAF（`ACTION_OPEN_DOCUMENT_TREE` + 持久化 URI 权限 + `DocumentFile`），桌面走 `file_selector` 目录 + `dart:io`，Web 无持久目录仍走下载 | 分区存储下唯一可长期读写用户可见目录的方式；条件导入 `lib/app/backup/backup_storage_*.dart` |
 | 备份加密 | `cryptography`（纯 Dart AES-GCM + PBKDF2-SHA256），口令明文存本机 KV | 加密属非简单需求需成熟库；纯 Dart 全平台无原生依赖；口令保护离开设备的备份文件，本机数据本在应用私有区 |
+| CSV 导入范围 | 只做 CSV 解析（自研 RFC-4180 解析器），Excel 经「另存为 CSV」；不引入 `excel`/xlsx 依赖 | CSV 覆盖所有表格工具，避免重量级 xlsx 解析依赖；纯函数便于测试 |
+| WebDAV 客户端 | `dart:io HttpClient` 手写 PUT/GET/PROPFIND/MKCOL + Basic Auth，PROPFIND XML 用正则按局部名解析；Web stub | 不引入 WebDAV/HTTP 第三方依赖；命名空间前缀不固定用局部名匹配；Web 端浏览器跨域限制无法直连 WebDAV |

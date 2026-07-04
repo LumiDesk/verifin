@@ -7,6 +7,8 @@ import '../app/backup/backup_crypto.dart';
 import '../app/backup/backup_service.dart';
 import '../app/backup/backup_settings.dart';
 import '../app/backup/transaction_import.dart';
+import '../app/backup/webdav_client.dart';
+import '../app/backup/webdav_config.dart';
 import '../app/common_widgets.dart';
 import '../app/data_file_port.dart';
 import '../app/demo_data.dart';
@@ -1194,6 +1196,57 @@ class DataManagementPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
+              _sectionLabel(context, 'WebDAV 云备份'),
+              VeriCard(
+                child: Column(
+                  children: <Widget>[
+                    SettingsRow(
+                      icon: Icons.cloud_outlined,
+                      title: 'WebDAV 服务器',
+                      trailing: controller.webdavConfig.isConfigured
+                          ? '已配置'
+                          : '未配置',
+                      trailingIcon: Icons.chevron_right,
+                      onTap: () => _editWebdav(context, controller),
+                    ),
+                    if (controller.webdavConfig.isConfigured) ...<Widget>[
+                      const Divider(),
+                      SettingsRow(
+                        icon: Icons.cloud_upload_outlined,
+                        title: '上传到 WebDAV',
+                        trailing: '立即上传',
+                        trailingIcon: Icons.chevron_right,
+                        onTap: () => _uploadToWebdav(context, controller),
+                      ),
+                      const Divider(),
+                      SettingsRow(
+                        icon: Icons.cloud_download_outlined,
+                        title: '从 WebDAV 恢复',
+                        trailing: '选择备份',
+                        trailingIcon: Icons.chevron_right,
+                        onTap: () => _restoreFromWebdav(context, controller),
+                      ),
+                      const Divider(),
+                      CompactSwitchRow(
+                        icon: Icons.sync_outlined,
+                        title: const Text('自动上传到 WebDAV'),
+                        value: controller.webdavConfig.autoUpload,
+                        onChanged: controller.setWebdavAutoUpload,
+                      ),
+                      const Divider(),
+                      SettingsRow(
+                        icon: Icons.cloud_off_outlined,
+                        title: '清除 WebDAV 配置',
+                        trailing: '断开连接',
+                        trailingIcon: Icons.chevron_right,
+                        contentColor: veriExpense,
+                        onTap: () => _confirmClearWebdav(context, controller),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
               VeriCard(
                 child: SettingsRow(
                   icon: Icons.restart_alt,
@@ -1554,6 +1607,269 @@ class DataManagementPage extends StatelessWidget {
     );
     if (confirmed == true) {
       controller.clearBackupPassphrase();
+    }
+  }
+
+  Future<void> _editWebdav(
+    BuildContext context,
+    VeriFinController controller,
+  ) async {
+    final existing = controller.webdavConfig;
+    final urlController = TextEditingController(text: existing.url);
+    final userController = TextEditingController(text: existing.username);
+    final passController = TextEditingController(text: existing.password);
+    WebdavConfig current() => WebdavConfig(
+      url: urlController.text.trim(),
+      username: userController.text.trim(),
+      password: passController.text,
+      autoUpload: existing.autoUpload,
+    );
+
+    final saved = await showDialog<WebdavConfig>(
+      context: context,
+      builder: (context) {
+        String? statusText;
+        var testing = false;
+        return StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: const Text('WebDAV 服务器'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  TextField(
+                    controller: urlController,
+                    autofocus: true,
+                    keyboardType: TextInputType.url,
+                    decoration: const InputDecoration(
+                      labelText: '服务器目录地址',
+                      hintText: 'https://dav.example.com/verifin/',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: userController,
+                    decoration: const InputDecoration(labelText: '账号'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: passController,
+                    obscureText: true,
+                    decoration: const InputDecoration(labelText: '密码'),
+                  ),
+                  if (statusText != null) ...<Widget>[
+                    const SizedBox(height: 10),
+                    Text(
+                      statusText!,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('取消'),
+              ),
+              TextButton(
+                onPressed: testing || urlController.text.trim().isEmpty
+                    ? null
+                    : () async {
+                        setState(() {
+                          testing = true;
+                          statusText = '正在测试连接...';
+                        });
+                        try {
+                          await webdavTestConnection(current());
+                          setState(() => statusText = '连接成功');
+                        } catch (error) {
+                          setState(() => statusText = '连接失败：$error');
+                        } finally {
+                          setState(() => testing = false);
+                        }
+                      },
+                child: const Text('测试连接'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  if (urlController.text.trim().isEmpty) {
+                    setState(() => statusText = '请填写服务器地址');
+                    return;
+                  }
+                  Navigator.of(context).pop(current());
+                },
+                child: const Text('保存'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (saved != null && saved.isConfigured) {
+      controller.setWebdavConfig(saved);
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('已保存 WebDAV 配置')));
+      }
+    }
+  }
+
+  Future<void> _uploadToWebdav(
+    BuildContext context,
+    VeriFinController controller,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(const SnackBar(content: Text('正在上传到 WebDAV...')));
+    try {
+      final now = DateTime.now();
+      final filename = BackupService.manualBackupFilename(now);
+      final payload = await BackupService.prepareContent(
+        controller.exportDataJson(),
+        controller.backupPassphrase,
+      );
+      await webdavUpload(controller.webdavConfig, filename, payload);
+      controller.recordBackupTime(now);
+      messenger.showSnackBar(SnackBar(content: Text('已上传：$filename')));
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text('上传失败：$error')));
+    }
+  }
+
+  Future<void> _restoreFromWebdav(
+    BuildContext context,
+    VeriFinController controller,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    List<WebdavRemoteFile> files;
+    try {
+      files = await webdavList(controller.webdavConfig);
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text('读取失败：$error')));
+      return;
+    }
+    if (!context.mounted) {
+      return;
+    }
+    if (files.isEmpty) {
+      messenger.showSnackBar(const SnackBar(content: Text('WebDAV 上没有找到备份文件')));
+      return;
+    }
+    files.sort((a, b) {
+      final at = a.modifiedAt;
+      final bt = b.modifiedAt;
+      if (at == null || bt == null) {
+        return b.name.compareTo(a.name);
+      }
+      return bt.compareTo(at);
+    });
+    final chosen = await showModalBottomSheet<WebdavRemoteFile>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                '选择要恢复的备份',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              ),
+            ),
+            for (final file in files)
+              ListTile(
+                leading: const Icon(Icons.insert_drive_file_outlined),
+                title: Text(file.name),
+                subtitle: file.modifiedAt == null
+                    ? null
+                    : Text(file.modifiedAt!.toLocal().toString()),
+                onTap: () => Navigator.of(context).pop(file),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (chosen == null || !context.mounted) {
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('从此备份恢复？'),
+        content: Text('将用「${chosen.name}」替换当前本地数据，建议先备份当前数据。'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('恢复'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) {
+      return;
+    }
+    try {
+      var content = await webdavDownload(controller.webdavConfig, chosen.href);
+      if (content.trim().isEmpty) {
+        throw const FormatException('空备份文件');
+      }
+      if (isEncryptedBackup(content)) {
+        if (!context.mounted) {
+          return;
+        }
+        final decrypted = await _decryptForImport(context, controller, content);
+        if (decrypted == null) {
+          return;
+        }
+        content = decrypted;
+      }
+      controller.importDataJson(content);
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('已从 WebDAV 恢复数据')));
+      }
+    } on FormatException {
+      messenger.showSnackBar(const SnackBar(content: Text('恢复失败：备份文件格式不正确')));
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text('恢复失败：$error')));
+    }
+  }
+
+  Future<void> _confirmClearWebdav(
+    BuildContext context,
+    VeriFinController controller,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('清除 WebDAV 配置？'),
+        content: const Text('清除后将停止自动上传，服务器上已有的备份文件不会被删除。'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: veriExpense),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('清除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      controller.clearWebdavConfig();
     }
   }
 

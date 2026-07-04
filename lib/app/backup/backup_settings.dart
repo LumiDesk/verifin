@@ -82,12 +82,9 @@ class BackupSettings {
     );
   }
 
-  /// 依据频率与上次备份时间，判断在 [now] 是否应触发自动备份。
-  /// [onEntry] 表示当前调用是否由「记账后」事件触发。
-  bool shouldAutoBackup(DateTime now, {bool afterEntry = false}) {
-    if (!hasDirectory) {
-      return false;
-    }
+  /// 仅按频率与上次备份时间判断在 [now] 是否到期（不要求已配置目录）。
+  /// [afterEntry] 表示当前调用是否由「记账后」事件触发。供本地目录与 WebDAV 共用。
+  bool isFrequencyDue(DateTime now, {bool afterEntry = false}) {
     switch (frequency) {
       case BackupFrequency.manual:
         return false;
@@ -106,6 +103,11 @@ class BackupSettings {
         final elapsed = now.difference(last);
         return elapsed.inMinutes >= intervalHours * 60;
     }
+  }
+
+  /// 依据频率与上次备份时间，判断在 [now] 是否应触发本地目录自动备份。
+  bool shouldAutoBackup(DateTime now, {bool afterEntry = false}) {
+    return hasDirectory && isFrequencyDue(now, afterEntry: afterEntry);
   }
 
   Map<String, Object?> toJson() {

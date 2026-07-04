@@ -51,8 +51,14 @@ Web/移动/测试差异统一用条件导出模式（`stub` + `if (dart.library.
 - `lib/app/avatar_picker_*.dart`：本地图片选择。
 - `lib/app/data_file_port_*.dart`：JSON 备份导出/导入（Android 默认写系统 Downloads）。
 - `lib/app/biometric_auth_*.dart`：应用锁的生物解锁 — io 用 `local_auth`（仅 Android/iOS 生效，不保存生物特征数据；`local_auth` 无法严格排除人脸，故用户文案统一为「生物解锁」），stub（含 Web 与测试宿主）一律不可用。Android 端依赖 `FlutterFragmentActivity`、`USE_BIOMETRIC` 权限与 `minSdk≥23`。
+- `lib/app/backup/backup_storage_*.dart`：备份目录选择与文件读写 — io 上 Android 走 SAF（经 `platform_bridge`）、桌面走 `file_selector`+`dart:io`，Web/stub 不支持持久目录。
+- `lib/app/backup/webdav_client_*.dart`：WebDAV 备份 — io 用 `dart:io HttpClient` 手写 PUT/GET/PROPFIND/MKCOL，Web/stub 因跨域不支持。
 
-[lib/app/platform_bridge.dart](lib/app/platform_bridge.dart) 是 Android MethodChannel 桥（快速记账磁贴入口、GitHub Release 更新检查与下载）。
+[lib/app/platform_bridge.dart](lib/app/platform_bridge.dart) 是 Android MethodChannel 桥（快速记账磁贴入口、GitHub Release 更新检查与下载、备份目录 SAF 读写）。
+
+### 数据管理与备份
+
+数据管理页（`DataManagementPage`，我的页进入）集中导出/导入/初始化，以及 `lib/app/backup/` 备份子系统：`backup_settings.dart`（目录/频率/保留/上次时间 + 纯保留清理逻辑）、`backup_crypto.dart`（AES-GCM+PBKDF2 加密，`cryptography` 包）、`backup_service.dart`（写文件+按需加密+清理）、`backup_coordinator.dart`（打开/回前台/记账后触发本地目录与 WebDAV 自动备份，`main.dart` 注入 `onEntryAdded` 与生命周期）、`transaction_import.dart`（CSV 解析+名称建账户/分类+钱迹/随手记表头识别）、`webdav_config.dart`/`webdav_client_*.dart`（WebDAV）。备份目录/加密口令/WebDAV 配置存 KV，均不随初始化数据清除，也不进 JSON 导出（设备本地）。
 
 应用锁（PIN/图案/生物解锁）：加盐哈希（`lib/app/app_lock.dart`）存 KV，UI 与门卫在 `lib/pages/app_lock_page.dart` 与 `app_lock_gate.dart`（门卫放在 `MaterialApp.builder` 覆盖根 Navigator，冷启动与回前台锁定）。
 

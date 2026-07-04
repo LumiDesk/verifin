@@ -8,6 +8,7 @@ import '../local_storage/local_storage.dart';
 import 'app_lock.dart';
 import 'backup/backup_settings.dart';
 import 'backup/transaction_import.dart';
+import 'backup/webdav_config.dart';
 import 'demo_data.dart';
 import 'ledger_math.dart';
 import 'models.dart';
@@ -48,6 +49,7 @@ class VeriFinController extends ChangeNotifier {
   static const String _reportPanelsKey = 'verifin.report_panels.v1';
   static const String _backupSettingsKey = 'verifin.backup_settings.v1';
   static const String _backupPassphraseKey = 'verifin.backup_passphrase.v1';
+  static const String _webdavKey = 'verifin.webdav.v1';
 
   static String _panelsKeyFor(PanelPageKind page) {
     switch (page) {
@@ -93,6 +95,7 @@ class VeriFinController extends ChangeNotifier {
   AssetAccountViewMode _assetAccountViewMode = AssetAccountViewMode.type;
   BackupSettings _backupSettings = const BackupSettings();
   String _backupPassphrase = '';
+  WebdavConfig _webdavConfig = const WebdavConfig();
 
   List<LedgerEntry> get entries => List<LedgerEntry>.unmodifiable(
     _entries.where((entry) => entry.bookId == _activeBookId),
@@ -205,6 +208,29 @@ class VeriFinController extends ChangeNotifier {
 
   /// 清除加密口令：后续备份不再加密（已加密的旧文件仍需原口令导入）。
   void clearBackupPassphrase() => setBackupPassphrase('');
+
+  /// WebDAV 备份配置（地址/账号/密码/是否自动上传）；密码明文存本机 KV。
+  WebdavConfig get webdavConfig => _webdavConfig;
+
+  void setWebdavConfig(WebdavConfig config) {
+    _webdavConfig = config;
+    if (config.isConfigured) {
+      _store.write(_webdavKey, config.encode());
+    } else {
+      _store.delete(_webdavKey);
+    }
+    notifyListeners();
+  }
+
+  void setWebdavAutoUpload(bool enabled) {
+    setWebdavConfig(_webdavConfig.copyWith(autoUpload: enabled));
+  }
+
+  void clearWebdavConfig() {
+    _webdavConfig = const WebdavConfig();
+    _store.delete(_webdavKey);
+    notifyListeners();
+  }
 
   List<Category> categoriesForType(EntryType type) {
     return categoriesFor(type, categories);
@@ -1217,6 +1243,7 @@ class VeriFinController extends ChangeNotifier {
     _loadPagePanels();
     _backupSettings = BackupSettings.decode(_store.read(_backupSettingsKey));
     _backupPassphrase = _store.read(_backupPassphraseKey) ?? '';
+    _webdavConfig = WebdavConfig.decode(_store.read(_webdavKey));
   }
 
   /// 从 SQLite 载入账目类数据；全新数据库首启动写入默认账本/账户/分组/分类。
