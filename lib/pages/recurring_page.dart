@@ -1,0 +1,474 @@
+import 'package:flutter/material.dart';
+
+import '../app/common_widgets.dart';
+import '../app/demo_data.dart';
+import '../app/entry_sheets.dart';
+import '../app/ledger_math.dart';
+import '../app/models.dart';
+import '../app/veri_fin_scope.dart';
+import 'sheets.dart';
+
+/// 周期记账规则列表：新增 / 编辑 / 启停 / 删除。
+class RecurringRulesPage extends StatelessWidget {
+  const RecurringRulesPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = VeriFinScope.of(context);
+    final rules = controller.recurringRules;
+
+    return Scaffold(
+      body: SafeArea(
+        child: VeriPage(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
+            children: <Widget>[
+              VeriHeader(
+                title: '周期记账',
+                subtitle: '打开应用时自动补记到期交易',
+                showBack: true,
+                actions: <Widget>[
+                  HeaderAction(
+                    icon: Icons.add,
+                    tooltip: '新增规则',
+                    onPressed: () => _openEditor(context, null),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              if (rules.isEmpty)
+                VeriCard(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Center(
+                      child: Text(
+                        '还没有周期规则，点击右上角新增\n例如每月房租、每月工资',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              else
+                VeriCard(
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    children: <Widget>[
+                      for (final rule in rules)
+                        _RecurringRow(
+                          rule: rule,
+                          category: controller.categoryById(rule.categoryId),
+                          onTap: () => _openEditor(context, rule),
+                          onToggle: (value) =>
+                              controller.setRecurringRuleActive(rule.id, value),
+                        ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openEditor(BuildContext context, RecurringRule? rule) {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => RecurringRuleEditPage(rule: rule),
+      ),
+    );
+  }
+}
+
+class _RecurringRow extends StatelessWidget {
+  const _RecurringRow({
+    required this.rule,
+    required this.category,
+    required this.onTap,
+    required this.onToggle,
+  });
+
+  final RecurringRule rule;
+  final Category category;
+  final VoidCallback onTap;
+  final ValueChanged<bool> onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final sign = switch (rule.type) {
+      EntryType.expense => '-',
+      EntryType.income => '+',
+      EntryType.transfer => '',
+    };
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+        child: Row(
+          children: <Widget>[
+            VeriIconBox(
+              icon: iconForCode(category.iconCode),
+              color: colorForType(rule.type),
+              size: 32,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    rule.note.isEmpty ? category.label : rule.note,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '${rule.frequency.label} · $sign${formatAmount(rule.amount)}'
+                    ' · 下次 ${formatDate(rule.nextRunDate)}',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.5),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Switch(value: rule.active, onChanged: onToggle),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 周期规则新增 / 编辑表单。
+class RecurringRuleEditPage extends StatefulWidget {
+  const RecurringRuleEditPage({super.key, this.rule});
+
+  final RecurringRule? rule;
+
+  @override
+  State<RecurringRuleEditPage> createState() => _RecurringRuleEditPageState();
+}
+
+class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
+  late EntryType _type;
+  late double _amount;
+  late String _categoryId;
+  late String _accountId;
+  String? _toAccountId;
+  late RecurringFrequency _frequency;
+  late DateTime _startDate;
+  late final TextEditingController _noteController;
+  var _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) {
+      return;
+    }
+    _initialized = true;
+    final controller = VeriFinScope.of(context);
+    final rule = widget.rule;
+    if (rule != null) {
+      _type = rule.type;
+      _amount = rule.amount;
+      _categoryId = rule.categoryId;
+      _accountId = rule.accountId;
+      _toAccountId = rule.toAccountId;
+      _frequency = rule.frequency;
+      _startDate = rule.startDate;
+      _noteController = TextEditingController(text: rule.note);
+    } else {
+      _type = EntryType.expense;
+      _amount = 0;
+      _categoryId = controller.categoriesForType(EntryType.expense).first.id;
+      _accountId = controller.accounts.isEmpty
+          ? ''
+          : controller.accounts.first.id;
+      _frequency = RecurringFrequency.monthly;
+      _startDate = dateOnly(DateTime.now());
+      _noteController = TextEditingController();
+    }
+  }
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = VeriFinScope.of(context);
+    final accounts = controller.accounts;
+    final category = controller.categoryById(_categoryId);
+    final account = accounts.where((a) => a.id == _accountId).firstOrNull;
+
+    return Scaffold(
+      body: SafeArea(
+        child: VeriPage(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
+            children: <Widget>[
+              VeriHeader(
+                title: widget.rule == null ? '新增周期规则' : '编辑周期规则',
+                showBack: true,
+                actions: <Widget>[
+                  if (widget.rule != null)
+                    HeaderAction(
+                      icon: Icons.delete_outline,
+                      tooltip: '删除规则',
+                      destructive: true,
+                      onPressed: _delete,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              SegmentedButton<EntryType>(
+                segments: EntryType.values
+                    .map(
+                      (type) => ButtonSegment<EntryType>(
+                        value: type,
+                        label: Text(type.label),
+                      ),
+                    )
+                    .toList(),
+                selected: <EntryType>{_type},
+                onSelectionChanged: (selection) {
+                  setState(() {
+                    _type = selection.first;
+                    _categoryId = controller.categoriesForType(_type).first.id;
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+              VeriCard(
+                child: Column(
+                  children: <Widget>[
+                    DetailInfoRow(
+                      label: '金额',
+                      value: _amount > 0 ? formatAmount(_amount) : '点击填写',
+                      placeholder: _amount <= 0,
+                      onTap: _editAmount,
+                    ),
+                    DetailInfoRow(
+                      label: '分类',
+                      value: category.label,
+                      onTap: _pickCategory,
+                    ),
+                    DetailInfoRow(
+                      label: _type == EntryType.transfer ? '转出账户' : '账户',
+                      value: account?.name ?? '请先添加账户',
+                      placeholder: account == null,
+                      onTap: accounts.isEmpty
+                          ? null
+                          : () => _pickAccount(false),
+                    ),
+                    if (_type == EntryType.transfer)
+                      DetailInfoRow(
+                        label: '转入账户',
+                        value:
+                            accounts
+                                .where((a) => a.id == _toAccountId)
+                                .firstOrNull
+                                ?.name ??
+                            '请选择',
+                        placeholder: _toAccountId == null,
+                        onTap: accounts.length < 2
+                            ? null
+                            : () => _pickAccount(true),
+                      ),
+                    DetailInfoRow(
+                      label: '频率',
+                      value: _frequency.label,
+                      onTap: _pickFrequency,
+                    ),
+                    DetailInfoRow(
+                      label: '开始日期',
+                      value: formatDate(_startDate),
+                      onTap: _pickStartDate,
+                    ),
+                    DetailInfoRow(
+                      label: '备注',
+                      value: _noteController.text.trim().isEmpty
+                          ? '点击添加备注'
+                          : _noteController.text.trim(),
+                      placeholder: _noteController.text.trim().isEmpty,
+                      onTap: _editNote,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 48,
+                child: FilledButton(
+                  onPressed: _canSave(accounts) ? _save : null,
+                  child: const Text('保存'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  bool _canSave(List<Account> accounts) {
+    if (_amount <= 0 || accounts.isEmpty) {
+      return false;
+    }
+    if (_type == EntryType.transfer &&
+        (_toAccountId == null || _toAccountId == _accountId)) {
+      return false;
+    }
+    return true;
+  }
+
+  Future<void> _editAmount() async {
+    final amount = await showModalBottomSheet<double>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => NumberPadSheet(
+        title: '金额',
+        initialAmount: _amount > 0 ? _amount : null,
+        hapticsEnabled: VeriFinScope.of(context).hapticsEnabled,
+      ),
+    );
+    if (amount == null || amount <= 0 || !mounted) {
+      return;
+    }
+    setState(() => _amount = amount);
+  }
+
+  Future<void> _pickCategory() async {
+    final controller = VeriFinScope.of(context);
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => CategoryPickerSheet(
+        categories: controller.categoriesForType(_type),
+        selectedId: _categoryId,
+      ),
+    );
+    if (selected != null && mounted) {
+      setState(() => _categoryId = selected);
+    }
+  }
+
+  Future<void> _pickAccount(bool toAccount) async {
+    final controller = VeriFinScope.of(context);
+    final selected = await showOptionSheet<String>(
+      context: context,
+      title: toAccount ? '选择转入账户' : '选择账户',
+      values: controller.accounts.map((a) => a.id).toList(),
+      selected:
+          (toAccount ? _toAccountId : _accountId) ??
+          controller.accounts.first.id,
+      labelOf: (id) => accountById(controller.accounts, id).name,
+    );
+    if (selected == null || !mounted) {
+      return;
+    }
+    setState(() {
+      if (toAccount) {
+        _toAccountId = selected;
+      } else {
+        _accountId = selected;
+      }
+    });
+  }
+
+  Future<void> _pickFrequency() async {
+    final selected = await showOptionSheet<RecurringFrequency>(
+      context: context,
+      title: '选择频率',
+      values: RecurringFrequency.values,
+      selected: _frequency,
+      labelOf: (value) => value.label,
+    );
+    if (selected != null && mounted) {
+      setState(() => _frequency = selected);
+    }
+  }
+
+  Future<void> _pickStartDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _startDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null && mounted) {
+      setState(() => _startDate = dateOnly(picked));
+    }
+  }
+
+  Future<void> _editNote() async {
+    final note = await showTextInputDialog(
+      context: context,
+      title: '备注',
+      label: '备注',
+      initialValue: _noteController.text,
+      allowEmpty: true,
+    );
+    if (note != null && mounted) {
+      setState(() => _noteController.text = note);
+    }
+  }
+
+  void _save() {
+    final controller = VeriFinScope.of(context);
+    final existing = widget.rule;
+    if (existing == null) {
+      controller.addRecurringRule(
+        RecurringRule(
+          id: 'recur_${DateTime.now().microsecondsSinceEpoch}',
+          bookId: controller.activeBook.id,
+          type: _type,
+          amount: _amount,
+          categoryId: _categoryId,
+          accountId: _accountId,
+          toAccountId: _type == EntryType.transfer ? _toAccountId : null,
+          note: _noteController.text.trim(),
+          frequency: _frequency,
+          startDate: _startDate,
+          nextRunDate: _startDate,
+        ),
+      );
+    } else {
+      controller.updateRecurringRule(
+        existing.copyWith(
+          type: _type,
+          amount: _amount,
+          categoryId: _categoryId,
+          accountId: _accountId,
+          toAccountId: _type == EntryType.transfer ? _toAccountId : null,
+          clearToAccountId: _type != EntryType.transfer,
+          note: _noteController.text.trim(),
+          frequency: _frequency,
+          startDate: _startDate,
+        ),
+      );
+    }
+    // 立即补记已到期的交易。
+    controller.applyDueRecurring(DateTime.now());
+    Navigator.of(context).pop();
+  }
+
+  void _delete() {
+    VeriFinScope.of(context).deleteRecurringRule(widget.rule!.id);
+    Navigator.of(context).pop();
+  }
+}

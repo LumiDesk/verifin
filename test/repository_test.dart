@@ -294,6 +294,51 @@ void main() {
     expect(untagged.tagIds, isEmpty);
   });
 
+  test('周期记账规则 recurring_rules 表往返', () async {
+    final repo = await openRepo();
+    await repo.saveRecurringRules(<RecurringRule>[
+      RecurringRule(
+        id: 'r1',
+        bookId: defaultLedgerBookId,
+        type: EntryType.expense,
+        amount: 1500,
+        categoryId: 'housing',
+        accountId: 'cash',
+        note: '房租',
+        frequency: RecurringFrequency.monthly,
+        startDate: DateTime(2026, 1, 5),
+        nextRunDate: DateTime(2026, 8, 5),
+      ),
+    ]);
+    final loaded = await repo.loadRecurringRules();
+    expect(loaded.single.note, '房租');
+    expect(loaded.single.frequency, RecurringFrequency.monthly);
+    expect(loaded.single.nextRunDate, DateTime(2026, 8, 5));
+  });
+
+  test('v6 数据库升级到 v7 后有 recurring_rules 表', () async {
+    final dir = await Directory.systemTemp.createTemp('verifin_mig7');
+    final path = '${dir.path}/mig7.db';
+    final v6 = await databaseFactoryFfi.openDatabase(
+      path,
+      options: OpenDatabaseOptions(
+        version: 6,
+        onCreate: (db, _) async {
+          // 一张占位表即可，迁移只新增 recurring_rules。
+          await db.execute('CREATE TABLE placeholder (id TEXT PRIMARY KEY)');
+        },
+      ),
+    );
+    await v6.close();
+
+    final db = await AppDatabase.open(factory: databaseFactoryFfi, path: path);
+    final repo = SqliteLedgerRepository(db);
+    expect(await repo.loadRecurringRules(), isEmpty);
+
+    await db.close();
+    await dir.delete(recursive: true);
+  });
+
   test('转账手续费 fee 列往返', () async {
     final repo = await openRepo();
     final entry = LedgerEntry(

@@ -31,6 +31,9 @@ abstract interface class LedgerRepository {
   Future<List<Attachment>> loadAttachments();
   Future<void> saveAttachments(List<Attachment> attachments);
 
+  Future<List<RecurringRule>> loadRecurringRules();
+  Future<void> saveRecurringRules(List<RecurringRule> rules);
+
   Future<Map<String, double>> loadMonthlyBudgets();
   Future<void> saveMonthlyBudgets(Map<String, double> budgets);
 
@@ -140,6 +143,19 @@ class SqliteLedgerRepository implements LedgerRepository {
   @override
   Future<void> saveAttachments(List<Attachment> attachments) async {
     await _replaceAll('attachments', _indexed(attachments, _attachmentToRow));
+  }
+
+  // ---- 周期记账规则 ----
+
+  @override
+  Future<List<RecurringRule>> loadRecurringRules() async {
+    final rows = await _db.query('recurring_rules', orderBy: 'sort_order ASC');
+    return rows.map(_recurringFromRow).toList();
+  }
+
+  @override
+  Future<void> saveRecurringRules(List<RecurringRule> rules) async {
+    await _replaceAll('recurring_rules', _indexed(rules, _recurringToRow));
   }
 
   // ---- 预算（键值对：月度 / 分类）----
@@ -291,6 +307,43 @@ class SqliteLedgerRepository implements LedgerRepository {
     entryId: row['entry_id'] as String,
     dataUrl: row['data_url'] as String,
   );
+
+  static Map<String, Object?> _recurringToRow(RecurringRule r, int index) =>
+      <String, Object?>{
+        'id': r.id,
+        'book_id': r.bookId,
+        'type': r.type.storageValue,
+        'amount': r.amount,
+        'category_id': r.categoryId,
+        'account_id': r.accountId,
+        'to_account_id': r.toAccountId,
+        'note': r.note,
+        'frequency': r.frequency.storageValue,
+        'start_date': r.startDate.millisecondsSinceEpoch,
+        'next_run_date': r.nextRunDate.millisecondsSinceEpoch,
+        'active': r.active ? 1 : 0,
+        'sort_order': index,
+      };
+
+  static RecurringRule _recurringFromRow(Map<String, Object?> row) =>
+      RecurringRule(
+        id: row['id'] as String,
+        bookId: row['book_id'] as String,
+        type: EntryType.fromStorage(row['type'] as String),
+        amount: (row['amount'] as num).toDouble(),
+        categoryId: row['category_id'] as String,
+        accountId: row['account_id'] as String,
+        toAccountId: row['to_account_id'] as String?,
+        note: row['note'] as String? ?? '',
+        frequency: RecurringFrequency.fromStorage(row['frequency'] as String?),
+        startDate: DateTime.fromMillisecondsSinceEpoch(
+          row['start_date'] as int,
+        ),
+        nextRunDate: DateTime.fromMillisecondsSinceEpoch(
+          row['next_run_date'] as int,
+        ),
+        active: ((row['active'] as int?) ?? 1) != 0,
+      );
 
   static Map<String, Object?> _bookToRow(LedgerBook b, int index) =>
       <String, Object?>{

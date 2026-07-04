@@ -19,6 +19,7 @@ import '../app/ledger_math.dart';
 import '../app/legal_content.dart';
 import '../app/models.dart';
 import '../app/platform_bridge.dart';
+import 'recurring_page.dart';
 import '../app/series_math.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
@@ -180,6 +181,20 @@ class ProfilePage extends StatelessWidget {
                     Navigator.of(context).push<void>(
                       MaterialPageRoute<void>(
                         builder: (context) => const TagManagementPage(),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(),
+                SettingsRow(
+                  icon: Icons.repeat,
+                  title: '周期记账',
+                  trailing: '${controller.recurringRules.length} 条规则',
+                  trailingIcon: Icons.chevron_right,
+                  onTap: () {
+                    Navigator.of(context).push<void>(
+                      MaterialPageRoute<void>(
+                        builder: (context) => const RecurringRulesPage(),
                       ),
                     );
                   },

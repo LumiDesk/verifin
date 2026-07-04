@@ -259,6 +259,123 @@ List<String> _stringList(Object? value) {
   return const <String>[];
 }
 
+/// 周期记账频率。
+enum RecurringFrequency {
+  daily('daily', '每天'),
+  weekly('weekly', '每周'),
+  monthly('monthly', '每月'),
+  yearly('yearly', '每年');
+
+  const RecurringFrequency(this.storageValue, this.label);
+
+  final String storageValue;
+  final String label;
+
+  static RecurringFrequency fromStorage(String? value) {
+    return RecurringFrequency.values.firstWhere(
+      (f) => f.storageValue == value,
+      orElse: () => RecurringFrequency.monthly,
+    );
+  }
+}
+
+/// 周期记账规则：按频率自动补记交易（如房租、工资）。规则本身带 [bookId]，
+/// 生成的交易落入同一账本；[nextRunDate] 为下一次应生成的日期。
+class RecurringRule {
+  const RecurringRule({
+    required this.id,
+    required this.bookId,
+    required this.type,
+    required this.amount,
+    required this.categoryId,
+    required this.accountId,
+    this.toAccountId,
+    required this.note,
+    required this.frequency,
+    required this.startDate,
+    required this.nextRunDate,
+    this.active = true,
+  });
+
+  final String id;
+  final String bookId;
+  final EntryType type;
+  final double amount;
+  final String categoryId;
+  final String accountId;
+  final String? toAccountId;
+  final String note;
+  final RecurringFrequency frequency;
+  final DateTime startDate;
+  final DateTime nextRunDate;
+  final bool active;
+
+  RecurringRule copyWith({
+    String? note,
+    double? amount,
+    String? categoryId,
+    String? accountId,
+    String? toAccountId,
+    bool clearToAccountId = false,
+    EntryType? type,
+    RecurringFrequency? frequency,
+    DateTime? startDate,
+    DateTime? nextRunDate,
+    bool? active,
+  }) {
+    return RecurringRule(
+      id: id,
+      bookId: bookId,
+      type: type ?? this.type,
+      amount: amount ?? this.amount,
+      categoryId: categoryId ?? this.categoryId,
+      accountId: accountId ?? this.accountId,
+      toAccountId: clearToAccountId ? null : toAccountId ?? this.toAccountId,
+      note: note ?? this.note,
+      frequency: frequency ?? this.frequency,
+      startDate: startDate ?? this.startDate,
+      nextRunDate: nextRunDate ?? this.nextRunDate,
+      active: active ?? this.active,
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    return <String, Object?>{
+      'id': id,
+      'bookId': bookId,
+      'type': type.storageValue,
+      'amount': amount,
+      'categoryId': categoryId,
+      'accountId': accountId,
+      'toAccountId': toAccountId,
+      'note': note,
+      'frequency': frequency.storageValue,
+      'startDate': startDate.toIso8601String(),
+      'nextRunDate': nextRunDate.toIso8601String(),
+      'active': active,
+    };
+  }
+
+  static RecurringRule fromJson(Map<String, Object?> json) {
+    final now = DateTime.now();
+    return RecurringRule(
+      id: json['id'] as String,
+      bookId: json['bookId'] as String? ?? defaultLedgerBookId,
+      type: EntryType.fromStorage(json['type'] as String? ?? 'expense'),
+      amount: (json['amount'] as num?)?.toDouble() ?? 0,
+      categoryId: json['categoryId'] as String? ?? 'dining',
+      accountId: json['accountId'] as String? ?? '',
+      toAccountId: json['toAccountId'] as String?,
+      note: json['note'] as String? ?? '',
+      frequency: RecurringFrequency.fromStorage(json['frequency'] as String?),
+      startDate: DateTime.tryParse(json['startDate'] as String? ?? '') ?? now,
+      nextRunDate:
+          DateTime.tryParse(json['nextRunDate'] as String? ?? '') ?? now,
+      active: json['active'] as bool? ?? true,
+    );
+  }
+}
+
 /// 交易的图片附件（如票据）。以压缩后的 JPEG data URL 存储在独立表中，
 /// 不放进 entries 表，避免整表覆盖式写入放大；数据落在应用私有的 SQLite 内。
 class Attachment {

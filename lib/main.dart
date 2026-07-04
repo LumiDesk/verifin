@@ -20,6 +20,8 @@ Future<void> main() async {
     store,
     repository: SqliteLedgerRepository(database),
   );
+  // 打开应用时补记到期的周期交易。
+  controller.applyDueRecurring(DateTime.now());
   runApp(VeriFinApp(controller: controller));
 }
 
@@ -52,6 +54,7 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      _controller.applyDueRecurring(DateTime.now());
       BackupCoordinator.maybeBackupOnOpen(_controller);
     }
   }

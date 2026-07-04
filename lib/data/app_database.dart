@@ -13,7 +13,7 @@ class AppDatabase {
   final Database db;
 
   static const String defaultDatabaseName = 'verifin.db';
-  static const int schemaVersion = 6;
+  static const int schemaVersion = 7;
 
   /// 打开（或创建）数据库。测试通过 [factory]/[path] 注入 ffi 与内存路径；
   /// 真实平台留空则由 [resolveDatabaseFactory]/[resolveDatabasePath] 决定。
@@ -93,7 +93,29 @@ class AppDatabase {
         'ALTER TABLE entries ADD COLUMN refunded_amount REAL NOT NULL DEFAULT 0',
       );
     }
+    // v6 → v7：周期记账规则表。
+    if (oldVersion < 7) {
+      await db.execute(_recurringRulesTable);
+    }
   }
+
+  static const String _recurringRulesTable = '''
+    CREATE TABLE recurring_rules (
+      id TEXT PRIMARY KEY,
+      book_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      amount REAL NOT NULL,
+      category_id TEXT NOT NULL,
+      account_id TEXT NOT NULL,
+      to_account_id TEXT,
+      note TEXT NOT NULL,
+      frequency TEXT NOT NULL,
+      start_date INTEGER NOT NULL,
+      next_run_date INTEGER NOT NULL,
+      active INTEGER NOT NULL,
+      sort_order INTEGER NOT NULL
+    )
+  ''';
 
   /// 当前完整建表语句（供全新数据库 onCreate 用）。字段命名用 snake_case；
   /// 布尔存 0/1；时间存毫秒时间戳。已含历次迁移引入的列/表（parent_id、tags 等）。
@@ -191,5 +213,6 @@ class AppDatabase {
     )
     ''',
     'CREATE INDEX idx_attachments_entry ON attachments (entry_id)',
+    _recurringRulesTable,
   ];
 }

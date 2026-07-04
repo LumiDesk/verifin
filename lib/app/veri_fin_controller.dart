@@ -13,6 +13,7 @@ import 'category_tree.dart';
 import 'demo_data.dart';
 import 'ledger_math.dart';
 import 'models.dart';
+import 'recurring.dart';
 
 class VeriFinController extends ChangeNotifier {
   VeriFinController._(this._store, this._repository) {
@@ -73,6 +74,7 @@ class VeriFinController extends ChangeNotifier {
   final List<Category> _categories = <Category>[];
   final List<Tag> _tags = <Tag>[];
   final List<Attachment> _attachments = <Attachment>[];
+  final List<RecurringRule> _recurringRules = <RecurringRule>[];
   final Map<String, double> _monthlyBudgets = <String, double>{};
   final Map<String, double> _categoryBudgets = <String, double>{};
   final Set<String> _collapsedAssetSections = <String>{};
@@ -183,6 +185,97 @@ class VeriFinController extends ChangeNotifier {
     final before = _attachments.length;
     _attachments.removeWhere((a) => entryIds.contains(a.entryId));
     return _attachments.length != before;
+  }
+
+  // ---- 周期记账 ----
+
+  /// 当前账本下的周期记账规则（按加入顺序）。
+  List<RecurringRule> get recurringRules => List<RecurringRule>.unmodifiable(
+    _recurringRules.where((rule) => rule.bookId == _activeBookId),
+  );
+
+  void addRecurringRule(RecurringRule rule) {
+    _recurringRules.add(rule);
+    _persistRecurringRules();
+    notifyListeners();
+  }
+
+  void updateRecurringRule(RecurringRule rule) {
+    final index = _recurringRules.indexWhere((item) => item.id == rule.id);
+    if (index == -1) {
+      return;
+    }
+    _recurringRules[index] = rule;
+    _persistRecurringRules();
+    notifyListeners();
+  }
+
+  void setRecurringRuleActive(String ruleId, bool active) {
+    final index = _recurringRules.indexWhere((item) => item.id == ruleId);
+    if (index == -1) {
+      return;
+    }
+    _recurringRules[index] = _recurringRules[index].copyWith(active: active);
+    _persistRecurringRules();
+    notifyListeners();
+  }
+
+  void deleteRecurringRule(String ruleId) {
+    final before = _recurringRules.length;
+    _recurringRules.removeWhere((item) => item.id == ruleId);
+    if (_recurringRules.length == before) {
+      return;
+    }
+    _persistRecurringRules();
+    notifyListeners();
+  }
+
+  /// 补记所有到期的周期交易（打开应用 / 回前台时调用）。为每条到期规则按其
+  /// 频率补齐从 `nextRunDate` 到 [now] 的交易，并推进规则的 `nextRunDate`。
+  /// 返回新补记的交易数量。处理所有账本的规则（不限当前账本）。
+  int applyDueRecurring(DateTime now) {
+    var generated = 0;
+    var rulesChanged = false;
+    for (var i = 0; i < _recurringRules.length; i++) {
+      final rule = _recurringRules[i];
+      final dueDates = dueDatesFor(rule, now);
+      if (dueDates.isEmpty) {
+        continue;
+      }
+      for (final due in dueDates) {
+        _entries.add(
+          LedgerEntry(
+            id: 'entry_recur_${rule.id}_${due.millisecondsSinceEpoch}',
+            bookId: rule.bookId,
+            type: rule.type,
+            amount: rule.amount,
+            categoryId: rule.categoryId,
+            accountId: rule.accountId,
+            toAccountId: rule.type == EntryType.transfer
+                ? rule.toAccountId
+                : null,
+            note: rule.note,
+            occurredAt: due,
+          ),
+        );
+        generated += 1;
+      }
+      _recurringRules[i] = rule.copyWith(
+        nextRunDate: advanceRecurring(dueDates.last, rule.frequency),
+      );
+      rulesChanged = true;
+    }
+    if (generated > 0) {
+      _entries.sort(_compareEntriesLatestFirst);
+      _persistEntries();
+    }
+    if (rulesChanged) {
+      _persistRecurringRules();
+    }
+    if (generated > 0 || rulesChanged) {
+      notifyListeners();
+    }
+    return generated;
   }
 
   ThemePreference get themePreference => _themePreference;
@@ -768,6 +861,7 @@ class VeriFinController extends ChangeNotifier {
     _entries.removeWhere((entry) => entry.bookId == bookId);
     _accounts.removeWhere((account) => account.bookId == bookId);
     _accountGroups.removeWhere((group) => group.bookId == bookId);
+    _recurringRules.removeWhere((rule) => rule.bookId == bookId);
     _collapsedAssetSections.removeWhere((key) => key.startsWith('$bookId:'));
     _assetAccountOrders.removeWhere((key, _) => key.startsWith('$bookId:'));
     _assetSectionOrders.removeWhere((key, _) => key.startsWith('$bookId:'));
@@ -784,6 +878,7 @@ class VeriFinController extends ChangeNotifier {
     _persistEntries();
     _persistAccounts();
     _persistAccountGroups();
+    _persistRecurringRules();
     _persistAssetSectionCollapsed();
     _persistAssetAccountOrders();
     _persistAssetSectionOrders();
@@ -1245,6 +1340,7 @@ class VeriFinController extends ChangeNotifier {
       ..addAll(defaultCategories);
     _tags.clear();
     _attachments.clear();
+    _recurringRules.clear();
     _monthlyBudgets.clear();
     _categoryBudgets.clear();
     _profile = defaultUserProfile;
@@ -1267,6 +1363,7 @@ class VeriFinController extends ChangeNotifier {
     _persistCategories();
     _persistTags();
     _persistAttachments();
+    _persistRecurringRules();
     _persistBudgets();
     _persistCategoryBudgets();
     themePreferenceListenable.value = _themePreference;
@@ -1287,6 +1384,7 @@ class VeriFinController extends ChangeNotifier {
         'categories': _categories.map((category) => category.toJson()).toList(),
         'tags': _tags.map((tag) => tag.toJson()).toList(),
         'attachments': _attachments.map((a) => a.toJson()).toList(),
+        'recurringRules': _recurringRules.map((r) => r.toJson()).toList(),
         'monthlyBudgets': Map<String, double>.from(_monthlyBudgets),
         'categoryBudgets': Map<String, double>.from(_categoryBudgets),
         'profile': _profile.toJson(),
@@ -1362,6 +1460,10 @@ class VeriFinController extends ChangeNotifier {
       data['attachments'],
       Attachment.fromJson,
     );
+    final nextRecurringRules = _decodeModelList<RecurringRule>(
+      data['recurringRules'],
+      RecurringRule.fromJson,
+    );
     final nextMonthlyBudgets = _bookScopedBudgets(
       _decodeBudgets(data['monthlyBudgets']),
     );
@@ -1429,6 +1531,9 @@ class VeriFinController extends ChangeNotifier {
     _attachments
       ..clear()
       ..addAll(nextAttachments);
+    _recurringRules
+      ..clear()
+      ..addAll(nextRecurringRules);
     _monthlyBudgets
       ..clear()
       ..addAll(nextMonthlyBudgets);
@@ -1460,6 +1565,7 @@ class VeriFinController extends ChangeNotifier {
     _persistCategories();
     _persistTags();
     _persistAttachments();
+    _persistRecurringRules();
     _persistBudgets();
     _persistCategoryBudgets();
     _store.write(_profileKey, jsonEncode(_profile.toJson()));
@@ -1569,6 +1675,9 @@ class VeriFinController extends ChangeNotifier {
     _attachments
       ..clear()
       ..addAll(await _repository.loadAttachments());
+    _recurringRules
+      ..clear()
+      ..addAll(await _repository.loadRecurringRules());
     _monthlyBudgets
       ..clear()
       ..addAll(_bookScopedBudgets(await _repository.loadMonthlyBudgets()));
@@ -1701,6 +1810,12 @@ class VeriFinController extends ChangeNotifier {
 
   void _persistAttachments() {
     _trackWrite(_repository.saveAttachments(List<Attachment>.of(_attachments)));
+  }
+
+  void _persistRecurringRules() {
+    _trackWrite(
+      _repository.saveRecurringRules(List<RecurringRule>.of(_recurringRules)),
+    );
   }
 
   void _persistBudgets() {

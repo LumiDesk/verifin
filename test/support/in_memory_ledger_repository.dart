@@ -14,6 +14,7 @@ class InMemoryLedgerRepository implements LedgerRepository {
   List<Category> _categories = <Category>[];
   List<Tag> _tags = <Tag>[];
   List<Attachment> _attachments = <Attachment>[];
+  List<RecurringRule> _recurringRules = <RecurringRule>[];
   Map<String, double> _monthlyBudgets = <String, double>{};
   Map<String, double> _categoryBudgets = <String, double>{};
 
@@ -75,6 +76,15 @@ class InMemoryLedgerRepository implements LedgerRepository {
   @override
   Future<void> saveAttachments(List<Attachment> attachments) async {
     _attachments = List<Attachment>.of(attachments);
+  }
+
+  @override
+  Future<List<RecurringRule>> loadRecurringRules() async =>
+      List<RecurringRule>.of(_recurringRules);
+
+  @override
+  Future<void> saveRecurringRules(List<RecurringRule> rules) async {
+    _recurringRules = List<RecurringRule>.of(rules);
   }
 
   @override
