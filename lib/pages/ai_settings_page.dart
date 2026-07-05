@@ -66,7 +66,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     FocusScope.of(context).unfocus();
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(l10n.commonSave)));
+    ).showSnackBar(SnackBar(content: Text(l10n.aiSettingsSaved)));
     setState(() {
       _statusIsError = false;
       _statusText = null;
@@ -208,6 +208,18 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: _testing ? null : _testConnection,
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(44, 44),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  veriRadiusMd,
+                                ),
+                              ),
+                            ),
                             icon: _testing
                                 ? const SizedBox(
                                     width: 16,

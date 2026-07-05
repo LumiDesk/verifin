@@ -3992,6 +3992,12 @@ abstract class AppLocalizations {
   /// **'请填写请求地址、API Key 与模型'**
   String get aiFillAllFields;
 
+  /// No description provided for @aiSettingsSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存成功'**
+  String get aiSettingsSaved;
+
   /// No description provided for @aiPrivacyNotice.
   ///
   /// In zh, this message translates to:

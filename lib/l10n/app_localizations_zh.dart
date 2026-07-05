@@ -2161,6 +2161,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiFillAllFields => '请填写请求地址、API Key 与模型';
 
   @override
+  String get aiSettingsSaved => '保存成功';
+
+  @override
   String get aiPrivacyNotice => 'AI 记账会把你输入的文字发送到你配置的第三方服务进行解析，请勿输入敏感信息。';
 
   @override

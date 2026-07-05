@@ -189,8 +189,8 @@ class _AiEntrySheetState extends State<_AiEntrySheet> {
           TextField(
             controller: _inputController,
             autofocus: true,
-            minLines: 2,
-            maxLines: 4,
+            minLines: 4,
+            maxLines: 8,
             textInputAction: TextInputAction.newline,
             decoration: InputDecoration(
               hintText: l10n.aiEntryInputHint,

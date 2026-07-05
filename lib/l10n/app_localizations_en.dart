@@ -2196,6 +2196,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Please fill in the request URL, API key and model';
 
   @override
+  String get aiSettingsSaved => 'Saved';
+
+  @override
   String get aiPrivacyNotice =>
       'AI entry sends the text you type to the third-party service you configured for parsing. Do not enter sensitive information.';
 
