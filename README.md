@@ -26,11 +26,9 @@
 
 | 首页 | 资产 | 数据看板 |
 | :---: | :---: | :---: |
-| <img src="docs/screenshots/home.png" width="240" alt="首页" /> | <img src="docs/screenshots/assets.png" width="240" alt="资产" /> | <img src="docs/screenshots/reports.png" width="240" alt="数据看板" /> |
+| <img src="docs/screenshots/home.jpg" width="240" alt="首页" /> | <img src="docs/screenshots/assets.jpg" width="240" alt="资产" /> | <img src="docs/screenshots/reports.jpg" width="240" alt="数据看板" /> |
 
 </div>
-
-<!-- 截图放入 docs/screenshots/：home.png（首页）、assets.png（资产）、reports.png（数据看板） -->
 
 ## ✨ 功能亮点
 
