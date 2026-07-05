@@ -373,4 +373,92 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get balanceAdjustNote => '余额调整';
+
+  @override
+  String get commonNone => '暂无';
+
+  @override
+  String get commonDone => '完成';
+
+  @override
+  String get homeNoEntriesTitle => '还没有交易';
+
+  @override
+  String get homeNoEntriesDesc => '点击右下角加号开始第一笔记账。';
+
+  @override
+  String trendNet(String amount) {
+    return '结余 $amount';
+  }
+
+  @override
+  String get homeDaysTracked => '记账日';
+
+  @override
+  String daysCount(int count) {
+    return '$count天';
+  }
+
+  @override
+  String get homeDailyAvgExpense => '日均支出';
+
+  @override
+  String dateMonthDay(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat('M月d日', localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString';
+  }
+
+  @override
+  String monthBudgetTitle(DateTime month) {
+    final intl.DateFormat monthDateFormat = intl.DateFormat('M月', localeName);
+    final String monthString = monthDateFormat.format(month);
+
+    return '$monthString预算';
+  }
+
+  @override
+  String get budgetRemaining => '剩余';
+
+  @override
+  String get budgetDailyRemaining => '剩余日均';
+
+  @override
+  String budgetTotalLabel(String amount) {
+    return '预算 $amount';
+  }
+
+  @override
+  String get incomeExpenseTitle => '收支统计';
+
+  @override
+  String get homeNoStatsTitle => '暂无统计';
+
+  @override
+  String get homeNoStatsDesc => '当前月份没有对应记录。';
+
+  @override
+  String get statTypeTitle => '统计类型';
+
+  @override
+  String budgetCatOver(String category, String amount) {
+    return '$category超出 $amount';
+  }
+
+  @override
+  String budgetCatUsed(String category, String percent) {
+    return '$category已用 $percent%';
+  }
+
+  @override
+  String entriesCount(int count) {
+    return '$count笔';
+  }
+
+  @override
+  String get categoryAll => '全部分类';
+
+  @override
+  String get tagPickerTitle => '选择标签';
 }

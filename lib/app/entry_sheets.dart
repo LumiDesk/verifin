@@ -7,6 +7,7 @@ import 'common_widgets.dart';
 import 'demo_data.dart';
 import 'ledger_math.dart';
 import 'models.dart';
+import '../l10n/app_localizations.dart';
 
 class NumberPadSheet extends StatefulWidget {
   const NumberPadSheet({
@@ -308,7 +309,7 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            '全部分类',
+            AppLocalizations.of(context).categoryAll,
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
@@ -444,7 +445,7 @@ class _TagSelectorSheetState extends State<TagSelectorSheet> {
           Row(
             children: <Widget>[
               Text(
-                '选择标签',
+                AppLocalizations.of(context).tagPickerTitle,
                 style: Theme.of(
                   context,
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
@@ -452,7 +453,7 @@ class _TagSelectorSheetState extends State<TagSelectorSheet> {
               const Spacer(),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(_selected.toList()),
-                child: const Text('完成'),
+                child: Text(AppLocalizations.of(context).commonDone),
               ),
             ],
           ),
@@ -477,7 +478,7 @@ class _TagSelectorSheetState extends State<TagSelectorSheet> {
                     ),
                   ActionChip(
                     avatar: const Icon(Icons.add, size: 18),
-                    label: const Text('新建标签'),
+                    label: Text(AppLocalizations.of(context).tagCreateTitle),
                     onPressed: _createTag,
                   ),
                 ],

@@ -117,5 +117,45 @@
   "iconGroupCredit": "Credit accounts",
   "iconGroupPayment": "Payment platforms",
   "iconGroupBank": "Banks",
-  "balanceAdjustNote": "Balance adjustment"
+  "balanceAdjustNote": "Balance adjustment",
+  "commonNone": "None",
+  "commonDone": "Done",
+  "homeNoEntriesTitle": "No transactions yet",
+  "homeNoEntriesDesc": "Tap the plus button to record your first entry.",
+  "trendNet": "Net {amount}",
+  "homeDaysTracked": "Days tracked",
+  "daysCount": "{count} days",
+  "homeDailyAvgExpense": "Daily average",
+  "dateMonthDay": "{date}",
+  "@dateMonthDay": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "MMM d",
+        "isCustomDateFormat": "true"
+      }
+    }
+  },
+  "monthBudgetTitle": "{month} budget",
+  "@monthBudgetTitle": {
+    "placeholders": {
+      "month": {
+        "type": "DateTime",
+        "format": "MMM",
+        "isCustomDateFormat": "true"
+      }
+    }
+  },
+  "budgetRemaining": "Remaining",
+  "budgetDailyRemaining": "Daily remaining",
+  "budgetTotalLabel": "Budget {amount}",
+  "incomeExpenseTitle": "Income & expense",
+  "homeNoStatsTitle": "No data",
+  "homeNoStatsDesc": "No records for this month.",
+  "statTypeTitle": "Statistic type",
+  "budgetCatOver": "{category} over by {amount}",
+  "budgetCatUsed": "{category} used {percent}%",
+  "entriesCount": "{count} entries",
+  "categoryAll": "All categories",
+  "tagPickerTitle": "Select tags"
 }

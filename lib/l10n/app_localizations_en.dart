@@ -381,4 +381,93 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get balanceAdjustNote => 'Balance adjustment';
+
+  @override
+  String get commonNone => 'None';
+
+  @override
+  String get commonDone => 'Done';
+
+  @override
+  String get homeNoEntriesTitle => 'No transactions yet';
+
+  @override
+  String get homeNoEntriesDesc =>
+      'Tap the plus button to record your first entry.';
+
+  @override
+  String trendNet(String amount) {
+    return 'Net $amount';
+  }
+
+  @override
+  String get homeDaysTracked => 'Days tracked';
+
+  @override
+  String daysCount(int count) {
+    return '$count days';
+  }
+
+  @override
+  String get homeDailyAvgExpense => 'Daily average';
+
+  @override
+  String dateMonthDay(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat('MMM d', localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString';
+  }
+
+  @override
+  String monthBudgetTitle(DateTime month) {
+    final intl.DateFormat monthDateFormat = intl.DateFormat.MMM(localeName);
+    final String monthString = monthDateFormat.format(month);
+
+    return '$monthString budget';
+  }
+
+  @override
+  String get budgetRemaining => 'Remaining';
+
+  @override
+  String get budgetDailyRemaining => 'Daily remaining';
+
+  @override
+  String budgetTotalLabel(String amount) {
+    return 'Budget $amount';
+  }
+
+  @override
+  String get incomeExpenseTitle => 'Income & expense';
+
+  @override
+  String get homeNoStatsTitle => 'No data';
+
+  @override
+  String get homeNoStatsDesc => 'No records for this month.';
+
+  @override
+  String get statTypeTitle => 'Statistic type';
+
+  @override
+  String budgetCatOver(String category, String amount) {
+    return '$category over by $amount';
+  }
+
+  @override
+  String budgetCatUsed(String category, String percent) {
+    return '$category used $percent%';
+  }
+
+  @override
+  String entriesCount(int count) {
+    return '$count entries';
+  }
+
+  @override
+  String get categoryAll => 'All categories';
+
+  @override
+  String get tagPickerTitle => 'Select tags';
 }

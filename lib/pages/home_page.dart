@@ -72,9 +72,9 @@ class HomePage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 SectionHeaderAction(
-                  title: '最近交易',
+                  title: AppLocalizations.of(context).panelRecentLabel,
                   trailing: recentEntries.isEmpty
-                      ? '暂无'
+                      ? AppLocalizations.of(context).commonNone
                       : formatSignedAmount(
                           recentEntries.fold<double>(
                             0,
@@ -91,10 +91,10 @@ class HomePage extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 if (recentEntries.isEmpty)
-                  const EmptyState(
+                  EmptyState(
                     icon: Icons.receipt_long_outlined,
-                    title: '还没有交易',
-                    description: '点击右下角加号开始第一笔记账。',
+                    title: AppLocalizations.of(context).homeNoEntriesTitle,
+                    description: AppLocalizations.of(context).homeNoEntriesDesc,
                   )
                 else
                   for (final item in recentEntries.indexed) ...<Widget>[
@@ -149,7 +149,11 @@ class HomePage extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(14, 8, 14, 82),
         children: <Widget>[
-          const PageHeader(title: '首页', subtitle: '日常账本'),
+          PageHeader(
+            title: AppLocalizations.of(context).tabHome,
+            // 副标题展示当前账本名（此前误为固定文案）。
+            subtitle: controller.activeBook.name,
+          ),
           for (final id in panelIds) ...<Widget>[
             const SizedBox(height: 10),
             panelFor(id),
@@ -261,7 +265,7 @@ class HomeTrendPanel extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '支出走势',
+                        AppLocalizations.of(context).panelTrendLabel,
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w800),
                       ),
@@ -293,7 +297,9 @@ class HomeTrendPanel extends StatelessWidget {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    '结余 ${formatSignedAmount(net)}',
+                    AppLocalizations.of(
+                      context,
+                    ).trendNet(formatSignedAmount(net)),
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: netColor,
                       fontWeight: FontWeight.w800,
@@ -307,7 +313,7 @@ class HomeTrendPanel extends StatelessWidget {
               children: <Widget>[
                 Expanded(
                   child: _TrendMetric(
-                    label: '收入',
+                    label: AppLocalizations.of(context).entryTypeIncome,
                     value: formatAmount(income),
                     color: isZeroAmount(income) ? mutedColor : veriIncome,
                     dark: isDark,
@@ -316,8 +322,10 @@ class HomeTrendPanel extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: _TrendMetric(
-                    label: '记账日',
-                    value: '$daysWithExpense天',
+                    label: AppLocalizations.of(context).homeDaysTracked,
+                    value: AppLocalizations.of(
+                      context,
+                    ).daysCount(daysWithExpense),
                     color: veriRoyal,
                     dark: isDark,
                   ),
@@ -325,7 +333,7 @@ class HomeTrendPanel extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: _TrendMetric(
-                    label: '日均支出',
+                    label: AppLocalizations.of(context).homeDailyAvgExpense,
                     value: formatAmount(
                       expense / window.days.length.clamp(1, 7),
                     ),
@@ -351,10 +359,11 @@ class HomeTrendPanel extends StatelessWidget {
                   tooltipOf: (index) {
                     final day = window.days[index];
                     return ChartTooltip(
-                      title: '${day.month}月${day.day}日',
+                      title: AppLocalizations.of(context).dateMonthDay(day),
                       lines: <ChartTooltipLine>[
                         ChartTooltipLine(
-                          text: '支出 ${formatExpenseAmount(values[index])}',
+                          text:
+                              '${EntryType.expense.label(AppLocalizations.of(context))} ${formatExpenseAmount(values[index])}',
                         ),
                       ],
                     );
@@ -466,7 +475,7 @@ class BudgetPanel extends StatelessWidget {
             children: <Widget>[
               Expanded(
                 child: Text(
-                  '${month.month}月预算',
+                  AppLocalizations.of(context).monthBudgetTitle(month),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
@@ -480,7 +489,7 @@ class BudgetPanel extends StatelessWidget {
             children: <Widget>[
               Expanded(
                 child: BudgetSideStat(
-                  label: '支出',
+                  label: AppLocalizations.of(context).entryTypeExpense,
                   value: formatExpenseAmount(expense),
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
@@ -513,7 +522,7 @@ class BudgetPanel extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
                         Text(
-                          '剩余',
+                          AppLocalizations.of(context).budgetRemaining,
                           style: Theme.of(context).textTheme.labelSmall
                               ?.copyWith(
                                 color: Theme.of(
@@ -547,7 +556,7 @@ class BudgetPanel extends StatelessWidget {
               ),
               Expanded(
                 child: BudgetSideStat(
-                  label: '剩余日均',
+                  label: AppLocalizations.of(context).budgetDailyRemaining,
                   // 超支时可分配日均为 0（负的日均无实际意义）。
                   value: formatAmount(
                     (remaining < 0 ? 0.0 : remaining) / remainingDays,
@@ -560,7 +569,9 @@ class BudgetPanel extends StatelessWidget {
           const SizedBox(height: 2),
           Center(
             child: Text(
-              '预算 ${formatAmount(budget)}',
+              AppLocalizations.of(
+                context,
+              ).budgetTotalLabel(formatAmount(budget)),
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: Theme.of(
                   context,
@@ -643,7 +654,10 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
             children: <Widget>[
-              const VeriHeader(title: '收支统计', showBack: true),
+              VeriHeader(
+                title: AppLocalizations.of(context).incomeExpenseTitle,
+                showBack: true,
+              ),
               const SizedBox(height: 8),
               Row(
                 children: <Widget>[
@@ -710,7 +724,9 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
                             EntryType.transfer => formatAmount(value),
                           };
                           return ChartTooltip(
-                            title: '${day.month}月${day.day}日',
+                            title: AppLocalizations.of(
+                              context,
+                            ).dateMonthDay(day),
                             lines: <ChartTooltipLine>[
                               ChartTooltipLine(
                                 text:
@@ -729,10 +745,12 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
                 child: Column(
                   children: <Widget>[
                     if (dayRows.isEmpty)
-                      const EmptyState(
+                      EmptyState(
                         icon: Icons.bar_chart_outlined,
-                        title: '暂无统计',
-                        description: '当前月份没有对应记录。',
+                        title: AppLocalizations.of(context).homeNoStatsTitle,
+                        description: AppLocalizations.of(
+                          context,
+                        ).homeNoStatsDesc,
                       )
                     else
                       for (final row in dayRows.indexed) ...<Widget>[
@@ -752,7 +770,7 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
   Future<void> _pickEntryType() async {
     final selected = await showOptionSheet<EntryType>(
       context: context,
-      title: '统计类型',
+      title: AppLocalizations.of(context).statTypeTitle,
       values: EntryType.values,
       selected: _type,
       labelOf: (value) => value.label(AppLocalizations.of(context)),
@@ -771,9 +789,16 @@ class _HomeBudgetRiskBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = snapshot.overBudget ? veriExpense : veriWarning;
+    final l10n = AppLocalizations.of(context);
     final text = snapshot.overBudget
-        ? '${snapshot.category.label}超出 ${formatAmount(snapshot.spent - snapshot.budget)}'
-        : '${snapshot.category.label}已用 ${(snapshot.ratio * 100).toStringAsFixed(0)}%';
+        ? l10n.budgetCatOver(
+            snapshot.category.label,
+            formatAmount(snapshot.spent - snapshot.budget),
+          )
+        : l10n.budgetCatUsed(
+            snapshot.category.label,
+            (snapshot.ratio * 100).toStringAsFixed(0),
+          );
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -881,7 +906,7 @@ class _DailyStatTile extends StatelessWidget {
               ),
               const SizedBox(height: 3),
               Text(
-                '${row.count}笔',
+                AppLocalizations.of(context).entriesCount(row.count),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(
                     context,

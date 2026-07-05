@@ -805,6 +805,138 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'余额调整'**
   String get balanceAdjustNote;
+
+  /// No description provided for @commonNone.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无'**
+  String get commonNone;
+
+  /// No description provided for @commonDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成'**
+  String get commonDone;
+
+  /// No description provided for @homeNoEntriesTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有交易'**
+  String get homeNoEntriesTitle;
+
+  /// No description provided for @homeNoEntriesDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'点击右下角加号开始第一笔记账。'**
+  String get homeNoEntriesDesc;
+
+  /// No description provided for @trendNet.
+  ///
+  /// In zh, this message translates to:
+  /// **'结余 {amount}'**
+  String trendNet(String amount);
+
+  /// No description provided for @homeDaysTracked.
+  ///
+  /// In zh, this message translates to:
+  /// **'记账日'**
+  String get homeDaysTracked;
+
+  /// No description provided for @daysCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count}天'**
+  String daysCount(int count);
+
+  /// No description provided for @homeDailyAvgExpense.
+  ///
+  /// In zh, this message translates to:
+  /// **'日均支出'**
+  String get homeDailyAvgExpense;
+
+  /// 图表气泡等处的「几月几日」短日期
+  ///
+  /// In zh, this message translates to:
+  /// **'{date}'**
+  String dateMonthDay(DateTime date);
+
+  /// 首页预算卡标题(某月预算)
+  ///
+  /// In zh, this message translates to:
+  /// **'{month}预算'**
+  String monthBudgetTitle(DateTime month);
+
+  /// No description provided for @budgetRemaining.
+  ///
+  /// In zh, this message translates to:
+  /// **'剩余'**
+  String get budgetRemaining;
+
+  /// No description provided for @budgetDailyRemaining.
+  ///
+  /// In zh, this message translates to:
+  /// **'剩余日均'**
+  String get budgetDailyRemaining;
+
+  /// No description provided for @budgetTotalLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'预算 {amount}'**
+  String budgetTotalLabel(String amount);
+
+  /// No description provided for @incomeExpenseTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'收支统计'**
+  String get incomeExpenseTitle;
+
+  /// No description provided for @homeNoStatsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无统计'**
+  String get homeNoStatsTitle;
+
+  /// No description provided for @homeNoStatsDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前月份没有对应记录。'**
+  String get homeNoStatsDesc;
+
+  /// No description provided for @statTypeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'统计类型'**
+  String get statTypeTitle;
+
+  /// No description provided for @budgetCatOver.
+  ///
+  /// In zh, this message translates to:
+  /// **'{category}超出 {amount}'**
+  String budgetCatOver(String category, String amount);
+
+  /// No description provided for @budgetCatUsed.
+  ///
+  /// In zh, this message translates to:
+  /// **'{category}已用 {percent}%'**
+  String budgetCatUsed(String category, String percent);
+
+  /// No description provided for @entriesCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count}笔'**
+  String entriesCount(int count);
+
+  /// No description provided for @categoryAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部分类'**
+  String get categoryAll;
+
+  /// No description provided for @tagPickerTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择标签'**
+  String get tagPickerTitle;
 }
 
 class _AppLocalizationsDelegate

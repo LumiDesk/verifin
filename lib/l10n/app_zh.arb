@@ -221,5 +221,95 @@
   "balanceAdjustNote": "余额调整",
   "@balanceAdjustNote": {
     "description": "调整余额时自动生成交易的备注"
-  }
+  },
+  "commonNone": "暂无",
+  "commonDone": "完成",
+  "homeNoEntriesTitle": "还没有交易",
+  "homeNoEntriesDesc": "点击右下角加号开始第一笔记账。",
+  "trendNet": "结余 {amount}",
+  "@trendNet": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "homeDaysTracked": "记账日",
+  "daysCount": "{count}天",
+  "@daysCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeDailyAvgExpense": "日均支出",
+  "dateMonthDay": "{date}",
+  "@dateMonthDay": {
+    "description": "图表气泡等处的「几月几日」短日期",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "M月d日",
+        "isCustomDateFormat": "true"
+      }
+    }
+  },
+  "monthBudgetTitle": "{month}预算",
+  "@monthBudgetTitle": {
+    "description": "首页预算卡标题(某月预算)",
+    "placeholders": {
+      "month": {
+        "type": "DateTime",
+        "format": "M月",
+        "isCustomDateFormat": "true"
+      }
+    }
+  },
+  "budgetRemaining": "剩余",
+  "budgetDailyRemaining": "剩余日均",
+  "budgetTotalLabel": "预算 {amount}",
+  "@budgetTotalLabel": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "incomeExpenseTitle": "收支统计",
+  "homeNoStatsTitle": "暂无统计",
+  "homeNoStatsDesc": "当前月份没有对应记录。",
+  "statTypeTitle": "统计类型",
+  "budgetCatOver": "{category}超出 {amount}",
+  "@budgetCatOver": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetCatUsed": "{category}已用 {percent}%",
+  "@budgetCatUsed": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "entriesCount": "{count}笔",
+  "@entriesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "categoryAll": "全部分类",
+  "tagPickerTitle": "选择标签"
 }
