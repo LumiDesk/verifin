@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
+import '../app/category_tree.dart';
 import '../app/common_widgets.dart';
 import '../app/demo_data.dart';
 import '../app/entry_sheets.dart';
@@ -365,9 +366,16 @@ class _TransactionsPageState extends State<TransactionsPage> {
         !entryTouchesAccount(entry, _selectedAccountId!)) {
       return false;
     }
-    if (_selectedCategoryId != null &&
-        entry.categoryId != _selectedCategoryId) {
-      return false;
+    // 选中某分类时，连同它的所有子分类一起筛出（与看板统计「归总到顶级」口径
+    // 一致：选大类=大类及其全部子类的交易）。
+    if (_selectedCategoryId != null) {
+      final ids = <String>{
+        _selectedCategoryId!,
+        ...descendantIds(controller.categories, _selectedCategoryId!),
+      };
+      if (!ids.contains(entry.categoryId)) {
+        return false;
+      }
     }
     if (_selectedTagId != null && !entry.tagIds.contains(_selectedTagId)) {
       return false;
@@ -469,10 +477,15 @@ class _TransactionsPageState extends State<TransactionsPage> {
   }
 
   Future<void> _pickCategoryFilter(VeriFinController controller) async {
-    final values = <String>[
-      _allFilterValue,
-      for (final category in controller.categories) category.id,
-    ];
+    // 按类型 + 层级（前序）平铺分类，子分类缩进展示，用户既能选大类也能选子类。
+    final depthOfId = <String, int>{};
+    final values = <String>[_allFilterValue];
+    for (final type in EntryType.values) {
+      for (final node in flattenTree(controller.categories, type)) {
+        depthOfId[node.category.id] = node.depth;
+        values.add(node.category.id);
+      }
+    }
     final selected = await showOptionSheet<String>(
       context: context,
       title: '筛选分类',
@@ -480,7 +493,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
       selected: _selectedCategoryId ?? _allFilterValue,
       labelOf: (value) => value == _allFilterValue
           ? '全部分类'
-          : controller.categoryById(value).label,
+          : '${'　' * (depthOfId[value] ?? 0)}${controller.categoryById(value).label}',
     );
     if (selected != null) {
       setState(() {

@@ -210,6 +210,81 @@ void main() {
     expect(find.text('餐饮'), findsNothing);
   });
 
+  testWidgets(
+    'filters by a parent category includes its sub-category entries',
+    (WidgetTester tester) async {
+      final store = LocalKeyValueStore();
+      final controller = await makeController(store);
+      final now = DateTime.now();
+      controller
+        ..addAccount(
+          Account(
+            id: 'cash-drill',
+            bookId: controller.activeBook.id,
+            name: '现金账户',
+            type: AccountType.cash,
+            groupId: null,
+            initialBalance: 0,
+            iconCode: 'cash',
+            note: '',
+            includeInAssets: true,
+            hidden: false,
+          ),
+        )
+        ..addCategory(
+          type: EntryType.expense,
+          label: '早餐',
+          iconCode: 'dining',
+          parentId: 'dining',
+        );
+      final breakfast = controller
+          .categoriesForType(EntryType.expense)
+          .firstWhere((c) => c.label == '早餐');
+      controller
+        ..addEntry(
+          LedgerEntry(
+            id: 'e-breakfast',
+            bookId: controller.activeBook.id,
+            type: EntryType.expense,
+            amount: 8,
+            categoryId: breakfast.id,
+            accountId: 'cash-drill',
+            note: '肠粉',
+            occurredAt: now,
+          ),
+        )
+        ..addEntry(
+          LedgerEntry(
+            id: 'e-transport',
+            bookId: controller.activeBook.id,
+            type: EntryType.expense,
+            amount: 12,
+            categoryId: 'transport',
+            accountId: 'cash-drill',
+            note: '公交',
+            occurredAt: now,
+          ),
+        )
+        ..dispose();
+
+      await pumpApp(tester, store);
+      await tester.tap(find.text('最近交易'));
+      await tester.pumpAndSettle();
+      // 交易行显示分类标签：子分类「早餐」与顶级「交通」各一行。
+      expect(find.text('早餐'), findsOneWidget);
+      expect(find.text('交通'), findsOneWidget);
+
+      // 按父分类「餐饮」筛选，应带出记在子分类「早餐」上的交易，排除「交通」。
+      await tester.tap(find.text('全部分类'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('餐饮').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('早餐'), findsOneWidget);
+      expect(find.text('交通'), findsNothing);
+    },
+  );
+
   testWidgets('adds a custom category from the profile page', (
     WidgetTester tester,
   ) async {
