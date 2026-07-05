@@ -95,20 +95,26 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
       child: ValueListenableBuilder<ThemePreference>(
         valueListenable: _controller.themePreferenceListenable,
         builder: (context, themePreference, _) {
-          return MaterialApp(
-            onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
-            debugShowCheckedModeBanner: false,
-            // 语言暂固定中文;应用内语言切换在 i18n 文案迁移完成后提供。
-            locale: const Locale('zh'),
-            supportedLocales: AppLocalizations.supportedLocales,
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            themeMode: themePreference.themeMode,
-            theme: buildVeriFinTheme(Brightness.light),
-            darkTheme: buildVeriFinTheme(Brightness.dark),
-            builder: (context, child) => PrivacyConsentGate(
-              child: AppLockGate(child: child ?? const SizedBox.shrink()),
-            ),
-            home: const VeriFinShell(),
+          return ValueListenableBuilder<LocalePreference>(
+            valueListenable: _controller.localePreferenceListenable,
+            builder: (context, localePreference, _) {
+              return MaterialApp(
+                onGenerateTitle: (context) =>
+                    AppLocalizations.of(context).appTitle,
+                debugShowCheckedModeBanner: false,
+                // null 表示跟随系统语言（按 supportedLocales 解析，找不到回落中文）。
+                locale: localePreference.locale,
+                supportedLocales: AppLocalizations.supportedLocales,
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                themeMode: themePreference.themeMode,
+                theme: buildVeriFinTheme(Brightness.light),
+                darkTheme: buildVeriFinTheme(Brightness.dark),
+                builder: (context, child) => PrivacyConsentGate(
+                  child: AppLockGate(child: child ?? const SizedBox.shrink()),
+                ),
+                home: const VeriFinShell(),
+              );
+            },
           );
         },
       ),

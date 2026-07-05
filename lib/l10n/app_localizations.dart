@@ -139,6 +139,24 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'再次返回退出程序'**
   String get pressBackAgainToExit;
+
+  /// 设置页:语言入口标题
+  ///
+  /// In zh, this message translates to:
+  /// **'语言'**
+  String get settingsLanguage;
+
+  /// 语言选择弹窗标题
+  ///
+  /// In zh, this message translates to:
+  /// **'选择语言'**
+  String get languagePickerTitle;
+
+  /// 语言选项:跟随系统语言
+  ///
+  /// In zh, this message translates to:
+  /// **'跟随系统'**
+  String get localeFollowSystem;
 }
 
 class _AppLocalizationsDelegate

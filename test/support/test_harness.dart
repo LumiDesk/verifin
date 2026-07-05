@@ -37,6 +37,11 @@ Future<VeriFinController> makeController([
     // 跳过新用户引导页，避免 widget 测试被首启动引导阻塞。
     resolvedStore.write('verifin.onboarding.v1', 'true');
   }
+  // 测试宿主系统语言是 en，「跟随系统」会渲染英文；固定中文让既有中文断言稳定。
+  // 测试语言切换本身时可在用例里 setLocalePreference 覆盖。
+  if (resolvedStore.read('verifin.locale.v1') == null) {
+    resolvedStore.write('verifin.locale.v1', 'zh');
+  }
   final repository = _repoForStore.putIfAbsent(
     resolvedStore,
     InMemoryLedgerRepository.new,

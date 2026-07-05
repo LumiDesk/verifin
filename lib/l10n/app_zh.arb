@@ -27,5 +27,17 @@
   "pressBackAgainToExit": "再次返回退出程序",
   "@pressBackAgainToExit": {
     "description": "首页按返回键时的退出提示"
+  },
+  "settingsLanguage": "语言",
+  "@settingsLanguage": {
+    "description": "设置页:语言入口标题"
+  },
+  "languagePickerTitle": "选择语言",
+  "@languagePickerTitle": {
+    "description": "语言选择弹窗标题"
+  },
+  "localeFollowSystem": "跟随系统",
+  "@localeFollowSystem": {
+    "description": "语言选项:跟随系统语言"
   }
 }

@@ -87,7 +87,7 @@
 
 存量硬编码中文全部迁入 ARB（zh + en），并提供应用内语言切换。分模块推进，每模块一个提交。
 
-- [ ] 6.1 语言切换基础设施：语言偏好存 KV（跟随系统 / 中文 / English），设置页「语言」入口，`main.dart` 按偏好设置 `locale`
+- [x] 6.1 语言切换基础设施：`LocalePreference`（跟随系统 / 简体中文 / English）存 KV（`verifin.locale.v1`，设备本地、不进备份、初始化保留），设置页「语言」入口即时切换，`main.dart` 经 `localePreferenceListenable` 驱动 `MaterialApp.locale`（null=跟随系统，回落中文）；测试脚手架预置中文保住存量中文断言，语言切换本身有独立测试
 - [ ] 6.2 壳层与通用组件（shell / common_widgets / sheets）
 - [ ] 6.3 模型显示名与控制器消息（models / veri_fin_controller / demo_data / account_icon_assets）
 - [ ] 6.4 首页与记账表单（home_page / entry_sheets）

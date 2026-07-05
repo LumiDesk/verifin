@@ -43,6 +43,9 @@ class VeriFinController extends ChangeNotifier {
     themePreferenceListenable = ValueNotifier<ThemePreference>(
       _themePreference,
     );
+    localePreferenceListenable = ValueNotifier<LocalePreference>(
+      _localePreference,
+    );
   }
 
   /// 唯一的构造入口：同步载入偏好类 KV 数据后，从 SQLite 载入账目类数据
@@ -58,6 +61,7 @@ class VeriFinController extends ChangeNotifier {
 
   // 账目类数据（交易/账户/分组/账本/分类/预算）存 SQLite；以下仅为偏好类小数据的 KV 键。
   static const String _themeKey = 'verifin.theme.v1';
+  static const String _localeKey = 'verifin.locale.v1';
   static const String _profileKey = 'verifin.profile.v1';
   static const String _activeBookKey = 'verifin.active_book.v1';
   static const String _assetCoverKey = 'verifin.asset_cover.v1';
@@ -114,7 +118,11 @@ class VeriFinController extends ChangeNotifier {
 
   late final ValueNotifier<ThemePreference> themePreferenceListenable;
 
+  /// 语言偏好通知器：驱动 `MaterialApp.locale` 即时切换。
+  late final ValueNotifier<LocalePreference> localePreferenceListenable;
+
   ThemePreference _themePreference = ThemePreference.system;
+  LocalePreference _localePreference = LocalePreference.system;
   UserProfile _profile = defaultUserProfile;
   String _activeBookId = defaultLedgerBookId;
   String _assetCoverUrl = '';
@@ -475,6 +483,16 @@ class VeriFinController extends ChangeNotifier {
     _themePreference = preference;
     themePreferenceListenable.value = preference;
     _store.write(_themeKey, preference.name);
+    notifyListeners();
+  }
+
+  LocalePreference get localePreference => _localePreference;
+
+  /// 语言是设备本地偏好：不进 JSON 备份，初始化数据时保留。
+  void setLocalePreference(LocalePreference preference) {
+    _localePreference = preference;
+    localePreferenceListenable.value = preference;
+    _store.write(_localeKey, preference.name);
     notifyListeners();
   }
 
@@ -1738,6 +1756,7 @@ class VeriFinController extends ChangeNotifier {
   /// 载入偏好类小数据（KV）。账目类数据由 [_loadFromRepository] 从 SQLite 载入。
   void _loadPreferences() {
     _themePreference = ThemePreference.fromStorage(_store.read(_themeKey));
+    _localePreference = LocalePreference.fromStorage(_store.read(_localeKey));
     _loadProfile();
     _activeBookId = _store.read(_activeBookKey) ?? defaultLedgerBookId;
     _assetCoverUrl = _store.read(_assetCoverKey) ?? '';
@@ -2030,6 +2049,7 @@ class VeriFinController extends ChangeNotifier {
   @override
   void dispose() {
     themePreferenceListenable.dispose();
+    localePreferenceListenable.dispose();
     super.dispose();
   }
 }

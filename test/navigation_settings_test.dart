@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/app_version.dart';
+import 'package:verifin/app/models.dart';
+import 'package:verifin/local_storage/local_storage.dart';
 
 import 'support/test_harness.dart';
 
@@ -45,6 +47,41 @@ void main() {
 
     expect(find.text('主题模式'), findsOneWidget);
     expect(find.text('深色'), findsOneWidget);
+  });
+
+  testWidgets('changes language preference and persists across restart', (
+    WidgetTester tester,
+  ) async {
+    final store = LocalKeyValueStore();
+    await pumpApp(tester, store);
+
+    await tapBottomTab(tester, 3);
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.pumpAndSettle();
+
+    expect(find.text('语言'), findsOneWidget);
+    expect(find.text('简体中文'), findsOneWidget);
+
+    await tester.tap(find.text('语言'));
+    await tester.pumpAndSettle();
+    expect(find.text('选择语言'), findsOneWidget);
+    // 主题模式行的 trailing 也是「跟随系统」，弹窗里再出现一次。
+    expect(find.text('跟随系统'), findsAtLeastNWidgets(1));
+    await tester.tap(find.text('English'));
+    await tester.pumpAndSettle();
+
+    // 设置页即时切换为英文并落盘。
+    expect(find.text('Language'), findsOneWidget);
+    expect(store.read('verifin.locale.v1'), 'en');
+
+    // 模拟重启：先卸载旧树（同类型根组件会被框架复用 State），再用同一
+    // store 重建，语言仍是英文且底部导航渲染英文。
+    await tester.pumpWidget(const SizedBox.shrink());
+    final restarted = await pumpApp(tester, store);
+    await tester.pumpAndSettle();
+    expect(restarted.localePreference, LocalePreference.en);
+    // 底部导航是纯图标，标签在 Tooltip 里。
+    expect(find.byTooltip('Home'), findsOneWidget);
   });
 
   testWidgets('requires double confirmation before resetting data', (

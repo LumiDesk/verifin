@@ -20,6 +20,7 @@ import '../app/image_cropper.dart';
 import '../app/image_sources.dart';
 import '../app/ledger_math.dart';
 import '../app/legal_content.dart';
+import '../l10n/app_localizations.dart';
 import '../app/models.dart';
 import '../app/platform_bridge.dart';
 import 'recurring_page.dart';
@@ -1447,6 +1448,16 @@ class SettingsPage extends StatelessWidget {
                       onTap: () => _pickThemePreference(context, controller),
                     ),
                     const Divider(height: 1),
+                    SettingsRow(
+                      icon: Icons.translate_outlined,
+                      title: AppLocalizations.of(context).settingsLanguage,
+                      trailing: controller.localePreference.label(
+                        AppLocalizations.of(context),
+                      ),
+                      trailingIcon: Icons.chevron_right,
+                      onTap: () => _pickLocalePreference(context, controller),
+                    ),
+                    const Divider(height: 1),
                     CompactSwitchRow(
                       icon: Icons.touch_app_outlined,
                       title: const Text('触感反馈'),
@@ -1554,6 +1565,23 @@ class SettingsPage extends StatelessWidget {
     );
     if (selected != null) {
       controller.setThemePreference(selected);
+    }
+  }
+
+  Future<void> _pickLocalePreference(
+    BuildContext context,
+    VeriFinController controller,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final selected = await showOptionSheet<LocalePreference>(
+      context: context,
+      title: l10n.languagePickerTitle,
+      values: LocalePreference.values,
+      selected: controller.localePreference,
+      labelOf: (value) => value.label(l10n),
+    );
+    if (selected != null) {
+      controller.setLocalePreference(selected);
     }
   }
 

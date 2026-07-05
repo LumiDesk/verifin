@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
+
 enum EntryType {
   expense,
   income,
@@ -66,6 +68,45 @@ enum ThemePreference {
     return ThemePreference.values.firstWhere(
       (preference) => preference.name == value,
       orElse: () => ThemePreference.system,
+    );
+  }
+}
+
+/// 应用语言偏好：跟随系统或固定某一语言。设备本地偏好（存 KV），
+/// 不进 JSON 备份，初始化数据时保留。
+enum LocalePreference {
+  system,
+  zh,
+  en;
+
+  /// 固定语言时返回对应 locale；跟随系统返回 null（交给系统解析）。
+  Locale? get locale {
+    switch (this) {
+      case LocalePreference.system:
+        return null;
+      case LocalePreference.zh:
+        return const Locale('zh');
+      case LocalePreference.en:
+        return const Locale('en');
+    }
+  }
+
+  /// 语言选项显示名：具体语言恒用其母语名，跟随系统随当前语言。
+  String label(AppLocalizations l10n) {
+    switch (this) {
+      case LocalePreference.system:
+        return l10n.localeFollowSystem;
+      case LocalePreference.zh:
+        return '简体中文';
+      case LocalePreference.en:
+        return 'English';
+    }
+  }
+
+  static LocalePreference fromStorage(String? value) {
+    return LocalePreference.values.firstWhere(
+      (preference) => preference.name == value,
+      orElse: () => LocalePreference.system,
     );
   }
 }

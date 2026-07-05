@@ -28,4 +28,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get pressBackAgainToExit => '再次返回退出程序';
+
+  @override
+  String get settingsLanguage => '语言';
+
+  @override
+  String get languagePickerTitle => '选择语言';
+
+  @override
+  String get localeFollowSystem => '跟随系统';
 }

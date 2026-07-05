@@ -6,5 +6,8 @@
   "tabReports": "Reports",
   "tabProfile": "Me",
   "quickEntry": "Quick Entry",
-  "pressBackAgainToExit": "Press back again to exit"
+  "pressBackAgainToExit": "Press back again to exit",
+  "settingsLanguage": "Language",
+  "languagePickerTitle": "Select language",
+  "localeFollowSystem": "Follow system"
 }
