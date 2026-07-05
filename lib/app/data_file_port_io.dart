@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:file_selector/file_selector.dart';
 
@@ -32,6 +33,30 @@ Future<bool> downloadTextFile({
   return true;
 }
 
+/// 写字节文件到下载目录（zip 导出）。Android 优先走系统下载目录，失败/不支持时
+/// 回退到系统「保存到」选择器；用户取消返回 false。
+Future<bool> downloadBytesFile({
+  required String filename,
+  required Uint8List bytes,
+  String mimeType = 'application/zip',
+}) async {
+  final savedToDownloads = await AppPlatformBridge.saveBytesToDownloads(
+    filename: filename,
+    bytes: bytes,
+    mimeType: mimeType,
+  );
+  if (savedToDownloads) {
+    return true;
+  }
+  final location = await getSaveLocation(suggestedName: filename);
+  if (location == null) {
+    return false;
+  }
+  final file = XFile.fromData(bytes, mimeType: mimeType, name: filename);
+  await file.saveTo(location.path);
+  return true;
+}
+
 Future<String?> pickTextFile() async {
   const jsonGroup = XTypeGroup(
     label: 'JSON',
@@ -42,6 +67,20 @@ Future<String?> pickTextFile() async {
     acceptedTypeGroups: const <XTypeGroup>[jsonGroup],
   );
   return _readAsUtf8(file);
+}
+
+/// 选择备份文件（.json 旧版 / .zip 新版）并读原始字节，格式由调用方判别。
+Future<Uint8List?> pickBackupBytes() async {
+  const group = XTypeGroup(
+    label: '备份文件',
+    extensions: <String>['json', 'zip'],
+    mimeTypes: <String>['application/json', 'application/zip'],
+  );
+  final file = await openFile(acceptedTypeGroups: const <XTypeGroup>[group]);
+  if (file == null) {
+    return null;
+  }
+  return file.readAsBytes();
 }
 
 Future<String?> pickCsvFile() async {

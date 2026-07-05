@@ -192,6 +192,61 @@ class AppPlatformBridge {
     }
   }
 
+  /// 向下载目录写入字节文件（zip 导出）。Android 10+ 成功返回 true；更低版本或
+  /// 无插件返回 false，由调用方回退到系统「保存到」选择器。
+  static Future<bool> saveBytesToDownloads({
+    required String filename,
+    required Uint8List bytes,
+    required String mimeType,
+  }) async {
+    try {
+      return await _channel.invokeMethod<bool>('saveBytesToDownloads', {
+            'filename': filename,
+            'bytes': bytes,
+            'mimeType': mimeType,
+          }) ??
+          false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException catch (error) {
+      throw Exception(error.message ?? '导出失败，请稍后再试。');
+    }
+  }
+
+  /// 向已授权的备份目录写入一个字节文件（同名覆盖，zip 备份），返回新文件 URI。
+  static Future<String?> writeBackupBytes({
+    required String directoryUri,
+    required String filename,
+    required Uint8List bytes,
+    String mimeType = 'application/zip',
+  }) async {
+    try {
+      return await _channel.invokeMethod<String>('writeBackupBytes', {
+        'directoryUri': directoryUri,
+        'filename': filename,
+        'bytes': bytes,
+        'mimeType': mimeType,
+      });
+    } on MissingPluginException {
+      throw Exception('当前平台不支持写入备份目录。');
+    } on PlatformException catch (error) {
+      throw Exception(error.message ?? '写入备份失败，请稍后再试。');
+    }
+  }
+
+  /// 读取备份目录内某个文件的原始字节（用于 zip / 旧版 JSON 统一按字节读入）。
+  static Future<Uint8List?> readBackupBytes(String fileUri) async {
+    try {
+      return await _channel.invokeMethod<Uint8List>('readBackupBytes', {
+        'fileUri': fileUri,
+      });
+    } on MissingPluginException {
+      throw Exception('当前平台不支持读取备份文件。');
+    } on PlatformException catch (error) {
+      throw Exception(error.message ?? '读取备份文件失败，请稍后再试。');
+    }
+  }
+
   /// 删除备份目录内某个文件。
   static Future<bool> deleteBackupFile(String fileUri) async {
     try {

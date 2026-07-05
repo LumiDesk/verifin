@@ -60,12 +60,29 @@ class MainActivity : FlutterFragmentActivity() {
                     call.argument<String>("mimeType") ?: "application/json",
                     result,
                 )
+                "saveBytesToDownloads" -> saveBytesToDownloads(
+                    call.argument<String>("filename") ?: "verifin-backup.zip",
+                    call.argument<ByteArray>("bytes") ?: ByteArray(0),
+                    call.argument<String>("mimeType") ?: "application/zip",
+                    result,
+                )
                 "pickBackupDirectory" -> pickBackupDirectory(result)
                 "writeBackupFile" -> writeBackupFile(
                     call.argument<String>("directoryUri") ?: "",
                     call.argument<String>("filename") ?: "verifin-backup.json",
                     call.argument<String>("content") ?: "",
                     call.argument<String>("mimeType") ?: "application/json",
+                    result,
+                )
+                "writeBackupBytes" -> writeBackupBytes(
+                    call.argument<String>("directoryUri") ?: "",
+                    call.argument<String>("filename") ?: "verifin-backup.zip",
+                    call.argument<ByteArray>("bytes") ?: ByteArray(0),
+                    call.argument<String>("mimeType") ?: "application/zip",
+                    result,
+                )
+                "readBackupBytes" -> readBackupBytes(
+                    call.argument<String>("fileUri") ?: "",
                     result,
                 )
                 "listBackupFiles" -> listBackupFiles(
@@ -510,6 +527,86 @@ class MainActivity : FlutterFragmentActivity() {
         }.start()
     }
 
+    private fun writeBackupBytes(
+        directoryUri: String,
+        filename: String,
+        bytes: ByteArray,
+        mimeType: String,
+        result: MethodChannel.Result,
+    ) {
+        Thread {
+            try {
+                val tree = backupTree(directoryUri)
+                    ?: throw IllegalStateException("备份目录不可用，请重新选择。")
+                tree.findFile(filename)?.delete()
+                val file = tree.createFile(mimeType, filename)
+                    ?: throw IllegalStateException("无法在备份目录创建文件。")
+                contentResolver.openOutputStream(file.uri)?.use { output ->
+                    output.write(bytes)
+                } ?: throw IllegalStateException("无法写入备份文件。")
+                runOnUiThread { result.success(file.uri.toString()) }
+            } catch (error: Exception) {
+                runOnUiThread {
+                    result.error("BACKUP_FAILED", error.message ?: "写入备份失败。", null)
+                }
+            }
+        }.start()
+    }
+
+    private fun readBackupBytes(fileUri: String, result: MethodChannel.Result) {
+        Thread {
+            try {
+                val bytes = contentResolver.openInputStream(Uri.parse(fileUri))?.use { input ->
+                    input.readBytes()
+                } ?: throw IllegalStateException("无法读取备份文件。")
+                runOnUiThread { result.success(bytes) }
+            } catch (error: Exception) {
+                runOnUiThread {
+                    result.error("BACKUP_READ_FAILED", error.message ?: "读取备份文件失败。", null)
+                }
+            }
+        }.start()
+    }
+
+    // 写公共下载目录的字节版（zip 导出）。Android 10+ 用 MediaStore、无需权限；
+    // 更低版本返回 false，由 Flutter 侧回退到系统「保存到」选择器。
+    private fun saveBytesToDownloads(
+        filename: String,
+        bytes: ByteArray,
+        mimeType: String,
+        result: MethodChannel.Result,
+    ) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            result.success(false)
+            return
+        }
+        Thread {
+            try {
+                val values = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                    put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                    put(MediaStore.MediaColumns.IS_PENDING, 1)
+                }
+                val uri = contentResolver.insert(
+                    MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                    values,
+                ) ?: throw IllegalStateException("无法创建下载文件")
+                contentResolver.openOutputStream(uri)?.use { output ->
+                    output.write(bytes)
+                } ?: throw IllegalStateException("无法写入下载文件")
+                values.clear()
+                values.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                contentResolver.update(uri, values, null, null)
+                runOnUiThread { result.success(true) }
+            } catch (error: Exception) {
+                runOnUiThread {
+                    result.error("EXPORT_FAILED", error.message ?: "导出失败，请稍后再试。", null)
+                }
+            }
+        }.start()
+    }
+
     private fun listBackupFiles(directoryUri: String, result: MethodChannel.Result) {
         Thread {
             try {
@@ -519,7 +616,11 @@ class MainActivity : FlutterFragmentActivity() {
                     return@Thread
                 }
                 val files = tree.listFiles()
-                    .filter { it.isFile && (it.name?.endsWith(".json") == true) }
+                    .filter {
+                        it.isFile &&
+                            (it.name?.endsWith(".json") == true ||
+                                it.name?.endsWith(".zip") == true)
+                    }
                     .map { doc ->
                         mapOf(
                             "uri" to doc.uri.toString(),
