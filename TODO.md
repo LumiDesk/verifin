@@ -97,7 +97,7 @@
 - [x] 6.8 看板与统计分析（reports_page / report_analysis* / chart_painters / series_math / panel_settings_page）：看板各面板/统计分析页/同环比表/面板管理页迁 ARB；`ReportRange.label` 与 `bookkeepingDurationStat` 改为接收 l10n，趋势点 `tooltipTitle` 字段删除、由页面按粒度用日期键格式化
 - [x] 6.9 我的页与设置（profile_pages / legal_pages / recurring_page / reminder_settings_page / onboarding_page）：我的页宫格/账本-分类-标签管理/个人信息/设置页/数据管理全流程（导出导入、本地目录备份、加密、WebDAV、CSV 导入、初始化、检查更新）/周期记账页/提醒设置页/新用户引导/法律页 UI 文案全部迁 ARB。隐私政策与用户协议**正文**按既有约定保持中文（内容而非界面，文件头注释已注明），标题/按钮走 ARB
 - [x] 6.10 应用锁与隐私同意（app_lock_page / app_lock_gate / privacy_consent_gate / biometric）：锁屏/设置/验证页与生物解锁全部迁 ARB；`AppLockKind.label` 改 l10n 方法；生物识别系统弹窗文案（AndroidAuthMessages）按当前语言组装，`authenticate` 接收 l10n
-- [ ] 6.11 备份子系统用户可见消息（backup/* / data_file_port / transaction_import）
+- [x] 6.11 备份子系统与无 context 场景（backup_settings / data_file_port / image_cropper / home_widget_service / notification_scheduler / ledger_math）：`BackupFrequency.label` 改 l10n 方法；图片裁剪器、文件选择器标签迁 ARB；桌面小组件「今日支出」与提醒通知文案经 `l10nForPreference`（无 BuildContext 场景按语言偏好解析，回落中文）随语言切换；`formatDate` 调用点改 `dateMonthDay` 键，紧凑金额中文用「万」、英文用 k
 - [ ] 6.12 全量核查无残留硬编码中文，analyze + test 全绿，真机验证清单见 `docs/dev/i18n-verification.md`
 
 ## Backlog（暂不排期）

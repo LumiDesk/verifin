@@ -732,5 +732,15 @@
   "bioSuccess": "Verified",
   "bioSetupDescription": "Enroll biometrics in system settings",
   "bioGoToSettings": "Go to settings",
-  "bioGoToSettingsDesc": "No biometrics enrolled; add them in system settings"
+  "bioGoToSettingsDesc": "No biometrics enrolled; add them in system settings",
+  "widgetTodayExpense": "Today's spending",
+  "reminderNotifBody": "Don't forget to record today's spending!",
+  "reminderChannelDesc": "Daily bookkeeping reminder notifications",
+  "backupFileTypeLabel": "Backup file",
+  "cropAdjustHint": "Adjust image position",
+  "cropDone": "Finish cropping",
+  "zoomLabel": "Zoom",
+  "horizontalLabel": "Horizontal",
+  "verticalLabel": "Vertical",
+  "resetLabel": "Reset"
 }

@@ -1345,7 +1345,7 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                         child: expense <= 0
                             ? const SizedBox.shrink()
                             : Text(
-                                '-${formatCompactAmount(expense)}',
+                                '-${formatCompactAmount(AppLocalizations.of(context), expense)}',
                                 style: Theme.of(context).textTheme.labelSmall
                                     ?.copyWith(color: veriExpense, fontSize: 9),
                               ),
@@ -1355,7 +1355,7 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                         child: income <= 0
                             ? const SizedBox.shrink()
                             : Text(
-                                '+${formatCompactAmount(income)}',
+                                '+${formatCompactAmount(AppLocalizations.of(context), income)}',
                                 style: Theme.of(context).textTheme.labelSmall
                                     ?.copyWith(color: veriIncome, fontSize: 9),
                               ),

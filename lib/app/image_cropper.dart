@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'app_theme.dart';
 import 'common_widgets.dart';
 import 'image_sources.dart';
+import '../l10n/app_localizations.dart';
 
 class ImageCropResult {
   const ImageCropResult({
@@ -178,12 +179,12 @@ class _ImageCropperPageState extends State<ImageCropperPage> {
             children: <Widget>[
               VeriHeader(
                 title: widget.title,
-                subtitle: '调整图片位置',
+                subtitle: AppLocalizations.of(context).cropAdjustHint,
                 showBack: true,
                 actions: <Widget>[
                   HeaderAction(
                     icon: Icons.check,
-                    tooltip: '完成裁剪',
+                    tooltip: AppLocalizations.of(context).cropDone,
                     onPressed: () {
                       Navigator.of(context).pop(
                         ImageCropResult(
@@ -211,7 +212,7 @@ class _ImageCropperPageState extends State<ImageCropperPage> {
                     ),
                     const SizedBox(height: 16),
                     _CropSlider(
-                      label: '缩放',
+                      label: AppLocalizations.of(context).zoomLabel,
                       value: _zoom,
                       min: 1,
                       max: 3,
@@ -219,7 +220,7 @@ class _ImageCropperPageState extends State<ImageCropperPage> {
                       onChanged: (value) => setState(() => _zoom = value),
                     ),
                     _CropSlider(
-                      label: '水平',
+                      label: AppLocalizations.of(context).horizontalLabel,
                       value: _offsetX,
                       min: -1,
                       max: 1,
@@ -227,7 +228,7 @@ class _ImageCropperPageState extends State<ImageCropperPage> {
                       onChanged: (value) => setState(() => _offsetX = value),
                     ),
                     _CropSlider(
-                      label: '垂直',
+                      label: AppLocalizations.of(context).verticalLabel,
                       value: _offsetY,
                       min: -1,
                       max: 1,
@@ -246,7 +247,7 @@ class _ImageCropperPageState extends State<ImageCropperPage> {
                           });
                         },
                         icon: const Icon(Icons.refresh, size: 17),
-                        label: const Text('重置'),
+                        label: Text(AppLocalizations.of(context).resetLabel),
                       ),
                     ),
                   ],

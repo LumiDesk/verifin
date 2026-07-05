@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../../l10n/app_localizations.dart';
 
 /// 自动备份触发频率。
 enum BackupFrequency {
@@ -14,16 +15,16 @@ enum BackupFrequency {
   /// 每隔 N 小时备份（打开应用时检查是否到期）。
   everyNHours;
 
-  String get label {
+  String label(AppLocalizations l10n) {
     switch (this) {
       case BackupFrequency.manual:
-        return '仅手动';
+        return l10n.backupFreqManual;
       case BackupFrequency.onOpen:
-        return '每次打开应用';
+        return l10n.backupFreqOnOpen;
       case BackupFrequency.onEntry:
-        return '每次记账后';
+        return l10n.backupFreqOnEntry;
       case BackupFrequency.everyNHours:
-        return '每隔一段时间';
+        return l10n.backupFreqEveryN;
     }
   }
 

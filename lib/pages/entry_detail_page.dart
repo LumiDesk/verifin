@@ -236,7 +236,11 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                     children: <Widget>[
                       ActionChip(
                         avatar: const Icon(Icons.calendar_today, size: 18),
-                        label: Text(formatDate(_occurredAt)),
+                        label: Text(
+                          AppLocalizations.of(
+                            context,
+                          ).dateMonthDay(_occurredAt),
+                        ),
                         onPressed: _pickDate,
                       ),
                       ActionChip(

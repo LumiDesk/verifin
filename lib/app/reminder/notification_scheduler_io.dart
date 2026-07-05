@@ -6,6 +6,7 @@ import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 import 'reminder_settings.dart';
+import '../../l10n/app_localizations.dart';
 
 /// 移动平台的本地通知实现（`flutter_local_notifications` + `timezone`）。
 /// 每日在用户设定时刻发一条记账提醒，使用 inexact 调度（免精确闹钟权限）。
@@ -93,7 +94,10 @@ class NotificationScheduler {
     return false;
   }
 
-  Future<void> apply(ReminderSettings settings) async {
+  Future<void> apply(
+    ReminderSettings settings, {
+    AppLocalizations? l10n,
+  }) async {
     if (!supported) {
       return;
     }
@@ -103,21 +107,21 @@ class NotificationScheduler {
       return;
     }
     final scheduled = _nextInstanceOf(settings.hour, settings.minute);
-    const details = NotificationDetails(
+    final details = NotificationDetails(
       android: AndroidNotificationDetails(
         _channelId,
-        _channelName,
-        channelDescription: _channelDescription,
+        l10n?.reminderTitle ?? _channelName,
+        channelDescription: l10n?.reminderChannelDesc ?? _channelDescription,
         importance: Importance.defaultImportance,
         priority: Priority.defaultPriority,
       ),
-      iOS: DarwinNotificationDetails(),
+      iOS: const DarwinNotificationDetails(),
     );
     try {
       await _plugin.zonedSchedule(
         id: _reminderId,
-        title: '记账提醒',
-        body: '别忘了记录今天的收支～',
+        title: l10n?.reminderTitle ?? _channelName,
+        body: l10n?.reminderNotifBody ?? '别忘了记录今天的收支～',
         scheduledDate: scheduled,
         notificationDetails: details,
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,

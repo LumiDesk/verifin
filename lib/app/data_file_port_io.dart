@@ -70,13 +70,13 @@ Future<String?> pickTextFile() async {
 }
 
 /// 选择备份文件（.json 旧版 / .zip 新版）并读原始字节，格式由调用方判别。
-Future<Uint8List?> pickBackupBytes() async {
-  const group = XTypeGroup(
-    label: '备份文件',
+Future<Uint8List?> pickBackupBytes({String label = '备份文件'}) async {
+  final group = XTypeGroup(
+    label: label,
     extensions: <String>['json', 'zip'],
     mimeTypes: <String>['application/json', 'application/zip'],
   );
-  final file = await openFile(acceptedTypeGroups: const <XTypeGroup>[group]);
+  final file = await openFile(acceptedTypeGroups: <XTypeGroup>[group]);
   if (file == null) {
     return null;
   }

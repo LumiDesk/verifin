@@ -4333,6 +4333,66 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'尚未录入生物识别，请在系统设置中添加'**
   String get bioGoToSettingsDesc;
+
+  /// No description provided for @widgetTodayExpense.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日支出'**
+  String get widgetTodayExpense;
+
+  /// No description provided for @reminderNotifBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'别忘了记录今天的收支～'**
+  String get reminderNotifBody;
+
+  /// No description provided for @reminderChannelDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'每日记账提醒通知'**
+  String get reminderChannelDesc;
+
+  /// No description provided for @backupFileTypeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'备份文件'**
+  String get backupFileTypeLabel;
+
+  /// No description provided for @cropAdjustHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整图片位置'**
+  String get cropAdjustHint;
+
+  /// No description provided for @cropDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成裁剪'**
+  String get cropDone;
+
+  /// No description provided for @zoomLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'缩放'**
+  String get zoomLabel;
+
+  /// No description provided for @horizontalLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'水平'**
+  String get horizontalLabel;
+
+  /// No description provided for @verticalLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'垂直'**
+  String get verticalLabel;
+
+  /// No description provided for @resetLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'重置'**
+  String get resetLabel;
 }
 
 class _AppLocalizationsDelegate

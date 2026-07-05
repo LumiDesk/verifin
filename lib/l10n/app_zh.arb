@@ -1563,5 +1563,15 @@
   "bioSuccess": "验证成功",
   "bioSetupDescription": "请在系统设置中录入生物识别",
   "bioGoToSettings": "前往设置",
-  "bioGoToSettingsDesc": "尚未录入生物识别，请在系统设置中添加"
+  "bioGoToSettingsDesc": "尚未录入生物识别，请在系统设置中添加",
+  "widgetTodayExpense": "今日支出",
+  "reminderNotifBody": "别忘了记录今天的收支～",
+  "reminderChannelDesc": "每日记账提醒通知",
+  "backupFileTypeLabel": "备份文件",
+  "cropAdjustHint": "调整图片位置",
+  "cropDone": "完成裁剪",
+  "zoomLabel": "缩放",
+  "horizontalLabel": "水平",
+  "verticalLabel": "垂直",
+  "resetLabel": "重置"
 }

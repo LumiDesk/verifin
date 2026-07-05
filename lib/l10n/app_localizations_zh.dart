@@ -2354,4 +2354,34 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get bioGoToSettingsDesc => '尚未录入生物识别，请在系统设置中添加';
+
+  @override
+  String get widgetTodayExpense => '今日支出';
+
+  @override
+  String get reminderNotifBody => '别忘了记录今天的收支～';
+
+  @override
+  String get reminderChannelDesc => '每日记账提醒通知';
+
+  @override
+  String get backupFileTypeLabel => '备份文件';
+
+  @override
+  String get cropAdjustHint => '调整图片位置';
+
+  @override
+  String get cropDone => '完成裁剪';
+
+  @override
+  String get zoomLabel => '缩放';
+
+  @override
+  String get horizontalLabel => '水平';
+
+  @override
+  String get verticalLabel => '垂直';
+
+  @override
+  String get resetLabel => '重置';
 }

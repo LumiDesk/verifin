@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'app/app_theme.dart';
 import 'app/backup/backup_coordinator.dart';
 import 'app/home_widget_service.dart';
+import 'app/l10n_outside_context.dart';
 import 'app/models.dart';
 import 'app/reminder/notification_scheduler.dart';
 import 'app/reminder/reminder_settings.dart';
@@ -56,7 +57,10 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
     _controller.onEntryAdded = _handleEntryAdded;
     // 记账提醒：配置变化时重排本地通知，开屏按当前配置对齐一次。
     _controller.onReminderChanged = _handleReminderChanged;
-    _notifications.apply(_controller.reminderSettings);
+    _notifications.apply(
+      _controller.reminderSettings,
+      l10n: l10nForPreference(_controller.localePreference),
+    );
     BackupCoordinator.maybeBackupOnOpen(_controller);
     // 打开应用时刷新桌面小组件「今日支出」。
     pushTodayExpenseToWidget(_controller);
@@ -68,7 +72,10 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
   }
 
   void _handleReminderChanged(ReminderSettings settings) {
-    _notifications.apply(settings);
+    _notifications.apply(
+      settings,
+      l10n: l10nForPreference(_controller.localePreference),
+    );
   }
 
   @override

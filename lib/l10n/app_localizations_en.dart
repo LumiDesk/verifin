@@ -2392,4 +2392,34 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get bioGoToSettingsDesc =>
       'No biometrics enrolled; add them in system settings';
+
+  @override
+  String get widgetTodayExpense => 'Today\'s spending';
+
+  @override
+  String get reminderNotifBody => 'Don\'t forget to record today\'s spending!';
+
+  @override
+  String get reminderChannelDesc => 'Daily bookkeeping reminder notifications';
+
+  @override
+  String get backupFileTypeLabel => 'Backup file';
+
+  @override
+  String get cropAdjustHint => 'Adjust image position';
+
+  @override
+  String get cropDone => 'Finish cropping';
+
+  @override
+  String get zoomLabel => 'Zoom';
+
+  @override
+  String get horizontalLabel => 'Horizontal';
+
+  @override
+  String get verticalLabel => 'Vertical';
+
+  @override
+  String get resetLabel => 'Reset';
 }

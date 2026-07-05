@@ -1031,7 +1031,7 @@ class _DateGroupHeader extends StatelessWidget {
         children: <Widget>[
           Expanded(
             child: Text(
-              '${formatDate(date)}  ${_relativeDay(AppLocalizations.of(context), date)}',
+              '${AppLocalizations.of(context).dateMonthDay(date)}  ${_relativeDay(AppLocalizations.of(context), date)}',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: Theme.of(
                   context,
@@ -1278,7 +1278,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                       DetailInfoRow(
                         label: AppLocalizations.of(context).dateLabel,
                         value:
-                            '${formatDate(_occurredAt)}  ${_relativeDay(AppLocalizations.of(context), _occurredAt)}',
+                            '${AppLocalizations.of(context).dateMonthDay(_occurredAt)}  ${_relativeDay(AppLocalizations.of(context), _occurredAt)}',
                         onTap: _pickDate,
                       ),
                       DetailInfoRow(

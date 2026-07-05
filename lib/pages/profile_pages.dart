@@ -1773,7 +1773,9 @@ class DataManagementPage extends StatelessWidget {
                         title: AppLocalizations.of(
                           context,
                         ).backupFrequencyLabel,
-                        trailing: controller.backupSettings.frequency.label,
+                        trailing: controller.backupSettings.frequency.label(
+                          AppLocalizations.of(context),
+                        ),
                         trailingIcon: Icons.chevron_right,
                         onTap: () => _pickBackupFrequency(context, controller),
                       ),
@@ -2028,7 +2030,7 @@ class DataManagementPage extends StatelessWidget {
       title: AppLocalizations.of(context).pickBackupFrequency,
       values: BackupFrequency.values,
       selected: controller.backupSettings.frequency,
-      labelOf: (value) => value.label,
+      labelOf: (value) => value.label(AppLocalizations.of(context)),
     );
     if (selected != null) {
       controller.setBackupFrequency(selected);
@@ -2808,12 +2810,13 @@ class DataManagementPage extends StatelessWidget {
         ],
       ),
     );
-    if (confirmed != true) {
+    if (confirmed != true || !context.mounted) {
       return;
     }
+    final fileTypeLabel = AppLocalizations.of(context).backupFileTypeLabel;
 
     try {
-      final bytes = await pickBackupBytes();
+      final bytes = await pickBackupBytes(label: fileTypeLabel);
       if (bytes == null) {
         return;
       }

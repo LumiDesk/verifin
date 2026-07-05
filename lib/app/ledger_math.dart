@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app_theme.dart';
 import 'models.dart';
+import '../l10n/app_localizations.dart';
 
 double signedAmount(LedgerEntry entry) {
   switch (entry.type) {
@@ -199,20 +200,25 @@ String formatSignedAmount(double value) {
       : '-${formatAmount(value.abs())}';
 }
 
-String formatCompactAmount(num value) {
+/// 紧凑金额（日历单元格等窄处）。中文以「万」为单位，其他语言以 k 为单位——
+/// 两种语言的数量级习惯不同，无法用单一 ARB 键表达，故按 locale 分支。
+String formatCompactAmount(AppLocalizations l10n, num value) {
   final abs = value.abs();
-  if (abs >= 10000) {
-    final compact = value / 10000;
-    return '${compact.toStringAsFixed(compact.abs() >= 10 ? 0 : 1)}万';
+  if (l10n.localeName.startsWith('zh')) {
+    if (abs >= 10000) {
+      final compact = value / 10000;
+      return '${compact.toStringAsFixed(compact.abs() >= 10 ? 0 : 1)}万';
+    }
+    if (abs >= 1000) {
+      return value.toStringAsFixed(0);
+    }
+    return formatAmount(value);
   }
   if (abs >= 1000) {
-    return value.toStringAsFixed(0);
+    final compact = value / 1000;
+    return '${compact.toStringAsFixed(compact.abs() >= 10 ? 0 : 1)}k';
   }
   return formatAmount(value);
-}
-
-String formatDate(DateTime date) {
-  return '${date.month}月${date.day}日';
 }
 
 String formatTime(DateTime date) {

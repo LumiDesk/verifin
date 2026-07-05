@@ -21,7 +21,7 @@ Future<String?> pickTextFile() async {
 }
 
 /// 选择备份文件并读原始字节（.json 旧版 / .zip 新版统一按字节返回）。
-Future<Uint8List?> pickBackupBytes() async {
+Future<Uint8List?> pickBackupBytes({String label = '备份文件'}) async {
   throw UnsupportedError('当前平台暂不支持文件选择');
 }
 
