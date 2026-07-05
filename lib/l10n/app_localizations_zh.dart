@@ -1074,4 +1074,243 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get changeAccountShort => '改账户';
+
+  @override
+  String get budgetSettingsTitle => '预算设置';
+
+  @override
+  String yearMonth(DateTime month) {
+    final intl.DateFormat monthDateFormat = intl.DateFormat('y年M月', localeName);
+    final String monthString = monthDateFormat.format(month);
+
+    return '$monthString';
+  }
+
+  @override
+  String get budgetUsed => '已用';
+
+  @override
+  String get budgetOverspentThisMonth => '本月已超支';
+
+  @override
+  String get budgetAvailableThisMonth => '本月可用预算';
+
+  @override
+  String get budgetMonthExpense => '本月支出';
+
+  @override
+  String get budgetOverAmountLabel => '超出预算';
+
+  @override
+  String get budgetRemainingQuota => '剩余额度';
+
+  @override
+  String get budgetAmountLabel => '预算金额';
+
+  @override
+  String get categoryBudgetTitle => '分类预算';
+
+  @override
+  String get monthExpenseCategories => '本月支出分类';
+
+  @override
+  String get noExpenseCategories => '还没有支出分类';
+
+  @override
+  String get setMonthBudgetTitle => '设置本月预算';
+
+  @override
+  String get monthBudgetAmountLabel => '月份预算金额';
+
+  @override
+  String setCategoryBudgetTitle(String category) {
+    return '设置$category预算';
+  }
+
+  @override
+  String get categoryBudgetAmountLabel => '分类预算金额';
+
+  @override
+  String get budgetHistoryTitle => '预算历史';
+
+  @override
+  String get last12MonthsSub => '最近 12 个月';
+
+  @override
+  String get monthSummary => '月份汇总';
+
+  @override
+  String get last6MonthsTrend => '近 6 月趋势';
+
+  @override
+  String get budgetLegend => '预算';
+
+  @override
+  String expenseAmountLabel(String amount) {
+    return '支出 $amount';
+  }
+
+  @override
+  String get historyCompare => '历史对比';
+
+  @override
+  String get lastMonthExpense => '上月支出';
+
+  @override
+  String get noExpenseYet => '暂无支出';
+
+  @override
+  String get compareBaseline => '对比基准';
+
+  @override
+  String budgetUsageLine(String percent, String delta) {
+    return '预算使用率 $percent%，较上月 $delta';
+  }
+
+  @override
+  String get notSetBudget => '未设置预算';
+
+  @override
+  String overBy(String amount) {
+    return '超出 $amount';
+  }
+
+  @override
+  String remainingAmount(String amount) {
+    return '剩余 $amount';
+  }
+
+  @override
+  String budgetHistoryLine(String budget, String expense, String percent) {
+    return '预算 $budget · 支出 $expense · 已用 $percent%';
+  }
+
+  @override
+  String get categoryBudgetOk => '分类预算正常';
+
+  @override
+  String categoryOverspent(String category) {
+    return '$category已超支';
+  }
+
+  @override
+  String categoryNearBudget(String category) {
+    return '$category接近预算';
+  }
+
+  @override
+  String categoryBudgetOkDesc(int count) {
+    return '已设置 $count 个分类预算，当前没有临近超支的分类。';
+  }
+
+  @override
+  String categoryOverspentDesc(String amount, String percent) {
+    return '已超出 $amount，本月已用 $percent%。';
+  }
+
+  @override
+  String categoryNearDesc(String amount, String percent) {
+    return '剩余 $amount，本月已用 $percent%。';
+  }
+
+  @override
+  String catNoBudgetLine(String amount) {
+    return '未设置预算 · 本月支出 $amount';
+  }
+
+  @override
+  String catRemainLine(String amount, String percent) {
+    return '剩余 $amount · 已用 $percent%';
+  }
+
+  @override
+  String catOverLine(String amount, String percent) {
+    return '超出 $amount · 已用 $percent%';
+  }
+
+  @override
+  String get lastMonthNone => '上月无支出';
+
+  @override
+  String lastMonthAmount(String amount) {
+    return '上月 $amount';
+  }
+
+  @override
+  String get setLabel => '设置';
+
+  @override
+  String get monthEnded => '月份已结束';
+
+  @override
+  String remainingDaysInclToday(int days) {
+    return '含今天还剩 $days 天';
+  }
+
+  @override
+  String monthTotalDays(int days) {
+    return '本月共 $days 天';
+  }
+
+  @override
+  String get budgetTipNoneTitle => '还没有设置预算';
+
+  @override
+  String get budgetTipNoneDesc => '设置本月预算后，首页和这里会同步展示预算进度、剩余额度和剩余日均。';
+
+  @override
+  String get budgetTipOverTitle => '预算已经超出';
+
+  @override
+  String budgetTipOverDesc(String amount) {
+    return '本月支出已超过预算 $amount，后续支出会继续计入本月统计。';
+  }
+
+  @override
+  String get budgetTipNearTitle => '预算接近用完';
+
+  @override
+  String budgetTipNearDesc(String percent, String amount) {
+    return '本月预算已使用 $percent%，剩余 $amount。';
+  }
+
+  @override
+  String get budgetTipOkTitle => '预算状态正常';
+
+  @override
+  String budgetTipOkDesc(String amount) {
+    return '按当前预算，本月剩余每天约可支出 $amount。';
+  }
+
+  @override
+  String get budgetTipEndedTitle => '本月预算已结算';
+
+  @override
+  String get budgetTipEndedDesc => '这个月份已结束，可切换到其他月份继续查看或调整预算。';
+
+  @override
+  String get deltaFlatVsLastMonth => '与上月持平';
+
+  @override
+  String deltaMoreVsLastMonth(String amount) {
+    return '比上月多 $amount';
+  }
+
+  @override
+  String deltaLessVsLastMonth(String amount) {
+    return '比上月少 $amount';
+  }
+
+  @override
+  String get usageFlat => '持平';
+
+  @override
+  String usageUp(String points) {
+    return '增加 $points 个点';
+  }
+
+  @override
+  String usageDown(String points) {
+    return '降低 $points 个点';
+  }
 }

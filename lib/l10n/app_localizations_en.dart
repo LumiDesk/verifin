@@ -1092,4 +1092,248 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get changeAccountShort => 'Account';
+
+  @override
+  String get budgetSettingsTitle => 'Budget settings';
+
+  @override
+  String yearMonth(DateTime month) {
+    final intl.DateFormat monthDateFormat = intl.DateFormat(
+      'MMM y',
+      localeName,
+    );
+    final String monthString = monthDateFormat.format(month);
+
+    return '$monthString';
+  }
+
+  @override
+  String get budgetUsed => 'Used';
+
+  @override
+  String get budgetOverspentThisMonth => 'Over budget this month';
+
+  @override
+  String get budgetAvailableThisMonth => 'Available this month';
+
+  @override
+  String get budgetMonthExpense => 'This month\'s spending';
+
+  @override
+  String get budgetOverAmountLabel => 'Over budget';
+
+  @override
+  String get budgetRemainingQuota => 'Remaining';
+
+  @override
+  String get budgetAmountLabel => 'Budget amount';
+
+  @override
+  String get categoryBudgetTitle => 'Category budgets';
+
+  @override
+  String get monthExpenseCategories => 'This month\'s expense categories';
+
+  @override
+  String get noExpenseCategories => 'No expense categories yet';
+
+  @override
+  String get setMonthBudgetTitle => 'Set this month\'s budget';
+
+  @override
+  String get monthBudgetAmountLabel => 'Monthly budget amount';
+
+  @override
+  String setCategoryBudgetTitle(String category) {
+    return 'Set $category budget';
+  }
+
+  @override
+  String get categoryBudgetAmountLabel => 'Category budget amount';
+
+  @override
+  String get budgetHistoryTitle => 'Budget history';
+
+  @override
+  String get last12MonthsSub => 'Last 12 months';
+
+  @override
+  String get monthSummary => 'Monthly summary';
+
+  @override
+  String get last6MonthsTrend => '6-month trend';
+
+  @override
+  String get budgetLegend => 'Budget';
+
+  @override
+  String expenseAmountLabel(String amount) {
+    return 'Spent $amount';
+  }
+
+  @override
+  String get historyCompare => 'History comparison';
+
+  @override
+  String get lastMonthExpense => 'Last month\'s spending';
+
+  @override
+  String get noExpenseYet => 'No spending';
+
+  @override
+  String get compareBaseline => 'Comparison baseline';
+
+  @override
+  String budgetUsageLine(String percent, String delta) {
+    return 'Budget usage $percent%, $delta vs last month';
+  }
+
+  @override
+  String get notSetBudget => 'No budget set';
+
+  @override
+  String overBy(String amount) {
+    return 'Over by $amount';
+  }
+
+  @override
+  String remainingAmount(String amount) {
+    return '$amount left';
+  }
+
+  @override
+  String budgetHistoryLine(String budget, String expense, String percent) {
+    return 'Budget $budget · Spent $expense · $percent% used';
+  }
+
+  @override
+  String get categoryBudgetOk => 'Category budgets on track';
+
+  @override
+  String categoryOverspent(String category) {
+    return '$category over budget';
+  }
+
+  @override
+  String categoryNearBudget(String category) {
+    return '$category near budget';
+  }
+
+  @override
+  String categoryBudgetOkDesc(int count) {
+    return '$count category budgets set; none is close to overspending.';
+  }
+
+  @override
+  String categoryOverspentDesc(String amount, String percent) {
+    return 'Over by $amount; $percent% used this month.';
+  }
+
+  @override
+  String categoryNearDesc(String amount, String percent) {
+    return '$amount left; $percent% used this month.';
+  }
+
+  @override
+  String catNoBudgetLine(String amount) {
+    return 'No budget · spent $amount this month';
+  }
+
+  @override
+  String catRemainLine(String amount, String percent) {
+    return '$amount left · $percent% used';
+  }
+
+  @override
+  String catOverLine(String amount, String percent) {
+    return 'Over by $amount · $percent% used';
+  }
+
+  @override
+  String get lastMonthNone => 'No spending last month';
+
+  @override
+  String lastMonthAmount(String amount) {
+    return 'Last month $amount';
+  }
+
+  @override
+  String get setLabel => 'Set';
+
+  @override
+  String get monthEnded => 'Month ended';
+
+  @override
+  String remainingDaysInclToday(int days) {
+    return '$days days left incl. today';
+  }
+
+  @override
+  String monthTotalDays(int days) {
+    return '$days days this month';
+  }
+
+  @override
+  String get budgetTipNoneTitle => 'No budget yet';
+
+  @override
+  String get budgetTipNoneDesc =>
+      'Once you set this month\'s budget, progress, remaining quota, and daily allowance show here and on Home.';
+
+  @override
+  String get budgetTipOverTitle => 'Budget exceeded';
+
+  @override
+  String budgetTipOverDesc(String amount) {
+    return 'Spending exceeds the budget by $amount; further spending still counts toward this month.';
+  }
+
+  @override
+  String get budgetTipNearTitle => 'Budget nearly used up';
+
+  @override
+  String budgetTipNearDesc(String percent, String amount) {
+    return '$percent% of this month\'s budget used; $amount left.';
+  }
+
+  @override
+  String get budgetTipOkTitle => 'Budget on track';
+
+  @override
+  String budgetTipOkDesc(String amount) {
+    return 'At the current pace, about $amount per day is available for the rest of the month.';
+  }
+
+  @override
+  String get budgetTipEndedTitle => 'Month settled';
+
+  @override
+  String get budgetTipEndedDesc =>
+      'This month has ended; switch months to review or adjust budgets.';
+
+  @override
+  String get deltaFlatVsLastMonth => 'Same as last month';
+
+  @override
+  String deltaMoreVsLastMonth(String amount) {
+    return '$amount more than last month';
+  }
+
+  @override
+  String deltaLessVsLastMonth(String amount) {
+    return '$amount less than last month';
+  }
+
+  @override
+  String get usageFlat => 'flat';
+
+  @override
+  String usageUp(String points) {
+    return 'up $points pts';
+  }
+
+  @override
+  String usageDown(String points) {
+    return 'down $points pts';
+  }
 }

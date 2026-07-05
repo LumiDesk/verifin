@@ -668,5 +668,269 @@
   "yesterdayLabel": "昨天",
   "selectAll": "全选",
   "changeCategoryShort": "改分类",
-  "changeAccountShort": "改账户"
+  "changeAccountShort": "改账户",
+  "budgetSettingsTitle": "预算设置",
+  "yearMonth": "{month}",
+  "@yearMonth": {
+    "description": "年月标签(如 2026年7月)",
+    "placeholders": {
+      "month": {
+        "type": "DateTime",
+        "format": "y年M月",
+        "isCustomDateFormat": "true"
+      }
+    }
+  },
+  "budgetUsed": "已用",
+  "budgetOverspentThisMonth": "本月已超支",
+  "budgetAvailableThisMonth": "本月可用预算",
+  "budgetMonthExpense": "本月支出",
+  "budgetOverAmountLabel": "超出预算",
+  "budgetRemainingQuota": "剩余额度",
+  "budgetAmountLabel": "预算金额",
+  "categoryBudgetTitle": "分类预算",
+  "monthExpenseCategories": "本月支出分类",
+  "noExpenseCategories": "还没有支出分类",
+  "setMonthBudgetTitle": "设置本月预算",
+  "monthBudgetAmountLabel": "月份预算金额",
+  "setCategoryBudgetTitle": "设置{category}预算",
+  "@setCategoryBudgetTitle": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "categoryBudgetAmountLabel": "分类预算金额",
+  "budgetHistoryTitle": "预算历史",
+  "last12MonthsSub": "最近 12 个月",
+  "monthSummary": "月份汇总",
+  "last6MonthsTrend": "近 6 月趋势",
+  "budgetLegend": "预算",
+  "expenseAmountLabel": "支出 {amount}",
+  "@expenseAmountLabel": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "historyCompare": "历史对比",
+  "lastMonthExpense": "上月支出",
+  "noExpenseYet": "暂无支出",
+  "compareBaseline": "对比基准",
+  "budgetUsageLine": "预算使用率 {percent}%，较上月 {delta}",
+  "@budgetUsageLine": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      },
+      "delta": {
+        "type": "String"
+      }
+    }
+  },
+  "notSetBudget": "未设置预算",
+  "overBy": "超出 {amount}",
+  "@overBy": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "remainingAmount": "剩余 {amount}",
+  "@remainingAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetHistoryLine": "预算 {budget} · 支出 {expense} · 已用 {percent}%",
+  "@budgetHistoryLine": {
+    "placeholders": {
+      "budget": {
+        "type": "String"
+      },
+      "expense": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "categoryBudgetOk": "分类预算正常",
+  "categoryOverspent": "{category}已超支",
+  "@categoryOverspent": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "categoryNearBudget": "{category}接近预算",
+  "@categoryNearBudget": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "categoryBudgetOkDesc": "已设置 {count} 个分类预算，当前没有临近超支的分类。",
+  "@categoryBudgetOkDesc": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "categoryOverspentDesc": "已超出 {amount}，本月已用 {percent}%。",
+  "@categoryOverspentDesc": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "categoryNearDesc": "剩余 {amount}，本月已用 {percent}%。",
+  "@categoryNearDesc": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "catNoBudgetLine": "未设置预算 · 本月支出 {amount}",
+  "@catNoBudgetLine": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "catRemainLine": "剩余 {amount} · 已用 {percent}%",
+  "@catRemainLine": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "catOverLine": "超出 {amount} · 已用 {percent}%",
+  "@catOverLine": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "lastMonthNone": "上月无支出",
+  "lastMonthAmount": "上月 {amount}",
+  "@lastMonthAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "setLabel": "设置",
+  "monthEnded": "月份已结束",
+  "remainingDaysInclToday": "含今天还剩 {days} 天",
+  "@remainingDaysInclToday": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "monthTotalDays": "本月共 {days} 天",
+  "@monthTotalDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "budgetTipNoneTitle": "还没有设置预算",
+  "budgetTipNoneDesc": "设置本月预算后，首页和这里会同步展示预算进度、剩余额度和剩余日均。",
+  "budgetTipOverTitle": "预算已经超出",
+  "budgetTipOverDesc": "本月支出已超过预算 {amount}，后续支出会继续计入本月统计。",
+  "@budgetTipOverDesc": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetTipNearTitle": "预算接近用完",
+  "budgetTipNearDesc": "本月预算已使用 {percent}%，剩余 {amount}。",
+  "@budgetTipNearDesc": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetTipOkTitle": "预算状态正常",
+  "budgetTipOkDesc": "按当前预算，本月剩余每天约可支出 {amount}。",
+  "@budgetTipOkDesc": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetTipEndedTitle": "本月预算已结算",
+  "budgetTipEndedDesc": "这个月份已结束，可切换到其他月份继续查看或调整预算。",
+  "deltaFlatVsLastMonth": "与上月持平",
+  "deltaMoreVsLastMonth": "比上月多 {amount}",
+  "@deltaMoreVsLastMonth": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "deltaLessVsLastMonth": "比上月少 {amount}",
+  "@deltaLessVsLastMonth": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "usageFlat": "持平",
+  "usageUp": "增加 {points} 个点",
+  "@usageUp": {
+    "placeholders": {
+      "points": {
+        "type": "String"
+      }
+    }
+  },
+  "usageDown": "降低 {points} 个点",
+  "@usageDown": {
+    "placeholders": {
+      "points": {
+        "type": "String"
+      }
+    }
+  }
 }

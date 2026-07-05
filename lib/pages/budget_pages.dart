@@ -13,6 +13,7 @@ import '../app/series_math.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
 import 'sheets.dart';
+import '../l10n/app_localizations.dart';
 
 class BudgetSettingsPage extends StatefulWidget {
   const BudgetSettingsPage({super.key, required this.initialMonth});
@@ -87,8 +88,8 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
             padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
             children: <Widget>[
               VeriHeader(
-                title: '预算设置',
-                subtitle: '${_month.year}年${_month.month}月',
+                title: AppLocalizations.of(context).budgetSettingsTitle,
+                subtitle: AppLocalizations.of(context).yearMonth(_month),
                 showBack: true,
               ),
               const SizedBox(height: 10),
@@ -133,7 +134,7 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: <Widget>[
                                   Text(
-                                    '已用',
+                                    AppLocalizations.of(context).budgetUsed,
                                     style: Theme.of(context)
                                         .textTheme
                                         .labelSmall
@@ -170,7 +171,13 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
                               Text(
-                                remaining < 0 ? '本月已超支' : '本月可用预算',
+                                remaining < 0
+                                    ? AppLocalizations.of(
+                                        context,
+                                      ).budgetOverspentThisMonth
+                                    : AppLocalizations.of(
+                                        context,
+                                      ).budgetAvailableThisMonth,
                                 style: Theme.of(context).textTheme.titleSmall
                                     ?.copyWith(fontWeight: FontWeight.w800),
                               ),
@@ -216,6 +223,7 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
                               const SizedBox(height: 6),
                               Text(
                                 _budgetPeriodLabel(
+                                  AppLocalizations.of(context),
                                   remainingDays,
                                   isPastMonth,
                                   isCurrentMonth,
@@ -244,13 +252,21 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
                       childAspectRatio: 2.45,
                       children: <Widget>[
                         _BudgetMetricTile(
-                          label: '本月支出',
+                          label: AppLocalizations.of(
+                            context,
+                          ).budgetMonthExpense,
                           value: formatExpenseAmount(monthExpense),
                           icon: Icons.payments_outlined,
                           color: veriExpense,
                         ),
                         _BudgetMetricTile(
-                          label: remaining < 0 ? '超出预算' : '剩余额度',
+                          label: remaining < 0
+                              ? AppLocalizations.of(
+                                  context,
+                                ).budgetOverAmountLabel
+                              : AppLocalizations.of(
+                                  context,
+                                ).budgetRemainingQuota,
                           value: remaining < 0
                               ? formatExpenseAmount(remaining.abs())
                               : formatAmount(remaining),
@@ -260,13 +276,15 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
                           color: remaining < 0 ? veriExpense : veriIncome,
                         ),
                         _BudgetMetricTile(
-                          label: '剩余日均',
+                          label: AppLocalizations.of(
+                            context,
+                          ).budgetDailyRemaining,
                           value: formatAmount(dailyAvailable),
                           icon: Icons.today_outlined,
                           color: veriRoyal,
                         ),
                         _BudgetMetricTile(
-                          label: '预算金额',
+                          label: AppLocalizations.of(context).budgetAmountLabel,
                           value: formatAmount(budget),
                           icon: Icons.flag_outlined,
                           color: veriBlue,
@@ -314,13 +332,13 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
                       children: <Widget>[
                         Expanded(
                           child: Text(
-                            '分类预算',
+                            AppLocalizations.of(context).categoryBudgetTitle,
                             style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(fontWeight: FontWeight.w900),
                           ),
                         ),
                         Text(
-                          '本月支出分类',
+                          AppLocalizations.of(context).monthExpenseCategories,
                           style: Theme.of(context).textTheme.labelSmall
                               ?.copyWith(
                                 color: Theme.of(
@@ -337,7 +355,7 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         child: Center(
                           child: Text(
-                            '还没有支出分类',
+                            AppLocalizations.of(context).noExpenseCategories,
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
                                   color: Theme.of(context).colorScheme.onSurface
@@ -373,8 +391,8 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
     final currentBudget = controller.monthlyBudget(_month);
     final amountText = await showTextInputDialog(
       context: context,
-      title: '设置本月预算',
-      label: '月份预算金额',
+      title: AppLocalizations.of(context).setMonthBudgetTitle,
+      label: AppLocalizations.of(context).monthBudgetAmountLabel,
       initialValue: currentBudget <= 0 ? '' : formatAmount(currentBudget),
       allowEmpty: true,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -392,8 +410,10 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
     final currentBudget = controller.categoryBudget(_month, category.id);
     final amountText = await showTextInputDialog(
       context: context,
-      title: '设置${category.label}预算',
-      label: '分类预算金额',
+      title: AppLocalizations.of(
+        context,
+      ).setCategoryBudgetTitle(category.label),
+      label: AppLocalizations.of(context).categoryBudgetAmountLabel,
       initialValue: currentBudget <= 0 ? '' : formatAmount(currentBudget),
       allowEmpty: true,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -435,18 +455,18 @@ class MonthSwitcher extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         IconButton(
-          tooltip: '上个月',
+          tooltip: AppLocalizations.of(context).calendarPrevMonth,
           onPressed: onPrevious,
           icon: const Icon(Icons.chevron_left),
         ),
         Text(
-          '${month.year}年${month.month}月',
+          AppLocalizations.of(context).yearMonth(month),
           style: Theme.of(
             context,
           ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
         ),
         IconButton(
-          tooltip: '下个月',
+          tooltip: AppLocalizations.of(context).calendarNextMonth,
           onPressed: onNext,
           icon: const Icon(Icons.chevron_right),
         ),
@@ -475,9 +495,9 @@ class BudgetHistoryPage extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
             children: <Widget>[
-              const VeriHeader(
-                title: '预算历史',
-                subtitle: '最近 12 个月',
+              VeriHeader(
+                title: AppLocalizations.of(context).budgetHistoryTitle,
+                subtitle: AppLocalizations.of(context).last12MonthsSub,
                 showBack: true,
               ),
               const SizedBox(height: 10),
@@ -491,7 +511,7 @@ class BudgetHistoryPage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      '月份汇总',
+                      AppLocalizations.of(context).monthSummary,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w900,
                       ),
@@ -655,7 +675,7 @@ class _BudgetTrendCardState extends State<_BudgetTrendCard> {
             children: <Widget>[
               Expanded(
                 child: Text(
-                  '近 6 月趋势',
+                  AppLocalizations.of(context).last6MonthsTrend,
                   style: Theme.of(
                     context,
                   ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
@@ -664,9 +684,15 @@ class _BudgetTrendCardState extends State<_BudgetTrendCard> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  _ChartLegendDot(color: veriRoyal, label: '预算'),
+                  _ChartLegendDot(
+                    color: veriRoyal,
+                    label: AppLocalizations.of(context).budgetLegend,
+                  ),
                   const SizedBox(width: 8),
-                  _ChartLegendDot(color: veriExpense, label: '支出'),
+                  _ChartLegendDot(
+                    color: veriExpense,
+                    label: AppLocalizations.of(context).entryTypeExpense,
+                  ),
                 ],
               ),
             ],
@@ -704,6 +730,8 @@ class _BudgetTrendCardState extends State<_BudgetTrendCard> {
                   child: CustomPaint(
                     painter: _BudgetTrendPainter(
                       months: months,
+                      monthLabelOf: (month) =>
+                          AppLocalizations.of(context).monthNumber(month),
                       labelColor: Theme.of(
                         context,
                       ).colorScheme.onSurface.withValues(alpha: 0.50),
@@ -726,14 +754,18 @@ class _BudgetTrendCardState extends State<_BudgetTrendCard> {
 
   ChartTooltip _tooltipFor(BudgetMonthSnapshot snapshot) {
     return ChartTooltip(
-      title: '${snapshot.month.year}年${snapshot.month.month}月',
+      title: AppLocalizations.of(context).yearMonth(snapshot.month),
       lines: <ChartTooltipLine>[
         ChartTooltipLine(
-          text: '预算 ${formatAmount(snapshot.budget)}',
+          text: AppLocalizations.of(
+            context,
+          ).budgetTotalLabel(formatAmount(snapshot.budget)),
           color: veriRoyal,
         ),
         ChartTooltipLine(
-          text: '支出 ${formatExpenseAmount(snapshot.expense)}',
+          text: AppLocalizations.of(
+            context,
+          ).expenseAmountLabel(formatExpenseAmount(snapshot.expense)),
           color: veriExpense,
         ),
       ],
@@ -775,6 +807,7 @@ class _ChartLegendDot extends StatelessWidget {
 class _BudgetTrendPainter extends CustomPainter {
   const _BudgetTrendPainter({
     required this.months,
+    required this.monthLabelOf,
     required this.labelColor,
     required this.yLabels,
     this.selectedIndex,
@@ -782,6 +815,9 @@ class _BudgetTrendPainter extends CustomPainter {
   });
 
   final List<BudgetMonthSnapshot> months;
+
+  /// 月份坐标标签（由调用方按当前语言解析）。
+  final String Function(int month) monthLabelOf;
   final Color labelColor;
   final List<String> yLabels;
   final int? selectedIndex;
@@ -921,7 +957,7 @@ class _BudgetTrendPainter extends CustomPainter {
     }
     final gap = chartRect.width / months.length;
     for (var i = 0; i < months.length; i += 1) {
-      final label = '${months[i].month.month}月';
+      final label = monthLabelOf(months[i].month.month);
       final painter = TextPainter(
         text: TextSpan(text: label, style: labelStyle),
         textDirection: TextDirection.ltr,
@@ -986,7 +1022,7 @@ class _BudgetHistoryCard extends StatelessWidget {
             children: <Widget>[
               Expanded(
                 child: Text(
-                  '历史对比',
+                  AppLocalizations.of(context).historyCompare,
                   style: Theme.of(
                     context,
                   ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
@@ -995,7 +1031,9 @@ class _BudgetHistoryCard extends StatelessWidget {
               TextButton.icon(
                 onPressed: onHistoryTap,
                 icon: const Icon(Icons.history, size: 15),
-                label: Text('${previousMonth.month}月 → ${currentMonth.month}月'),
+                label: Text(
+                  '${AppLocalizations.of(context).monthNumber(previousMonth.month)} → ${AppLocalizations.of(context).monthNumber(currentMonth.month)}',
+                ),
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   minimumSize: const Size(44, 32),
@@ -1011,18 +1049,23 @@ class _BudgetHistoryCard extends StatelessWidget {
             children: <Widget>[
               Expanded(
                 child: _BudgetCompareTile(
-                  label: '本月支出',
+                  label: AppLocalizations.of(context).budgetMonthExpense,
                   value: formatExpenseAmount(currentExpense),
-                  detail: _expenseDeltaLabel(expenseDelta),
+                  detail: _expenseDeltaLabel(
+                    AppLocalizations.of(context),
+                    expenseDelta,
+                  ),
                   color: deltaColor,
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: _BudgetCompareTile(
-                  label: '上月支出',
+                  label: AppLocalizations.of(context).lastMonthExpense,
                   value: formatExpenseAmount(previousExpense),
-                  detail: previousExpense <= 0 ? '暂无支出' : '对比基准',
+                  detail: previousExpense <= 0
+                      ? AppLocalizations.of(context).noExpenseYet
+                      : AppLocalizations.of(context).compareBaseline,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
@@ -1048,7 +1091,10 @@ class _BudgetHistoryCard extends StatelessWidget {
           ),
           const SizedBox(height: 7),
           Text(
-            '预算使用率 ${(currentUsage * 100).toStringAsFixed(0)}%，较上月 ${_usageDeltaLabel(usageDelta)}',
+            AppLocalizations.of(context).budgetUsageLine(
+              (currentUsage * 100).toStringAsFixed(0),
+              _usageDeltaLabel(AppLocalizations.of(context), usageDelta),
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -1078,10 +1124,14 @@ class _BudgetMonthRow extends StatelessWidget {
         ? veriExpense
         : veriIncome;
     final status = snapshot.budget <= 0
-        ? '未设置预算'
+        ? AppLocalizations.of(context).notSetBudget
         : snapshot.overBudget
-        ? '超出 ${formatAmount(snapshot.expense - snapshot.budget)}'
-        : '剩余 ${formatAmount(snapshot.remaining)}';
+        ? AppLocalizations.of(
+            context,
+          ).overBy(formatAmount(snapshot.expense - snapshot.budget))
+        : AppLocalizations.of(
+            context,
+          ).remainingAmount(formatAmount(snapshot.remaining));
 
     return Material(
       color: Colors.transparent,
@@ -1106,7 +1156,9 @@ class _BudgetMonthRow extends StatelessWidget {
                       children: <Widget>[
                         Expanded(
                           child: Text(
-                            '${snapshot.month.year}年${snapshot.month.month}月',
+                            AppLocalizations.of(
+                              context,
+                            ).yearMonth(snapshot.month),
                             style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
@@ -1133,7 +1185,11 @@ class _BudgetMonthRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '预算 ${formatAmount(snapshot.budget)} · 支出 ${formatExpenseAmount(snapshot.expense)} · 已用 ${(snapshot.ratio * 100).toStringAsFixed(0)}%',
+                      AppLocalizations.of(context).budgetHistoryLine(
+                        formatAmount(snapshot.budget),
+                        formatExpenseAmount(snapshot.expense),
+                        (snapshot.ratio * 100).toStringAsFixed(0),
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -1239,16 +1295,23 @@ class _CategoryBudgetAlertCard extends StatelessWidget {
         : current.overBudget
         ? Icons.warning_amber_rounded
         : Icons.error_outline;
+    final l10n = AppLocalizations.of(context);
     final title = current == null
-        ? '分类预算正常'
+        ? l10n.categoryBudgetOk
         : current.overBudget
-        ? '${current.category.label}已超支'
-        : '${current.category.label}接近预算';
+        ? l10n.categoryOverspent(current.category.label)
+        : l10n.categoryNearBudget(current.category.label);
     final description = current == null
-        ? '已设置 $budgetedCategoryCount 个分类预算，当前没有临近超支的分类。'
+        ? l10n.categoryBudgetOkDesc(budgetedCategoryCount)
         : current.overBudget
-        ? '已超出 ${formatAmount(current.spent - current.budget)}，本月已用 ${(current.ratio * 100).toStringAsFixed(0)}%。'
-        : '剩余 ${formatAmount(current.remaining)}，本月已用 ${(current.ratio * 100).toStringAsFixed(0)}%。';
+        ? l10n.categoryOverspentDesc(
+            formatAmount(current.spent - current.budget),
+            (current.ratio * 100).toStringAsFixed(0),
+          )
+        : l10n.categoryNearDesc(
+            formatAmount(current.remaining),
+            (current.ratio * 100).toStringAsFixed(0),
+          );
 
     return VeriCard(
       padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
@@ -1301,14 +1364,21 @@ class _CategoryBudgetRow extends StatelessWidget {
         : snapshot.spent > snapshot.budget
         ? veriExpense
         : veriRoyal;
+    final l10n = AppLocalizations.of(context);
     final subtitle = snapshot.budget <= 0
-        ? '未设置预算 · 本月支出 ${formatAmount(snapshot.spent)}'
+        ? l10n.catNoBudgetLine(formatAmount(snapshot.spent))
         : snapshot.remaining >= 0
-        ? '剩余 ${formatAmount(snapshot.remaining)} · 已用 ${(snapshot.ratio * 100).toStringAsFixed(0)}%'
-        : '超出 ${formatAmount(snapshot.remaining.abs())} · 已用 ${(snapshot.ratio * 100).toStringAsFixed(0)}%';
+        ? l10n.catRemainLine(
+            formatAmount(snapshot.remaining),
+            (snapshot.ratio * 100).toStringAsFixed(0),
+          )
+        : l10n.catOverLine(
+            formatAmount(snapshot.remaining.abs()),
+            (snapshot.ratio * 100).toStringAsFixed(0),
+          );
     final previousText = snapshot.previousSpent <= 0
-        ? '上月无支出'
-        : '上月 ${formatAmount(snapshot.previousSpent)}';
+        ? l10n.lastMonthNone
+        : l10n.lastMonthAmount(formatAmount(snapshot.previousSpent));
 
     return Material(
       color: Colors.transparent,
@@ -1343,7 +1413,7 @@ class _CategoryBudgetRow extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           snapshot.budget <= 0
-                              ? '设置'
+                              ? AppLocalizations.of(context).setLabel
                               : formatAmount(snapshot.budget),
                           style: Theme.of(context).textTheme.labelLarge
                               ?.copyWith(
@@ -1431,6 +1501,7 @@ class _BudgetInsightCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = budgetProgressColor(budget, remaining, ratio);
     final (title, description, icon) = _budgetInsight(
+      l10n: AppLocalizations.of(context),
       budget: budget,
       expense: expense,
       remaining: remaining,
@@ -1487,20 +1558,22 @@ Color budgetProgressColor(double budget, double remaining, double ratio) {
 }
 
 String _budgetPeriodLabel(
+  AppLocalizations l10n,
   int remainingDays,
   bool isPastMonth,
   bool isCurrentMonth,
 ) {
   if (isPastMonth) {
-    return '月份已结束';
+    return l10n.monthEnded;
   }
   if (isCurrentMonth) {
-    return '含今天还剩 $remainingDays 天';
+    return l10n.remainingDaysInclToday(remainingDays);
   }
-  return '本月共 $remainingDays 天';
+  return l10n.monthTotalDays(remainingDays);
 }
 
 (String, String, IconData) _budgetInsight({
+  required AppLocalizations l10n,
   required double budget,
   required double expense,
   required double remaining,
@@ -1509,35 +1582,38 @@ String _budgetPeriodLabel(
 }) {
   if (budget <= 0) {
     return (
-      '还没有设置预算',
-      '设置本月预算后，首页和这里会同步展示预算进度、剩余额度和剩余日均。',
+      l10n.budgetTipNoneTitle,
+      l10n.budgetTipNoneDesc,
       Icons.flag_outlined,
     );
   }
   if (remaining < 0) {
     return (
-      '预算已经超出',
-      '本月支出已超过预算 ${formatAmount(remaining.abs())}，后续支出会继续计入本月统计。',
+      l10n.budgetTipOverTitle,
+      l10n.budgetTipOverDesc(formatAmount(remaining.abs())),
       Icons.warning_amber_rounded,
     );
   }
   if (ratio >= 0.85) {
     return (
-      '预算接近用完',
-      '本月预算已使用 ${(ratio * 100).toStringAsFixed(0)}%，剩余 ${formatAmount(remaining)}。',
+      l10n.budgetTipNearTitle,
+      l10n.budgetTipNearDesc(
+        (ratio * 100).toStringAsFixed(0),
+        formatAmount(remaining),
+      ),
       Icons.error_outline,
     );
   }
   if (remainingDays > 0) {
     return (
-      '预算状态正常',
-      '按当前预算，本月剩余每天约可支出 ${formatAmount(remaining / remainingDays)}。',
+      l10n.budgetTipOkTitle,
+      l10n.budgetTipOkDesc(formatAmount(remaining / remainingDays)),
       Icons.check_circle_outline,
     );
   }
   return (
-    '本月预算已结算',
-    '这个月份已结束，可切换到其他月份继续查看或调整预算。',
+    l10n.budgetTipEndedTitle,
+    l10n.budgetTipEndedDesc,
     Icons.event_available_outlined,
   );
 }
@@ -1701,20 +1777,20 @@ int _categoryBudgetSortRank(CategoryBudgetSnapshot snapshot) {
   return 4;
 }
 
-String _expenseDeltaLabel(double delta) {
+String _expenseDeltaLabel(AppLocalizations l10n, double delta) {
   if (isZeroAmount(delta)) {
-    return '与上月持平';
+    return l10n.deltaFlatVsLastMonth;
   }
   if (delta > 0) {
-    return '比上月多 ${formatAmount(delta)}';
+    return l10n.deltaMoreVsLastMonth(formatAmount(delta));
   }
-  return '比上月少 ${formatAmount(delta.abs())}';
+  return l10n.deltaLessVsLastMonth(formatAmount(delta.abs()));
 }
 
-String _usageDeltaLabel(double delta) {
+String _usageDeltaLabel(AppLocalizations l10n, double delta) {
   final points = (delta.abs() * 100).toStringAsFixed(0);
   if (points == '0') {
-    return '持平';
+    return l10n.usageFlat;
   }
-  return delta > 0 ? '增加 $points 个点' : '降低 $points 个点';
+  return delta > 0 ? l10n.usageUp(points) : l10n.usageDown(points);
 }

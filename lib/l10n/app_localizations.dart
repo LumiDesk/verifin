@@ -2071,6 +2071,378 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'改账户'**
   String get changeAccountShort;
+
+  /// No description provided for @budgetSettingsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'预算设置'**
+  String get budgetSettingsTitle;
+
+  /// 年月标签(如 2026年7月)
+  ///
+  /// In zh, this message translates to:
+  /// **'{month}'**
+  String yearMonth(DateTime month);
+
+  /// No description provided for @budgetUsed.
+  ///
+  /// In zh, this message translates to:
+  /// **'已用'**
+  String get budgetUsed;
+
+  /// No description provided for @budgetOverspentThisMonth.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月已超支'**
+  String get budgetOverspentThisMonth;
+
+  /// No description provided for @budgetAvailableThisMonth.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月可用预算'**
+  String get budgetAvailableThisMonth;
+
+  /// No description provided for @budgetMonthExpense.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月支出'**
+  String get budgetMonthExpense;
+
+  /// No description provided for @budgetOverAmountLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'超出预算'**
+  String get budgetOverAmountLabel;
+
+  /// No description provided for @budgetRemainingQuota.
+  ///
+  /// In zh, this message translates to:
+  /// **'剩余额度'**
+  String get budgetRemainingQuota;
+
+  /// No description provided for @budgetAmountLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'预算金额'**
+  String get budgetAmountLabel;
+
+  /// No description provided for @categoryBudgetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'分类预算'**
+  String get categoryBudgetTitle;
+
+  /// No description provided for @monthExpenseCategories.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月支出分类'**
+  String get monthExpenseCategories;
+
+  /// No description provided for @noExpenseCategories.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有支出分类'**
+  String get noExpenseCategories;
+
+  /// No description provided for @setMonthBudgetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'设置本月预算'**
+  String get setMonthBudgetTitle;
+
+  /// No description provided for @monthBudgetAmountLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'月份预算金额'**
+  String get monthBudgetAmountLabel;
+
+  /// No description provided for @setCategoryBudgetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'设置{category}预算'**
+  String setCategoryBudgetTitle(String category);
+
+  /// No description provided for @categoryBudgetAmountLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'分类预算金额'**
+  String get categoryBudgetAmountLabel;
+
+  /// No description provided for @budgetHistoryTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'预算历史'**
+  String get budgetHistoryTitle;
+
+  /// No description provided for @last12MonthsSub.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近 12 个月'**
+  String get last12MonthsSub;
+
+  /// No description provided for @monthSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'月份汇总'**
+  String get monthSummary;
+
+  /// No description provided for @last6MonthsTrend.
+  ///
+  /// In zh, this message translates to:
+  /// **'近 6 月趋势'**
+  String get last6MonthsTrend;
+
+  /// No description provided for @budgetLegend.
+  ///
+  /// In zh, this message translates to:
+  /// **'预算'**
+  String get budgetLegend;
+
+  /// No description provided for @expenseAmountLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'支出 {amount}'**
+  String expenseAmountLabel(String amount);
+
+  /// No description provided for @historyCompare.
+  ///
+  /// In zh, this message translates to:
+  /// **'历史对比'**
+  String get historyCompare;
+
+  /// No description provided for @lastMonthExpense.
+  ///
+  /// In zh, this message translates to:
+  /// **'上月支出'**
+  String get lastMonthExpense;
+
+  /// No description provided for @noExpenseYet.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无支出'**
+  String get noExpenseYet;
+
+  /// No description provided for @compareBaseline.
+  ///
+  /// In zh, this message translates to:
+  /// **'对比基准'**
+  String get compareBaseline;
+
+  /// No description provided for @budgetUsageLine.
+  ///
+  /// In zh, this message translates to:
+  /// **'预算使用率 {percent}%，较上月 {delta}'**
+  String budgetUsageLine(String percent, String delta);
+
+  /// No description provided for @notSetBudget.
+  ///
+  /// In zh, this message translates to:
+  /// **'未设置预算'**
+  String get notSetBudget;
+
+  /// No description provided for @overBy.
+  ///
+  /// In zh, this message translates to:
+  /// **'超出 {amount}'**
+  String overBy(String amount);
+
+  /// No description provided for @remainingAmount.
+  ///
+  /// In zh, this message translates to:
+  /// **'剩余 {amount}'**
+  String remainingAmount(String amount);
+
+  /// No description provided for @budgetHistoryLine.
+  ///
+  /// In zh, this message translates to:
+  /// **'预算 {budget} · 支出 {expense} · 已用 {percent}%'**
+  String budgetHistoryLine(String budget, String expense, String percent);
+
+  /// No description provided for @categoryBudgetOk.
+  ///
+  /// In zh, this message translates to:
+  /// **'分类预算正常'**
+  String get categoryBudgetOk;
+
+  /// No description provided for @categoryOverspent.
+  ///
+  /// In zh, this message translates to:
+  /// **'{category}已超支'**
+  String categoryOverspent(String category);
+
+  /// No description provided for @categoryNearBudget.
+  ///
+  /// In zh, this message translates to:
+  /// **'{category}接近预算'**
+  String categoryNearBudget(String category);
+
+  /// No description provided for @categoryBudgetOkDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'已设置 {count} 个分类预算，当前没有临近超支的分类。'**
+  String categoryBudgetOkDesc(int count);
+
+  /// No description provided for @categoryOverspentDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'已超出 {amount}，本月已用 {percent}%。'**
+  String categoryOverspentDesc(String amount, String percent);
+
+  /// No description provided for @categoryNearDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'剩余 {amount}，本月已用 {percent}%。'**
+  String categoryNearDesc(String amount, String percent);
+
+  /// No description provided for @catNoBudgetLine.
+  ///
+  /// In zh, this message translates to:
+  /// **'未设置预算 · 本月支出 {amount}'**
+  String catNoBudgetLine(String amount);
+
+  /// No description provided for @catRemainLine.
+  ///
+  /// In zh, this message translates to:
+  /// **'剩余 {amount} · 已用 {percent}%'**
+  String catRemainLine(String amount, String percent);
+
+  /// No description provided for @catOverLine.
+  ///
+  /// In zh, this message translates to:
+  /// **'超出 {amount} · 已用 {percent}%'**
+  String catOverLine(String amount, String percent);
+
+  /// No description provided for @lastMonthNone.
+  ///
+  /// In zh, this message translates to:
+  /// **'上月无支出'**
+  String get lastMonthNone;
+
+  /// No description provided for @lastMonthAmount.
+  ///
+  /// In zh, this message translates to:
+  /// **'上月 {amount}'**
+  String lastMonthAmount(String amount);
+
+  /// No description provided for @setLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'设置'**
+  String get setLabel;
+
+  /// No description provided for @monthEnded.
+  ///
+  /// In zh, this message translates to:
+  /// **'月份已结束'**
+  String get monthEnded;
+
+  /// No description provided for @remainingDaysInclToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'含今天还剩 {days} 天'**
+  String remainingDaysInclToday(int days);
+
+  /// No description provided for @monthTotalDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月共 {days} 天'**
+  String monthTotalDays(int days);
+
+  /// No description provided for @budgetTipNoneTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有设置预算'**
+  String get budgetTipNoneTitle;
+
+  /// No description provided for @budgetTipNoneDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'设置本月预算后，首页和这里会同步展示预算进度、剩余额度和剩余日均。'**
+  String get budgetTipNoneDesc;
+
+  /// No description provided for @budgetTipOverTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'预算已经超出'**
+  String get budgetTipOverTitle;
+
+  /// No description provided for @budgetTipOverDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月支出已超过预算 {amount}，后续支出会继续计入本月统计。'**
+  String budgetTipOverDesc(String amount);
+
+  /// No description provided for @budgetTipNearTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'预算接近用完'**
+  String get budgetTipNearTitle;
+
+  /// No description provided for @budgetTipNearDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月预算已使用 {percent}%，剩余 {amount}。'**
+  String budgetTipNearDesc(String percent, String amount);
+
+  /// No description provided for @budgetTipOkTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'预算状态正常'**
+  String get budgetTipOkTitle;
+
+  /// No description provided for @budgetTipOkDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'按当前预算，本月剩余每天约可支出 {amount}。'**
+  String budgetTipOkDesc(String amount);
+
+  /// No description provided for @budgetTipEndedTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月预算已结算'**
+  String get budgetTipEndedTitle;
+
+  /// No description provided for @budgetTipEndedDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个月份已结束，可切换到其他月份继续查看或调整预算。'**
+  String get budgetTipEndedDesc;
+
+  /// No description provided for @deltaFlatVsLastMonth.
+  ///
+  /// In zh, this message translates to:
+  /// **'与上月持平'**
+  String get deltaFlatVsLastMonth;
+
+  /// No description provided for @deltaMoreVsLastMonth.
+  ///
+  /// In zh, this message translates to:
+  /// **'比上月多 {amount}'**
+  String deltaMoreVsLastMonth(String amount);
+
+  /// No description provided for @deltaLessVsLastMonth.
+  ///
+  /// In zh, this message translates to:
+  /// **'比上月少 {amount}'**
+  String deltaLessVsLastMonth(String amount);
+
+  /// No description provided for @usageFlat.
+  ///
+  /// In zh, this message translates to:
+  /// **'持平'**
+  String get usageFlat;
+
+  /// No description provided for @usageUp.
+  ///
+  /// In zh, this message translates to:
+  /// **'增加 {points} 个点'**
+  String usageUp(String points);
+
+  /// No description provided for @usageDown.
+  ///
+  /// In zh, this message translates to:
+  /// **'降低 {points} 个点'**
+  String usageDown(String points);
 }
 
 class _AppLocalizationsDelegate
