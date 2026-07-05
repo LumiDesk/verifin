@@ -88,7 +88,14 @@ jobs:
           name: verifin-android-apk
           path: release-artifacts
 
-      - name: Create release
+      - name: Create pre-release
         uses: softprops/action-gh-release@v2
         with:
           files: release-artifacts/**/*.apk
+          # 默认发预发布：不标记为 Latest，待真机测试通过后在 GitHub 手动改为正式版。
+          prerelease: true
+          make_latest: 'false'
+          body: |
+            ⚠️ 预发布（待验证）：此版本由 CI 自动构建，尚未经真机验收。
+            测试通过后，请在本页 “Edit release” 取消勾选 “Set as a pre-release”、
+            勾选 “Set as the latest release”，即成为正式版。

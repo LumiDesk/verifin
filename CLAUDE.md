@@ -21,7 +21,7 @@ dart format .                          # 提交前格式化
 ## 发布与 CI
 
 - **不要在本机构建 APK 作为交付物**。Android 安装包只由 GitHub Actions 生成。
-- CI（`.github/workflows/flutter.yml`）只在推送 `vX.Y.Z` 标签时触发：analyze → test → build apk --release → 创建 GitHub Release。普通 `main` 推送不触发。
+- CI（`.github/workflows/flutter.yml`）只在推送 `vX.Y.Z` 标签时触发：analyze → test → build apk --release → 发布 GitHub **预发布**（`prerelease`、不标记 Latest）。普通 `main` 推送不触发。**真机验收通过后，在 GitHub 手动把该 release 改为正式版（取消预发布、设为 Latest）**——CI 默认只出预发布，不直接出正式版。
 - 发版用 `scripts/publish.sh patch`（也支持 `minor`、`major` 或显式版本号）；脚本会更新 `pubspec.yaml` 和 `lib/app/app_version.dart` 里的 `appVersionLabel`、提交、打标签并推送。
 - Release APK 必须用项目内稳定 keystore（`android/app/verifin-release.jks`）签名。
 

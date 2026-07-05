@@ -10,7 +10,7 @@
 - `flutter test`：运行 `test/` 下的全部测试。
 - `scripts/publish.sh patch`：发布补丁版本，脚本会更新版本号、提交、创建 `vX.Y.Z` 标签并推送。
 
-Android 安装包不在本机打包；最终 APK/AAB 由 GitHub CI 负责生成。普通提交不触发 Actions，只有推送 `vX.Y.Z` 标签时才构建 Release。不要在常规开发流程中运行或依赖本机 `flutter build apk` 作为交付依据。
+Android 安装包不在本机打包；最终 APK/AAB 由 GitHub CI 负责生成。普通提交不触发 Actions，只有推送 `vX.Y.Z` 标签时才构建。CI 默认发布 GitHub **预发布**（不标记 Latest）；真机验收通过后，在 GitHub 手动把该 release 改为正式版（设为 Latest）。不要在常规开发流程中运行或依赖本机 `flutter build apk` 作为交付依据。
 
 ## 代码风格与命名规范
 遵循 Dart 默认格式和 `analysis_options.yaml` 中启用的 `flutter_lints`。提交前使用 `dart format .` 格式化代码。使用两个空格缩进。Dart 文件使用 `snake_case.dart`，类和 Widget 使用 `UpperCamelCase`，私有成员使用前导下划线。优先保持 Widget 简洁，只有出现明确复用或复杂度上升时再抽取组件。

@@ -11,6 +11,10 @@ Usage:
 
 The script updates pubspec.yaml and appVersionLabel, commits the version bump,
 creates tag vX.Y.Z, then pushes main and the tag.
+
+Pushing the tag triggers CI, which builds the APK and publishes a GitHub
+*pre-release* (not marked as Latest). After verifying the APK on a real device,
+promote it to the latest release manually on GitHub.
 USAGE
 }
 
@@ -106,4 +110,5 @@ git tag "$tag"
 git push origin main
 git push origin "$tag"
 
-echo "Published $tag. GitHub Actions will build and create the release."
+echo "Pushed $tag. GitHub Actions will build the APK and publish a pre-release."
+echo "Verify the APK on a real device, then promote it to Latest on GitHub."
