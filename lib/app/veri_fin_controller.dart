@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' hide Category;
 
 import '../data/ledger_repository.dart';
 import '../local_storage/local_storage.dart';
+import 'ai/ai_settings.dart';
 import 'app_lock.dart';
 import 'backup/backup_archive.dart';
 import 'backup/backup_settings.dart';
@@ -91,6 +92,8 @@ class VeriFinController extends ChangeNotifier {
   static const String _backupPassphraseKey = 'verifin.backup_passphrase.v1';
   static const String _webdavKey = 'verifin.webdav.v1';
   static const String _reminderKey = 'verifin.reminder.v1';
+  static const String _fabActionKey = 'verifin.fab_action.v1';
+  static const String _aiSettingsKey = 'verifin.ai.v1';
   static const String _onboardingKey = 'verifin.onboarding.v1';
 
   static String _panelsKeyFor(PanelPageKind page) {
@@ -171,6 +174,8 @@ class VeriFinController extends ChangeNotifier {
   String _backupPassphrase = '';
   WebdavConfig _webdavConfig = const WebdavConfig();
   ReminderSettings _reminderSettings = ReminderSettings.disabled;
+  FabActionMode _fabActionMode = FabActionMode.manual;
+  AiSettings _aiSettings = const AiSettings();
 
   List<LedgerEntry> get entries => List<LedgerEntry>.unmodifiable(
     _entries.where((entry) => entry.bookId == _activeBookId),
@@ -565,6 +570,36 @@ class VeriFinController extends ChangeNotifier {
   void setHapticsEnabled(bool enabled) {
     _hapticsEnabled = enabled;
     _store.write(_hapticsKey, enabled.toString());
+    notifyListeners();
+  }
+
+  /// 首页 FAB（记一笔）的行为：手动记账（默认）或 AI 对话记账。设备本地偏好，
+  /// 不进 JSON 备份、初始化保留。
+  FabActionMode get fabActionMode => _fabActionMode;
+
+  void setFabActionMode(FabActionMode mode) {
+    _fabActionMode = mode;
+    _store.write(_fabActionKey, mode.name);
+    notifyListeners();
+  }
+
+  /// AI 对话记账的连接配置（请求地址/API Key/模型）。设备本地偏好，不进 JSON
+  /// 备份、初始化保留（API Key 明文存本机）。
+  AiSettings get aiSettings => _aiSettings;
+
+  void setAiSettings(AiSettings settings) {
+    if (_aiSettings == settings) {
+      return;
+    }
+    _aiSettings = settings;
+    if (settings.isConfigured ||
+        settings.baseUrl.isNotEmpty ||
+        settings.apiKey.isNotEmpty ||
+        settings.model.isNotEmpty) {
+      _store.write(_aiSettingsKey, settings.encode());
+    } else {
+      _store.delete(_aiSettingsKey);
+    }
     notifyListeners();
   }
 
@@ -1860,6 +1895,8 @@ class VeriFinController extends ChangeNotifier {
     _backupPassphrase = _store.read(_backupPassphraseKey) ?? '';
     _webdavConfig = WebdavConfig.decode(_store.read(_webdavKey));
     _reminderSettings = ReminderSettings.decode(_store.read(_reminderKey));
+    _fabActionMode = FabActionMode.fromStorage(_store.read(_fabActionKey));
+    _aiSettings = AiSettings.decode(_store.read(_aiSettingsKey));
   }
 
   /// 从 SQLite 载入账目类数据；全新数据库首启动写入默认账本/账户/分组/分类。

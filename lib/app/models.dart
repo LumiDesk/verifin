@@ -175,6 +175,28 @@ enum AssetAccountViewMode {
   }
 }
 
+/// 首页 FAB（记一笔）点击后的行为：手动记账（默认）或 AI 对话记账。
+enum FabActionMode {
+  manual,
+  ai;
+
+  String label(AppLocalizations l10n) {
+    switch (this) {
+      case FabActionMode.manual:
+        return l10n.fabModeManual;
+      case FabActionMode.ai:
+        return l10n.fabModeAi;
+    }
+  }
+
+  static FabActionMode fromStorage(String? value) {
+    return FabActionMode.values.firstWhere(
+      (mode) => mode.name == value,
+      orElse: () => FabActionMode.manual,
+    );
+  }
+}
+
 class LedgerEntry {
   const LedgerEntry({
     required this.id,

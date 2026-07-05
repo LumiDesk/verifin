@@ -28,6 +28,7 @@ import 'recurring_page.dart';
 import '../app/series_math.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
+import 'ai_settings_page.dart';
 import 'app_lock_page.dart';
 import 'report_analysis_page.dart';
 import 'reminder_settings_page.dart';
@@ -1548,6 +1549,32 @@ class SettingsPage extends StatelessWidget {
                         );
                       },
                     ),
+                    const Divider(height: 1),
+                    SettingsRow(
+                      icon: Icons.bolt_outlined,
+                      title: AppLocalizations.of(context).fabActionTitle,
+                      trailing: controller.fabActionMode.label(
+                        AppLocalizations.of(context),
+                      ),
+                      trailingIcon: Icons.chevron_right,
+                      onTap: () => _pickFabActionMode(context, controller),
+                    ),
+                    const Divider(height: 1),
+                    SettingsRow(
+                      icon: Icons.auto_awesome_outlined,
+                      title: AppLocalizations.of(context).aiSettingsTitle,
+                      trailing: controller.aiSettings.isConfigured
+                          ? AppLocalizations.of(context).aiConfigured
+                          : AppLocalizations.of(context).aiNotConfigured,
+                      trailingIcon: Icons.chevron_right,
+                      onTap: () {
+                        Navigator.of(context).push<void>(
+                          MaterialPageRoute<void>(
+                            builder: (context) => const AiSettingsPage(),
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -1636,6 +1663,23 @@ class SettingsPage extends StatelessWidget {
     );
     if (selected != null) {
       controller.setLocalePreference(selected);
+    }
+  }
+
+  Future<void> _pickFabActionMode(
+    BuildContext context,
+    VeriFinController controller,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final selected = await showOptionSheet<FabActionMode>(
+      context: context,
+      title: l10n.fabActionPickerTitle,
+      values: FabActionMode.values,
+      selected: controller.fabActionMode,
+      labelOf: (value) => value.label(l10n),
+    );
+    if (selected != null) {
+      controller.setFabActionMode(selected);
     }
   }
 

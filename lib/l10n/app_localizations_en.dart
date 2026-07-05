@@ -2152,6 +2152,100 @@ class AppLocalizationsEn extends AppLocalizations {
   String get webdavSaved => 'WebDAV config saved';
 
   @override
+  String get fabActionTitle => 'Quick-entry button';
+
+  @override
+  String get fabActionPickerTitle => 'Quick-entry button action';
+
+  @override
+  String get fabModeManual => 'Manual entry';
+
+  @override
+  String get fabModeAi => 'AI entry';
+
+  @override
+  String get aiSettingsTitle => 'AI entry settings';
+
+  @override
+  String get aiConfigured => 'Configured';
+
+  @override
+  String get aiNotConfigured => 'Not set';
+
+  @override
+  String get aiSettingsIntro =>
+      'Enter the request URL, API key and model of any OpenAI-compatible service. Your input is only sent to the service configured here; the config stays on this device and is not backed up.';
+
+  @override
+  String get aiBaseUrlLabel => 'Request URL (base)';
+
+  @override
+  String get aiBaseUrlHint => 'e.g. https://api.openai.com/v1';
+
+  @override
+  String get aiApiKeyLabel => 'API Key';
+
+  @override
+  String get aiModelLabel => 'Model';
+
+  @override
+  String get aiModelHint => 'e.g. gpt-4o-mini';
+
+  @override
+  String get aiFillAllFields =>
+      'Please fill in the request URL, API key and model';
+
+  @override
+  String get aiPrivacyNotice =>
+      'AI entry sends the text you type to the third-party service you configured for parsing. Do not enter sensitive information.';
+
+  @override
+  String get aiEntryTitle => 'AI entry';
+
+  @override
+  String get aiEntryInputHint =>
+      'Describe it in one sentence, e.g. \"taxi 32 yesterday\"';
+
+  @override
+  String get aiEntryParse => 'Parse';
+
+  @override
+  String get aiEntryParsing => 'Parsing…';
+
+  @override
+  String get aiEntryEmptyInput => 'Please enter a description first';
+
+  @override
+  String get aiEntryNotConfiguredTitle => 'AI not configured';
+
+  @override
+  String get aiEntryNotConfiguredBody =>
+      'Please set the request URL, API key and model in Profile → AI entry settings first.';
+
+  @override
+  String get aiEntryGoToSettings => 'Go to settings';
+
+  @override
+  String get aiEntryReviewHint =>
+      'Parsed into a draft by AI — review or edit, then save';
+
+  @override
+  String get aiEntryNoResult =>
+      'AI returned no recognizable result — try rephrasing';
+
+  @override
+  String get aiEntryNoAmount =>
+      'Couldn\'t recognize an amount — include it, e.g. \"taxi 32\"';
+
+  @override
+  String get aiWarningCategoryUnmatched =>
+      'Category not matched — a default was used, please confirm';
+
+  @override
+  String get aiWarningAccountUnmatched =>
+      'Account not matched — set to no account, please confirm';
+
+  @override
   String get uploadingWebdav => 'Uploading to WebDAV…';
 
   @override

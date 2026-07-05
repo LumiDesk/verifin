@@ -5,7 +5,9 @@ import '../app/app_theme.dart';
 import '../app/entry_sheets.dart';
 import '../app/platform_bridge.dart';
 import '../app/veri_fin_scope.dart';
+import '../app/models.dart';
 import '../l10n/app_localizations.dart';
+import 'ai_entry_sheet.dart';
 import 'assets_pages.dart';
 import 'entry_detail_page.dart';
 import 'home_page.dart';
@@ -117,6 +119,11 @@ class _VeriFinShellState extends State<VeriFinShell> {
   }
 
   Future<void> _startQuickEntry(BuildContext context) async {
+    // 记一笔按钮设为 AI 记账时，走自然语言解析入口；默认仍是手动记账。
+    if (VeriFinScope.of(context).fabActionMode == FabActionMode.ai) {
+      await startAiEntry(context);
+      return;
+    }
     final amount = await showModalBottomSheet<double>(
       context: context,
       showDragHandle: true,

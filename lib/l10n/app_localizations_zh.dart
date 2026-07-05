@@ -2118,6 +2118,92 @@ class AppLocalizationsZh extends AppLocalizations {
   String get webdavSaved => '已保存 WebDAV 配置';
 
   @override
+  String get fabActionTitle => '记一笔按钮';
+
+  @override
+  String get fabActionPickerTitle => '记一笔按钮行为';
+
+  @override
+  String get fabModeManual => '手动记账';
+
+  @override
+  String get fabModeAi => 'AI 记账';
+
+  @override
+  String get aiSettingsTitle => 'AI 记账设置';
+
+  @override
+  String get aiConfigured => '已配置';
+
+  @override
+  String get aiNotConfigured => '未配置';
+
+  @override
+  String get aiSettingsIntro =>
+      '填写任意 OpenAI 兼容服务的请求地址、API Key 与模型。你的输入只会发送到这里配置的服务，配置只存本机、不进备份。';
+
+  @override
+  String get aiBaseUrlLabel => '请求地址（Base URL）';
+
+  @override
+  String get aiBaseUrlHint => '如 https://api.openai.com/v1';
+
+  @override
+  String get aiApiKeyLabel => 'API Key';
+
+  @override
+  String get aiModelLabel => '模型';
+
+  @override
+  String get aiModelHint => '如 gpt-4o-mini';
+
+  @override
+  String get aiFillAllFields => '请填写请求地址、API Key 与模型';
+
+  @override
+  String get aiPrivacyNotice => 'AI 记账会把你输入的文字发送到你配置的第三方服务进行解析，请勿输入敏感信息。';
+
+  @override
+  String get aiEntryTitle => 'AI 记账';
+
+  @override
+  String get aiEntryInputHint => '用一句话描述，例如「昨天打车 32」';
+
+  @override
+  String get aiEntryParse => '解析';
+
+  @override
+  String get aiEntryParsing => '正在解析…';
+
+  @override
+  String get aiEntryEmptyInput => '请先输入一句话';
+
+  @override
+  String get aiEntryNotConfiguredTitle => '尚未配置 AI';
+
+  @override
+  String get aiEntryNotConfiguredBody =>
+      '请先在「我的 → AI 记账设置」中填写请求地址、API Key 与模型。';
+
+  @override
+  String get aiEntryGoToSettings => '去设置';
+
+  @override
+  String get aiEntryReviewHint => '已由 AI 解析为草稿，确认或修改后保存';
+
+  @override
+  String get aiEntryNoResult => 'AI 未返回可识别的结果，请换种说法再试';
+
+  @override
+  String get aiEntryNoAmount => '未能识别金额，请在描述中说明金额，例如「打车 32」';
+
+  @override
+  String get aiWarningCategoryUnmatched => '分类未匹配，已用默认分类，请确认';
+
+  @override
+  String get aiWarningAccountUnmatched => '账户未匹配，已置为无账户，请确认';
+
+  @override
   String get uploadingWebdav => '正在上传到 WebDAV...';
 
   @override

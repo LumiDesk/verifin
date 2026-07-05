@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/ai/ai_entry_parser.dart';
 import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
 import '../app/demo_data.dart';
@@ -16,10 +17,14 @@ class EntryDetailPage extends StatefulWidget {
     super.key,
     required this.initialAmount,
     this.initialAccountId,
+    this.initialDraft,
   });
 
   final double initialAmount;
   final String? initialAccountId;
+
+  /// AI 解析出的草稿：非空时预填表单并显示复核提示，供用户确认/修改后落账。
+  final AiEntryDraft? initialDraft;
 
   @override
   State<EntryDetailPage> createState() => _EntryDetailPageState();
@@ -39,6 +44,28 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   // 新增交易时先缓存附件 data URL，保存后再按新交易 id 落库。
   final List<String> _pendingAttachments = <String>[];
   final TextEditingController _noteController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    final draft = widget.initialDraft;
+    if (draft != null) {
+      _type = draft.type;
+      if (draft.categoryId.isNotEmpty) {
+        _categoryId = draft.categoryId;
+      }
+      // 转账必须落到账户；收支允许「无账户」（空 accountId）。
+      if (draft.type != EntryType.transfer && draft.accountId.isEmpty) {
+        _noAccount = true;
+        _accountId = '';
+      } else {
+        _accountId = draft.accountId;
+      }
+      _toAccountId = draft.toAccountId;
+      _occurredAt = draft.occurredAt;
+      _noteController.text = draft.note;
+    }
+  }
 
   @override
   void dispose() {
@@ -88,6 +115,10 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                     subtitle: AppLocalizations.of(context).entryDetailSubtitle,
                     showBack: true,
                   ),
+                  if (widget.initialDraft != null) ...<Widget>[
+                    const SizedBox(height: 12),
+                    _AiReviewBanner(draft: widget.initialDraft!),
+                  ],
                   const SizedBox(height: 12),
                   SegmentedButton<EntryType>(
                     key: const Key('entry_type_segmented_button'),
@@ -513,5 +544,69 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       controller.addAttachment(entryId, dataUrl);
     }
     Navigator.of(context).pop();
+  }
+}
+
+/// AI 记账草稿的复核提示条：说明这是 AI 解析结果，并列出降级提示（分类/账户未匹配）。
+class _AiReviewBanner extends StatelessWidget {
+  const _AiReviewBanner({required this.draft});
+
+  final AiEntryDraft draft;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final accent = theme.colorScheme.primary;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(veriRadiusMd),
+        border: Border.all(color: accent.withValues(alpha: 0.22)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(Icons.auto_awesome, size: 16, color: accent),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l10n.aiEntryReviewHint,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: accent,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          for (final warning in draft.warnings) ...<Widget>[
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.only(left: 24),
+              child: Text(
+                aiDraftWarningLabel(l10n, warning),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.62),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// 把解析降级提示码本地化为一句提示文案。
+String aiDraftWarningLabel(AppLocalizations l10n, AiDraftWarning warning) {
+  switch (warning) {
+    case AiDraftWarning.categoryUnmatched:
+      return l10n.aiWarningCategoryUnmatched;
+    case AiDraftWarning.accountUnmatched:
+      return l10n.aiWarningAccountUnmatched;
   }
 }

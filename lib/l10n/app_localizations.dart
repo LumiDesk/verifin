@@ -3908,6 +3908,174 @@ abstract class AppLocalizations {
   /// **'已保存 WebDAV 配置'**
   String get webdavSaved;
 
+  /// No description provided for @fabActionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'记一笔按钮'**
+  String get fabActionTitle;
+
+  /// No description provided for @fabActionPickerTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'记一笔按钮行为'**
+  String get fabActionPickerTitle;
+
+  /// No description provided for @fabModeManual.
+  ///
+  /// In zh, this message translates to:
+  /// **'手动记账'**
+  String get fabModeManual;
+
+  /// No description provided for @fabModeAi.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 记账'**
+  String get fabModeAi;
+
+  /// No description provided for @aiSettingsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 记账设置'**
+  String get aiSettingsTitle;
+
+  /// No description provided for @aiConfigured.
+  ///
+  /// In zh, this message translates to:
+  /// **'已配置'**
+  String get aiConfigured;
+
+  /// No description provided for @aiNotConfigured.
+  ///
+  /// In zh, this message translates to:
+  /// **'未配置'**
+  String get aiNotConfigured;
+
+  /// No description provided for @aiSettingsIntro.
+  ///
+  /// In zh, this message translates to:
+  /// **'填写任意 OpenAI 兼容服务的请求地址、API Key 与模型。你的输入只会发送到这里配置的服务，配置只存本机、不进备份。'**
+  String get aiSettingsIntro;
+
+  /// No description provided for @aiBaseUrlLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'请求地址（Base URL）'**
+  String get aiBaseUrlLabel;
+
+  /// No description provided for @aiBaseUrlHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'如 https://api.openai.com/v1'**
+  String get aiBaseUrlHint;
+
+  /// No description provided for @aiApiKeyLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'API Key'**
+  String get aiApiKeyLabel;
+
+  /// No description provided for @aiModelLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'模型'**
+  String get aiModelLabel;
+
+  /// No description provided for @aiModelHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'如 gpt-4o-mini'**
+  String get aiModelHint;
+
+  /// No description provided for @aiFillAllFields.
+  ///
+  /// In zh, this message translates to:
+  /// **'请填写请求地址、API Key 与模型'**
+  String get aiFillAllFields;
+
+  /// No description provided for @aiPrivacyNotice.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 记账会把你输入的文字发送到你配置的第三方服务进行解析，请勿输入敏感信息。'**
+  String get aiPrivacyNotice;
+
+  /// No description provided for @aiEntryTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 记账'**
+  String get aiEntryTitle;
+
+  /// No description provided for @aiEntryInputHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'用一句话描述，例如「昨天打车 32」'**
+  String get aiEntryInputHint;
+
+  /// No description provided for @aiEntryParse.
+  ///
+  /// In zh, this message translates to:
+  /// **'解析'**
+  String get aiEntryParse;
+
+  /// No description provided for @aiEntryParsing.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在解析…'**
+  String get aiEntryParsing;
+
+  /// No description provided for @aiEntryEmptyInput.
+  ///
+  /// In zh, this message translates to:
+  /// **'请先输入一句话'**
+  String get aiEntryEmptyInput;
+
+  /// No description provided for @aiEntryNotConfiguredTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'尚未配置 AI'**
+  String get aiEntryNotConfiguredTitle;
+
+  /// No description provided for @aiEntryNotConfiguredBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'请先在「我的 → AI 记账设置」中填写请求地址、API Key 与模型。'**
+  String get aiEntryNotConfiguredBody;
+
+  /// No description provided for @aiEntryGoToSettings.
+  ///
+  /// In zh, this message translates to:
+  /// **'去设置'**
+  String get aiEntryGoToSettings;
+
+  /// No description provided for @aiEntryReviewHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'已由 AI 解析为草稿，确认或修改后保存'**
+  String get aiEntryReviewHint;
+
+  /// No description provided for @aiEntryNoResult.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 未返回可识别的结果，请换种说法再试'**
+  String get aiEntryNoResult;
+
+  /// No description provided for @aiEntryNoAmount.
+  ///
+  /// In zh, this message translates to:
+  /// **'未能识别金额，请在描述中说明金额，例如「打车 32」'**
+  String get aiEntryNoAmount;
+
+  /// No description provided for @aiWarningCategoryUnmatched.
+  ///
+  /// In zh, this message translates to:
+  /// **'分类未匹配，已用默认分类，请确认'**
+  String get aiWarningCategoryUnmatched;
+
+  /// No description provided for @aiWarningAccountUnmatched.
+  ///
+  /// In zh, this message translates to:
+  /// **'账户未匹配，已置为无账户，请确认'**
+  String get aiWarningAccountUnmatched;
+
   /// No description provided for @uploadingWebdav.
   ///
   /// In zh, this message translates to:
