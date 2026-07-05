@@ -13,7 +13,7 @@ class AppDatabase {
   final Database db;
 
   static const String defaultDatabaseName = 'verifin.db';
-  static const int schemaVersion = 8;
+  static const int schemaVersion = 9;
 
   /// 打开（或创建）数据库。测试通过 [factory]/[path] 注入 ffi 与内存路径；
   /// 真实平台留空则由 [resolveDatabaseFactory]/[resolveDatabasePath] 决定。
@@ -102,7 +102,18 @@ class AppDatabase {
       await db.execute('ALTER TABLE accounts ADD COLUMN statement_day INTEGER');
       await db.execute('ALTER TABLE accounts ADD COLUMN due_day INTEGER');
     }
+    // v8 → v9：按日预算维度。键为 `bookId:yyyy-MM-dd`。
+    if (oldVersion < 9) {
+      await db.execute(_dailyBudgetsTable);
+    }
   }
+
+  static const String _dailyBudgetsTable = '''
+    CREATE TABLE daily_budgets (
+      scope_key TEXT PRIMARY KEY,
+      amount REAL NOT NULL
+    )
+  ''';
 
   static const String _recurringRulesTable = '''
     CREATE TABLE recurring_rules (
@@ -204,6 +215,7 @@ class AppDatabase {
       amount REAL NOT NULL
     )
     ''',
+    _dailyBudgetsTable,
     '''
     CREATE TABLE tags (
       id TEXT PRIMARY KEY,

@@ -295,6 +295,12 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
                 ),
               ),
               const SizedBox(height: 10),
+              _DailyBudgetCard(
+                dailyBudget: controller.dailyBudget(),
+                todayExpense: dayExpenseTotal(controller.entries, now),
+                onEdit: _editDailyBudget,
+              ),
+              const SizedBox(height: 10),
               _BudgetInsightCard(
                 budget: budget,
                 expense: monthExpense,
@@ -426,6 +432,23 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
       category.id,
       double.tryParse(amountText) ?? 0,
     );
+  }
+
+  Future<void> _editDailyBudget() async {
+    final controller = VeriFinScope.of(context);
+    final currentBudget = controller.dailyBudget();
+    final amountText = await showTextInputDialog(
+      context: context,
+      title: AppLocalizations.of(context).setDailyBudgetTitle,
+      label: AppLocalizations.of(context).dailyBudgetAmountLabel,
+      initialValue: currentBudget <= 0 ? '' : formatAmount(currentBudget),
+      allowEmpty: true,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+    );
+    if (amountText == null || !mounted) {
+      return;
+    }
+    controller.setDailyBudget(double.tryParse(amountText) ?? 0);
   }
 
   void _openBudgetHistory() {
@@ -572,6 +595,155 @@ class BudgetSideStat extends StatelessWidget {
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
             color: color,
             fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 按日预算卡片：展示当前账本的每日花销上限与今日已花进度。
+/// 每日上限是账本级偏好（适用于每一天），未设置时提示点击配置。
+class _DailyBudgetCard extends StatelessWidget {
+  const _DailyBudgetCard({
+    required this.dailyBudget,
+    required this.todayExpense,
+    required this.onEdit,
+  });
+
+  final double dailyBudget;
+  final double todayExpense;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final hasBudget = dailyBudget > 0;
+    final remaining = dailyBudget - todayExpense;
+    final ratio = hasBudget
+        ? (todayExpense / dailyBudget).clamp(0, 1).toDouble()
+        : 0.0;
+    final progressColor = budgetProgressColor(dailyBudget, remaining, ratio);
+    return VeriCard(
+      padding: const EdgeInsets.fromLTRB(13, 12, 13, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              VeriIconBox(
+                icon: Icons.today_outlined,
+                color: veriRoyal,
+                size: 30,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      l10n.dailyBudgetTitle,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      hasBudget
+                          ? l10n.dailyBudgetLimitLabel(
+                              formatAmount(dailyBudget),
+                            )
+                          : l10n.dailyBudgetNotSet,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.55,
+                        ),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              InkResponse(
+                onTap: onEdit,
+                radius: 18,
+                child: Padding(
+                  padding: const EdgeInsets.all(3),
+                  child: Icon(Icons.edit_outlined, size: 16, color: veriRoyal),
+                ),
+              ),
+            ],
+          ),
+          if (hasBudget) ...<Widget>[
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: ratio,
+                minHeight: 8,
+                backgroundColor: theme.colorScheme.surfaceContainerHighest
+                    .withValues(alpha: 0.48),
+                valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: <Widget>[
+                _DailyBudgetStat(
+                  label: l10n.dailyBudgetTodaySpent,
+                  value: formatExpenseAmount(todayExpense),
+                  color: veriExpense,
+                ),
+                const SizedBox(width: 16),
+                _DailyBudgetStat(
+                  label: remaining < 0
+                      ? l10n.dailyBudgetTodayOver
+                      : l10n.dailyBudgetTodayLeft,
+                  value: remaining < 0
+                      ? formatExpenseAmount(remaining.abs())
+                      : formatAmount(remaining),
+                  color: remaining < 0 ? veriExpense : veriIncome,
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DailyBudgetStat extends StatelessWidget {
+  const _DailyBudgetStat({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.50),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w900,
+            color: color,
           ),
         ),
       ],

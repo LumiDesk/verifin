@@ -641,6 +641,9 @@
       "default:2026-06:shopping": 800.0,
       "default:2026-06:transport": 300.0
     },
+    "dailyBudgets": {
+      "default": 200.0
+    },
     "profile": {
       "nickname": "Veri Fin 测试用户",
       "bio": "用于验证资产、预算、看板、账本和导入导出流程",

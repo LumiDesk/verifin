@@ -40,6 +40,9 @@ abstract interface class LedgerRepository {
   Future<Map<String, double>> loadCategoryBudgets();
   Future<void> saveCategoryBudgets(Map<String, double> budgets);
 
+  Future<Map<String, double>> loadDailyBudgets();
+  Future<void> saveDailyBudgets(Map<String, double> budgets);
+
   Future<bool> hasAnyData();
 }
 
@@ -175,6 +178,14 @@ class SqliteLedgerRepository implements LedgerRepository {
   @override
   Future<void> saveCategoryBudgets(Map<String, double> budgets) =>
       _saveBudgetMap('category_budgets', budgets);
+
+  @override
+  Future<Map<String, double>> loadDailyBudgets() =>
+      _loadBudgetMap('daily_budgets');
+
+  @override
+  Future<void> saveDailyBudgets(Map<String, double> budgets) =>
+      _saveBudgetMap('daily_budgets', budgets);
 
   /// 是否已存在任何账目数据（用于判断迁移是否有内容写入）。
   @override

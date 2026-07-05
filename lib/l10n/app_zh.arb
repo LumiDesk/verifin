@@ -695,6 +695,21 @@
   "noExpenseCategories": "还没有支出分类",
   "setMonthBudgetTitle": "设置本月预算",
   "monthBudgetAmountLabel": "月份预算金额",
+  "dailyBudgetTitle": "按日预算",
+  "dailyBudgetNotSet": "未设置每日上限，点击设置",
+  "dailyBudgetLimitLabel": "每日上限 {amount}",
+  "@dailyBudgetLimitLabel": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "dailyBudgetTodaySpent": "今日已花",
+  "dailyBudgetTodayLeft": "今日剩余",
+  "dailyBudgetTodayOver": "今日超支",
+  "setDailyBudgetTitle": "设置每日预算",
+  "dailyBudgetAmountLabel": "每日预算金额",
   "setCategoryBudgetTitle": "设置{category}预算",
   "@setCategoryBudgetTitle": {
     "placeholders": {

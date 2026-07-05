@@ -1151,6 +1151,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get monthBudgetAmountLabel => 'Monthly budget amount';
 
   @override
+  String get dailyBudgetTitle => 'Daily budget';
+
+  @override
+  String get dailyBudgetNotSet => 'No daily limit set — tap to configure';
+
+  @override
+  String dailyBudgetLimitLabel(String amount) {
+    return 'Daily limit $amount';
+  }
+
+  @override
+  String get dailyBudgetTodaySpent => 'Spent today';
+
+  @override
+  String get dailyBudgetTodayLeft => 'Left today';
+
+  @override
+  String get dailyBudgetTodayOver => 'Over today';
+
+  @override
+  String get setDailyBudgetTitle => 'Set daily budget';
+
+  @override
+  String get dailyBudgetAmountLabel => 'Daily budget amount';
+
+  @override
   String setCategoryBudgetTitle(String category) {
     return 'Set $category budget';
   }

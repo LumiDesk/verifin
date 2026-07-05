@@ -372,6 +372,21 @@
   "noExpenseCategories": "No expense categories yet",
   "setMonthBudgetTitle": "Set this month's budget",
   "monthBudgetAmountLabel": "Monthly budget amount",
+  "dailyBudgetTitle": "Daily budget",
+  "dailyBudgetNotSet": "No daily limit set — tap to configure",
+  "dailyBudgetLimitLabel": "Daily limit {amount}",
+  "@dailyBudgetLimitLabel": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "dailyBudgetTodaySpent": "Spent today",
+  "dailyBudgetTodayLeft": "Left today",
+  "dailyBudgetTodayOver": "Over today",
+  "setDailyBudgetTitle": "Set daily budget",
+  "dailyBudgetAmountLabel": "Daily budget amount",
   "setCategoryBudgetTitle": "Set {category} budget",
   "categoryBudgetAmountLabel": "Category budget amount",
   "budgetHistoryTitle": "Budget history",

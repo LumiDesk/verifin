@@ -2168,6 +2168,54 @@ abstract class AppLocalizations {
   /// **'月份预算金额'**
   String get monthBudgetAmountLabel;
 
+  /// No description provided for @dailyBudgetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'按日预算'**
+  String get dailyBudgetTitle;
+
+  /// No description provided for @dailyBudgetNotSet.
+  ///
+  /// In zh, this message translates to:
+  /// **'未设置每日上限，点击设置'**
+  String get dailyBudgetNotSet;
+
+  /// No description provided for @dailyBudgetLimitLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'每日上限 {amount}'**
+  String dailyBudgetLimitLabel(String amount);
+
+  /// No description provided for @dailyBudgetTodaySpent.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日已花'**
+  String get dailyBudgetTodaySpent;
+
+  /// No description provided for @dailyBudgetTodayLeft.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日剩余'**
+  String get dailyBudgetTodayLeft;
+
+  /// No description provided for @dailyBudgetTodayOver.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日超支'**
+  String get dailyBudgetTodayOver;
+
+  /// No description provided for @setDailyBudgetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'设置每日预算'**
+  String get setDailyBudgetTitle;
+
+  /// No description provided for @dailyBudgetAmountLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'每日预算金额'**
+  String get dailyBudgetAmountLabel;
+
   /// No description provided for @setCategoryBudgetTitle.
   ///
   /// In zh, this message translates to:

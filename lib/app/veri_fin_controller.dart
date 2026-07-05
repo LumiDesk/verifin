@@ -32,6 +32,7 @@ const Set<String> _knownBackupDataKeys = <String>{
   'recurringRules',
   'monthlyBudgets',
   'categoryBudgets',
+  'dailyBudgets',
   'profile',
   'themePreference',
   'homePanels',
@@ -138,6 +139,8 @@ class VeriFinController extends ChangeNotifier {
   final List<RecurringRule> _recurringRules = <RecurringRule>[];
   final Map<String, double> _monthlyBudgets = <String, double>{};
   final Map<String, double> _categoryBudgets = <String, double>{};
+  // 按日预算：每个账本一条「每日花销上限」，键为 bookId、值为金额（适用于每一天）。
+  final Map<String, double> _dailyBudgets = <String, double>{};
   final Set<String> _collapsedAssetSections = <String>{};
   final Map<String, List<String>> _assetAccountOrders =
       <String, List<String>>{};
@@ -509,6 +512,21 @@ class VeriFinController extends ChangeNotifier {
       _categoryBudgets[key] = amount;
     }
     _persistCategoryBudgets();
+    notifyListeners();
+  }
+
+  /// 当前账本的每日花销上限（0 表示未设置）。
+  double dailyBudget() {
+    return _dailyBudgets[_activeBookId] ?? 0;
+  }
+
+  void setDailyBudget(double amount) {
+    if (amount <= 0) {
+      _dailyBudgets.remove(_activeBookId);
+    } else {
+      _dailyBudgets[_activeBookId] = amount;
+    }
+    _persistDailyBudgets();
     notifyListeners();
   }
 
@@ -989,6 +1007,7 @@ class VeriFinController extends ChangeNotifier {
     _assetSectionOrders.removeWhere((key, _) => key.startsWith('$bookId:'));
     _monthlyBudgets.removeWhere((key, _) => key.startsWith('$bookId:'));
     _categoryBudgets.removeWhere((key, _) => key.startsWith('$bookId:'));
+    _dailyBudgets.remove(bookId);
     if (_activeBookId == bookId) {
       _activeBookId = defaultLedgerBookId;
       _store.write(_activeBookKey, _activeBookId);
@@ -1006,6 +1025,7 @@ class VeriFinController extends ChangeNotifier {
     _persistAssetSectionOrders();
     _persistBudgets();
     _persistCategoryBudgets();
+    _persistDailyBudgets();
     notifyListeners();
     return true;
   }
@@ -1527,6 +1547,7 @@ class VeriFinController extends ChangeNotifier {
     _recurringRules.clear();
     _monthlyBudgets.clear();
     _categoryBudgets.clear();
+    _dailyBudgets.clear();
     _profile = _seedProfile;
     _themePreference = ThemePreference.system;
     _activeBookId = defaultLedgerBookId;
@@ -1550,6 +1571,7 @@ class VeriFinController extends ChangeNotifier {
     _persistRecurringRules();
     _persistBudgets();
     _persistCategoryBudgets();
+    _persistDailyBudgets();
     themePreferenceListenable.value = _themePreference;
     notifyListeners();
   }
@@ -1571,6 +1593,7 @@ class VeriFinController extends ChangeNotifier {
         'recurringRules': _recurringRules.map((r) => r.toJson()).toList(),
         'monthlyBudgets': Map<String, double>.from(_monthlyBudgets),
         'categoryBudgets': Map<String, double>.from(_categoryBudgets),
+        'dailyBudgets': Map<String, double>.from(_dailyBudgets),
         'profile': _profile.toJson(),
         'themePreference': _themePreference.name,
         'assetCoverUrl': _assetCoverUrl,
@@ -1680,6 +1703,8 @@ class VeriFinController extends ChangeNotifier {
     final nextCategoryBudgets = _bookScopedBudgets(
       _decodeBudgets(data['categoryBudgets']),
     );
+    // 按日预算键是纯 bookId（无日期前缀），无需 _bookScopedBudgets 迁移。
+    final nextDailyBudgets = _decodeBudgets(data['dailyBudgets']);
 
     final profileValue = data['profile'];
     final nextProfile = profileValue is Map
@@ -1750,6 +1775,9 @@ class VeriFinController extends ChangeNotifier {
     _categoryBudgets
       ..clear()
       ..addAll(nextCategoryBudgets);
+    _dailyBudgets
+      ..clear()
+      ..addAll(nextDailyBudgets);
     _profile = nextProfile;
     _themePreference = nextThemePreference;
     _assetCoverUrl = nextAssetCoverUrl;
@@ -1778,6 +1806,7 @@ class VeriFinController extends ChangeNotifier {
     _persistRecurringRules();
     _persistBudgets();
     _persistCategoryBudgets();
+    _persistDailyBudgets();
     _store.write(_profileKey, jsonEncode(_profile.toJson()));
     _store.write(_themeKey, _themePreference.name);
     _store.write(_hapticsKey, _hapticsEnabled.toString());
@@ -1897,6 +1926,9 @@ class VeriFinController extends ChangeNotifier {
     _categoryBudgets
       ..clear()
       ..addAll(_bookScopedBudgets(await _repository.loadCategoryBudgets()));
+    _dailyBudgets
+      ..clear()
+      ..addAll(await _repository.loadDailyBudgets());
     notifyListeners();
   }
 
@@ -2040,6 +2072,12 @@ class VeriFinController extends ChangeNotifier {
   void _persistCategoryBudgets() {
     _trackWrite(
       _repository.saveCategoryBudgets(Map<String, double>.of(_categoryBudgets)),
+    );
+  }
+
+  void _persistDailyBudgets() {
+    _trackWrite(
+      _repository.saveDailyBudgets(Map<String, double>.of(_dailyBudgets)),
     );
   }
 

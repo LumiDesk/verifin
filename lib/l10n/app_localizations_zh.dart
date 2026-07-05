@@ -1129,6 +1129,32 @@ class AppLocalizationsZh extends AppLocalizations {
   String get monthBudgetAmountLabel => '月份预算金额';
 
   @override
+  String get dailyBudgetTitle => '按日预算';
+
+  @override
+  String get dailyBudgetNotSet => '未设置每日上限，点击设置';
+
+  @override
+  String dailyBudgetLimitLabel(String amount) {
+    return '每日上限 $amount';
+  }
+
+  @override
+  String get dailyBudgetTodaySpent => '今日已花';
+
+  @override
+  String get dailyBudgetTodayLeft => '今日剩余';
+
+  @override
+  String get dailyBudgetTodayOver => '今日超支';
+
+  @override
+  String get setDailyBudgetTitle => '设置每日预算';
+
+  @override
+  String get dailyBudgetAmountLabel => '每日预算金额';
+
+  @override
   String setCategoryBudgetTitle(String category) {
     return '设置$category预算';
   }

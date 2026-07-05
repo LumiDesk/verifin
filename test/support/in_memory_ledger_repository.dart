@@ -17,6 +17,7 @@ class InMemoryLedgerRepository implements LedgerRepository {
   List<RecurringRule> _recurringRules = <RecurringRule>[];
   Map<String, double> _monthlyBudgets = <String, double>{};
   Map<String, double> _categoryBudgets = <String, double>{};
+  Map<String, double> _dailyBudgets = <String, double>{};
 
   @override
   Future<List<LedgerEntry>> loadEntries() async =>
@@ -103,6 +104,15 @@ class InMemoryLedgerRepository implements LedgerRepository {
   @override
   Future<void> saveCategoryBudgets(Map<String, double> budgets) async {
     _categoryBudgets = Map<String, double>.of(budgets);
+  }
+
+  @override
+  Future<Map<String, double>> loadDailyBudgets() async =>
+      Map<String, double>.of(_dailyBudgets);
+
+  @override
+  Future<void> saveDailyBudgets(Map<String, double> budgets) async {
+    _dailyBudgets = Map<String, double>.of(budgets);
   }
 
   @override
