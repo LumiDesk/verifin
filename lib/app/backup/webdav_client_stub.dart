@@ -28,6 +28,10 @@ Future<List<WebdavRemoteFile>> webdavList(WebdavConfig config) async {
   throw const WebdavException('当前平台不支持 WebDAV');
 }
 
+Future<void> webdavDelete(WebdavConfig config, String href) async {
+  throw const WebdavException('当前平台不支持 WebDAV');
+}
+
 Future<Uint8List> webdavDownload(WebdavConfig config, String href) async {
   throw const WebdavException('当前平台不支持 WebDAV');
 }

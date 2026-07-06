@@ -116,6 +116,15 @@ class BackupService {
       now: now,
       auto: true,
     );
+    return writeAutoBackupPrepared(settings: settings, prepared: prepared);
+  }
+
+  /// 用已准备好的备份内容写入自动备份并清理旧文件——供协调器把同一份 [PreparedBackup]
+  /// 同时用于本地与 WebDAV，避免重复导出/加密（加密时 PBKDF2 很贵）。
+  static Future<BackupWriteResult> writeAutoBackupPrepared({
+    required BackupSettings settings,
+    required PreparedBackup prepared,
+  }) async {
     final uri = await writeBackupBytesFile(
       directoryUri: settings.directoryUri,
       filename: prepared.filename,

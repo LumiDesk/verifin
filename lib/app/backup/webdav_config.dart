@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'backup_settings.dart';
+
 /// WebDAV 服务器配置。密码明文存本机 KV（与备份加密口令同等信任边界）。
 class WebdavConfig {
   const WebdavConfig({
@@ -94,6 +96,28 @@ String normalizeCollectionUrl(String url) {
 /// 拼接集合 URL 与文件名，得到文件的完整 URL。
 String joinWebdavUrl(String collectionUrl, String filename) {
   return '${normalizeCollectionUrl(collectionUrl)}${Uri.encodeComponent(filename)}';
+}
+
+/// 从 WebDAV 文件列表挑出应删除的旧自动备份（只处理 [autoBackupFilePrefix] 前缀，
+/// 按修改时间倒序保留最新 [retention] 份）。`modifiedAt` 为 null 的排在最后、优先删。
+List<WebdavRemoteFile> webdavAutoBackupsToPrune(
+  List<WebdavRemoteFile> files,
+  int retention,
+) {
+  final autoFiles =
+      files.where((f) => f.name.startsWith(autoBackupFilePrefix)).toList()
+        ..sort((a, b) {
+          final am = a.modifiedAt;
+          final bm = b.modifiedAt;
+          if (am == null && bm == null) return 0;
+          if (am == null) return 1;
+          if (bm == null) return -1;
+          return bm.compareTo(am);
+        });
+  if (retention < 1 || autoFiles.length <= retention) {
+    return const <WebdavRemoteFile>[];
+  }
+  return autoFiles.sublist(retention);
 }
 
 String _stripTag(String inner, String localName) {

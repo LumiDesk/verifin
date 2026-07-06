@@ -1,6 +1,7 @@
 import '../veri_fin_controller.dart';
 import 'backup_service.dart';
 import 'webdav_client.dart';
+import 'webdav_config.dart';
 
 /// 自动备份协调器：在应用打开与记账后按配置触发自动备份。真正的文件 I/O 在
 /// [BackupService]（条件导入存储端口）；控制器只提供配置与数据，不做 I/O。
@@ -41,7 +42,8 @@ class BackupCoordinator {
     _running = true;
     var anySucceeded = false;
     try {
-      // 准备一次备份内容（未加密→zip、加密→文本信封），本地与 WebDAV 共用同一份。
+      // 只准备一次备份内容（未加密→zip、加密→文本信封），本地与 WebDAV 共用同一份，
+      // 避免重复导出/加密（加密时 PBKDF2 迭代很贵）。
       final prepared = await BackupService.prepare(
         json: controller.exportDataJson(),
         passphrase: controller.backupPassphrase,
@@ -50,11 +52,9 @@ class BackupCoordinator {
       );
       if (toLocal) {
         try {
-          await BackupService.writeAutoBackup(
+          await BackupService.writeAutoBackupPrepared(
             settings: settings,
-            content: controller.exportDataJson(),
-            now: now,
-            passphrase: controller.backupPassphrase,
+            prepared: prepared,
           );
           anySucceeded = true;
         } catch (_) {
@@ -65,6 +65,8 @@ class BackupCoordinator {
         try {
           await webdavUpload(webdav, prepared.filename, prepared.bytes);
           anySucceeded = true;
+          // 与本地一致：按保留份数清理远端旧的自动备份，避免无限累积。
+          await _pruneWebdav(webdav, settings.retention);
         } catch (_) {
           // WebDAV 失败静默。
         }
@@ -76,6 +78,18 @@ class BackupCoordinator {
       // 兜底：任何未预期错误都不打断用户操作。
     } finally {
       _running = false;
+    }
+  }
+
+  /// 清理 WebDAV 上超出保留份数的旧自动备份。尽力而为，失败不影响备份主流程。
+  static Future<void> _pruneWebdav(WebdavConfig webdav, int retention) async {
+    try {
+      final files = await webdavList(webdav);
+      for (final file in webdavAutoBackupsToPrune(files, retention)) {
+        await webdavDelete(webdav, file.href);
+      }
+    } catch (_) {
+      // 清理失败静默。
     }
   }
 }

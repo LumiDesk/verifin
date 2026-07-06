@@ -180,6 +180,28 @@ Future<List<WebdavRemoteFile>> webdavList(WebdavConfig config) async {
   }
 }
 
+Future<void> webdavDelete(WebdavConfig config, String href) async {
+  final client = HttpClient();
+  try {
+    final request = await _open(
+      client,
+      'DELETE',
+      _resolveHref(config, href),
+      config,
+    );
+    final response = await request.close();
+    await response.drain<void>();
+    // 404 视为已删除，其余 4xx/5xx 报错。
+    if (response.statusCode >= 400 && response.statusCode != 404) {
+      throw WebdavException(_statusMessage(response.statusCode));
+    }
+  } catch (error) {
+    _fail(error);
+  } finally {
+    client.close(force: true);
+  }
+}
+
 Future<Uint8List> webdavDownload(WebdavConfig config, String href) async {
   final client = HttpClient();
   try {

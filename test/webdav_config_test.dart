@@ -7,6 +7,50 @@ import 'support/test_harness.dart';
 void main() {
   useTestDatabases();
 
+  group('webdavAutoBackupsToPrune', () {
+    WebdavRemoteFile file(String name, int day) => WebdavRemoteFile(
+      href: '/dav/$name',
+      name: name,
+      modifiedAt: DateTime(2026, 1, day),
+      sizeBytes: 100,
+    );
+
+    test('只保留最新 N 份自动备份，删掉更旧的', () {
+      final files = <WebdavRemoteFile>[
+        file('verifin-auto-20260101-000000.zip', 1),
+        file('verifin-auto-20260103-000000.zip', 3),
+        file('verifin-auto-20260102-000000.zip', 2),
+      ];
+      final prune = webdavAutoBackupsToPrune(files, 2);
+      expect(prune.map((f) => f.name), <String>[
+        'verifin-auto-20260101-000000.zip',
+      ]);
+    });
+
+    test('手动导出不参与清理', () {
+      final files = <WebdavRemoteFile>[
+        file('verifin-backup-20260101-000000.zip', 1),
+        file('verifin-backup-20260102-000000.zip', 2),
+        file('verifin-auto-20260103-000000.zip', 3),
+      ];
+      expect(webdavAutoBackupsToPrune(files, 1), isEmpty);
+    });
+
+    test('modifiedAt 为 null 的优先被删', () {
+      final files = <WebdavRemoteFile>[
+        file('verifin-auto-20260103-000000.zip', 3),
+        const WebdavRemoteFile(
+          href: '/dav/verifin-auto-old.zip',
+          name: 'verifin-auto-old.zip',
+          modifiedAt: null,
+          sizeBytes: 100,
+        ),
+      ];
+      final prune = webdavAutoBackupsToPrune(files, 1);
+      expect(prune.single.name, 'verifin-auto-old.zip');
+    });
+  });
+
   group('WebdavConfig', () {
     test('encode/decode 往返', () {
       const config = WebdavConfig(
