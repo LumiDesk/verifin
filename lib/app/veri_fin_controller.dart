@@ -357,7 +357,11 @@ class VeriFinController extends ChangeNotifier {
         generated += 1;
       }
       _recurringRules[i] = rule.copyWith(
-        nextRunDate: advanceRecurring(dueDates.last, rule.frequency),
+        nextRunDate: advanceRecurring(
+          dueDates.last,
+          rule.frequency,
+          anchorDay: rule.startDate.day,
+        ),
       );
       rulesChanged = true;
     }

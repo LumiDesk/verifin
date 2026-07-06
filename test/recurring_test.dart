@@ -68,6 +68,53 @@ void main() {
     expect(dueDatesFor(inactive, DateTime(2026, 7, 15)), isEmpty);
   });
 
+  test('月末锚定：31 号规则不随短月永久漂移', () {
+    // 锚定 1/31，逐月应为 1/31、2/28、3/31、4/30、5/31、6/30，而非锁死在 28。
+    final rule = _rule(
+      freq: RecurringFrequency.monthly,
+      start: DateTime(2026, 1, 31),
+    );
+    final due = dueDatesFor(rule, DateTime(2026, 7, 15));
+    expect(due, <DateTime>[
+      DateTime(2026, 1, 31),
+      DateTime(2026, 2, 28),
+      DateTime(2026, 3, 31),
+      DateTime(2026, 4, 30),
+      DateTime(2026, 5, 31),
+      DateTime(2026, 6, 30),
+    ]);
+  });
+
+  test('月末锚定：即使 nextRunDate 已被收缩到 28 也能回到 31', () {
+    // 模拟历史遗留：nextRunDate 停在 2/28，但锚定日仍是 31。
+    final rule = _rule(
+      freq: RecurringFrequency.monthly,
+      start: DateTime(2026, 1, 31),
+      next: DateTime(2026, 2, 28),
+    );
+    final due = dueDatesFor(rule, DateTime(2026, 5, 1));
+    expect(due, <DateTime>[
+      DateTime(2026, 2, 28),
+      DateTime(2026, 3, 31),
+      DateTime(2026, 4, 30),
+    ]);
+  });
+
+  test('年度锚定：2/29 规则闰年回到 29', () {
+    final rule = _rule(
+      freq: RecurringFrequency.yearly,
+      start: DateTime(2024, 2, 29),
+    );
+    final due = dueDatesFor(rule, DateTime(2028, 3, 1));
+    expect(due, <DateTime>[
+      DateTime(2024, 2, 29),
+      DateTime(2025, 2, 28),
+      DateTime(2026, 2, 28),
+      DateTime(2027, 2, 28),
+      DateTime(2028, 2, 29),
+    ]);
+  });
+
   test('applyDueRecurring 补记交易并推进 nextRunDate', () async {
     final controller = await makeController();
     final now = DateTime(2026, 7, 15);
