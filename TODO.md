@@ -31,10 +31,7 @@
   - **AI 模块** `lib/app/ai/`：`ai_settings.dart` 值类；`ai_client.dart`（facade/io/stub 条件导入，`dart:io HttpClient` POST `{baseUrl}/chat/completions` + `Authorization: Bearer`，带超时，与 WebDAV 同款约定）；`ai_entry_parser.dart` 纯函数——把当前账本分类（按类型）、账户、今天日期喂给模型，要求严格 JSON，解析后**校验所有 id**（未命中降级 + 提示码），产出 `AiEntryDraft`。
   - **确认落账**：FAB 为 AI 模式时弹自然语言输入框（`ai_entry_sheet.dart`，附隐私提示），解析成草稿后 push 到 `EntryDetailPage`（新增 `initialDraft` 预填 + 复核提示条）由用户确认/修改再保存，AI 不直接落账。类型/金额/分类/账户/备注/日期均可被识别。未配置时引导去设置。
   - 已处理：解析容错（代码块/多余文字提取 JSON、金额为字符串/负数、相对日期）、落账前确认、隐私提示、i18n（zh+en）；Android 开启 `usesCleartextTraffic` 支持本地/自建 `http://` 端点（局域网 Ollama / LM Studio 等）。**语音输入有意不做**：主流输入法自带听写（语音转文字），用户可直接对着 AI 输入框说话，无需引入麦克风权限与 STT 依赖。
-- [ ] **7.5 自动记账（呼声最高）**：**方案已定，待真实样例开工**，完整方案见 [docs/dev/7.5-auto-capture-assessment.md](docs/dev/7.5-auto-capture-assessment.md)。要点：① 本应用不上架 Google Play（只经 GitHub Releases 分发），Play 政策审核风险不成立，剩余约束是用户信任 / 版面文案脆弱性 / 微信支付宝 ToS；② **双通道纯 opt-in**——入口「我的/设置 → 自动记账」独立页，**默认全关**，页内选监听方式；调研结论：半自动是行业共识（没人自动落账）、NLS 与无障碍分工互补（支付宝/银行通知带金额靠 NLS，微信通知不带金额需无障碍读支付成功页）、最大工程坑是国产 ROM 保活（需前台服务+常驻通知+电池白名单/自启动引导）、连钱迹都长期拒做（「监控屏幕太激进」）；③ 红线：一律产 `AiEntryDraft` 交 `EntryDetailPage(initialDraft:)` 确认、**绝不自动落账**，无障碍只读不操作、`packageNames` 严格限定；④ **解析改用 AI（必需），不写按银行/App 正则**——原生只捕获原始文本入队，开屏 drain 时批量喂 AI（复用 7.4，加 `isTransaction` 过滤噪音）；自动记账开关以「已配 AI」为硬门槛，主推本地 Ollama/LM Studio（文本不出设备），云端 Key 按量计费需告知，AI 失败存「待解析」草稿兜底；⑤ **砍掉截屏方案**（有这两条不需要）。开工前置：收集支付宝/银行真实通知与微信支付成功页节点文本样例，用于打磨 AI 提示词与测试（禁编造格式）。短期仍用 7.2 导入 + 7.4 AI 组合覆盖大部分「自动」体验。
-  - **7.5a** NLS 通知监听 —— **Dart 层 + 原生已实现，待真机验收**：`lib/app/auto_capture/*`（`AutoCaptureSettings`/前置过滤/AI 通知解析 `isTransaction`/管线/服务）+ 设置页 `AutoCaptureSettingsPage`（Alpha 提示、AI 未配置引导、来源白名单/监听全部、常驻通知文案、隐私说明）+ 原生 `PaymentNotificationListenerService`/`AutoCaptureBridge` + `verifin/app` 通道。**解析改用 AI 必需，不写正则**；**确认后落账**（回前台弹记账页预填草稿，用户确认才保存，不静默入账；到账/收款→收入）。**未做**：真机验收暴露的保活（App 被划掉即停，需前台服务）与「悬浮窗即时确认」（见 7.5a-2）
-  - **7.5a-2** 悬浮窗即时确认（**验证地基后做**）：付款通知 → 后台 AI 解析 → **悬浮卡片盖在其他 App 上**弹出确认（金额/分类/账户 + 确认/忽略）→ 确认入队 → 主 App 落账。需 `SYSTEM_ALERT_WINDOW` 权限 + 后台 Dart 引擎 + 大概率引入 `flutter_overlay_window`（架构：悬浮 isolate 只管 AI+卡片+入队，写库仍由主 App 做，避开多 isolate 写库）。**用户选悬浮窗方案（非通知式），取代当前「后台自动落账」为「弹窗确认」**——当前后台自动落账仅为地基验证的过渡形态
-  - **7.5b** 无障碍补微信（`AccessibilityService` 读支付成功页 + 前台服务常驻通知保活 + 各 ROM 保活引导），opt-in、后做
+- [ ] **7.5 通知/屏幕自动识别记账（呼声最高，需仔细评估）**：读取支付通知或无障碍识别屏幕自动生成记录。**用户里想要的人最多，但风险也最高**：无障碍/通知监听权限敏感（Android 13+ 审核严）、依赖各 App 界面文案易失效、触碰微信/支付宝服务条款。先做可行性与合规评估，再决定是否/如何落地；短期可用 7.2 导入 + 7.4 AI 记账组合在合规前提下覆盖大部分「自动」体验。
 - [ ] **7.6 Obsidian / Markdown 联动（最不着急）**：把数据导出为 Markdown / 写入 vault，在 Obsidian 内查看记录。契合「数据自主」，但受众偏小众，优先级最低。
 
 > 规划思路：7.1/7.2/7.3 是「快赢」（成本低、合规、命中高频痛点），优先推进；7.4 是差异化亮点；7.5 是最高呼声但需谨慎评估；7.6 长期特色。整体方向仍需继续打磨——「怎么把这个软件做得更好」是后续持续思考的主题。
@@ -43,7 +40,6 @@
 
 - 错误消息本地化收尾：WebDAV 连接/恢复失败、平台桥接（检查更新下载、SAF 读写）与备份加解密的异常消息目前为中文（无 BuildContext 场景），如需彻底英文化可改为错误码 + UI 侧 l10n 映射
 - 结构重构候选（5.6 评估结论：结构健康，非必须）：part 拆分 `veri_fin_controller`、抽通用确认弹窗、拆分 `profile_pages`
-- 截屏记账磁贴 / MediaProjection OCR（7.5 已改双通道 NLS + 无障碍方案，截屏方案不做——有这两条即可覆盖，见 [docs/dev/7.5-auto-capture-assessment.md](docs/dev/7.5-auto-capture-assessment.md)）
 - 借贷管理（借入/借出、应收应付、分期）
 - 小票 OCR（语音/自然语言记账已归入阶段 7.4 AI 对话记账）
 - iOS 构建与发布（暂无开发者账号）

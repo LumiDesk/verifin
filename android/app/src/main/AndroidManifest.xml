@@ -66,17 +66,6 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/quick_entry_widget_info" />
         </receiver>
-        <!-- 自动记账（Alpha）：通知监听服务。用户在系统「通知使用权」中授权后由系统绑定，
-             只读支付/银行通知原文交给 AI 解析，不做任何界面抓取或自动操作。 -->
-        <service
-            android:name=".PaymentNotificationListenerService"
-            android:exported="false"
-            android:label="VeriFin 自动记账"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
-            <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService" />
-            </intent-filter>
-        </service>
         <!-- flutter_local_notifications 定时通知的接收器；开机后重排已安排的记账提醒。 -->
         <receiver
             android:exported="false"

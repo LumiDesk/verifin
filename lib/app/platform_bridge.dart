@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -246,94 +244,6 @@ class AppPlatformBridge {
       throw Exception('当前平台不支持读取备份文件。');
     } on PlatformException catch (error) {
       throw Exception(error.message ?? '读取备份文件失败，请稍后再试。');
-    }
-  }
-
-  /// 把自动记账配置推送到原生（通知监听服务据此过滤 + 维护常驻通知）。
-  /// 非 Android 平台静默忽略。
-  static Future<void> setAutoCaptureConfig({
-    required bool enabled,
-    required bool listenAll,
-    required String packages,
-    required String idleText,
-    required String detectingText,
-    required String doneText,
-  }) async {
-    try {
-      await _channel.invokeMethod<void>('setAutoCaptureConfig', {
-        'enabled': enabled,
-        'listenAll': listenAll,
-        'packages': packages,
-        'idleText': idleText,
-        'detectingText': detectingText,
-        'doneText': doneText,
-      });
-    } on MissingPluginException {
-      // 非 Android 平台没有通知监听。
-    } on PlatformException {
-      // 配置推送失败不影响主流程。
-    }
-  }
-
-  /// 取出并清空原生捕获队列，返回每条 `{packageName, text, postedAt}`。
-  static Future<List<Map<String, Object?>>> drainAutoCaptureQueue() async {
-    try {
-      final json = await _channel.invokeMethod<String>('drainAutoCaptureQueue');
-      if (json == null || json.isEmpty) {
-        return const <Map<String, Object?>>[];
-      }
-      final decoded = jsonDecode(json);
-      if (decoded is List) {
-        return decoded
-            .whereType<Map<dynamic, dynamic>>()
-            .map((e) => Map<String, Object?>.from(e))
-            .toList();
-      }
-      return const <Map<String, Object?>>[];
-    } on MissingPluginException {
-      return const <Map<String, Object?>>[];
-    } on PlatformException {
-      return const <Map<String, Object?>>[];
-    }
-  }
-
-  /// 更新常驻通知状态（idle/detecting/done），done 可带金额替换 `{amount}` 占位。
-  static Future<void> setAutoCaptureState(
-    String state, {
-    String? amount,
-  }) async {
-    try {
-      await _channel.invokeMethod<void>('setAutoCaptureState', {
-        'state': state,
-        'amount': amount,
-      });
-    } on MissingPluginException {
-      // 非 Android 平台忽略。
-    } on PlatformException {
-      // 忽略。
-    }
-  }
-
-  /// 是否已授予「通知使用权」（通知监听）。
-  static Future<bool> isNotificationAccessGranted() async {
-    try {
-      return await _channel.invokeMethod<bool>('isNotificationAccessGranted') ??
-          false;
-    } on MissingPluginException {
-      return false;
-    } on PlatformException {
-      return false;
-    }
-  }
-
-  /// 打开系统「通知使用权」设置页，让用户授予本应用权限。
-  static Future<void> openNotificationAccessSettings() async {
-    try {
-      await _channel.invokeMethod<void>('openNotificationAccessSettings');
-    } on MissingPluginException {
-      // 非 Android 平台忽略。
-    } on PlatformException {
-      // 忽略。
     }
   }
 

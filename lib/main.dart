@@ -1,10 +1,8 @@
-import 'dart:async' show unawaited;
 import 'dart:ui' show PlatformDispatcher;
 
 import 'package:flutter/material.dart';
 
 import 'app/app_theme.dart';
-import 'app/auto_capture/auto_capture_service.dart';
 import 'app/backup/backup_coordinator.dart';
 import 'app/home_widget_service.dart';
 import 'app/l10n_outside_context.dart';
@@ -18,7 +16,6 @@ import 'data/ledger_repository.dart';
 import 'l10n/app_localizations.dart';
 import 'local_storage/local_storage.dart';
 import 'pages/app_lock_gate.dart';
-import 'pages/entry_detail_page.dart';
 import 'pages/privacy_consent_gate.dart';
 import 'pages/shell.dart';
 
@@ -51,9 +48,6 @@ class VeriFinApp extends StatefulWidget {
 class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
   late final VeriFinController _controller = widget.controller;
   final NotificationScheduler _notifications = NotificationScheduler();
-  late final AutoCaptureService _autoCapture = AutoCaptureService(_controller);
-  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
-  bool _confirmingAutoCapture = false;
 
   @override
   void initState() {
@@ -63,8 +57,6 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
     _controller.onEntryAdded = _handleEntryAdded;
     // 记账提醒：配置变化时重排本地通知，开屏按当前配置对齐一次。
     _controller.onReminderChanged = _handleReminderChanged;
-    // 自动记账：配置变化时把配置推送到原生 NLS。
-    _controller.onAutoCaptureChanged = _handleAutoCaptureChanged;
     _notifications.apply(
       _controller.reminderSettings,
       l10n: l10nForPreference(_controller.localePreference),
@@ -72,57 +64,6 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
     BackupCoordinator.maybeBackupOnOpen(_controller);
     // 打开应用时刷新桌面小组件「今日支出」。
     pushTodayExpenseToWidget(_controller);
-    // 自动记账：推送配置并处理后台捕获的通知队列。首帧后再跑，确保导航器就绪可弹确认页。
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        unawaited(_syncAutoCapture());
-      }
-    });
-  }
-
-  void _handleAutoCaptureChanged() {
-    unawaited(_pushAutoCaptureConfig());
-  }
-
-  Future<void> _pushAutoCaptureConfig() {
-    final l10n = l10nForPreference(_controller.localePreference);
-    return _autoCapture.pushConfig(
-      idleDefault: l10n.autoCaptureNotifIdleDefault,
-      detectingDefault: l10n.autoCaptureNotifDetectingDefault,
-      doneDefault: l10n.autoCaptureNotifDoneDefault,
-    );
-  }
-
-  Future<void> _syncAutoCapture() async {
-    await _pushAutoCaptureConfig();
-    // 导航器未就绪（冷启动首帧前）或已在展示确认页时不 drain——避免清空队列却无法弹确认页丢草稿。
-    if (_confirmingAutoCapture || _navigatorKey.currentState == null) {
-      return;
-    }
-    final drafts = await _autoCapture.drainAndProcess();
-    if (drafts.isEmpty || !mounted) {
-      return;
-    }
-    _confirmingAutoCapture = true;
-    try {
-      for (final draft in drafts) {
-        final navigator = _navigatorKey.currentState;
-        if (navigator == null) {
-          break;
-        }
-        // 逐条弹出记账页（预填 AI 草稿）由用户确认/修改后保存——不静默落账。
-        await navigator.push<void>(
-          MaterialPageRoute<void>(
-            builder: (_) => EntryDetailPage(
-              initialAmount: draft.amount,
-              initialDraft: draft,
-            ),
-          ),
-        );
-      }
-    } finally {
-      _confirmingAutoCapture = false;
-    }
   }
 
   void _handleEntryAdded() {
@@ -143,8 +84,6 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
       _controller.applyDueRecurring(DateTime.now());
       BackupCoordinator.maybeBackupOnOpen(_controller);
       pushTodayExpenseToWidget(_controller);
-      // 回前台：处理后台捕获的支付通知（AI 解析并落账）。
-      unawaited(_syncAutoCapture());
     }
   }
 
@@ -156,9 +95,6 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
     }
     if (_controller.onReminderChanged == _handleReminderChanged) {
       _controller.onReminderChanged = null;
-    }
-    if (_controller.onAutoCaptureChanged == _handleAutoCaptureChanged) {
-      _controller.onAutoCaptureChanged = null;
     }
     _controller.dispose();
     super.dispose();
@@ -175,7 +111,6 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
             valueListenable: _controller.localePreferenceListenable,
             builder: (context, localePreference, _) {
               return MaterialApp(
-                navigatorKey: _navigatorKey,
                 onGenerateTitle: (context) =>
                     AppLocalizations.of(context).appTitle,
                 debugShowCheckedModeBanner: false,

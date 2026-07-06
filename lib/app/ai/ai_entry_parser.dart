@@ -57,7 +57,6 @@ class AiEntryDraft {
     required this.note,
     required this.occurredAt,
     this.warnings = const <AiDraftWarning>[],
-    this.isTransaction = true,
   });
 
   final EntryType type;
@@ -72,10 +71,6 @@ class AiEntryDraft {
 
   /// 解析过程中的降级提示（如分类未识别已用默认），供 UI 本地化展示，不阻断落账。
   final List<AiDraftWarning> warnings;
-
-  /// 是否是一笔真实交易。手动/对话记账恒为 true；通知自动记账时由 AI 判断——
-  /// 通知可能是营销/系统提示等非交易内容，此时为 false，调用方应丢弃、不落账。
-  final bool isTransaction;
 }
 
 String _dateKey(DateTime date) {
@@ -261,103 +256,4 @@ Future<AiEntryDraft> requestAiEntryDraft({
     userPrompt: input.trim(),
   );
   return parseAiEntryDraft(content, context);
-}
-
-/// 构造「通知/账单文本 → 交易」的系统提示词。与 [buildAiEntryPrompt] 的差别：
-/// 输入是一条支付/银行通知原文（可能并非交易），要求模型先判断 `isTransaction`，
-/// 再按需提取字段。用于自动记账（NLS/无障碍）通道。
-String buildNotificationEntryPrompt(AiEntryContext context) {
-  final base = buildAiEntryPrompt(context);
-  return '''
-$base
-
-补充说明（自动记账场景）：
-- 下面给你的不是用户主动描述，而是一条来自支付/银行 App 的通知原文，可能并不是一笔交易（如营销、活动、系统提示、验证码、聊天消息等）。
-- 先判断它是否是一笔真实的收支或转账。是则 "isTransaction" 为 true 并正常填写各字段；不是则 "isTransaction" 为 false，其余字段可留默认。
-- 收支方向按关键词判断：
-  - **收入（income）**：「收款」「到账」「入账」「转入」「退款」「返现」「工资」「红包到账」「收到」等——钱进账。
-  - **支出（expense）**：「付款」「支出」「消费」「已扣款」「扣费」「支付成功」「购买」等——钱出账。
-  - 拿不准时按字面；「到账/入账」默认按收入处理。
-- 金额只取交易本金：忽略「余额」「可用额度」「积分」等非交易金额；一条通知有多个数字时取表示本次交易的那个。
-- 输出 JSON 需额外包含 "isTransaction" 布尔字段。示例：
-{"isTransaction":true,"type":"expense","amount":12.5,"categoryId":"food","accountId":"","toAccountId":null,"note":"星巴克","date":"${_dateKey(context.today)}"}
-{"isTransaction":true,"type":"income","amount":200,"categoryId":"","accountId":"","toAccountId":null,"note":"银行卡到账","date":"${_dateKey(context.today)}"}
-''';
-}
-
-/// 解析通知自动记账的模型返回：容忍「非交易」（返回 `isTransaction:false` 的草稿，不抛错）。
-/// 判为交易但金额无效时也按「非交易」处理，避免落一笔金额为 0 的脏数据。
-AiEntryDraft parseNotificationEntryDraft(
-  String content,
-  AiEntryContext context,
-) {
-  final json = extractJsonObject(content);
-  if (json == null) {
-    throw AiEntryException(AiEntryError.emptyResult);
-  }
-  final isTransaction = _parseBool(json['isTransaction'], defaultValue: true);
-  if (!isTransaction) {
-    return _notATransaction(context);
-  }
-  final amount = _parseAmount(json['amount']);
-  if (amount <= 0) {
-    return _notATransaction(context);
-  }
-  // 金额有效则复用主解析路径（含 id 校验与降级提示）。
-  final draft = parseAiEntryDraft(content, context);
-  return AiEntryDraft(
-    type: draft.type,
-    amount: draft.amount,
-    categoryId: draft.categoryId,
-    accountId: draft.accountId,
-    toAccountId: draft.toAccountId,
-    note: draft.note,
-    occurredAt: draft.occurredAt,
-    warnings: draft.warnings,
-    isTransaction: true,
-  );
-}
-
-AiEntryDraft _notATransaction(AiEntryContext context) => AiEntryDraft(
-  type: EntryType.expense,
-  amount: 0,
-  categoryId: '',
-  accountId: '',
-  toAccountId: null,
-  note: '',
-  occurredAt: context.today,
-  isTransaction: false,
-);
-
-bool _parseBool(Object? raw, {required bool defaultValue}) {
-  if (raw is bool) {
-    return raw;
-  }
-  if (raw is String) {
-    final value = raw.trim().toLowerCase();
-    if (value == 'true' || value == '是' || value == '1') {
-      return true;
-    }
-    if (value == 'false' || value == '否' || value == '0') {
-      return false;
-    }
-  }
-  if (raw is num) {
-    return raw != 0;
-  }
-  return defaultValue;
-}
-
-/// 发起一次通知自动记账解析：请求 → 解析（含非交易判定）。网络/空结果异常抛 [AiEntryException]。
-Future<AiEntryDraft> requestNotificationEntryDraft({
-  required AiSettings settings,
-  required String notificationText,
-  required AiEntryContext context,
-}) async {
-  final content = await aiChatComplete(
-    settings: settings,
-    systemPrompt: buildNotificationEntryPrompt(context),
-    userPrompt: notificationText.trim(),
-  );
-  return parseNotificationEntryDraft(content, context);
 }

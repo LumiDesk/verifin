@@ -11,7 +11,6 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.provider.Settings
 import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
@@ -98,33 +97,6 @@ class MainActivity : FlutterFragmentActivity() {
                     call.argument<String>("fileUri") ?: "",
                     result,
                 )
-                "setAutoCaptureConfig" -> {
-                    AutoCaptureBridge.writeConfig(
-                        this,
-                        enabled = call.argument<Boolean>("enabled") ?: false,
-                        listenAll = call.argument<Boolean>("listenAll") ?: false,
-                        packagesCsv = call.argument<String>("packages") ?: "",
-                        idleText = call.argument<String>("idleText") ?: "",
-                        detectingText = call.argument<String>("detectingText") ?: "",
-                        doneText = call.argument<String>("doneText") ?: "",
-                    )
-                    result.success(true)
-                }
-                "drainAutoCaptureQueue" -> result.success(AutoCaptureBridge.drain(this))
-                "setAutoCaptureState" -> {
-                    when (call.argument<String>("state")) {
-                        "detecting" -> AutoCaptureBridge.showDetecting(this)
-                        "done" -> AutoCaptureBridge.showDone(this, call.argument<String>("amount"))
-                        else -> AutoCaptureBridge.showIdle(this)
-                    }
-                    result.success(true)
-                }
-                "isNotificationAccessGranted" ->
-                    result.success(isNotificationAccessGranted())
-                "openNotificationAccessSettings" -> {
-                    startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                    result.success(true)
-                }
                 else -> result.notImplemented()
             }
         }
@@ -141,9 +113,6 @@ class MainActivity : FlutterFragmentActivity() {
             }
         }
     }
-
-    private fun isNotificationAccessGranted(): Boolean =
-        NotificationManagerCompat.getEnabledListenerPackages(this).contains(packageName)
 
     private fun rememberQuickEntryIntent(intent: Intent?) {
         if (intent?.action == ACTION_QUICK_ENTRY) {

@@ -78,8 +78,6 @@ void main() {
     expect(find.text('隐私政策'), findsOneWidget);
     expect(find.text('用户协议'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('隐私政策'));
-    await tester.pumpAndSettle();
     await tester.tap(find.text('隐私政策'));
     await tester.pumpAndSettle();
 

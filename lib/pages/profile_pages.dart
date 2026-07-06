@@ -29,7 +29,6 @@ import '../app/series_math.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
 import 'ai_settings_page.dart';
-import 'auto_capture_settings_page.dart';
 import 'app_lock_page.dart';
 import 'report_analysis_page.dart';
 import 'reminder_settings_page.dart';
@@ -1572,24 +1571,6 @@ class SettingsPage extends StatelessWidget {
                         Navigator.of(context).push<void>(
                           MaterialPageRoute<void>(
                             builder: (context) => const AiSettingsPage(),
-                          ),
-                        );
-                      },
-                    ),
-                    const Divider(height: 1),
-                    SettingsRow(
-                      icon: Icons.radar_outlined,
-                      title: AppLocalizations.of(context).autoCaptureTitle,
-                      trailing:
-                          controller.autoCaptureSettings.notificationEnabled
-                          ? AppLocalizations.of(context).autoCaptureOn
-                          : AppLocalizations.of(context).notEnabled,
-                      trailingIcon: Icons.chevron_right,
-                      onTap: () {
-                        Navigator.of(context).push<void>(
-                          MaterialPageRoute<void>(
-                            builder: (context) =>
-                                const AutoCaptureSettingsPage(),
                           ),
                         );
                       },
