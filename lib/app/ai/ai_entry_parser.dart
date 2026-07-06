@@ -149,6 +149,10 @@ Map<String, Object?>? extractJsonObject(String content) {
   return null;
 }
 
+/// 安全取字符串字段：模型可能把本应是字符串的字段返回成数字/布尔/数组，直接
+/// `as String?` 会抛 TypeError。非字符串一律回退空串（后续按「未识别」降级处理）。
+String _parseString(Object? raw) => raw is String ? raw.trim() : '';
+
 EntryType _parseType(Object? raw) {
   final value = raw?.toString().trim().toLowerCase() ?? '';
   switch (value) {
@@ -238,7 +242,7 @@ AiEntryDraft parseAiEntryDraft(String content, AiEntryContext context) {
       ? context.incomeCategories
       : context.expenseCategories;
   final categoryIds = categories.map((o) => o.id).toSet();
-  var categoryId = (json['categoryId'] as String?)?.trim() ?? '';
+  var categoryId = _parseString(json['categoryId']);
   if (categoryId.isEmpty || !categoryIds.contains(categoryId)) {
     if (type == EntryType.transfer) {
       categoryId = '';
@@ -254,7 +258,7 @@ AiEntryDraft parseAiEntryDraft(String content, AiEntryContext context) {
   }
 
   final accountIds = context.accounts.map((o) => o.id).toSet();
-  var accountId = (json['accountId'] as String?)?.trim() ?? '';
+  var accountId = _parseString(json['accountId']);
   if (accountId.isNotEmpty && !accountIds.contains(accountId)) {
     warnings.add(AiDraftWarning.accountUnmatched);
     accountId = '';
@@ -262,11 +266,11 @@ AiEntryDraft parseAiEntryDraft(String content, AiEntryContext context) {
 
   String? toAccountId;
   if (type == EntryType.transfer) {
-    final raw = (json['toAccountId'] as String?)?.trim() ?? '';
+    final raw = _parseString(json['toAccountId']);
     toAccountId = (raw.isNotEmpty && accountIds.contains(raw)) ? raw : null;
   }
 
-  final note = (json['note'] as String?)?.trim() ?? '';
+  final note = _parseString(json['note']);
   final occurredAt = _resolveOccurredAt(
     json['date'],
     json['time'],

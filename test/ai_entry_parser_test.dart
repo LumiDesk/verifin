@@ -65,6 +65,22 @@ void main() {
       expect(draft.warnings, isEmpty);
     });
 
+    test('模型把字符串字段返回成数字/数组时不崩溃，降级为未识别', () {
+      // categoryId 返回数字、accountId 返回数组、note 返回布尔——旧代码 as String? 会抛。
+      final draft = parseAiEntryDraft(
+        '{"type":"expense","amount":20,"categoryId":5,'
+        '"accountId":["cash"],"note":true}',
+        _context(),
+      );
+      expect(draft.amount, 20);
+      // 非法 categoryId 降级到第一个支出分类。
+      expect(draft.categoryId, 'dining');
+      // 非法 accountId 视为空（无账户）。
+      expect(draft.accountId, '');
+      // 非法 note 视为空串。
+      expect(draft.note, '');
+    });
+
     test('income picks from income categories', () {
       final draft = parseAiEntryDraft(
         '{"type":"income","amount":8000,"categoryId":"salary","accountId":"card"}',
