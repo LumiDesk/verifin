@@ -265,6 +265,10 @@
   "attachDeleteTooltip": "Remove this image",
   "entryDetailSubtitle": "Entry detail",
   "commonCategory": "Category",
+  "categoryAutoSuggested": "Auto-suggested",
+  "@categoryAutoSuggested": {
+    "description": "Hint shown next to the category header when the category was auto-suggested from history"
+  },
   "allLabel": "All",
   "transferOutAccount": "From account",
   "transferInAccount": "To account",

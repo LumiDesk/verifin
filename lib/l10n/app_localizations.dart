@@ -1580,6 +1580,12 @@ abstract class AppLocalizations {
   /// **'分类'**
   String get commonCategory;
 
+  /// Hint shown next to the category header when the category was auto-suggested from history
+  ///
+  /// In zh, this message translates to:
+  /// **'已自动推荐'**
+  String get categoryAutoSuggested;
+
   /// No description provided for @allLabel.
   ///
   /// In zh, this message translates to:

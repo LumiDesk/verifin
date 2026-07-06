@@ -514,6 +514,10 @@
   "attachDeleteTooltip": "删除这张",
   "entryDetailSubtitle": "记账详情",
   "commonCategory": "分类",
+  "categoryAutoSuggested": "已自动推荐",
+  "@categoryAutoSuggested": {
+    "description": "Hint shown next to the category header when the category was auto-suggested from history"
+  },
   "allLabel": "全部",
   "transferOutAccount": "转出账户",
   "transferInAccount": "转入账户",

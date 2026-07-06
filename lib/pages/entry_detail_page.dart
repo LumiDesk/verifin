@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../app/ai/ai_entry_parser.dart';
 import '../app/app_theme.dart';
+import '../app/category_suggest.dart';
 import '../app/common_widgets.dart';
 import '../app/demo_data.dart';
 import '../app/entry_sheets.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
+import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
 import 'attachments_editor.dart';
@@ -45,14 +47,22 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   final List<String> _pendingAttachments = <String>[];
   final TextEditingController _noteController = TextEditingController();
 
+  // 自动分类：用户尚未手动选过分类前，按备注/习惯自动推荐并选中；一旦手动选过就不再
+  // 覆盖。_suggestedCategoryId 记当前推荐项（用于提示与置顶展示）。
+  bool _categoryTouched = false;
+  String? _suggestedCategoryId;
+
   @override
   void initState() {
     super.initState();
+    _noteController.addListener(_onNoteChanged);
     final draft = widget.initialDraft;
     if (draft != null) {
       _type = draft.type;
       if (draft.categoryId.isNotEmpty) {
         _categoryId = draft.categoryId;
+        // AI 已给出分类，视作已选，不用历史推荐覆盖。
+        _categoryTouched = true;
       }
       // 转账必须落到账户；收支允许「无账户」（空 accountId）。
       if (draft.type != EntryType.transfer && draft.accountId.isEmpty) {
@@ -69,8 +79,60 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
 
   @override
   void dispose() {
+    _noteController.removeListener(_onNoteChanged);
     _noteController.dispose();
     super.dispose();
+  }
+
+  // 备注变化时，若用户还没手动选过分类，重跑推荐（触发 build 重算）。
+  void _onNoteChanged() {
+    if (_categoryTouched || !mounted) {
+      return;
+    }
+    setState(() {});
+  }
+
+  /// 在未手动选分类时，按当前备注/金额/时段从历史推荐一个分类并选中。
+  /// 直接在 build 期间调用（与既有「分类不在清单则回退首项」同为纯赋值，不触发
+  /// setState）。返回推荐的分类 id（无把握时为 null）。
+  String? _applyAutoCategory(VeriFinController controller, EntryType type) {
+    if (_categoryTouched || type == EntryType.transfer) {
+      return null;
+    }
+    final candidateIds = controller
+        .categoriesForType(type)
+        .map((c) => c.id)
+        .toSet();
+    final history = controller.entries
+        .where((e) => e.type == type)
+        .toList(growable: false);
+    final suggestion = suggestCategoryId(
+      history: history,
+      candidateIds: candidateIds,
+      note: _noteController.text,
+      amount: _amount,
+      hour: _occurredAt.hour,
+    );
+    if (suggestion != null) {
+      _categoryId = suggestion;
+    }
+    return suggestion;
+  }
+
+  /// 分类快捷区展示的前若干个分类；若当前选中项（含自动推荐）不在前 8 个里，则把它
+  /// 置顶插入，保证被选中/推荐的分类始终可见。
+  List<Category> _visibleCategoryChips(List<Category> categories) {
+    final shown = categories.take(8).toList();
+    if (!shown.any((c) => c.id == _categoryId)) {
+      final idx = categories.indexWhere((c) => c.id == _categoryId);
+      if (idx >= 0) {
+        shown.insert(0, categories[idx]);
+        if (shown.length > 8) {
+          shown.removeLast();
+        }
+      }
+    }
+    return shown;
   }
 
   @override
@@ -94,6 +156,8 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     if (!categories.any((category) => category.id == _categoryId)) {
       _categoryId = categories.first.id;
     }
+    // 自动分类：未手动选过时按备注/习惯推荐并选中（可能改写上面的 _categoryId）。
+    _suggestedCategoryId = _applyAutoCategory(controller, _type);
     // 大金额颜色跟随类型:支出红、收入青绿、转账保持蓝色。
     final amountColor = switch (_type) {
       EntryType.expense => veriExpense,
@@ -162,30 +226,54 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                     ),
                   ),
                   const Divider(height: 24),
-                  Text(
-                    AppLocalizations.of(context).commonCategory,
-                    style: Theme.of(context).textTheme.titleMedium,
+                  Row(
+                    children: <Widget>[
+                      Text(
+                        AppLocalizations.of(context).commonCategory,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      if (_suggestedCategoryId != null &&
+                          !_categoryTouched) ...[
+                        const SizedBox(width: 8),
+                        Icon(Icons.auto_awesome, size: 14, color: veriRoyal),
+                        const SizedBox(width: 3),
+                        Text(
+                          AppLocalizations.of(context).categoryAutoSuggested,
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: veriRoyal,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: <Widget>[
-                      ...categories
-                          .take(8)
-                          .map(
-                            (category) => ChoiceChip(
-                              avatar: Icon(
-                                iconForCode(category.iconCode),
-                                size: 18,
-                              ),
-                              label: Text(category.label),
-                              selected: _categoryId == category.id,
-                              onSelected: (_) {
-                                setState(() => _categoryId = category.id);
-                              },
-                            ),
+                      ..._visibleCategoryChips(categories).map(
+                        (category) => ChoiceChip(
+                          avatar: Icon(
+                            _categoryId == category.id &&
+                                    _suggestedCategoryId == category.id &&
+                                    !_categoryTouched
+                                ? Icons.auto_awesome
+                                : iconForCode(category.iconCode),
+                            size: 18,
                           ),
+                          label: Text(category.label),
+                          selected: _categoryId == category.id,
+                          onSelected: (_) {
+                            setState(() {
+                              _categoryId = category.id;
+                              _categoryTouched = true;
+                              _suggestedCategoryId = null;
+                            });
+                          },
+                        ),
+                      ),
                       ActionChip(
                         avatar: const Icon(Icons.more_horiz, size: 18),
                         label: Text(AppLocalizations.of(context).allLabel),
@@ -382,7 +470,11 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       return;
     }
 
-    setState(() => _categoryId = selected);
+    setState(() {
+      _categoryId = selected;
+      _categoryTouched = true;
+      _suggestedCategoryId = null;
+    });
   }
 
   Future<void> _pickAccount(List<Account> accounts) async {
