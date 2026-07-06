@@ -84,6 +84,18 @@ class AppPlatformBridge {
     }
   }
 
+  /// 开关 FLAG_SECURE：开启后应用内容不可截屏/录屏、且从最近任务缩略图中隐藏。
+  /// 启用应用锁时打开，保护账户余额等敏感信息。非 Android 平台静默忽略。
+  static Future<void> setSecureFlag(bool secure) async {
+    try {
+      await _channel.invokeMethod<void>('setSecureFlag', {'secure': secure});
+    } on MissingPluginException {
+      // 非 Android / 测试宿主：无原生实现，忽略。
+    } on PlatformException {
+      // 原生调用失败不应影响功能。
+    }
+  }
+
   static Future<UpdateCheckResult> checkForUpdate({
     bool includePrerelease = false,
   }) async {

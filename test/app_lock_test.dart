@@ -49,6 +49,18 @@ void main() {
     });
   });
 
+  test('设置/关闭应用锁触发 onAppLockChanged（驱动 FLAG_SECURE）', () async {
+    final controller = await makeController();
+    final events = <bool>[];
+    controller.onAppLockChanged = events.add;
+
+    controller.setAppLock(kind: AppLockKind.pin, secret: '135790');
+    controller.disableAppLock();
+
+    expect(events, <bool>[true, false]);
+    controller.dispose();
+  });
+
   group('controller app lock', () {
     test('set, verify, disable and persist across reload', () async {
       final store = LocalKeyValueStore();

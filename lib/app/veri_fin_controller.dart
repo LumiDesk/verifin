@@ -125,6 +125,9 @@ class VeriFinController extends ChangeNotifier {
   /// SQLite 落库失败时回调（由 UI 层挂钩弹出「保存失败」提示）。
   void Function(Object error)? onPersistError;
 
+  /// 应用锁开关变化时回调（由 main 挂钩，据此开关 Android FLAG_SECURE）。
+  void Function(bool appLockEnabled)? onAppLockChanged;
+
   /// 系统语言是否为英文（由 main.dart 传入）。语言偏好为「跟随系统」时，
   /// 播种默认数据（账本名/分类/个人简介）依此选语言。
   final bool _systemIsEnglish;
@@ -749,6 +752,7 @@ class VeriFinController extends ChangeNotifier {
     );
     _persistAppLock();
     notifyListeners();
+    onAppLockChanged?.call(_appLockConfig.enabled);
   }
 
   /// 校验输入的密钥是否匹配当前应用锁。
@@ -762,6 +766,7 @@ class VeriFinController extends ChangeNotifier {
     _appLockConfig = const AppLockConfig.none();
     _persistAppLock();
     notifyListeners();
+    onAppLockChanged?.call(false);
   }
 
   /// 开关生物识别快捷解锁。仅在已启用应用锁时生效。

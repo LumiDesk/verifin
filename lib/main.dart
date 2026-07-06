@@ -9,6 +9,7 @@ import 'app/home_widget_service.dart';
 import 'app/l10n_outside_context.dart';
 import 'app/logging/app_logger.dart';
 import 'app/models.dart';
+import 'app/platform_bridge.dart';
 import 'app/reminder/notification_scheduler.dart';
 import 'app/reminder/reminder_settings.dart';
 import 'app/veri_fin_controller.dart';
@@ -82,6 +83,9 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
     _controller.onEntryAdded = _handleEntryAdded;
     // 落库失败时弹出「保存失败」提示，避免用户以为已保存。
     _controller.onPersistError = _handlePersistError;
+    // 应用锁开关变化时同步 FLAG_SECURE；开屏按当前状态对齐一次。
+    _controller.onAppLockChanged = _handleAppLockChanged;
+    AppPlatformBridge.setSecureFlag(_controller.appLockEnabled);
     // 记账提醒：配置变化时重排本地通知，开屏按当前配置对齐一次。
     _controller.onReminderChanged = _handleReminderChanged;
     _notifications.apply(
@@ -105,6 +109,10 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
     messenger
       ..clearSnackBars()
       ..showSnackBar(SnackBar(content: Text(l10n.saveFailed)));
+  }
+
+  void _handleAppLockChanged(bool appLockEnabled) {
+    AppPlatformBridge.setSecureFlag(appLockEnabled);
   }
 
   void _handleReminderChanged(ReminderSettings settings) {
@@ -131,6 +139,9 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
     }
     if (_controller.onPersistError == _handlePersistError) {
       _controller.onPersistError = null;
+    }
+    if (_controller.onAppLockChanged == _handleAppLockChanged) {
+      _controller.onAppLockChanged = null;
     }
     if (_controller.onReminderChanged == _handleReminderChanged) {
       _controller.onReminderChanged = null;

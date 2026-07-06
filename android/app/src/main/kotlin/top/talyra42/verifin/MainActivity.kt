@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import android.provider.Settings
+import android.view.WindowManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -49,6 +50,10 @@ class MainActivity : FlutterFragmentActivity() {
                 }
                 "updateWidgetData" -> {
                     updateWidgetData(call)
+                    result.success(true)
+                }
+                "setSecureFlag" -> {
+                    setSecureFlag(call.argument<Boolean>("secure") ?: false)
                     result.success(true)
                 }
                 "pinWidget" -> pinWidget(call.argument<String>("widget") ?: "", result)
@@ -116,6 +121,18 @@ class MainActivity : FlutterFragmentActivity() {
                 pendingQuickEntryIntent = true
             } else {
                 channel?.invokeMethod("openQuickEntry", null)
+            }
+        }
+    }
+
+    /// 开关 FLAG_SECURE：开启后应用内容不可截屏/录屏，且从最近任务缩略图中隐藏，
+    /// 避免账户余额等敏感信息泄漏。由 Flutter 侧在启用应用锁时打开。
+    private fun setSecureFlag(secure: Boolean) {
+        runOnUiThread {
+            if (secure) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            } else {
+                window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
             }
         }
     }
