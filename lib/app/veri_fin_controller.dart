@@ -1770,17 +1770,22 @@ class VeriFinController extends ChangeNotifier {
       throw const FormatException('备份文件格式不正确');
     }
     final root = Map<String, Object?>.from(decoded);
+
+    // 防御性拦截加密信封：它带 `app:'verifin'` 但只有密文、无任何数据键，若直接
+    // 往下走会被当成「空备份」用默认数据覆盖并清库。加密备份必须先解密再导入。
+    if (root['enc'] != null || root.containsKey('cipher')) {
+      throw const FormatException('这是加密备份，请先输入口令解密后再导入');
+    }
+
     final dataValue = root['data'] ?? root;
     if (dataValue is! Map) {
       throw const FormatException('备份文件缺少数据内容');
     }
     final data = Map<String, Object?>.from(dataValue);
 
-    // 只接受本应用的备份：带 app 标记，或至少含一个已知数据键。否则（如一个格式
-    // 合法却无关的 JSON）直接报错，绝不在导入前清空/覆盖现有数据。
-    final looksLikeVeriFinBackup =
-        root['app'] == 'verifin' ||
-        data.keys.any(_knownBackupDataKeys.contains);
+    // 只接受本应用的备份：必须至少含一个已知数据键。仅有 `app` 标记而无任何数据键
+    // 的 JSON（如残缺/异常文件）一律拒绝，绝不在导入前清空/覆盖现有数据。
+    final looksLikeVeriFinBackup = data.keys.any(_knownBackupDataKeys.contains);
     if (!looksLikeVeriFinBackup) {
       throw const FormatException('不是本应用的备份文件');
     }
