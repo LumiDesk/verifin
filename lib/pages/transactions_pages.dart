@@ -66,6 +66,37 @@ enum TransactionSortOrder {
   }
 }
 
+/// 报销状态筛选：全部 / 待报销（已标记且未完全冲抵）/ 已报销（已有回款冲抵）。
+enum ReimbursementFilter {
+  all,
+  pending,
+  reimbursed;
+
+  String label(AppLocalizations l10n) {
+    switch (this) {
+      case ReimbursementFilter.all:
+        return l10n.reimbursementStatusAll;
+      case ReimbursementFilter.pending:
+        return l10n.badgeReimbursable;
+      case ReimbursementFilter.reimbursed:
+        return l10n.reimbursementReimbursed;
+    }
+  }
+
+  bool matches(LedgerEntry entry) {
+    switch (this) {
+      case ReimbursementFilter.all:
+        return true;
+      case ReimbursementFilter.pending:
+        // 已标记待报销、且尚未完全冲抵的支出（还有钱没报回来）。
+        return entry.reimbursable && entry.refundedAmount < entry.amount;
+      case ReimbursementFilter.reimbursed:
+        // 已有退款/报销回款冲抵（含部分冲抵）。
+        return entry.refundedAmount > 0;
+    }
+  }
+}
+
 class TransactionsPage extends StatefulWidget {
   const TransactionsPage({
     super.key,
@@ -95,7 +126,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
   String? _selectedAccountId;
   String? _selectedCategoryId;
   String? _selectedTagId;
-  bool _onlyReimbursable = false;
+  ReimbursementFilter _reimbursementFilter = ReimbursementFilter.all;
   bool _selectionMode = false;
   final Set<String> _selectedIds = <String>{};
 
@@ -248,13 +279,14 @@ class _TransactionsPageState extends State<TransactionsPage> {
                             }
                             _selectedCategoryId = null;
                             _selectedTagId = null;
-                            _onlyReimbursable = false;
+                            _reimbursementFilter = ReimbursementFilter.all;
                           });
                         }
                       : null,
-                  reimbursableOnly: _onlyReimbursable,
-                  onToggleReimbursable: () =>
-                      setState(() => _onlyReimbursable = !_onlyReimbursable),
+                  reimbursementLabel: _reimbursementFilterLabel(),
+                  reimbursementActive:
+                      _reimbursementFilter != ReimbursementFilter.all,
+                  onPickReimbursement: _pickReimbursementFilter,
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -392,7 +424,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
       (widget.accountId == null && _selectedAccountId != null) ||
       _selectedCategoryId != null ||
       _selectedTagId != null ||
-      _onlyReimbursable;
+      _reimbursementFilter != ReimbursementFilter.all;
 
   bool _matchesSecondaryFilters(
     LedgerEntry entry,
@@ -416,9 +448,8 @@ class _TransactionsPageState extends State<TransactionsPage> {
     if (_selectedTagId != null && !entry.tagIds.contains(_selectedTagId)) {
       return false;
     }
-    // 待报销：仅显示标记待报销、且尚未完全冲抵的支出。
-    if (_onlyReimbursable &&
-        !(entry.reimbursable && entry.refundedAmount < entry.amount)) {
+    // 报销状态：全部 / 待报销（未完全冲抵）/ 已报销（已有回款冲抵）。
+    if (!_reimbursementFilter.matches(entry)) {
       return false;
     }
     return true;
@@ -442,6 +473,12 @@ class _TransactionsPageState extends State<TransactionsPage> {
       formatSignedAmount(signedAmount(entry)),
       for (final id in entry.tagIds)
         if (controller.tagById(id) case final Tag tag) tag.label,
+      // 报销状态也纳入搜索：可用「待报销」「已退」「已报销」关键词检索。
+      if (entry.refundedAmount > 0) ...<String>[
+        AppLocalizations.of(context).badgeRefunded,
+        AppLocalizations.of(context).reimbursementReimbursed,
+      ] else if (entry.reimbursable)
+        AppLocalizations.of(context).badgeReimbursable,
     ].join(' ').toLowerCase();
     return searchable.contains(query);
   }
@@ -583,6 +620,27 @@ class _TransactionsPageState extends State<TransactionsPage> {
     }
     return controller.tagById(tagId)?.label ??
         AppLocalizations.of(context).tagLabel;
+  }
+
+  /// 报销筛选胶囊的文案：未筛选时显示维度名「报销」，否则显示所选状态。
+  String _reimbursementFilterLabel() {
+    final l10n = AppLocalizations.of(context);
+    return _reimbursementFilter == ReimbursementFilter.all
+        ? l10n.reimbursementFilterName
+        : _reimbursementFilter.label(l10n);
+  }
+
+  Future<void> _pickReimbursementFilter() async {
+    final selected = await showOptionSheet<ReimbursementFilter>(
+      context: context,
+      title: AppLocalizations.of(context).reimbursementFilterTitle,
+      values: ReimbursementFilter.values,
+      selected: _reimbursementFilter,
+      labelOf: (value) => value.label(AppLocalizations.of(context)),
+    );
+    if (selected != null) {
+      setState(() => _reimbursementFilter = selected);
+    }
   }
 
   void _toggleSelected(String id) {
@@ -854,8 +912,9 @@ class _TransactionSearchFilters extends StatelessWidget {
     this.tagLabel,
     this.tagSelected = false,
     this.onPickTag,
-    this.reimbursableOnly = false,
-    this.onToggleReimbursable,
+    required this.reimbursementLabel,
+    this.reimbursementActive = false,
+    this.onPickReimbursement,
     this.onClear,
   });
 
@@ -871,8 +930,9 @@ class _TransactionSearchFilters extends StatelessWidget {
   final String? tagLabel;
   final bool tagSelected;
   final VoidCallback? onPickTag;
-  final bool reimbursableOnly;
-  final VoidCallback? onToggleReimbursable;
+  final String reimbursementLabel;
+  final bool reimbursementActive;
+  final VoidCallback? onPickReimbursement;
   final VoidCallback? onClear;
 
   @override
@@ -955,15 +1015,13 @@ class _TransactionSearchFilters extends StatelessWidget {
                     icon: tagSelected ? Icons.label : Icons.label_outline,
                     onTap: onPickTag,
                   ),
-                if (onToggleReimbursable != null)
-                  FilterPill(
-                    label: AppLocalizations.of(context).badgeReimbursable,
-                    icon: reimbursableOnly
-                        ? Icons.check_circle
-                        : Icons.receipt_long_outlined,
-                    onTap: onToggleReimbursable,
-                    showChevron: false,
-                  ),
+                FilterPill(
+                  label: reimbursementLabel,
+                  icon: reimbursementActive
+                      ? Icons.check_circle
+                      : Icons.receipt_long_outlined,
+                  onTap: onPickReimbursement,
+                ),
               ],
             ),
           ),

@@ -60,6 +60,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get badgeReimbursable => 'Reimbursable';
 
   @override
+  String get reimbursementFilterName => 'Reimbursement';
+
+  @override
+  String get reimbursementFilterTitle => 'Reimbursement status';
+
+  @override
+  String get reimbursementStatusAll => 'All';
+
+  @override
+  String get reimbursementReimbursed => 'Reimbursed';
+
+  @override
   String get calendarTitle => 'Calendar';
 
   @override
@@ -1812,6 +1824,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nicknameLabel => 'Nickname';
 
   @override
+  String get nicknameEmptyTitle => 'No nickname set';
+
+  @override
+  String get nicknameEmptyMessage =>
+      'You haven\'t set a nickname. The default \"Veri Fin\" will be used. Save anyway?';
+
+  @override
   String get bioLabel => 'Bio';
 
   @override
@@ -2432,6 +2451,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get downloadNewVersion => 'Download update';
+
+  @override
+  String get includePrereleaseLabel => 'Include pre-release (Beta)';
+
+  @override
+  String get prereleaseNoticeInline =>
+      'This is a pre-release (beta) build and may be unstable or buggy.';
+
+  @override
+  String get prereleaseWarningTitle => 'Download pre-release?';
+
+  @override
+  String get prereleaseWarningMessage =>
+      'Pre-release builds may be unstable, buggy, or cause data issues. Only proceed if you understand the risks. Download and install anyway?';
+
+  @override
+  String get prereleaseDownloadAnyway => 'Download anyway';
 
   @override
   String get backupFreqManual => 'Manual only';

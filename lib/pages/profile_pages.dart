@@ -99,12 +99,14 @@ class ProfilePage extends StatelessWidget {
                               style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(fontWeight: FontWeight.w800),
                             ),
-                            const SizedBox(height: 3),
-                            Text(
-                              profile.bio,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            if (profile.bio.isNotEmpty) ...[
+                              const SizedBox(height: 3),
+                              Text(
+                                profile.bio,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                             if (profileTags.isNotEmpty) ...[
                               const SizedBox(height: 7),
                               Wrap(
@@ -1449,15 +1451,35 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
     }
   }
 
-  void _save() {
+  Future<void> _save() async {
+    final l10n = AppLocalizations.of(context);
+    final nickname = _nicknameController.text.trim();
+    if (nickname.isEmpty) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(l10n.nicknameEmptyTitle),
+          content: Text(l10n.nicknameEmptyMessage),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(l10n.commonCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(l10n.commonSave),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) {
+        return;
+      }
+    }
     VeriFinScope.of(context).updateProfile(
       UserProfile(
-        nickname: _nicknameController.text.trim().isEmpty
-            ? 'Veri Fin'
-            : _nicknameController.text.trim(),
-        bio: _bioController.text.trim().isEmpty
-            ? AppLocalizations.of(context).profileDefaultBio
-            : _bioController.text.trim(),
+        nickname: nickname.isEmpty ? 'Veri Fin' : nickname,
+        bio: _bioController.text.trim(),
         avatarDataUrl: _avatarDataUrl,
         gender: _gender,
         birthday: _birthday,
@@ -3072,6 +3094,7 @@ class _UpdateCheckDialogState extends State<_UpdateCheckDialog> {
   UpdateCheckResult? _result;
   bool _checking = true;
   bool _downloading = false;
+  bool _includePrerelease = false;
 
   @override
   void initState() {
@@ -3084,7 +3107,9 @@ class _UpdateCheckDialogState extends State<_UpdateCheckDialog> {
       _checking = true;
       _downloading = false;
     });
-    final result = await AppPlatformBridge.checkForUpdate();
+    final result = await AppPlatformBridge.checkForUpdate(
+      includePrerelease: _includePrerelease,
+    );
     if (!mounted) {
       return;
     }
@@ -3095,8 +3120,35 @@ class _UpdateCheckDialogState extends State<_UpdateCheckDialog> {
   }
 
   Future<void> _download() async {
+    // 预发布版本下载前先提示不稳定风险，用户确认后再继续。
+    if (_result?.isPrerelease ?? false) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(AppLocalizations.of(context).prereleaseWarningTitle),
+          content: Text(AppLocalizations.of(context).prereleaseWarningMessage),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(AppLocalizations.of(context).commonCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(
+                AppLocalizations.of(context).prereleaseDownloadAnyway,
+              ),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true || !mounted) {
+        return;
+      }
+    }
     setState(() => _downloading = true);
-    final result = await AppPlatformBridge.downloadLatestUpdate();
+    final result = await AppPlatformBridge.downloadLatestUpdate(
+      includePrerelease: _includePrerelease,
+    );
     if (!mounted) {
       return;
     }
@@ -3153,6 +3205,29 @@ class _UpdateCheckDialogState extends State<_UpdateCheckDialog> {
                   ).colorScheme.onSurface.withValues(alpha: 0.72),
                 ),
               ),
+            if (hasUpdate && (result?.isPrerelease ?? false)) ...<Widget>[
+              const SizedBox(height: 10),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    size: 16,
+                    color: veriExpense,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      AppLocalizations.of(context).prereleaseNoticeInline,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: veriExpense,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             if (_downloading) ...<Widget>[
               const SizedBox(height: 14),
               ValueListenableBuilder<UpdateDownloadProgress?>(
@@ -3180,6 +3255,27 @@ class _UpdateCheckDialogState extends State<_UpdateCheckDialog> {
                 },
               ),
             ],
+            const SizedBox(height: 6),
+            const Divider(height: 18),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    AppLocalizations.of(context).includePrereleaseLabel,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ),
+                Switch(
+                  value: _includePrerelease,
+                  onChanged: (_checking || _downloading)
+                      ? null
+                      : (value) {
+                          setState(() => _includePrerelease = value);
+                          _check();
+                        },
+                ),
+              ],
+            ),
           ],
         ),
       ),

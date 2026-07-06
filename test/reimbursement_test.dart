@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/ledger_math.dart';
 import 'package:verifin/app/models.dart';
+import 'package:verifin/pages/transactions_pages.dart';
 
 import 'support/test_harness.dart';
 
@@ -81,6 +82,62 @@ void main() {
     controller.setEntryReimbursable('e1', true);
     expect(controller.entries.single.reimbursable, isTrue);
     controller.dispose();
+  });
+
+  group('ReimbursementFilter.matches 筛选语义', () {
+    test('all 匹配所有交易', () {
+      expect(ReimbursementFilter.all.matches(_expense(amount: 10)), isTrue);
+      expect(
+        ReimbursementFilter.all.matches(
+          _expense(amount: 10, reimbursable: true),
+        ),
+        isTrue,
+      );
+    });
+
+    test('pending 仅匹配已标记且未完全冲抵', () {
+      // 已标记、未冲抵：命中。
+      expect(
+        ReimbursementFilter.pending.matches(
+          _expense(amount: 100, reimbursable: true),
+        ),
+        isTrue,
+      );
+      // 已标记、部分冲抵：仍有余额待报，命中。
+      expect(
+        ReimbursementFilter.pending.matches(
+          _expense(amount: 100, reimbursable: true, refunded: 40),
+        ),
+        isTrue,
+      );
+      // 已标记、完全冲抵：不再命中。
+      expect(
+        ReimbursementFilter.pending.matches(
+          _expense(amount: 100, reimbursable: true, refunded: 100),
+        ),
+        isFalse,
+      );
+      // 未标记：不命中。
+      expect(
+        ReimbursementFilter.pending.matches(_expense(amount: 100)),
+        isFalse,
+      );
+    });
+
+    test('reimbursed 匹配已有回款冲抵（含部分）', () {
+      expect(
+        ReimbursementFilter.reimbursed.matches(
+          _expense(amount: 100, refunded: 30),
+        ),
+        isTrue,
+      );
+      expect(
+        ReimbursementFilter.reimbursed.matches(
+          _expense(amount: 100, refunded: 0, reimbursable: true),
+        ),
+        isFalse,
+      );
+    });
   });
 
   test('报销/退款字段随导出导入往返', () async {

@@ -19,6 +19,7 @@ import androidx.documentfile.provider.DocumentFile
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
@@ -51,8 +52,14 @@ class MainActivity : FlutterFragmentActivity() {
                     result.success(true)
                 }
                 "pinWidget" -> pinWidget(call.argument<String>("widget") ?: "", result)
-                "checkLatestRelease" -> checkLatestRelease(result)
-                "downloadLatestUpdate" -> downloadLatestUpdate(result)
+                "checkLatestRelease" -> checkLatestRelease(
+                    call.argument<Boolean>("includePrerelease") ?: false,
+                    result,
+                )
+                "downloadLatestUpdate" -> downloadLatestUpdate(
+                    call.argument<Boolean>("includePrerelease") ?: false,
+                    result,
+                )
                 "saveTextToDownloads" -> saveTextToDownloads(
                     call.argument<String>("filename") ?: "verifin-backup.json",
                     call.argument<String>("content") ?: "",
@@ -163,10 +170,10 @@ class MainActivity : FlutterFragmentActivity() {
         }
     }
 
-    private fun checkLatestRelease(result: MethodChannel.Result) {
+    private fun checkLatestRelease(includePrerelease: Boolean, result: MethodChannel.Result) {
         Thread {
             try {
-                val response = checkLatestReleaseInfo()
+                val response = checkLatestReleaseInfo(includePrerelease)
                 runOnUiThread { result.success(response) }
             } catch (error: Exception) {
                 runOnUiThread {
@@ -180,10 +187,10 @@ class MainActivity : FlutterFragmentActivity() {
         }.start()
     }
 
-    private fun downloadLatestUpdate(result: MethodChannel.Result) {
+    private fun downloadLatestUpdate(includePrerelease: Boolean, result: MethodChannel.Result) {
         Thread {
             try {
-                val response = downloadLatestReleaseAndInstall()
+                val response = downloadLatestReleaseAndInstall(includePrerelease)
                 runOnUiThread { result.success(response) }
             } catch (error: Exception) {
                 runOnUiThread {
@@ -197,10 +204,11 @@ class MainActivity : FlutterFragmentActivity() {
         }.start()
     }
 
-    private fun checkLatestReleaseInfo(): Map<String, Any> {
-        val release = fetchLatestRelease()
+    private fun checkLatestReleaseInfo(includePrerelease: Boolean): Map<String, Any> {
+        val release = resolveRelease(includePrerelease)
         val latestTag = release.optString("tag_name")
         val latestVersion = latestTag.removePrefix("v")
+        val isPrerelease = release.optBoolean("prerelease")
         val currentVersion = BuildConfig.VERSION_NAME
         if (latestVersion.isBlank()) {
             return mapOf(
@@ -230,11 +238,39 @@ class MainActivity : FlutterFragmentActivity() {
             "message" to "发现新版本 $latestTag，可以下载并安装。",
             "currentVersion" to currentVersion,
             "latestVersion" to latestTag,
+            "isPrerelease" to isPrerelease,
         )
     }
 
-    private fun downloadLatestReleaseAndInstall(): Map<String, Any> {
-        val release = fetchLatestRelease()
+    /// 解析目标 Release：不含预发布时用 /releases/latest（GitHub 天然排除预发布/草稿）；
+    /// 含预发布时拉 /releases 列表，剔除草稿后取版本号最高的一个（含预发布）。
+    private fun resolveRelease(includePrerelease: Boolean): JSONObject {
+        if (!includePrerelease) {
+            return fetchLatestRelease()
+        }
+        val releases = fetchReleaseList()
+        var best: JSONObject? = null
+        var bestVersion = ""
+        for (index in 0 until releases.length()) {
+            val release = releases.optJSONObject(index) ?: continue
+            if (release.optBoolean("draft")) {
+                continue
+            }
+            val version = release.optString("tag_name").removePrefix("v")
+            if (version.isBlank()) {
+                continue
+            }
+            if (best == null || isNewerVersion(version, bestVersion)) {
+                best = release
+                bestVersion = version
+            }
+        }
+        // 列表为空/异常时回退到稳定版通道，避免整功能不可用。
+        return best ?: fetchLatestRelease()
+    }
+
+    private fun downloadLatestReleaseAndInstall(includePrerelease: Boolean): Map<String, Any> {
+        val release = resolveRelease(includePrerelease)
         val latestTag = release.optString("tag_name")
         val latestVersion = latestTag.removePrefix("v")
         val currentVersion = BuildConfig.VERSION_NAME
@@ -287,8 +323,12 @@ class MainActivity : FlutterFragmentActivity() {
         )
     }
 
-    private fun fetchLatestRelease(): JSONObject {
-        val connection = URL(RELEASE_API_URL).openConnection() as HttpURLConnection
+    private fun fetchLatestRelease(): JSONObject = JSONObject(fetchGithubJson(RELEASE_API_URL))
+
+    private fun fetchReleaseList(): JSONArray = JSONArray(fetchGithubJson(RELEASE_LIST_API_URL))
+
+    private fun fetchGithubJson(urlString: String): String {
+        val connection = URL(urlString).openConnection() as HttpURLConnection
         connection.requestMethod = "GET"
         connection.setRequestProperty("Accept", "application/vnd.github+json")
         connection.setRequestProperty("User-Agent", "VeriFin/${BuildConfig.VERSION_NAME}")
@@ -302,7 +342,7 @@ class MainActivity : FlutterFragmentActivity() {
         if (code !in 200..299) {
             throw IllegalStateException("GitHub Release 查询失败：HTTP $code")
         }
-        return JSONObject(body)
+        return body
     }
 
     private fun findApkAssetUrl(release: JSONObject): String? {
@@ -738,5 +778,8 @@ class MainActivity : FlutterFragmentActivity() {
         private const val REQUEST_PICK_BACKUP_DIR = 4302
         private const val RELEASE_API_URL =
             "https://api.github.com/repos/LumiDesk/verifin/releases/latest"
+        // 预发布检查用列表端点：/releases/latest 天然排除预发布，需拉列表自行筛选。
+        private const val RELEASE_LIST_API_URL =
+            "https://api.github.com/repos/LumiDesk/verifin/releases?per_page=20"
     }
 }

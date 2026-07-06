@@ -60,6 +60,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get badgeReimbursable => '待报销';
 
   @override
+  String get reimbursementFilterName => '报销';
+
+  @override
+  String get reimbursementFilterTitle => '报销状态';
+
+  @override
+  String get reimbursementStatusAll => '全部';
+
+  @override
+  String get reimbursementReimbursed => '已报销';
+
+  @override
   String get calendarTitle => '日历';
 
   @override
@@ -1782,6 +1794,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get nicknameLabel => '昵称';
 
   @override
+  String get nicknameEmptyTitle => '未设置昵称';
+
+  @override
+  String get nicknameEmptyMessage => '未设置昵称，将使用默认昵称「Veri Fin」。是否继续保存？';
+
+  @override
   String get bioLabel => '简介';
 
   @override
@@ -2384,6 +2402,22 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get downloadNewVersion => '下载新版本';
+
+  @override
+  String get includePrereleaseLabel => '包含预发布版本（Beta）';
+
+  @override
+  String get prereleaseNoticeInline => '这是预发布（测试）版本，可能存在不稳定或缺陷。';
+
+  @override
+  String get prereleaseWarningTitle => '下载预发布版本？';
+
+  @override
+  String get prereleaseWarningMessage =>
+      '预发布版本可能存在不稳定、功能缺陷或数据异常等问题，建议仅在了解风险时使用。确定继续下载并安装吗？';
+
+  @override
+  String get prereleaseDownloadAnyway => '仍要下载';
 
   @override
   String get backupFreqManual => '仅手动';

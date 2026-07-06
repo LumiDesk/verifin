@@ -200,6 +200,30 @@ abstract class AppLocalizations {
   /// **'待报销'**
   String get badgeReimbursable;
 
+  /// No description provided for @reimbursementFilterName.
+  ///
+  /// In zh, this message translates to:
+  /// **'报销'**
+  String get reimbursementFilterName;
+
+  /// No description provided for @reimbursementFilterTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'报销状态'**
+  String get reimbursementFilterTitle;
+
+  /// No description provided for @reimbursementStatusAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get reimbursementStatusAll;
+
+  /// No description provided for @reimbursementReimbursed.
+  ///
+  /// In zh, this message translates to:
+  /// **'已报销'**
+  String get reimbursementReimbursed;
+
   /// No description provided for @calendarTitle.
   ///
   /// In zh, this message translates to:
@@ -3278,6 +3302,18 @@ abstract class AppLocalizations {
   /// **'昵称'**
   String get nicknameLabel;
 
+  /// No description provided for @nicknameEmptyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'未设置昵称'**
+  String get nicknameEmptyTitle;
+
+  /// No description provided for @nicknameEmptyMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'未设置昵称，将使用默认昵称「Veri Fin」。是否继续保存？'**
+  String get nicknameEmptyMessage;
+
   /// No description provided for @bioLabel.
   ///
   /// In zh, this message translates to:
@@ -4387,6 +4423,36 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'下载新版本'**
   String get downloadNewVersion;
+
+  /// No description provided for @includePrereleaseLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'包含预发布版本（Beta）'**
+  String get includePrereleaseLabel;
+
+  /// No description provided for @prereleaseNoticeInline.
+  ///
+  /// In zh, this message translates to:
+  /// **'这是预发布（测试）版本，可能存在不稳定或缺陷。'**
+  String get prereleaseNoticeInline;
+
+  /// No description provided for @prereleaseWarningTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载预发布版本？'**
+  String get prereleaseWarningTitle;
+
+  /// No description provided for @prereleaseWarningMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'预发布版本可能存在不稳定、功能缺陷或数据异常等问题，建议仅在了解风险时使用。确定继续下载并安装吗？'**
+  String get prereleaseWarningMessage;
+
+  /// No description provided for @prereleaseDownloadAnyway.
+  ///
+  /// In zh, this message translates to:
+  /// **'仍要下载'**
+  String get prereleaseDownloadAnyway;
 
   /// No description provided for @backupFreqManual.
   ///

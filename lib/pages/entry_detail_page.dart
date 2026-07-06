@@ -42,6 +42,8 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   String? _toAccountId;
   DateTime _occurredAt = DateTime.now();
   double _fee = 0;
+  // 支出可标记「待报销」；新建时不涉及回款冲抵，退款金额建后在编辑页填写。
+  bool _reimbursable = false;
   List<String> _tagIds = <String>[];
   // 新增交易时先缓存附件 data URL，保存后再按新交易 id 落库。
   final List<String> _pendingAttachments = <String>[];
@@ -390,6 +392,23 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                     tagLabelOf: (id) => controller.tagById(id)?.label,
                     onTap: _pickTags,
                   ),
+                  if (_type == EntryType.expense) ...<Widget>[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Text(
+                            AppLocalizations.of(context).markReimbursable,
+                          ),
+                        ),
+                        Switch(
+                          value: _reimbursable,
+                          onChanged: (value) =>
+                              setState(() => _reimbursable = value),
+                        ),
+                      ],
+                    ),
+                  ],
                   const Divider(height: 24),
                   AttachmentsEditor(
                     dataUrls: _pendingAttachments,
@@ -630,6 +649,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
         occurredAt: _occurredAt,
         tagIds: _tagIds,
         fee: _type == EntryType.transfer ? _fee : 0,
+        reimbursable: _type == EntryType.expense && _reimbursable,
       ),
     );
     for (final dataUrl in _pendingAttachments) {

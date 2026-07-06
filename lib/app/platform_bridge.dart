@@ -84,10 +84,13 @@ class AppPlatformBridge {
     }
   }
 
-  static Future<UpdateCheckResult> checkForUpdate() async {
+  static Future<UpdateCheckResult> checkForUpdate({
+    bool includePrerelease = false,
+  }) async {
     try {
       final result = await _channel.invokeMapMethod<String, Object?>(
         'checkLatestRelease',
+        <String, Object?>{'includePrerelease': includePrerelease},
       );
       return UpdateCheckResult.fromMap(result ?? const <String, Object?>{});
     } on MissingPluginException {
@@ -103,11 +106,14 @@ class AppPlatformBridge {
     }
   }
 
-  static Future<UpdateCheckResult> downloadLatestUpdate() async {
+  static Future<UpdateCheckResult> downloadLatestUpdate({
+    bool includePrerelease = false,
+  }) async {
     updateProgress.value = const UpdateDownloadProgress(progress: 0);
     try {
       final result = await _channel.invokeMapMethod<String, Object?>(
         'downloadLatestUpdate',
+        <String, Object?>{'includePrerelease': includePrerelease},
       );
       return UpdateCheckResult.fromMap(result ?? const <String, Object?>{});
     } on MissingPluginException {
@@ -301,12 +307,16 @@ class UpdateCheckResult {
     required this.message,
     this.currentVersion = '',
     this.latestVersion = '',
+    this.isPrerelease = false,
   });
 
   final UpdateCheckStatus status;
   final String message;
   final String currentVersion;
   final String latestVersion;
+
+  /// 命中的目标 Release 是否为预发布版本（供 UI 在下载前提示不稳定风险）。
+  final bool isPrerelease;
 
   static UpdateCheckResult fromMap(Map<String, Object?> map) {
     final statusName = map['status'] as String? ?? 'error';
@@ -318,6 +328,7 @@ class UpdateCheckResult {
       message: map['message'] as String? ?? '检查更新失败，请稍后再试。',
       currentVersion: map['currentVersion'] as String? ?? '',
       latestVersion: map['latestVersion'] as String? ?? '',
+      isPrerelease: map['isPrerelease'] as bool? ?? false,
     );
   }
 }
