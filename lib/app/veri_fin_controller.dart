@@ -375,6 +375,9 @@ class VeriFinController extends ChangeNotifier {
     if (generated > 0 || rulesChanged) {
       notifyListeners();
     }
+    // 注意：不在此触发 onEntryAdded。applyDueRecurring 只在 main 的开屏/回前台流程中
+    // 调用，紧随其后已有 maybeBackupOnOpen + pushWidgetData，再触发会重复备份
+    // （加密备份还会重复跑 PBKDF2）。
     return generated;
   }
 
@@ -1039,6 +1042,8 @@ class VeriFinController extends ChangeNotifier {
     _persistCategories();
     _persistEntries();
     notifyListeners();
+    // 导入也新增了交易：触发自动备份与小组件刷新，与手动记账一致。
+    onEntryAdded?.call();
   }
 
   void updateEntry(LedgerEntry entry) {
@@ -1306,6 +1311,8 @@ class VeriFinController extends ChangeNotifier {
     _entries.sort(_compareEntriesLatestFirst);
     _persistEntries();
     notifyListeners();
+    // 余额调整也生成了一笔交易：触发自动备份与小组件刷新。
+    onEntryAdded?.call();
   }
 
   /// 不生成交易,直接调整初始余额,使当前余额等于目标值。
