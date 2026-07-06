@@ -86,7 +86,7 @@
 | 云备份 | `dart:io HttpClient` 手写 WebDAV 客户端（PUT / GET / PROPFIND / MKCOL） |
 | 图表 | 全部 `CustomPainter` 自绘（趋势 / 柱状 / 环形，带命中测试与数据气泡） |
 | 平台能力 | `local_auth`（生物解锁）、`flutter_local_notifications`（提醒）、`image_picker`（附件）、原生 `AppWidgetProvider`（桌面小组件）、MethodChannel 桥（SAF / 磁贴 / 更新检查） |
-| 测试 | 219 例 widget / 单元测试（内存仓储）+ ffi 真实 SQLite 数据层测试 |
+| 测试 | 322 例 widget / 单元测试（内存仓储）+ ffi 真实 SQLite 数据层测试 |
 | CI / 发布 | GitHub Actions：推 `vX.Y.Z` 标签 → analyze + test + release APK + GitHub Release |
 
 ## 🚀 快速开始
