@@ -12,6 +12,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'Veri Fin';
 
   @override
+  String get dbErrorTitle => 'Couldn\'t open your data';
+
+  @override
+  String get dbErrorBody =>
+      'Your data is most likely still safe on this device. Please do not clear the app\'s data or uninstall the app.';
+
+  @override
+  String get dbErrorHint =>
+      'If you just installed an older version, please reinstall the latest version and try again. If the problem persists, take a screenshot of this page to report it.';
+
+  @override
+  String get dbErrorDetail => 'Error details';
+
+  @override
   String get tabHome => 'Home';
 
   @override

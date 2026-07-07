@@ -38,16 +38,30 @@ Future<void> main() async {
         );
         previousOnError?.call(details);
       };
-      final database = await AppDatabase.open();
-      final controller = await VeriFinController.create(
-        store,
-        repository: SqliteLedgerRepository(database),
-        logger: logger,
-        // 语言偏好为「跟随系统」时，首启动播种的默认数据（账本/分类/简介）按系统语言选文案。
-        systemIsEnglish:
-            PlatformDispatcher.instance.locale.languageCode.toLowerCase() !=
-            'zh',
-      );
+      final VeriFinController controller;
+      try {
+        final database = await AppDatabase.open();
+        controller = await VeriFinController.create(
+          store,
+          repository: SqliteLedgerRepository(database),
+          logger: logger,
+          // 语言偏好为「跟随系统」时，首启动播种的默认数据（账本/分类/简介）按系统语言选文案。
+          systemIsEnglish:
+              PlatformDispatcher.instance.locale.languageCode.toLowerCase() !=
+              'zh',
+        );
+      } catch (error) {
+        // 数据库损坏或版本降级（用户安装了更旧 APK）时打开会抛异常。不做破坏性
+        // 处理（绝不删库），而是展示可诊断的错误页，明确告知用户数据很可能仍在、
+        // 不要清除应用数据，避免「白屏 → 误以为数据丢了 → 清数据 → 真丢」。
+        logger.error(
+          'Database open failed: $error',
+          source: 'startup',
+          error: error,
+        );
+        runApp(DatabaseErrorApp(detail: '$error'));
+        return;
+      }
       // 打开应用时补记到期的周期交易。
       controller.applyDueRecurring(DateTime.now());
       runApp(VeriFinApp(controller: controller));
@@ -57,6 +71,96 @@ Future<void> main() async {
       debugPrint('Uncaught zone error: $error');
     },
   );
+}
+
+/// 数据库无法打开时的兜底错误页。用最小依赖自绘（不依赖 controller），
+/// 语言跟随系统。核心目的：把「白屏」换成明确「数据很可能还在、别清数据」的提示。
+class DatabaseErrorApp extends StatelessWidget {
+  const DatabaseErrorApp({super.key, required this.detail});
+
+  final String detail;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
+      debugShowCheckedModeBanner: false,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      theme: buildVeriFinTheme(Brightness.light),
+      darkTheme: buildVeriFinTheme(Brightness.dark),
+      home: Builder(
+        builder: (context) {
+          final l10n = AppLocalizations.of(context);
+          final scheme = Theme.of(context).colorScheme;
+          return Scaffold(
+            body: SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      Icon(
+                        Icons.storage_rounded,
+                        size: 56,
+                        color: scheme.error,
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        l10n.dbErrorTitle,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        l10n.dbErrorBody,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.dbErrorHint,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          l10n.dbErrorDetail,
+                          style: Theme.of(context).textTheme.labelMedium,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: scheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: SelectableText(
+                          detail,
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
 class VeriFinApp extends StatefulWidget {

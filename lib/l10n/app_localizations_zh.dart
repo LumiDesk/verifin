@@ -12,6 +12,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appTitle => 'Veri Fin';
 
   @override
+  String get dbErrorTitle => '无法打开数据';
+
+  @override
+  String get dbErrorBody => '你的账目数据很可能仍完好保存在本机，请不要清除应用数据或卸载应用。';
+
+  @override
+  String get dbErrorHint => '如果你刚刚降级了应用版本，请重新安装最新版本后再打开。若问题持续，可截图此页面反馈。';
+
+  @override
+  String get dbErrorDetail => '错误详情';
+
+  @override
   String get tabHome => '首页';
 
   @override

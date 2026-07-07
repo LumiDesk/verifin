@@ -104,6 +104,30 @@ abstract class AppLocalizations {
   /// **'Veri Fin'**
   String get appTitle;
 
+  /// 数据库打开失败错误页标题
+  ///
+  /// In zh, this message translates to:
+  /// **'无法打开数据'**
+  String get dbErrorTitle;
+
+  /// 数据库打开失败错误页正文
+  ///
+  /// In zh, this message translates to:
+  /// **'你的账目数据很可能仍完好保存在本机，请不要清除应用数据或卸载应用。'**
+  String get dbErrorBody;
+
+  /// 数据库打开失败错误页提示
+  ///
+  /// In zh, this message translates to:
+  /// **'如果你刚刚降级了应用版本，请重新安装最新版本后再打开。若问题持续，可截图此页面反馈。'**
+  String get dbErrorHint;
+
+  /// 数据库打开失败错误页技术详情标题
+  ///
+  /// In zh, this message translates to:
+  /// **'错误详情'**
+  String get dbErrorDetail;
+
   /// 底部导航:首页
   ///
   /// In zh, this message translates to:
