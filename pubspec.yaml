@@ -92,6 +92,7 @@ flutter:
 
   assets:
     - assets/account_icons/
+    - assets/import_icons/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

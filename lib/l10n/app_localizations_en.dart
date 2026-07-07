@@ -1956,6 +1956,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get platformMintHint => 'Bill CSV';
 
   @override
+  String get platformYimu => 'YiMu (一木记账)';
+
+  @override
+  String get platformYimuHint => 'Bill Excel (.xls)';
+
+  @override
   String get platformGenericCsv => 'Other CSV';
 
   @override
@@ -1977,6 +1983,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get mintImportGuide =>
       'In Mint (Bohe): Me → ledger/data settings → Export bill (CSV), save it to your phone, then choose it here. Menu paths may vary by app version.';
+
+  @override
+  String get yimuImportGuide =>
+      'In YiMu (一木记账): Me → Export bill → choose the Excel format, save it to your phone, then choose it here (the file is a .xls). \n\nCategories are imported from the second-level category; transfers keep only the source account. Menu paths may vary by app version.';
 
   @override
   String get genericCsvImportGuide =>

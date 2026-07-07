@@ -3560,6 +3560,18 @@ abstract class AppLocalizations {
   /// **'账单 CSV'**
   String get platformMintHint;
 
+  /// No description provided for @platformYimu.
+  ///
+  /// In zh, this message translates to:
+  /// **'一木记账'**
+  String get platformYimu;
+
+  /// No description provided for @platformYimuHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'账单 Excel（.xls）'**
+  String get platformYimuHint;
+
   /// No description provided for @platformGenericCsv.
   ///
   /// In zh, this message translates to:
@@ -3595,6 +3607,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'薄荷记账 App →「我的」→ 账本/数据设置 → 导出账单（CSV），保存到本机后在此选择。菜单以实际 App 版本为准。'**
   String get mintImportGuide;
+
+  /// No description provided for @yimuImportGuide.
+  ///
+  /// In zh, this message translates to:
+  /// **'一木记账 App →「我的」→「导出账单」→ 选择 Excel 格式，保存到本机后在此选择（文件为 .xls）。\n\n分类按二级分类导入，转账仅记转出账户。菜单以实际 App 版本为准。'**
+  String get yimuImportGuide;
 
   /// No description provided for @genericCsvImportGuide.
   ///

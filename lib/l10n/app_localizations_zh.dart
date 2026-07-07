@@ -1923,6 +1923,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get platformMintHint => '账单 CSV';
 
   @override
+  String get platformYimu => '一木记账';
+
+  @override
+  String get platformYimuHint => '账单 Excel（.xls）';
+
+  @override
   String get platformGenericCsv => '其他 CSV';
 
   @override
@@ -1944,6 +1950,10 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get mintImportGuide =>
       '薄荷记账 App →「我的」→ 账本/数据设置 → 导出账单（CSV），保存到本机后在此选择。菜单以实际 App 版本为准。';
+
+  @override
+  String get yimuImportGuide =>
+      '一木记账 App →「我的」→「导出账单」→ 选择 Excel 格式，保存到本机后在此选择（文件为 .xls）。\n\n分类按二级分类导入，转账仅记转出账户。菜单以实际 App 版本为准。';
 
   @override
   String get genericCsvImportGuide =>

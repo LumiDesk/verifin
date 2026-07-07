@@ -1063,18 +1063,28 @@ class DataManagementPage extends StatelessWidget {
         Icons.account_balance_wallet_outlined,
         l10n.platformAlipay,
         l10n.platformAlipayHint,
+        assetPath: 'assets/import_icons/alipay.png',
       ),
       _PlatformOption(
         ImportPlatform.wechat,
         Icons.chat_bubble_outline,
         l10n.platformWechat,
         l10n.platformWechatHint,
+        assetPath: 'assets/import_icons/wechat.png',
       ),
       _PlatformOption(
         ImportPlatform.mint,
         Icons.eco_outlined,
         l10n.platformMint,
         l10n.platformMintHint,
+        assetPath: 'assets/import_icons/mint.png',
+      ),
+      _PlatformOption(
+        ImportPlatform.yimu,
+        Icons.menu_book_outlined,
+        l10n.platformYimu,
+        l10n.platformYimuHint,
+        assetPath: 'assets/import_icons/yimu.png',
       ),
       _PlatformOption(
         ImportPlatform.genericCsv,
@@ -1107,7 +1117,7 @@ class DataManagementPage extends StatelessWidget {
             ),
             for (final item in items)
               ListTile(
-                leading: Icon(item.icon),
+                leading: _platformLeading(item),
                 title: Text(item.title),
                 subtitle: Text(item.subtitle),
                 onTap: () => Navigator.of(context).pop(item.platform),
@@ -1119,12 +1129,30 @@ class DataManagementPage extends StatelessWidget {
     );
   }
 
+  /// 平台选项前的图标：有品牌图标用圆角 PNG，否则回退矢量图标。
+  Widget _platformLeading(_PlatformOption item) {
+    if (item.assetPath == null) {
+      return Icon(item.icon);
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Image.asset(
+        item.assetPath!,
+        width: 32,
+        height: 32,
+        fit: BoxFit.cover,
+        filterQuality: FilterQuality.medium,
+      ),
+    );
+  }
+
   String _platformLabel(BuildContext context, ImportPlatform platform) {
     final l10n = AppLocalizations.of(context);
     return switch (platform) {
       ImportPlatform.alipay => l10n.platformAlipay,
       ImportPlatform.wechat => l10n.platformWechat,
       ImportPlatform.mint => l10n.platformMint,
+      ImportPlatform.yimu => l10n.platformYimu,
       ImportPlatform.genericCsv => l10n.platformGenericCsv,
     };
   }
@@ -1135,6 +1163,7 @@ class DataManagementPage extends StatelessWidget {
       ImportPlatform.alipay => l10n.alipayImportGuide,
       ImportPlatform.wechat => l10n.wechatImportGuide,
       ImportPlatform.mint => l10n.mintImportGuide,
+      ImportPlatform.yimu => l10n.yimuImportGuide,
       ImportPlatform.genericCsv => l10n.genericCsvImportGuide,
     };
   }
@@ -1382,12 +1411,24 @@ class DataManagementPage extends StatelessWidget {
 }
 
 class _PlatformOption {
-  const _PlatformOption(this.platform, this.icon, this.title, this.subtitle);
+  const _PlatformOption(
+    this.platform,
+    this.icon,
+    this.title,
+    this.subtitle, {
+    this.assetPath,
+  });
 
   final ImportPlatform platform;
+
+  /// 无品牌图标时的回退矢量图标（如「其他 CSV」）。
   final IconData icon;
   final String title;
   final String subtitle;
+
+  /// 软件品牌图标资源路径；为 null 时回退到 [icon]。
+  /// 注意：这是记账/支付软件的品牌图标，与账户图标（`assets/account_icons/`）不同。
+  final String? assetPath;
 }
 
 /// 备份进行中的不可关闭转圈弹窗。

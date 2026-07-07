@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
@@ -246,6 +247,51 @@ void main() {
       );
       expect(plan.importedCount, 1);
       expect(plan.entries.first.amount, 23.5);
+    });
+  });
+
+  group('一木记账 xls（BIFF8 二进制，带符号金额，二级分类）', () {
+    // 真实样例（用户提供，7 条记录），验证 OLE2/BIFF8 读取 + 归一化端到端。
+    late ImportPlan plan;
+    setUp(() {
+      final bytes = File('test/fixtures/yimu_sample.xls').readAsBytesSync();
+      plan = run(ImportPlatform.yimu, Uint8List.fromList(bytes));
+    });
+
+    test('全部 7 条导入、无错误', () {
+      expect(plan.importedCount, 7);
+      expect(plan.errorCount, 0);
+    });
+
+    test('收入按二级分类映射、金额取绝对值、日期正确', () {
+      final income = plan.entries.firstWhere(
+        (e) => e.type == EntryType.income && e.amount == 200,
+      );
+      expect(income.occurredAt.year, 2026);
+      expect(income.occurredAt.month, 7);
+      final category = plan.newCategories.firstWhere(
+        (c) => c.id == income.categoryId,
+      );
+      expect(category.label, '工资'); // 二级分类，而非一级「收入」。
+      expect(category.type, EntryType.income);
+    });
+
+    test('支出金额取绝对值、账户按名建立', () {
+      final expense = plan.entries.firstWhere((e) => e.amount == 500);
+      expect(expense.type, EntryType.expense);
+      final account = plan.newAccounts.firstWhere(
+        (a) => a.id == expense.accountId,
+      );
+      expect(account.name, '微信钱包');
+      final category = plan.newCategories.firstWhere(
+        (c) => c.id == expense.categoryId,
+      );
+      expect(category.label, '饮料酒水');
+    });
+
+    test('账户为空记为「无账户」', () {
+      final noAccount = plan.entries.firstWhere((e) => e.amount == 3);
+      expect(noAccount.accountId, isEmpty);
     });
   });
 }
