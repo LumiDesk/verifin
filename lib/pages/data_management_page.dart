@@ -1123,11 +1123,44 @@ class DataManagementPage extends StatelessWidget {
               ),
             ),
             for (final item in items)
-              ListTile(
-                leading: _platformLeading(item),
-                title: Text(item.title),
-                subtitle: Text(item.subtitle),
+              InkWell(
                 onTap: () => Navigator.of(context).pop(item.platform),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  // 图标与「标题+副标题」整体垂直居中（Row 默认 center 对齐），
+                  // 不依赖 ListTile 带副标题时的内部对齐规则。
+                  child: Row(
+                    children: <Widget>[
+                      _platformLeading(item),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              item.title,
+                              style: Theme.of(context).textTheme.bodyLarge,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              item.subtitle,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             const SizedBox(height: 8),
           ],
@@ -1136,21 +1169,22 @@ class DataManagementPage extends StatelessWidget {
     );
   }
 
-  /// 平台选项前的图标：有品牌图标用圆角 PNG，否则回退矢量图标。
+  /// 平台选项前的图标：有品牌图标用圆角 PNG，否则回退矢量图标；统一占 32×32 方框，
+  /// 各行文字左边缘对齐。
   Widget _platformLeading(_PlatformOption item) {
-    if (item.assetPath == null) {
-      return Icon(item.icon);
-    }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: Image.asset(
-        item.assetPath!,
-        width: 32,
-        height: 32,
-        fit: BoxFit.cover,
-        filterQuality: FilterQuality.medium,
-      ),
-    );
+    final Widget child = item.assetPath == null
+        ? Icon(item.icon, size: 28)
+        : ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.asset(
+              item.assetPath!,
+              width: 32,
+              height: 32,
+              fit: BoxFit.cover,
+              filterQuality: FilterQuality.medium,
+            ),
+          );
+    return SizedBox(width: 32, height: 32, child: Center(child: child));
   }
 
   String _platformLabel(BuildContext context, ImportPlatform platform) {
