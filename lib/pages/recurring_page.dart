@@ -382,16 +382,20 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
 
   Future<void> _pickAccount(bool toAccount) async {
     final controller = VeriFinScope.of(context);
+    final accounts = controller.accounts;
+    // 兜底：无账户时不弹选择器（避免 accounts.first 抛 Bad state）。
+    // 调用点也各有守卫，这里再挡一层，防未来新增入口漏判。
+    if (accounts.isEmpty) {
+      return;
+    }
     final selected = await showOptionSheet<String>(
       context: context,
       title: toAccount
           ? AppLocalizations.of(context).pickTransferInAccount
           : AppLocalizations.of(context).pickAccountTitle,
-      values: controller.accounts.map((a) => a.id).toList(),
-      selected:
-          (toAccount ? _toAccountId : _accountId) ??
-          controller.accounts.first.id,
-      labelOf: (id) => accountById(controller.accounts, id).name,
+      values: accounts.map((a) => a.id).toList(),
+      selected: (toAccount ? _toAccountId : _accountId) ?? accounts.first.id,
+      labelOf: (id) => accountById(accounts, id).name,
     );
     if (selected == null || !mounted) {
       return;
