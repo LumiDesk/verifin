@@ -151,6 +151,22 @@ List<String> labelsForWindow(DateWindow window) {
   return window.days.map((date) => '${date.month}.${date.day}').toList();
 }
 
+/// 稀疏的日期标签：天数不多（≤8）时全部展示；否则只在 1 号与每 5 天（5/10/15…）
+/// 标注，其余留空，避免整月日期挤成一团（滑动时数据气泡仍显示具体某天）。
+List<String> sparseLabelsForWindow(DateWindow window) {
+  final days = window.days;
+  if (days.length <= 8) {
+    return labelsForWindow(window);
+  }
+  return days
+      .map(
+        (date) => (date.day == 1 || date.day % 5 == 0)
+            ? '${date.month}.${date.day}'
+            : '',
+      )
+      .toList();
+}
+
 List<double> dailyExpenseValues(Iterable<LedgerEntry> entries, DateTime now) {
   final days = DateUtils.getDaysInMonth(now.year, now.month);
   final values = List<double>.filled(days, 0);

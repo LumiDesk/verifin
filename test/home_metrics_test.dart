@@ -78,6 +78,25 @@ void main() {
     });
   });
 
+  group('sparseLabelsForWindow（稀疏日期标签）', () {
+    test('天数少（≤8）时全部展示', () {
+      final w = cumulativeWeekWindowFor(DateTime(2026, 7, 3)); // 1–7
+      expect(sparseLabelsForWindow(w).where((s) => s.isNotEmpty).length, 7);
+    });
+
+    test('整月只在 1 号与每 5 天标注', () {
+      final labels = sparseLabelsForWindow(
+        monthWindowFor(DateTime(2026, 7, 1)),
+      );
+      expect(labels.length, 31);
+      final labeledDays = <int>[
+        for (var i = 0; i < labels.length; i++)
+          if (labels[i].isNotEmpty) i + 1,
+      ];
+      expect(labeledDays, <int>[1, 5, 10, 15, 20, 25, 30]);
+    });
+  });
+
   group('computeHomeMetric', () {
     final now = DateTime(2026, 7, 15, 12);
     final entries = <LedgerEntry>[
@@ -199,10 +218,14 @@ void main() {
       final controller = await makeController();
       await pumpPage(tester, controller);
 
-      // 点「大数字」槽位打开选择弹窗。
+      // 点「大数字」槽位打开选择弹窗（先滚到可见）。
+      await tester.ensureVisible(find.text('大数字'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('大数字'));
       await tester.pumpAndSettle();
       // 选「日均收入」（默认各槽未使用它，弹窗内唯一）。
+      await tester.ensureVisible(find.text('日均收入'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('日均收入'));
       await tester.pumpAndSettle();
 

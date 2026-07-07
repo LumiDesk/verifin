@@ -111,15 +111,31 @@ class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
               child: ListView(
                 controller: scrollController,
                 children: <Widget>[
-                  for (final metric in HomeMetric.values)
-                    ListTile(
-                      dense: true,
-                      title: Text(homeMetricLabel(l10n, metric)),
-                      trailing: metric == current
-                          ? const Icon(Icons.check, color: veriRoyal)
-                          : null,
-                      onTap: () => Navigator.of(context).pop(metric),
+                  for (final group in homeMetricGroups(l10n)) ...<Widget>[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 10, 20, 2),
+                      child: Text(
+                        group.label,
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.55),
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
                     ),
+                    for (final metric in group.metrics)
+                      ListTile(
+                        dense: true,
+                        title: Text(homeMetricLabel(l10n, metric)),
+                        trailing: metric == current
+                            ? const Icon(Icons.check, color: veriRoyal)
+                            : null,
+                        onTap: () => Navigator.of(context).pop(metric),
+                      ),
+                  ],
+                  const SizedBox(height: 8),
                 ],
               ),
             ),
@@ -208,51 +224,65 @@ class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
                 onTap: () {},
               ),
               const SizedBox(height: 16),
+              // 卡片标题：紧跟预览，最先设置。
+              VeriCard(
+                child: TextField(
+                  controller: _titleController,
+                  maxLength: 12,
+                  decoration: InputDecoration(
+                    labelText: l10n.trendCustomizeTitleField,
+                    hintText: l10n.trendCustomizeTitleHint,
+                    prefixIcon: const Icon(Icons.title),
+                    border: InputBorder.none,
+                  ),
+                  onChanged: (value) => _update(config.copyWith(title: value)),
+                ),
+              ),
+              const SizedBox(height: 16),
               SectionTitle(title: l10n.trendCustomizeDisplayData),
               const SizedBox(height: 8),
-              _SlotField(
-                label: l10n.trendSlotBig,
-                value: homeMetricLabel(l10n, config.big),
-                onTap: () => _pickSlotMetric(0),
-              ),
-              _SlotField(
-                label: l10n.trendSlotPill,
-                value: homeMetricLabel(l10n, config.pill),
-                onTap: () => _pickSlotMetric(1),
-              ),
-              _SlotField(
-                label: l10n.trendSlotCard1,
-                value: homeMetricLabel(l10n, config.card1),
-                onTap: () => _pickSlotMetric(2),
-              ),
-              _SlotField(
-                label: l10n.trendSlotCard2,
-                value: homeMetricLabel(l10n, config.card2),
-                onTap: () => _pickSlotMetric(3),
-              ),
-              _SlotField(
-                label: l10n.trendSlotCard3,
-                value: homeMetricLabel(l10n, config.card3),
-                onTap: () => _pickSlotMetric(4),
+              VeriCard(
+                child: Column(
+                  children: <Widget>[
+                    _SlotField(
+                      label: l10n.trendSlotBig,
+                      value: homeMetricLabel(l10n, config.big),
+                      onTap: () => _pickSlotMetric(0),
+                    ),
+                    _SlotField(
+                      label: l10n.trendSlotPill,
+                      value: homeMetricLabel(l10n, config.pill),
+                      onTap: () => _pickSlotMetric(1),
+                    ),
+                    _SlotField(
+                      label: l10n.trendSlotCard1,
+                      value: homeMetricLabel(l10n, config.card1),
+                      onTap: () => _pickSlotMetric(2),
+                    ),
+                    _SlotField(
+                      label: l10n.trendSlotCard2,
+                      value: homeMetricLabel(l10n, config.card2),
+                      onTap: () => _pickSlotMetric(3),
+                    ),
+                    _SlotField(
+                      label: l10n.trendSlotCard3,
+                      value: homeMetricLabel(l10n, config.card3),
+                      onTap: () => _pickSlotMetric(4),
+                      last: true,
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
               SectionTitle(title: l10n.trendCustomizeChart),
               const SizedBox(height: 8),
-              _SlotField(
-                label: l10n.trendSlotChart,
-                value: homeTrendSeriesLabel(l10n, config.series),
-                onTap: _pickSeries,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _titleController,
-                maxLength: 12,
-                decoration: InputDecoration(
-                  labelText: l10n.trendCustomizeTitleField,
-                  hintText: l10n.trendCustomizeTitleHint,
-                  prefixIcon: const Icon(Icons.title),
+              VeriCard(
+                child: _SlotField(
+                  label: l10n.trendSlotChart,
+                  value: homeTrendSeriesLabel(l10n, config.series),
+                  onTap: _pickSeries,
+                  last: true,
                 ),
-                onChanged: (value) => _update(config.copyWith(title: value)),
               ),
             ],
           ),
@@ -267,22 +297,68 @@ class _SlotField extends StatelessWidget {
     required this.label,
     required this.value,
     required this.onTap,
+    this.last = false,
   });
 
   final String label;
   final String value;
   final VoidCallback onTap;
 
+  /// 卡片内最后一行不再画分隔线。
+  final bool last;
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: SelectField(
-        label: label,
-        value: value,
-        icon: Icons.tune,
-        onTap: onTap,
-      ),
+    return Column(
+      children: <Widget>[
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(veriRadiusSm),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 2),
+            child: Row(
+              children: <Widget>[
+                Icon(
+                  Icons.tune,
+                  size: 18,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                ),
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: veriRoyal,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.35),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (!last)
+          Divider(
+            height: 1,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.08),
+          ),
+      ],
     );
   }
 }

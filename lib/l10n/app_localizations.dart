@@ -608,6 +608,48 @@ abstract class AppLocalizations {
   /// **'结余'**
   String get metricSeriesNet;
 
+  /// No description provided for @metricGroupMonth.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月'**
+  String get metricGroupMonth;
+
+  /// No description provided for @metricGroupToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日'**
+  String get metricGroupToday;
+
+  /// No description provided for @metricGroupWeek.
+  ///
+  /// In zh, this message translates to:
+  /// **'本周'**
+  String get metricGroupWeek;
+
+  /// No description provided for @metricGroupYear.
+  ///
+  /// In zh, this message translates to:
+  /// **'本年'**
+  String get metricGroupYear;
+
+  /// No description provided for @metricGroupTotal.
+  ///
+  /// In zh, this message translates to:
+  /// **'总额'**
+  String get metricGroupTotal;
+
+  /// No description provided for @metricGroupAssets.
+  ///
+  /// In zh, this message translates to:
+  /// **'资产'**
+  String get metricGroupAssets;
+
+  /// No description provided for @metricGroupReimburse.
+  ///
+  /// In zh, this message translates to:
+  /// **'报销'**
+  String get metricGroupReimburse;
+
   /// No description provided for @metricMonthExpense.
   ///
   /// In zh, this message translates to:

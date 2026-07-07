@@ -269,6 +269,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get metricSeriesNet => 'Balance';
 
   @override
+  String get metricGroupMonth => 'This month';
+
+  @override
+  String get metricGroupToday => 'Today';
+
+  @override
+  String get metricGroupWeek => 'This week';
+
+  @override
+  String get metricGroupYear => 'This year';
+
+  @override
+  String get metricGroupTotal => 'Total';
+
+  @override
+  String get metricGroupAssets => 'Assets';
+
+  @override
+  String get metricGroupReimburse => 'Reimbursement';
+
+  @override
   String get metricMonthExpense => 'This month spending';
 
   @override

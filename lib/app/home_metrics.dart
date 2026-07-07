@@ -129,6 +129,76 @@ String homeMetricLabel(AppLocalizations l10n, HomeMetric metric) {
   }
 }
 
+/// 指标选择列表里的一组（按周期/类别归类，带小标题）。
+class HomeMetricGroup {
+  const HomeMetricGroup({required this.label, required this.metrics});
+
+  final String label;
+  final List<HomeMetric> metrics;
+}
+
+/// 指标按类别分组，供选择列表加小标题展示。
+List<HomeMetricGroup> homeMetricGroups(AppLocalizations l10n) {
+  return <HomeMetricGroup>[
+    HomeMetricGroup(
+      label: l10n.metricGroupMonth,
+      metrics: const <HomeMetric>[
+        HomeMetric.monthExpense,
+        HomeMetric.monthIncome,
+        HomeMetric.monthNet,
+        HomeMetric.dailyAvgExpense,
+        HomeMetric.dailyAvgIncome,
+      ],
+    ),
+    HomeMetricGroup(
+      label: l10n.metricGroupToday,
+      metrics: const <HomeMetric>[
+        HomeMetric.todayExpense,
+        HomeMetric.todayIncome,
+        HomeMetric.todayNet,
+      ],
+    ),
+    HomeMetricGroup(
+      label: l10n.metricGroupWeek,
+      metrics: const <HomeMetric>[
+        HomeMetric.weekExpense,
+        HomeMetric.weekIncome,
+        HomeMetric.weekNet,
+      ],
+    ),
+    HomeMetricGroup(
+      label: l10n.metricGroupYear,
+      metrics: const <HomeMetric>[
+        HomeMetric.yearExpense,
+        HomeMetric.yearIncome,
+      ],
+    ),
+    HomeMetricGroup(
+      label: l10n.metricGroupTotal,
+      metrics: const <HomeMetric>[
+        HomeMetric.totalExpense,
+        HomeMetric.totalIncome,
+        HomeMetric.totalNet,
+      ],
+    ),
+    HomeMetricGroup(
+      label: l10n.metricGroupAssets,
+      metrics: const <HomeMetric>[
+        HomeMetric.totalAssets,
+        HomeMetric.totalLiabilities,
+        HomeMetric.netAssets,
+      ],
+    ),
+    HomeMetricGroup(
+      label: l10n.metricGroupReimburse,
+      metrics: const <HomeMetric>[
+        HomeMetric.reimbursablePending,
+        HomeMetric.reimbursed,
+      ],
+    ),
+  ];
+}
+
 /// 曲线序列的本地化名称。
 String homeTrendSeriesLabel(AppLocalizations l10n, HomeTrendSeries series) {
   switch (series) {

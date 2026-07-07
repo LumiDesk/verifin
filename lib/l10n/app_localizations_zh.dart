@@ -268,6 +268,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get metricSeriesNet => '结余';
 
   @override
+  String get metricGroupMonth => '本月';
+
+  @override
+  String get metricGroupToday => '今日';
+
+  @override
+  String get metricGroupWeek => '本周';
+
+  @override
+  String get metricGroupYear => '本年';
+
+  @override
+  String get metricGroupTotal => '总额';
+
+  @override
+  String get metricGroupAssets => '资产';
+
+  @override
+  String get metricGroupReimburse => '报销';
+
+  @override
   String get metricMonthExpense => '本月支出';
 
   @override

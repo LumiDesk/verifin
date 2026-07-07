@@ -253,6 +253,18 @@ Color _trendSeriesColor(HomeTrendSeries series) {
   }
 }
 
+/// 走势气泡里单日数值的文案：支出显示为负（`-x`）、收入为正（`+x`）、结余带正负号。
+String _trendSeriesValueText(HomeTrendSeries series, double value) {
+  switch (series) {
+    case HomeTrendSeries.expense:
+      return formatExpenseAmount(value);
+    case HomeTrendSeries.income:
+      return isZeroAmount(value) ? '0' : '+${formatIncomeAmount(value)}';
+    case HomeTrendSeries.net:
+      return formatSignedAmount(value);
+  }
+}
+
 class HomeTrendPanel extends StatelessWidget {
   const HomeTrendPanel({
     super.key,
@@ -412,7 +424,7 @@ class HomeTrendPanel extends StatelessWidget {
                 child: InteractiveTrendChart(
                   color: seriesColor,
                   values: chartValues,
-                  xLabels: labelsForWindow(window),
+                  xLabels: sparseLabelsForWindow(window),
                   yLabels: reportAxisLabels(
                     chartValues.map((v) => v.abs()).fold(0, math.max),
                   ),
@@ -425,7 +437,7 @@ class HomeTrendPanel extends StatelessWidget {
                       lines: <ChartTooltipLine>[
                         ChartTooltipLine(
                           text:
-                              '$seriesLabel ${formatSignedAmount(chartValues[index])}',
+                              '$seriesLabel ${_trendSeriesValueText(config.series, chartValues[index])}',
                         ),
                       ],
                     );
@@ -811,7 +823,7 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
                       child: InteractiveTrendChart(
                         color: totalColor,
                         values: windowValues,
-                        xLabels: labelsForWindow(window),
+                        xLabels: sparseLabelsForWindow(window),
                         yLabels: reportAxisLabels(
                           windowValues.fold(0, math.max),
                         ),
@@ -857,7 +869,17 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
                       )
                     else
                       for (final row in dayRows.indexed) ...<Widget>[
-                        _DailyStatTile(row: row.$2, type: _type),
+                        _DailyStatTile(
+                          row: row.$2,
+                          type: _type,
+                          // 点某天进入当天交易明细，与首页日历点日期一致。
+                          onTap: () => Navigator.of(context).push<void>(
+                            MaterialPageRoute<void>(
+                              builder: (context) =>
+                                  TransactionsPage(initialDate: row.$2.date),
+                            ),
+                          ),
+                        ),
                         if (row.$1 != dayRows.length - 1) const Divider(),
                       ],
                   ],
@@ -952,10 +974,11 @@ class _DailyStatRow {
 }
 
 class _DailyStatTile extends StatelessWidget {
-  const _DailyStatTile({required this.row, required this.type});
+  const _DailyStatTile({required this.row, required this.type, this.onTap});
 
   final _DailyStatRow row;
   final EntryType type;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -965,29 +988,54 @@ class _DailyStatTile extends StatelessWidget {
       EntryType.income => '+${formatIncomeAmount(row.amount)}',
       EntryType.transfer => formatAmount(row.amount),
     };
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 9),
-      child: Row(
-        children: <Widget>[
-          VeriIconBox(
-            icon: Icons.calendar_today_outlined,
-            color: amountColor,
-            size: 28,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(veriRadiusSm),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 9),
+        child: Row(
+          children: <Widget>[
+            VeriIconBox(
+              icon: Icons.calendar_today_outlined,
+              color: amountColor,
+              size: 28,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    '${row.date.month.toString().padLeft(2, '0')}.${row.date.day.toString().padLeft(2, '0')}',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '${(row.percent * 100).toStringAsFixed(0)}%',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.48),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: <Widget>[
                 Text(
-                  '${row.date.month.toString().padLeft(2, '0')}.${row.date.day.toString().padLeft(2, '0')}',
+                  amountText,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: amountColor,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  '${(row.percent * 100).toStringAsFixed(0)}%',
+                  AppLocalizations.of(context).entriesCount(row.count),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(
                       context,
@@ -996,29 +1044,8 @@ class _DailyStatTile extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: <Widget>[
-              Text(
-                amountText,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: amountColor,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                AppLocalizations.of(context).entriesCount(row.count),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.48),
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
