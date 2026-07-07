@@ -1,6 +1,6 @@
 # 自动记账定案：截图识别 + 外部意图接口（不做任何监听）
 
-> 状态：**方案定稿，未开工**。
+> 状态：**路线 A 与路线 B 均已实现（2026-07-07）**，待真机验收。实现落点：`lib/app/screenshot_recognizer_*.dart`（OCR 两件套）、`lib/app/ai/ai_entry_parser.dart`（`buildCapturedEntryPrompt`/`requestCapturedEntryDraft`）、`lib/pages/capture_entry.dart`（识别流程）、原生 `ShareReceiverActivity` + MainActivity 采集桥接；意图接口用户文档在 `docs/automation.md`。与本方案的偏差：在 App 内入口上只做了相册选图（AI 记账弹层「截图识账」按钮），拍照与磁贴入口按 backlog 未做；无新增数据表（草稿当场确认，不落库）。
 > 定案（2026-07-07，用户拍板）：**永久不做「监听类」自动记账**（通知监听 NLS、无障碍读屏/截屏都不做）——监听用户消息过于侵犯隐私，且可靠性天花板由系统/ROM 决定无法根治。保留两条不含任何监听的路线：**① 截图识别**（用户主动截图、主动分享进来才识别）；**② 钱迹式外部意图接口**（愿意折腾的用户用 Tasker 等自动化工具自建触发，敏感权限授给自动化工具而非本 App）。
 > 本文档为内部技术评估，正文保留中文（不进 ARB）。
 

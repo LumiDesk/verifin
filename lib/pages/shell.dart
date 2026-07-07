@@ -9,6 +9,7 @@ import '../app/models.dart';
 import '../l10n/app_localizations.dart';
 import 'ai_entry_sheet.dart';
 import 'assets_pages.dart';
+import 'capture_entry.dart';
 import 'entry_detail_page.dart';
 import 'home_page.dart';
 import 'onboarding_page.dart';
@@ -30,6 +31,7 @@ class _VeriFinShellState extends State<VeriFinShell> {
   void initState() {
     super.initState();
     AppPlatformBridge.setQuickEntryHandler(_openQuickEntryFromPlatform);
+    AppPlatformBridge.setSharedCaptureHandler(_openSharedCaptureFromPlatform);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // 隐私政策 / 用户协议同意由 PrivacyConsentGate 门卫处理；本壳只在同意后
       // 才会被构建，故此处直接展示新用户引导。
@@ -40,6 +42,11 @@ class _VeriFinShellState extends State<VeriFinShell> {
       if (await AppPlatformBridge.consumeInitialQuickEntryIntent() && mounted) {
         await _openQuickEntryFromPlatform();
       }
+      if (!mounted) {
+        return;
+      }
+      // 冷启动带着分享/外部采集内容时（分享截图给 Veri Fin 等），开屏即识别。
+      await startSharedCaptureEntry(context);
     });
   }
 
@@ -59,6 +66,7 @@ class _VeriFinShellState extends State<VeriFinShell> {
   @override
   void dispose() {
     AppPlatformBridge.clearQuickEntryHandler();
+    AppPlatformBridge.clearSharedCaptureHandler();
     super.dispose();
   }
 
@@ -190,6 +198,14 @@ class _VeriFinShellState extends State<VeriFinShell> {
       return;
     }
     await _startQuickEntry(context);
+  }
+
+  /// 应用运行中收到分享/外部采集内容（原生 onNewIntent 通知）时拉取并识别。
+  Future<void> _openSharedCaptureFromPlatform() async {
+    if (!mounted) {
+      return;
+    }
+    await startSharedCaptureEntry(context);
   }
 }
 

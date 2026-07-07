@@ -31,9 +31,7 @@ void main() {
     test('解密按信封记录的 iter 派生密钥（改动 iter 即解不开）', () async {
       const plain = '{"app":"verifin","data":{"n":1}}';
       final envelope = await encryptBackup(plain, 'hunter2');
-      final map = Map<String, Object?>.from(
-        jsonDecode(envelope) as Map,
-      );
+      final map = Map<String, Object?>.from(jsonDecode(envelope) as Map);
       // 篡改迭代数：若解密仍用固定常量而非信封里的 iter，就会「无视篡改」照常解开。
       map['iter'] = (map['iter'] as num).toInt() + 1000;
       final tampered = jsonEncode(map);

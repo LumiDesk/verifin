@@ -2498,6 +2498,31 @@ class AppLocalizationsEn extends AppLocalizations {
       'Account not matched — set to no account, please confirm';
 
   @override
+  String get screenshotEntryButton => 'Scan a screenshot';
+
+  @override
+  String get screenshotEntryUnsupported =>
+      'Image text recognition is not supported on this device';
+
+  @override
+  String get screenshotEntryNoText =>
+      'No text was recognized in the image — try a clearer screenshot';
+
+  @override
+  String get captureEntryRecognizing => 'Reading the bill…';
+
+  @override
+  String get captureEntryNoTransaction =>
+      'No transaction was found — make sure the content is a bill screenshot or bill text';
+
+  @override
+  String get captureEntryFailedTitle => 'Recognition failed';
+
+  @override
+  String get captureEntryPrivacyNotice =>
+      'Recognition runs on this device and the image is never uploaded; only the recognized text is sent to your configured AI service for parsing.';
+
+  @override
   String get uploadingWebdav => 'Uploading to WebDAV…';
 
   @override

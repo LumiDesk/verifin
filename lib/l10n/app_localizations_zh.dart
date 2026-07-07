@@ -2449,6 +2449,28 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiWarningAccountUnmatched => '账户未匹配，已置为无账户，请确认';
 
   @override
+  String get screenshotEntryButton => '截图识账';
+
+  @override
+  String get screenshotEntryUnsupported => '当前设备不支持图片文字识别';
+
+  @override
+  String get screenshotEntryNoText => '没有从图片里识别到文字，请换一张更清晰的截图';
+
+  @override
+  String get captureEntryRecognizing => '正在识别账单内容…';
+
+  @override
+  String get captureEntryNoTransaction => '没有识别到交易，请确认内容是账单截图或账单文本';
+
+  @override
+  String get captureEntryFailedTitle => '识别失败';
+
+  @override
+  String get captureEntryPrivacyNotice =>
+      '识别在本机完成，图片不会上传；识别出的文字会发送到你配置的 AI 服务解析。';
+
+  @override
   String get uploadingWebdav => '正在上传到 WebDAV...';
 
   @override

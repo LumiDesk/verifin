@@ -4562,6 +4562,48 @@ abstract class AppLocalizations {
   /// **'账户未匹配，已置为无账户，请确认'**
   String get aiWarningAccountUnmatched;
 
+  /// No description provided for @screenshotEntryButton.
+  ///
+  /// In zh, this message translates to:
+  /// **'截图识账'**
+  String get screenshotEntryButton;
+
+  /// No description provided for @screenshotEntryUnsupported.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前设备不支持图片文字识别'**
+  String get screenshotEntryUnsupported;
+
+  /// No description provided for @screenshotEntryNoText.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有从图片里识别到文字，请换一张更清晰的截图'**
+  String get screenshotEntryNoText;
+
+  /// No description provided for @captureEntryRecognizing.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在识别账单内容…'**
+  String get captureEntryRecognizing;
+
+  /// No description provided for @captureEntryNoTransaction.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有识别到交易，请确认内容是账单截图或账单文本'**
+  String get captureEntryNoTransaction;
+
+  /// No description provided for @captureEntryFailedTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'识别失败'**
+  String get captureEntryFailedTitle;
+
+  /// No description provided for @captureEntryPrivacyNotice.
+  ///
+  /// In zh, this message translates to:
+  /// **'识别在本机完成，图片不会上传；识别出的文字会发送到你配置的 AI 服务解析。'**
+  String get captureEntryPrivacyNotice;
+
   /// No description provided for @uploadingWebdav.
   ///
   /// In zh, this message translates to:

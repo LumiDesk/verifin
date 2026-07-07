@@ -179,7 +179,9 @@ void main() {
         ),
       ],
       recurringRules: const <RecurringRule>[],
-      monthlyBudgets: const <String, double>{'$defaultLedgerBookId:2026-02': 500},
+      monthlyBudgets: const <String, double>{
+        '$defaultLedgerBookId:2026-02': 500,
+      },
       categoryBudgets: const <String, double>{},
       dailyBudgets: const <String, double>{},
     );

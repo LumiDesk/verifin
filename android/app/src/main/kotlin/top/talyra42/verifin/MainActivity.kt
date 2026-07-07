@@ -30,11 +30,14 @@ import java.net.URL
 class MainActivity : FlutterFragmentActivity() {
     private var channel: MethodChannel? = null
     private var pendingQuickEntryIntent = false
+    private var pendingCaptureImageUri: Uri? = null
+    private var pendingCaptureText: String? = null
     private var pendingDownloadsWrite: PendingDownloadsWrite? = null
     private var pendingDirectoryPick: MethodChannel.Result? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         rememberQuickEntryIntent(intent)
+        rememberCaptureIntent(intent)
         super.onCreate(savedInstanceState)
     }
 
@@ -47,6 +50,12 @@ class MainActivity : FlutterFragmentActivity() {
                     val shouldOpen = pendingQuickEntryIntent
                     pendingQuickEntryIntent = false
                     result.success(shouldOpen)
+                }
+                "consumeCaptureImage" -> consumeCaptureImage(result)
+                "consumeCaptureText" -> {
+                    val text = pendingCaptureText
+                    pendingCaptureText = null
+                    result.success(text)
                 }
                 "updateWidgetData" -> {
                     updateWidgetData(call)
@@ -123,6 +132,53 @@ class MainActivity : FlutterFragmentActivity() {
                 channel?.invokeMethod("openQuickEntry", null)
             }
         }
+        if (intent.action == ACTION_CAPTURE_IMAGE || intent.action == ACTION_CAPTURE_TEXT) {
+            rememberCaptureIntent(intent)
+            // 引擎已就绪则立刻通知 Flutter 拉取；冷启动时由 Flutter 开屏主动 consume。
+            channel?.invokeMethod("openSharedCapture", null)
+        }
+    }
+
+    /// 记住分享/外部采集意图（由 ShareReceiverActivity 转发进来），待 Flutter 拉取。
+    private fun rememberCaptureIntent(intent: Intent?) {
+        when (intent?.action) {
+            ACTION_CAPTURE_IMAGE -> {
+                val uri = intent.getStringExtra(EXTRA_CAPTURE_IMAGE_URI)
+                if (!uri.isNullOrBlank()) {
+                    pendingCaptureImageUri = Uri.parse(uri)
+                }
+            }
+            ACTION_CAPTURE_TEXT -> {
+                val text = intent.getStringExtra(EXTRA_CAPTURE_TEXT)
+                if (!text.isNullOrBlank()) {
+                    // 外部送入的文本不可信，原生侧先做长度上限（Dart 侧还有截断）。
+                    pendingCaptureText = text.take(MAX_CAPTURE_TEXT_LENGTH)
+                }
+            }
+        }
+    }
+
+    /// 读取待识别的分享图片字节并清除。图片可能几 MB，放后台线程读；超限拒绝。
+    private fun consumeCaptureImage(result: MethodChannel.Result) {
+        val uri = pendingCaptureImageUri
+        pendingCaptureImageUri = null
+        if (uri == null) {
+            result.success(null)
+            return
+        }
+        Thread {
+            try {
+                val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                if (bytes == null || bytes.isEmpty() || bytes.size > MAX_CAPTURE_IMAGE_BYTES) {
+                    runOnUiThread { result.success(null) }
+                } else {
+                    runOnUiThread { result.success(bytes) }
+                }
+            } catch (error: Exception) {
+                // 分享方 URI 失效等异常按「没有待识别图片」处理，不打断开屏。
+                runOnUiThread { result.success(null) }
+            }
+        }.start()
     }
 
     /// 开关 FLAG_SECURE：开启后应用内容不可截屏/录屏，且从最近任务缩略图中隐藏，
@@ -788,6 +844,15 @@ class MainActivity : FlutterFragmentActivity() {
 
     companion object {
         const val ACTION_QUICK_ENTRY = "top.talyra42.verifin.action.QUICK_ENTRY"
+
+        /// 外部采集：自动化工具（Tasker 等）可显式发起，extra `text` 带账单原文；
+        /// 分享文本/图片经 ShareReceiverActivity 归一到同两个内部 action。
+        const val ACTION_CAPTURE_TEXT = "top.talyra42.verifin.action.CAPTURE_TEXT"
+        const val ACTION_CAPTURE_IMAGE = "top.talyra42.verifin.action.CAPTURE_IMAGE"
+        const val EXTRA_CAPTURE_TEXT = "text"
+        const val EXTRA_CAPTURE_IMAGE_URI = "imageUri"
+        private const val MAX_CAPTURE_TEXT_LENGTH = 8_000
+        private const val MAX_CAPTURE_IMAGE_BYTES = 25 * 1024 * 1024
         private const val CHANNEL_NAME = "verifin/app"
         private const val REQUEST_WRITE_DOWNLOADS = 4301
         private const val REQUEST_PICK_BACKUP_DIR = 4302

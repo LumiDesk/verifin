@@ -42,6 +42,30 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- 截图识账 / 外部采集入口：分享图片、分享文本、自动化工具显式意图统一由
+             无界面跳板接收并转发到自家任务栈的 MainActivity，避免在分享方任务栈里
+             再起一个 Flutter 实例。收到的内容只产草稿弹确认，绝不静默落账。 -->
+        <activity
+            android:name=".ShareReceiverActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:label="VeriFin">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="top.talyra42.verifin.action.CAPTURE_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
         <service
             android:name=".QuickEntryTileService"
             android:exported="true"

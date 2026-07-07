@@ -37,6 +37,7 @@
 - 首页 FAB 数字键盘**快速记账**，支持支出 / 收入 / 转账三种类型；可选**「无账户」**只记金额、不计入任何账户余额；数字键盘支持**四则运算算式**（如 `500+800`），实时显示结果、算式不完整时提示；
 - **默认付款账户**：在「我的 → 设置」或账户详情页把某账户设为默认，记账时（含 AI 未识别到账户时）自动预选它，每个账本各自设置；
 - **AI 对话记账**（可选）：把「记一笔」按钮设为 AI 模式，用一句话（如「昨天打车 32」）自动解析出类型 / 金额 / 分类 / 账户 / 备注草稿，确认后落账；也可设为**点击手动、长按 AI**，一个按钮两种入口；自带 API Key + 请求地址（OpenAI 兼容），配置只存本机；
+- **截图识账 / 分享识账**（可选，需先配置 AI）：把账单**截图「分享」给 Veri Fin**（或在 AI 记账弹层里选相册截图），文字识别在**本机离线完成、图片绝不上传**，识别文本由 AI 解析成草稿确认落账；账单**文本**同样可分享识别。Veri Fin 本体**不监听任何通知或屏幕**——Tasker 等自动化工具可经 Intent 接口把账单文本送进来（见 [`docs/automation.md`](docs/automation.md)）；
 - **多级分类**（任意层级树形结构）+ **多标签**（多对多，可筛选、可统计）；
 - 交易可附**图片票据**（拍照或相册，压缩后本地存储，随备份导出）；
 - **周期记账**（每天 / 周 / 月 / 年自动补记，如房租、工资）、**批量操作**（多选删除、改分类、改账户）；
@@ -136,6 +137,7 @@ lib/
 | [`docs/product.md`](docs/product.md) | 产品定位与数据策略 |
 | [`docs/ui-guidelines.md`](docs/ui-guidelines.md) | UI 规范（Header、弹窗、金额展示、图表交互） |
 | [`docs/acceptance-checklist.md`](docs/acceptance-checklist.md) | 功能验收清单 |
+| [`docs/automation.md`](docs/automation.md) | 自动化接入（Intent 接口，配 Tasker 示例） |
 | [`docs/dev/i18n-verification.md`](docs/dev/i18n-verification.md) | 多语言真机验证清单 |
 | [`docs/dev/verifin-sample-backup.json`](docs/dev/verifin-sample-backup.json) | 可导入的测试备份数据 |
 | [`AGENTS.md`](AGENTS.md) | 贡献与 Agent 开发规范 |

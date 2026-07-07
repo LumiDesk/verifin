@@ -302,3 +302,52 @@ Future<AiEntryDraft> requestAiEntryDraft({
   );
   return parseAiEntryDraft(content, context);
 }
+
+/// 采集文本送 AI 前的长度上限：账单截图 OCR 一般几百字，超长多半混入了整页
+/// 无关内容，截断保护 Token 消耗（关键交易信息几乎总在前部）。
+const int capturedTextMaxLength = 4000;
+
+/// 采集文本（截图 OCR / 分享文本）的前置过滤：连一个数字都没有的文本不可能
+/// 含交易金额，直接短路不调 AI。
+bool capturedTextLikelyTransaction(String text) {
+  return RegExp(r'[0-9０-９]').hasMatch(text);
+}
+
+/// 构造「采集文本」解析的系统提示词：输入不是用户亲手打的一句话，而是账单截图
+/// 的 OCR 结果或分享/自动化工具送入的账单原文——可能换行、乱序、混着界面按钮和
+/// 余额等无关数字，须挑出最主要的一笔交易。
+String buildCapturedEntryPrompt(AiEntryContext context) {
+  final base = buildAiEntryPrompt(context);
+  return '''
+$base
+
+补充：本次用户输入不是亲手描述的一句话，而是一段自动采集的账单文本（支付/账单页面截图的 OCR 结果，或分享进来的账单原文），可能包含换行、乱序、界面按钮文字等噪音。按下面规则从中解析出最主要的一笔交易：
+- 金额只取「交易金额/付款金额/收款金额」本身；余额、优惠、积分、红包、手续费上限等其他数字一律忽略。
+- 到账、收款、入账、退款、工资、报销 → "income"；付款、消费、支出、扣款 → "expense"；账户间转账、还款、提现 → "transfer"。
+- 文本里出现的交易时间（日期与时分）优先于当前时间，填入 date 与 time。
+- 对方名称/商户名/备注摘要放进 note，保留原语言。
+- 如果整段文本根本不含任何一笔交易（如聊天记录、营销内容、纯界面文字），把 amount 置为 0。
+''';
+}
+
+/// 发起一次「采集文本」记账解析：预过滤 → 截断 → 请求 → 解析 → 校验，返回草稿。
+/// 文本无数字直接抛 [AiEntryException]（无金额），不浪费 AI 调用。
+Future<AiEntryDraft> requestCapturedEntryDraft({
+  required AiSettings settings,
+  required String capturedText,
+  required AiEntryContext context,
+}) async {
+  final trimmed = capturedText.trim();
+  if (trimmed.isEmpty || !capturedTextLikelyTransaction(trimmed)) {
+    throw AiEntryException(AiEntryError.noAmount);
+  }
+  final input = trimmed.length > capturedTextMaxLength
+      ? trimmed.substring(0, capturedTextMaxLength)
+      : trimmed;
+  final content = await aiChatComplete(
+    settings: settings,
+    systemPrompt: buildCapturedEntryPrompt(context),
+    userPrompt: input,
+  );
+  return parseAiEntryDraft(content, context);
+}

@@ -325,10 +325,7 @@ class SqliteLedgerRepository implements LedgerRepository {
   static Iterable<Map<String, Object?>> _budgetRows(
     Map<String, double> budgets,
   ) => budgets.entries.map(
-    (entry) => <String, Object?>{
-      'scope_key': entry.key,
-      'amount': entry.value,
-    },
+    (entry) => <String, Object?>{'scope_key': entry.key, 'amount': entry.value},
   );
 
   Future<Map<String, double>> _loadBudgetMap(String table) async {

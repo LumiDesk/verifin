@@ -2,88 +2,49 @@ import 'package:flutter/material.dart';
 
 import '../app/ai/ai_client.dart';
 import '../app/ai/ai_entry_parser.dart';
-import '../app/models.dart';
-import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
-import 'ai_settings_page.dart';
+import 'capture_entry.dart';
 import 'entry_detail_page.dart';
 
+/// 弹层里点了「截图识账」时的返回哨兵（与解析出的草稿区分）。
+const Object _screenshotRequested = Object();
+
 /// AI 对话记账入口：未配置则引导去设置；否则弹出自然语言输入框，解析成交易草稿，
-/// 落账前 push 到记账页由用户确认/修改。
+/// 落账前 push 到记账页由用户确认/修改。弹层内也可切到「截图识账」。
 Future<void> startAiEntry(BuildContext context) async {
   final controller = VeriFinScope.of(context);
-  final l10n = AppLocalizations.of(context);
-
-  if (!controller.aiSettings.isConfigured) {
-    final goToSettings = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.aiEntryNotConfiguredTitle),
-        content: Text(l10n.aiEntryNotConfiguredBody),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(l10n.commonCancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(l10n.aiEntryGoToSettings),
-          ),
-        ],
-      ),
-    );
-    if (goToSettings == true && context.mounted) {
-      await Navigator.of(context).push<void>(
-        MaterialPageRoute<void>(builder: (_) => const AiSettingsPage()),
-      );
-    }
+  if (!await ensureAiConfigured(context) || !context.mounted) {
     return;
   }
 
-  final draft = await showModalBottomSheet<AiEntryDraft>(
+  final result = await showModalBottomSheet<Object>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,
     builder: (_) => const _AiEntrySheet(),
   );
+  if (!context.mounted) {
+    return;
+  }
 
-  if (draft != null && context.mounted) {
+  if (identical(result, _screenshotRequested)) {
+    await startScreenshotEntry(context);
+    return;
+  }
+  if (result is AiEntryDraft) {
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => EntryDetailPage(
-          initialAmount: draft.amount,
+          initialAmount: result.amount,
           // AI 未识别到账户时，记账页回落到默认付款账户（未设则为「无账户」）。
           initialAccountId: controller.defaultAccountId,
-          initialDraft: draft,
+          initialDraft: result,
         ),
       ),
     );
   }
-}
-
-AiEntryContext _buildContext(VeriFinController controller) {
-  List<AiOption> optionsFor(EntryType type) => controller
-      .categoriesForType(type)
-      .map(
-        (category) => AiOption(
-          id: category.id,
-          label: controller.categoryPathLabel(category.id),
-        ),
-      )
-      .toList();
-  final accounts = controller.accounts
-      .where((account) => !account.hidden)
-      .map((account) => AiOption(id: account.id, label: account.name))
-      .toList();
-  return AiEntryContext(
-    expenseCategories: optionsFor(EntryType.expense),
-    incomeCategories: optionsFor(EntryType.income),
-    accounts: accounts,
-    today: DateTime.now(),
-    bookId: controller.activeBook.id,
-  );
 }
 
 class _AiEntrySheet extends StatefulWidget {
@@ -120,7 +81,7 @@ class _AiEntrySheetState extends State<_AiEntrySheet> {
       final draft = await requestAiEntryDraft(
         settings: controller.aiSettings,
         input: input,
-        context: _buildContext(controller),
+        context: buildAiEntryContext(controller),
       );
       if (!mounted) {
         return;
@@ -232,6 +193,20 @@ class _AiEntrySheetState extends State<_AiEntrySheet> {
                     )
                   : const Icon(Icons.arrow_forward, size: 18),
               label: Text(_parsing ? l10n.aiEntryParsing : l10n.aiEntryParse),
+            ),
+          ),
+          const SizedBox(height: 6),
+          // 截图识账：选一张账单截图本地 OCR 后交 AI 解析（也支持从其他 App
+          // 直接把截图「分享」给 Veri Fin）。弹层先关，由入口方接力跑识别流程。
+          SizedBox(
+            width: double.infinity,
+            child: TextButton.icon(
+              key: const Key('ai_entry_screenshot_button'),
+              onPressed: _parsing
+                  ? null
+                  : () => Navigator.of(context).pop(_screenshotRequested),
+              icon: const Icon(Icons.document_scanner_outlined, size: 18),
+              label: Text(l10n.screenshotEntryButton),
             ),
           ),
         ],

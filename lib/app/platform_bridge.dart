@@ -6,6 +6,7 @@ class AppPlatformBridge {
 
   static const MethodChannel _channel = MethodChannel('verifin/app');
   static Future<void> Function()? _quickEntryHandler;
+  static Future<void> Function()? _sharedCaptureHandler;
   static final ValueNotifier<UpdateDownloadProgress?> updateProgress =
       ValueNotifier<UpdateDownloadProgress?>(null);
 
@@ -19,10 +20,25 @@ class AppPlatformBridge {
     _ensureMethodHandler();
   }
 
+  /// 注册分享/外部采集到达时的回调（应用已在运行、原生 onNewIntent 通知）。
+  static void setSharedCaptureHandler(Future<void> Function() handler) {
+    _sharedCaptureHandler = handler;
+    _ensureMethodHandler();
+  }
+
+  static void clearSharedCaptureHandler() {
+    _sharedCaptureHandler = null;
+    _ensureMethodHandler();
+  }
+
   static void _ensureMethodHandler() {
     _channel.setMethodCallHandler((call) async {
       if (call.method == 'openQuickEntry') {
         await _quickEntryHandler?.call();
+        return;
+      }
+      if (call.method == 'openSharedCapture') {
+        await _sharedCaptureHandler?.call();
         return;
       }
       if (call.method == 'updateDownloadProgress') {
@@ -40,6 +56,28 @@ class AppPlatformBridge {
           false;
     } on MissingPluginException {
       return false;
+    }
+  }
+
+  /// 取走待识别的分享图片字节（无则 null）。取走即清，重复调用返回 null。
+  static Future<Uint8List?> consumeCaptureImage() async {
+    try {
+      return await _channel.invokeMethod<Uint8List>('consumeCaptureImage');
+    } on MissingPluginException {
+      return null;
+    } on PlatformException {
+      return null;
+    }
+  }
+
+  /// 取走待解析的外部采集文本（分享文本 / 自动化意图，无则 null）。取走即清。
+  static Future<String?> consumeCaptureText() async {
+    try {
+      return await _channel.invokeMethod<String>('consumeCaptureText');
+    } on MissingPluginException {
+      return null;
+    } on PlatformException {
+      return null;
     }
   }
 

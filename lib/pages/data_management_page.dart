@@ -1079,7 +1079,9 @@ class DataManagementPage extends StatelessWidget {
       if (bytes.isEmpty) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(AppLocalizations.of(context).fileEmptyError)),
+            SnackBar(
+              content: Text(AppLocalizations.of(context).fileEmptyError),
+            ),
           );
         }
         return;
@@ -1531,7 +1533,9 @@ class _WebdavEditDialogState extends State<_WebdavEditDialog> {
       await webdavTestConnection(_current());
       if (mounted) setState(() => _statusText = l10n.connectionOk);
     } catch (error) {
-      if (mounted) setState(() => _statusText = l10n.connectionFailed('$error'));
+      if (mounted) {
+        setState(() => _statusText = l10n.connectionFailed('$error'));
+      }
     } finally {
       if (mounted) setState(() => _testing = false);
     }
@@ -1569,10 +1573,7 @@ class _WebdavEditDialogState extends State<_WebdavEditDialog> {
             ),
             if (_statusText != null) ...<Widget>[
               const SizedBox(height: 10),
-              Text(
-                _statusText!,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
+              Text(_statusText!, style: Theme.of(context).textTheme.bodySmall),
             ],
           ],
         ),
