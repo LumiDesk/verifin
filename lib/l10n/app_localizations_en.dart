@@ -1956,10 +1956,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get platformMintHint => 'Bill CSV';
 
   @override
-  String get platformYimu => 'YiMu (一木记账)';
+  String get platformYimuBill => 'YiMu · Bills';
 
   @override
-  String get platformYimuHint => 'Bill Excel (.xls)';
+  String get platformYimuBillHint => 'Bill export (.xls)';
+
+  @override
+  String get platformYimuTransfer => 'YiMu · Transfers';
+
+  @override
+  String get platformYimuTransferHint => 'Transfer export (.xls)';
 
   @override
   String get platformGenericCsv => 'Other CSV';
@@ -1985,8 +1991,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'In Mint (Bohe): Me → ledger/data settings → Export bill (CSV), save it to your phone, then choose it here. Menu paths may vary by app version.';
 
   @override
-  String get yimuImportGuide =>
-      'In YiMu (一木记账): Me → Export bill → choose the Excel format, save it to your phone, then choose it here (the file is a .xls). \n\nYiMu exports \"bills\" and \"transfers\" as two separate files; import both here one after another (they are auto-detected). Categories use the second-level category; transfers keep both accounts and the fee. Menu paths may vary by app version.';
+  String get yimuBillImportGuide =>
+      'In YiMu (一木记账): Me → Import/Export → Export data → Export bills, choose Excel (.xls) and save it to your phone, then choose it here.\n\nImports income/expense bills only; categories use the second-level category. For transfers, use the separate \"YiMu · Transfers\" entry. Menu paths may vary by app version.';
+
+  @override
+  String get yimuTransferImportGuide =>
+      'In YiMu (一木记账): Me → Import/Export → Export data → Export transfers, choose Excel (.xls) and save it to your phone, then choose it here.\n\nImports transfer records, keeping both accounts and the fee. For income/expense bills, use the separate \"YiMu · Bills\" entry. Menu paths may vary by app version.';
 
   @override
   String get genericCsvImportGuide =>

@@ -255,7 +255,7 @@ void main() {
     late ImportPlan plan;
     setUp(() {
       final bytes = File('test/fixtures/yimu_transactions.xls').readAsBytesSync();
-      plan = run(ImportPlatform.yimu, Uint8List.fromList(bytes));
+      plan = run(ImportPlatform.yimuBill, Uint8List.fromList(bytes));
     });
 
     test('全部 7 条导入、无错误', () {
@@ -294,7 +294,7 @@ void main() {
     late ImportPlan plan;
     setUp(() {
       final bytes = File('test/fixtures/yimu_transfers.xls').readAsBytesSync();
-      plan = run(ImportPlatform.yimu, Uint8List.fromList(bytes));
+      plan = run(ImportPlatform.yimuTransfer, Uint8List.fromList(bytes));
     });
 
     test('识别为转账并建立转出/转入账户', () {
@@ -312,6 +312,25 @@ void main() {
       );
       expect(from.name, '微信钱包');
       expect(to.name, '支付宝');
+    });
+
+    test('选错文件即报错（不跨类型猜测）', () {
+      final billBytes = File(
+        'test/fixtures/yimu_transactions.xls',
+      ).readAsBytesSync();
+      final transferBytes = File(
+        'test/fixtures/yimu_transfers.xls',
+      ).readAsBytesSync();
+      // 账单入口选到转账文件 → 表头不匹配，报错。
+      expect(
+        () => run(ImportPlatform.yimuBill, Uint8List.fromList(transferBytes)),
+        throwsFormatException,
+      );
+      // 转账入口选到账单文件 → 同样报错。
+      expect(
+        () => run(ImportPlatform.yimuTransfer, Uint8List.fromList(billBytes)),
+        throwsFormatException,
+      );
     });
   });
 }

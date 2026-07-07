@@ -1080,10 +1080,17 @@ class DataManagementPage extends StatelessWidget {
         assetPath: 'assets/import_icons/mint.png',
       ),
       _PlatformOption(
-        ImportPlatform.yimu,
+        ImportPlatform.yimuBill,
         Icons.menu_book_outlined,
-        l10n.platformYimu,
-        l10n.platformYimuHint,
+        l10n.platformYimuBill,
+        l10n.platformYimuBillHint,
+        assetPath: 'assets/import_icons/yimu.png',
+      ),
+      _PlatformOption(
+        ImportPlatform.yimuTransfer,
+        Icons.swap_horiz_outlined,
+        l10n.platformYimuTransfer,
+        l10n.platformYimuTransferHint,
         assetPath: 'assets/import_icons/yimu.png',
       ),
       _PlatformOption(
@@ -1152,7 +1159,8 @@ class DataManagementPage extends StatelessWidget {
       ImportPlatform.alipay => l10n.platformAlipay,
       ImportPlatform.wechat => l10n.platformWechat,
       ImportPlatform.mint => l10n.platformMint,
-      ImportPlatform.yimu => l10n.platformYimu,
+      ImportPlatform.yimuBill => l10n.platformYimuBill,
+      ImportPlatform.yimuTransfer => l10n.platformYimuTransfer,
       ImportPlatform.genericCsv => l10n.platformGenericCsv,
     };
   }
@@ -1163,7 +1171,8 @@ class DataManagementPage extends StatelessWidget {
       ImportPlatform.alipay => l10n.alipayImportGuide,
       ImportPlatform.wechat => l10n.wechatImportGuide,
       ImportPlatform.mint => l10n.mintImportGuide,
-      ImportPlatform.yimu => l10n.yimuImportGuide,
+      ImportPlatform.yimuBill => l10n.yimuBillImportGuide,
+      ImportPlatform.yimuTransfer => l10n.yimuTransferImportGuide,
       ImportPlatform.genericCsv => l10n.genericCsvImportGuide,
     };
   }

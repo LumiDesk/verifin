@@ -3560,17 +3560,29 @@ abstract class AppLocalizations {
   /// **'账单 CSV'**
   String get platformMintHint;
 
-  /// No description provided for @platformYimu.
+  /// No description provided for @platformYimuBill.
   ///
   /// In zh, this message translates to:
-  /// **'一木记账'**
-  String get platformYimu;
+  /// **'一木记账 · 账单'**
+  String get platformYimuBill;
 
-  /// No description provided for @platformYimuHint.
+  /// No description provided for @platformYimuBillHint.
   ///
   /// In zh, this message translates to:
-  /// **'账单 Excel（.xls）'**
-  String get platformYimuHint;
+  /// **'账单导出（.xls）'**
+  String get platformYimuBillHint;
+
+  /// No description provided for @platformYimuTransfer.
+  ///
+  /// In zh, this message translates to:
+  /// **'一木记账 · 转账还款'**
+  String get platformYimuTransfer;
+
+  /// No description provided for @platformYimuTransferHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'转账还款导出（.xls）'**
+  String get platformYimuTransferHint;
 
   /// No description provided for @platformGenericCsv.
   ///
@@ -3608,11 +3620,17 @@ abstract class AppLocalizations {
   /// **'薄荷记账 App →「我的」→ 账本/数据设置 → 导出账单（CSV），保存到本机后在此选择。菜单以实际 App 版本为准。'**
   String get mintImportGuide;
 
-  /// No description provided for @yimuImportGuide.
+  /// No description provided for @yimuBillImportGuide.
   ///
   /// In zh, this message translates to:
-  /// **'一木记账 App →「我的」→「导出账单」→ 选择 Excel 格式，保存到本机后在此选择（文件为 .xls）。\n\n一木把「账单」和「转账」导出成两个文件，两个都在此依次导入即可（会自动识别）。分类按二级分类导入，转账保留转出/转入账户与手续费。菜单以实际 App 版本为准。'**
-  String get yimuImportGuide;
+  /// **'一木记账 App →「我的」→「导入/导出」→「数据导出」→「账单导出」，选择 Excel（.xls）保存到本机后在此选择。\n\n只导入收支账单，分类按二级分类。转账请用另一个入口「一木记账 · 转账还款」。菜单以实际 App 版本为准。'**
+  String get yimuBillImportGuide;
+
+  /// No description provided for @yimuTransferImportGuide.
+  ///
+  /// In zh, this message translates to:
+  /// **'一木记账 App →「我的」→「导入/导出」→「数据导出」→「转账还款导出」，选择 Excel（.xls）保存到本机后在此选择。\n\n导入转账记录，保留转出/转入账户与手续费。收支账单请用另一个入口「一木记账 · 账单」。菜单以实际 App 版本为准。'**
+  String get yimuTransferImportGuide;
 
   /// No description provided for @genericCsvImportGuide.
   ///

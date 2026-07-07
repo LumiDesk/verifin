@@ -14,20 +14,23 @@ import 'xls_reader.dart';
 /// - [alipay] 支付宝「交易明细」CSV：GBK 编码、前置多行说明、含「不计收支」。
 /// - [wechat] 微信「支付账单」xlsx：二进制表格、日期为 Excel 序列号、含「中性交易」。
 /// - [mint] 薄荷记账 CSV：UTF-16LE 编码、**制表符分隔**、支出金额为负。
-/// - [yimu] 一木记账 xls：老式 BIFF8 二进制 Excel。一木把「账单（收支）」与「转账」
-///   导出成两个不同表头的文件，导入时按表头自动识别、各导一次。
+/// - [yimuBill] / [yimuTransfer] 一木记账 xls：老式 BIFF8 二进制 Excel。一木把
+///   「账单导出（收支）」与「转账还款导出」做成两个不同表头的文件，且还有其他导出，
+///   故拆成两个入口由用户显式选择、各认自己的表头（选错即报错，绝不猜测）。
 /// - [genericCsv] 通用 CSV（Veri Fin 模板 / 钱迹 / 随手记）：UTF-8 逗号分隔，走别名识别。
 enum ImportPlatform {
   alipay,
   wechat,
   mint,
-  yimu,
+  yimuBill,
+  yimuTransfer,
   genericCsv;
 
   /// 该来源可选择的文件扩展名（用于文件选择器过滤）。
   List<String> get fileExtensions => switch (this) {
     ImportPlatform.wechat => const <String>['xlsx'],
-    ImportPlatform.yimu => const <String>['xls'],
+    ImportPlatform.yimuBill => const <String>['xls'],
+    ImportPlatform.yimuTransfer => const <String>['xls'],
     _ => const <String>['csv', 'txt'],
   };
 }
@@ -61,7 +64,8 @@ ImportPlan buildPlatformImportPlan({
     ImportPlatform.alipay => _normalizeAlipay(_decodeGbk(bytes)),
     ImportPlatform.wechat => _normalizeWechat(parseXlsx(bytes)),
     ImportPlatform.mint => _normalizeMint(_decodeUtf16(bytes)),
-    ImportPlatform.yimu => _normalizeYimu(parseXls(bytes)),
+    ImportPlatform.yimuBill => _normalizeYimuBill(parseXls(bytes)),
+    ImportPlatform.yimuTransfer => _normalizeYimuTransfer(parseXls(bytes)),
     ImportPlatform.genericCsv => parseCsv(_decodeUtf8(bytes)),
   };
   return buildImportPlan(
@@ -223,34 +227,19 @@ List<List<String>> _normalizeMint(String content) {
 }
 
 // ---------------------------------------------------------------------------
-// 一木记账：BIFF8 .xls，账单与转账是两个不同表头的文件，按表头自动分派。
-// - 账单：日期/收支类型/金额(带符号)/类别/二级分类/账户。金额符号仅表方向（管线取
-//   绝对值），分类取二级分类（用户实际选择的叶子）、为空回退一级类别。
-// - 转账：日期/类型/转出账户/转入账户/金额/手续费/备注。含手续费，映射到转账 fee。
+// 一木记账「账单导出」：日期/收支类型/金额(带符号)/类别/二级分类/账户。金额符号仅表
+// 方向（管线取绝对值），分类取二级分类（用户实际选择的叶子）、为空回退一级类别。
+// 只认账单表头，选错文件（如转账/其他导出）即报错，不做跨类型猜测。
 // ---------------------------------------------------------------------------
 
-List<List<String>> _normalizeYimu(List<List<String>> rows) {
-  final txnHeader = _findHeaderRow(
+List<List<String>> _normalizeYimuBill(List<List<String>> rows) {
+  final headerIndex = _findHeaderRow(
     rows,
     mustHave: const <String>['日期', '收支类型', '金额'],
   );
-  if (txnHeader != null) {
-    return _normalizeYimuTransactions(rows, txnHeader);
+  if (headerIndex == null) {
+    throw const FormatException('未找到一木「账单导出」表头（日期/收支类型/金额），请确认选择的是一木账单导出的 xls');
   }
-  final xferHeader = _findHeaderRow(
-    rows,
-    mustHave: const <String>['转出账户', '转入账户', '金额'],
-  );
-  if (xferHeader != null) {
-    return _normalizeYimuTransfers(rows, xferHeader);
-  }
-  throw const FormatException('未找到一木记账表头，请确认选择的是一木导出的「账单」或「转账」xls');
-}
-
-List<List<String>> _normalizeYimuTransactions(
-  List<List<String>> rows,
-  int headerIndex,
-) {
   final cols = _columnIndex(rows[headerIndex]);
   final out = <List<String>>[_canonicalHeader];
   for (var i = headerIndex + 1; i < rows.length; i++) {
@@ -275,10 +264,19 @@ List<List<String>> _normalizeYimuTransactions(
   return out;
 }
 
-List<List<String>> _normalizeYimuTransfers(
-  List<List<String>> rows,
-  int headerIndex,
-) {
+// ---------------------------------------------------------------------------
+// 一木记账「转账还款导出」：日期/类型/转出账户/转入账户/金额/手续费/备注。含手续费，
+// 映射到转账 fee。只认转账表头，选错文件即报错。
+// ---------------------------------------------------------------------------
+
+List<List<String>> _normalizeYimuTransfer(List<List<String>> rows) {
+  final headerIndex = _findHeaderRow(
+    rows,
+    mustHave: const <String>['转出账户', '转入账户', '金额'],
+  );
+  if (headerIndex == null) {
+    throw const FormatException('未找到一木「转账还款导出」表头（转出账户/转入账户/金额），请确认选择的是一木转账还款导出的 xls');
+  }
   final cols = _columnIndex(rows[headerIndex]);
   final out = <List<String>>[_canonicalHeader];
   for (var i = headerIndex + 1; i < rows.length; i++) {
