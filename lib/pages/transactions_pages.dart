@@ -148,7 +148,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
     final entries = _sortedEntries(_filteredEntries(controller.entries));
     final expense = sumByType(entries, EntryType.expense);
     final income = sumByType(entries, EntryType.income);
-    final groupedEntries = _groupEntriesByDate(entries);
+    final groupedEntries = groupEntriesByDate(entries);
 
     return Theme(
       data: buildVeriFinTheme(Brightness.dark),
@@ -347,7 +347,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
                   )
                 else
                   for (final group in groupedEntries) ...<Widget>[
-                    _DateGroupHeader(entries: group.entries, date: group.date),
+                    DateGroupHeader(entries: group.entries, date: group.date),
                     const SizedBox(height: 8),
                     TransactionListCard(
                       entries: group.entries,
@@ -1064,55 +1064,6 @@ class _DateFilterBar extends StatelessWidget {
   }
 }
 
-class _DateEntryGroup {
-  const _DateEntryGroup({required this.date, required this.entries});
-
-  final DateTime date;
-  final List<LedgerEntry> entries;
-}
-
-class _DateGroupHeader extends StatelessWidget {
-  const _DateGroupHeader({required this.date, required this.entries});
-
-  final DateTime date;
-  final List<LedgerEntry> entries;
-
-  @override
-  Widget build(BuildContext context) {
-    final dayTotal = entries.fold<double>(
-      0,
-      (sum, entry) => sum + signedAmount(entry),
-    );
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: Text(
-              '${AppLocalizations.of(context).dateMonthDay(date)}  ${_relativeDay(AppLocalizations.of(context), date)}',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.42),
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          Text(
-            formatSignedAmount(dayTotal),
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.35),
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class TransactionDetailPage extends StatefulWidget {
   const TransactionDetailPage({super.key, required this.entryId});
 
@@ -1347,7 +1298,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                       DetailInfoRow(
                         label: AppLocalizations.of(context).dateLabel,
                         value:
-                            '${AppLocalizations.of(context).dateMonthDay(_occurredAt)}  ${_relativeDay(AppLocalizations.of(context), _occurredAt)}',
+                            '${AppLocalizations.of(context).dateMonthDay(_occurredAt)}  ${relativeDay(AppLocalizations.of(context), _occurredAt)}',
                         onTap: _pickDate,
                       ),
                       DetailInfoRow(
@@ -1726,36 +1677,6 @@ void openEntryDetail(BuildContext context, LedgerEntry entry) {
       builder: (context) => TransactionDetailPage(entryId: entry.id),
     ),
   );
-}
-
-List<_DateEntryGroup> _groupEntriesByDate(List<LedgerEntry> entries) {
-  final groups = <DateTime, List<LedgerEntry>>{};
-  for (final entry in entries) {
-    final date = DateTime(
-      entry.occurredAt.year,
-      entry.occurredAt.month,
-      entry.occurredAt.day,
-    );
-    groups.putIfAbsent(date, () => <LedgerEntry>[]).add(entry);
-  }
-  return groups.entries
-      .map((entry) => _DateEntryGroup(date: entry.key, entries: entry.value))
-      .toList()
-    ..sort((a, b) => b.date.compareTo(a.date));
-}
-
-String _relativeDay(AppLocalizations l10n, DateTime date) {
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
-  final target = DateTime(date.year, date.month, date.day);
-  final diff = today.difference(target).inDays;
-  if (diff == 0) {
-    return l10n.todayLabel;
-  }
-  if (diff == 1) {
-    return l10n.yesterdayLabel;
-  }
-  return '';
 }
 
 /// 多选模式底部操作栏：全选 / 删除 / 改分类 / 改账户。

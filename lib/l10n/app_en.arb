@@ -854,6 +854,60 @@
     }
   },
   "importPreviewNothingToImport": "No transactions to import",
+  "importAccountMapping": "Import accounts",
+  "importCategoryMapping": "Import categories",
+  "mappingSummary": "{newCount} new · {mappedCount} mapped",
+  "@mappingSummary": {
+    "placeholders": {
+      "newCount": {
+        "type": "int"
+      },
+      "mappedCount": {
+        "type": "int"
+      }
+    }
+  },
+  "mappingRowNew": "Create new",
+  "mappingRowRenamed": "New · renamed to \"{name}\"",
+  "@mappingRowRenamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mappingRowMapped": "Mapped to \"{name}\"",
+  "@mappingRowMapped": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mappingAccountSheetTitle": "Account \"{name}\"",
+  "@mappingAccountSheetTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mappingCategorySheetTitle": "Category \"{name}\"",
+  "@mappingCategorySheetTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mappingKeepNewAccount": "Create this account",
+  "mappingKeepNewCategory": "Create this category",
+  "mappingMapToExistingAccount": "Map to existing account",
+  "mappingMapToExistingCategory": "Map to existing category",
+  "mappingRenameAccount": "Rename new account",
+  "mappingRenameCategory": "Rename new category",
+  "mappingRenameTooltip": "Rename",
+  "mappingNewNameLabel": "New name",
   "importLocalTitle": "Import local backup?",
   "importLocalMessage": "Importing replaces current local transactions, accounts, ledgers, budgets, profile and settings. Consider exporting current data first.",
   "importedLocal": "Local data imported",

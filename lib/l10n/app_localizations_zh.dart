@@ -2558,6 +2558,64 @@ class AppLocalizationsZh extends AppLocalizations {
   String get importPreviewNothingToImport => '没有可导入的交易';
 
   @override
+  String get importAccountMapping => '导入账户';
+
+  @override
+  String get importCategoryMapping => '导入分类';
+
+  @override
+  String mappingSummary(int newCount, int mappedCount) {
+    return '新建 $newCount · 映射 $mappedCount';
+  }
+
+  @override
+  String get mappingRowNew => '新建';
+
+  @override
+  String mappingRowRenamed(String name) {
+    return '新建 · 改名为「$name」';
+  }
+
+  @override
+  String mappingRowMapped(String name) {
+    return '映射到「$name」';
+  }
+
+  @override
+  String mappingAccountSheetTitle(String name) {
+    return '账户「$name」';
+  }
+
+  @override
+  String mappingCategorySheetTitle(String name) {
+    return '分类「$name」';
+  }
+
+  @override
+  String get mappingKeepNewAccount => '新建此账户';
+
+  @override
+  String get mappingKeepNewCategory => '新建此分类';
+
+  @override
+  String get mappingMapToExistingAccount => '映射到现有账户';
+
+  @override
+  String get mappingMapToExistingCategory => '映射到现有分类';
+
+  @override
+  String get mappingRenameAccount => '重命名新账户';
+
+  @override
+  String get mappingRenameCategory => '重命名新分类';
+
+  @override
+  String get mappingRenameTooltip => '重命名';
+
+  @override
+  String get mappingNewNameLabel => '新名称';
+
+  @override
   String get importLocalTitle => '导入本地备份？';
 
   @override

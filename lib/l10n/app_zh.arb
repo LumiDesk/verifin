@@ -1664,6 +1664,60 @@
     }
   },
   "importPreviewNothingToImport": "没有可导入的交易",
+  "importAccountMapping": "导入账户",
+  "importCategoryMapping": "导入分类",
+  "mappingSummary": "新建 {newCount} · 映射 {mappedCount}",
+  "@mappingSummary": {
+    "placeholders": {
+      "newCount": {
+        "type": "int"
+      },
+      "mappedCount": {
+        "type": "int"
+      }
+    }
+  },
+  "mappingRowNew": "新建",
+  "mappingRowRenamed": "新建 · 改名为「{name}」",
+  "@mappingRowRenamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mappingRowMapped": "映射到「{name}」",
+  "@mappingRowMapped": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mappingAccountSheetTitle": "账户「{name}」",
+  "@mappingAccountSheetTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mappingCategorySheetTitle": "分类「{name}」",
+  "@mappingCategorySheetTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mappingKeepNewAccount": "新建此账户",
+  "mappingKeepNewCategory": "新建此分类",
+  "mappingMapToExistingAccount": "映射到现有账户",
+  "mappingMapToExistingCategory": "映射到现有分类",
+  "mappingRenameAccount": "重命名新账户",
+  "mappingRenameCategory": "重命名新分类",
+  "mappingRenameTooltip": "重命名",
+  "mappingNewNameLabel": "新名称",
   "importLocalTitle": "导入本地备份？",
   "importLocalMessage": "导入会替换当前本地交易、账户、账本、预算、个人信息和设置。建议先导出当前数据。",
   "importedLocal": "已导入本地数据",

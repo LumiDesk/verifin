@@ -15,7 +15,6 @@ import '../app/backup/webdav_client.dart';
 import '../app/backup/webdav_config.dart';
 import '../app/common_widgets.dart';
 import '../app/data_file_port.dart';
-import '../app/models.dart';
 import '../l10n/app_localizations.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
@@ -1288,21 +1287,21 @@ class DataManagementPage extends StatelessWidget {
         }
         return;
       }
-      final confirmed = await Navigator.of(context).push<List<LedgerEntry>>(
-        MaterialPageRoute<List<LedgerEntry>>(
+      final result = await Navigator.of(context).push<ImportPreviewResult>(
+        MaterialPageRoute<ImportPreviewResult>(
           builder: (_) => ImportPreviewPage(
             plan: plan,
             sourceLabel: _platformLabel(context, platform),
           ),
         ),
       );
-      if (confirmed == null || confirmed.isEmpty || !context.mounted) {
+      if (result == null || result.entries.isEmpty || !context.mounted) {
         return;
       }
       controller.applyImportEntries(
-        entries: confirmed,
-        candidateAccounts: plan.newAccounts,
-        candidateCategories: plan.newCategories,
+        entries: result.entries,
+        candidateAccounts: result.candidateAccounts,
+        candidateCategories: result.candidateCategories,
       );
       if (!context.mounted) {
         return;
@@ -1313,7 +1312,7 @@ class DataManagementPage extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '${AppLocalizations.of(context).importedEntries(confirmed.length)}$suffix',
+            '${AppLocalizations.of(context).importedEntries(result.entries.length)}$suffix',
           ),
         ),
       );

@@ -198,6 +198,89 @@ class _EntryBadge extends StatelessWidget {
   }
 }
 
+/// 同一天的交易分组（按日期倒序展示交易列表时用）。
+class DateEntryGroup {
+  const DateEntryGroup({required this.date, required this.entries});
+
+  final DateTime date;
+  final List<LedgerEntry> entries;
+}
+
+/// 把交易按「occurredAt 的日期」分组，日期从新到旧。
+List<DateEntryGroup> groupEntriesByDate(List<LedgerEntry> entries) {
+  final groups = <DateTime, List<LedgerEntry>>{};
+  for (final entry in entries) {
+    final date = DateTime(
+      entry.occurredAt.year,
+      entry.occurredAt.month,
+      entry.occurredAt.day,
+    );
+    groups.putIfAbsent(date, () => <LedgerEntry>[]).add(entry);
+  }
+  return groups.entries
+      .map((entry) => DateEntryGroup(date: entry.key, entries: entry.value))
+      .toList()
+    ..sort((a, b) => b.date.compareTo(a.date));
+}
+
+/// 相对今天的日期说明（今天 / 昨天，其余为空）。
+String relativeDay(AppLocalizations l10n, DateTime date) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final target = DateTime(date.year, date.month, date.day);
+  final diff = today.difference(target).inDays;
+  if (diff == 0) {
+    return l10n.todayLabel;
+  }
+  if (diff == 1) {
+    return l10n.yesterdayLabel;
+  }
+  return '';
+}
+
+/// 交易列表的日期分组小标题（日期 + 今天/昨天 + 当日合计）。
+class DateGroupHeader extends StatelessWidget {
+  const DateGroupHeader({super.key, required this.date, required this.entries});
+
+  final DateTime date;
+  final List<LedgerEntry> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    final dayTotal = entries.fold<double>(
+      0,
+      (sum, entry) => sum + signedAmount(entry),
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Text(
+              '${AppLocalizations.of(context).dateMonthDay(date)}  ${relativeDay(AppLocalizations.of(context), date)}',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.42),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          Text(
+            formatSignedAmount(dayTotal),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.35),
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class TransactionListCard extends StatelessWidget {
   const TransactionListCard({
     super.key,

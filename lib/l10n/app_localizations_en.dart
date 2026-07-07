@@ -2608,6 +2608,64 @@ class AppLocalizationsEn extends AppLocalizations {
   String get importPreviewNothingToImport => 'No transactions to import';
 
   @override
+  String get importAccountMapping => 'Import accounts';
+
+  @override
+  String get importCategoryMapping => 'Import categories';
+
+  @override
+  String mappingSummary(int newCount, int mappedCount) {
+    return '$newCount new · $mappedCount mapped';
+  }
+
+  @override
+  String get mappingRowNew => 'Create new';
+
+  @override
+  String mappingRowRenamed(String name) {
+    return 'New · renamed to \"$name\"';
+  }
+
+  @override
+  String mappingRowMapped(String name) {
+    return 'Mapped to \"$name\"';
+  }
+
+  @override
+  String mappingAccountSheetTitle(String name) {
+    return 'Account \"$name\"';
+  }
+
+  @override
+  String mappingCategorySheetTitle(String name) {
+    return 'Category \"$name\"';
+  }
+
+  @override
+  String get mappingKeepNewAccount => 'Create this account';
+
+  @override
+  String get mappingKeepNewCategory => 'Create this category';
+
+  @override
+  String get mappingMapToExistingAccount => 'Map to existing account';
+
+  @override
+  String get mappingMapToExistingCategory => 'Map to existing category';
+
+  @override
+  String get mappingRenameAccount => 'Rename new account';
+
+  @override
+  String get mappingRenameCategory => 'Rename new category';
+
+  @override
+  String get mappingRenameTooltip => 'Rename';
+
+  @override
+  String get mappingNewNameLabel => 'New name';
+
+  @override
   String get importLocalTitle => 'Import local backup?';
 
   @override

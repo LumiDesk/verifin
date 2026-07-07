@@ -3,17 +3,29 @@ import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 import '../app/backup/transaction_import.dart';
 import '../app/common_widgets.dart';
+import '../app/demo_data.dart';
 import '../app/models.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
 import 'entry_detail_page.dart';
 
-/// 账单导入预览页：解析后、落库前展示即将导入的交易，用户可逐条排除 / 恢复，
-/// 也可点进完整编辑（走 [EntryDetailPage] 草稿模式，不落库）。
-///
-/// 返回值（`Navigator.pop`）：
-/// - `null`：用户取消（返回键 / 未确认）。
-/// - `List<LedgerEntry>`：用户确认导入的交易（已按排除筛选、含编辑后的内容）。
+/// 导入预览页确认后返回的结果：最终要落库的交易，以及（可能被改名的）待新建
+/// 账户 / 分类候选。落库时只创建其中被保留交易实际引用到的那些。
+class ImportPreviewResult {
+  const ImportPreviewResult({
+    required this.entries,
+    required this.candidateAccounts,
+    required this.candidateCategories,
+  });
+
+  final List<LedgerEntry> entries;
+  final List<Account> candidateAccounts;
+  final List<Category> candidateCategories;
+}
+
+/// 账单导入预览页：解析后、落库前展示即将导入的交易（按日期分组），用户可逐条排除
+/// / 编辑，也可在「导入账户 / 分类」映射区里把某个待新建的账户/分类整体改名或映射到
+/// 现有条目（对所有引用它的交易一次性生效）。
 class ImportPreviewPage extends StatefulWidget {
   const ImportPreviewPage({
     super.key,
@@ -22,8 +34,6 @@ class ImportPreviewPage extends StatefulWidget {
   });
 
   final ImportPlan plan;
-
-  /// 来源名称（如「支付宝」），用于副标题。
   final String sourceLabel;
 
   @override
@@ -31,18 +41,57 @@ class ImportPreviewPage extends StatefulWidget {
 }
 
 class _ImportPreviewPageState extends State<ImportPreviewPage> {
-  /// 可编辑的交易副本，按时间倒序展示（与交易列表一致）。
   late final List<LedgerEntry> _entries = List<LedgerEntry>.of(
     widget.plan.entries,
   )..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
 
-  /// 被排除的交易 id（默认全部保留）。
   final Set<String> _excluded = <String>{};
+
+  // 映射：待新建账户/分类 id → 改后的名称（默认原名）。
+  late final Map<String, String> _accountName = <String, String>{
+    for (final account in widget.plan.newAccounts) account.id: account.name,
+  };
+  late final Map<String, String> _categoryName = <String, String>{
+    for (final category in widget.plan.newCategories)
+      category.id: category.label,
+  };
+  // 映射：待新建账户/分类 id → 映射到的现有条目 id（存在=映射，缺省=新建）。
+  final Map<String, String> _accountMapTo = <String, String>{};
+  final Map<String, String> _categoryMapTo = <String, String>{};
+
+  bool _accountsExpanded = false;
+  bool _categoriesExpanded = false;
 
   bool _isIncluded(LedgerEntry entry) => !_excluded.contains(entry.id);
 
-  List<LedgerEntry> get _includedEntries =>
-      _entries.where(_isIncluded).toList();
+  String _resolveAccountId(String id) => _accountMapTo[id] ?? id;
+  String _resolveCategoryId(String id) => _categoryMapTo[id] ?? id;
+
+  /// 把交易里对「待新建账户/分类」的引用解析为最终 id（映射后）。
+  LedgerEntry _resolved(LedgerEntry entry) {
+    final toAccountId = entry.toAccountId;
+    return entry.copyWith(
+      accountId: _resolveAccountId(entry.accountId),
+      categoryId: _resolveCategoryId(entry.categoryId),
+      toAccountId: (toAccountId == null || toAccountId.isEmpty)
+          ? toAccountId
+          : _resolveAccountId(toAccountId),
+    );
+  }
+
+  List<Account> _mergedAccounts(List<Account> existing) => <Account>[
+    ...existing,
+    ...widget.plan.newAccounts.map(
+      (account) => account.copyWith(name: _accountName[account.id]),
+    ),
+  ];
+
+  List<Category> _mergedCategories(List<Category> existing) => <Category>[
+    ...existing,
+    ...widget.plan.newCategories.map(
+      (category) => category.copyWith(label: _categoryName[category.id]),
+    ),
+  ];
 
   void _toggle(LedgerEntry entry) {
     setState(() {
@@ -63,16 +112,26 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
   });
 
   Future<void> _edit(
-    LedgerEntry entry,
+    LedgerEntry resolvedEntry,
     List<Account> accounts,
     List<Category> categories,
   ) async {
     final edited = await Navigator.of(context).push<LedgerEntry>(
       MaterialPageRoute<LedgerEntry>(
         builder: (_) => EntryDetailPage.draft(
-          entry: entry,
-          extraAccounts: widget.plan.newAccounts,
-          extraCategories: widget.plan.newCategories,
+          entry: resolvedEntry,
+          extraAccounts: _mergedAccounts(accounts)
+              .where(
+                (account) =>
+                    widget.plan.newAccounts.any((a) => a.id == account.id),
+              )
+              .toList(),
+          extraCategories: _mergedCategories(categories)
+              .where(
+                (category) =>
+                    widget.plan.newCategories.any((c) => c.id == category.id),
+              )
+              .toList(),
         ),
       ),
     );
@@ -85,6 +144,27 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
         _entries[index] = edited;
       }
     });
+  }
+
+  void _confirm() {
+    final included = _entries
+        .where(_isIncluded)
+        .map(_resolved)
+        .toList(growable: false);
+    Navigator.of(context).pop(
+      ImportPreviewResult(
+        entries: included,
+        candidateAccounts: widget.plan.newAccounts
+            .map((account) => account.copyWith(name: _accountName[account.id]))
+            .toList(),
+        candidateCategories: widget.plan.newCategories
+            .map(
+              (category) =>
+                  category.copyWith(label: _categoryName[category.id]),
+            )
+            .toList(),
+      ),
+    );
   }
 
   Future<void> _showSkippedRows() {
@@ -111,41 +191,167 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
     );
   }
 
+  // ── 账户映射 ────────────────────────────────────────────────
+  Future<void> _pickAccountDecision(
+    Account provisional,
+    List<Account> existing,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final result = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => _DecisionSheet(
+        title: l10n.mappingAccountSheetTitle(_accountName[provisional.id]!),
+        keepNewLabel: l10n.mappingKeepNewAccount,
+        mapSectionLabel: l10n.mappingMapToExistingAccount,
+        keepNewSelected: !_accountMapTo.containsKey(provisional.id),
+        options: <_DecisionOption>[
+          for (final account in existing.where((a) => !a.hidden))
+            _DecisionOption(
+              id: account.id,
+              label: account.name,
+              leading: AccountIconBox(iconCode: account.iconCode, size: 26),
+              selected: _accountMapTo[provisional.id] == account.id,
+            ),
+        ],
+      ),
+    );
+    if (result == null || !mounted) {
+      return;
+    }
+    setState(() {
+      if (result == _DecisionSheet.keepNewValue) {
+        _accountMapTo.remove(provisional.id);
+      } else {
+        _accountMapTo[provisional.id] = result;
+      }
+    });
+  }
+
+  Future<void> _renameAccount(Account provisional) async {
+    final name = await _promptName(
+      title: AppLocalizations.of(context).mappingRenameAccount,
+      initial: _accountName[provisional.id]!,
+    );
+    if (name == null || !mounted) {
+      return;
+    }
+    setState(() {
+      _accountName[provisional.id] = name;
+      _accountMapTo.remove(provisional.id);
+    });
+  }
+
+  // ── 分类映射 ────────────────────────────────────────────────
+  Future<void> _pickCategoryDecision(
+    Category provisional,
+    List<Category> existing,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final result = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => _DecisionSheet(
+        title: l10n.mappingCategorySheetTitle(_categoryName[provisional.id]!),
+        keepNewLabel: l10n.mappingKeepNewCategory,
+        mapSectionLabel: l10n.mappingMapToExistingCategory,
+        keepNewSelected: !_categoryMapTo.containsKey(provisional.id),
+        options: <_DecisionOption>[
+          for (final category in existing.where(
+            (c) => c.type == provisional.type,
+          ))
+            _DecisionOption(
+              id: category.id,
+              label: category.label,
+              leading: VeriIconBox(
+                icon: iconForCode(category.iconCode),
+                color: veriRoyal,
+                size: 26,
+              ),
+              selected: _categoryMapTo[provisional.id] == category.id,
+            ),
+        ],
+      ),
+    );
+    if (result == null || !mounted) {
+      return;
+    }
+    setState(() {
+      if (result == _DecisionSheet.keepNewValue) {
+        _categoryMapTo.remove(provisional.id);
+      } else {
+        _categoryMapTo[provisional.id] = result;
+      }
+    });
+  }
+
+  Future<void> _renameCategory(Category provisional) async {
+    final name = await _promptName(
+      title: AppLocalizations.of(context).mappingRenameCategory,
+      initial: _categoryName[provisional.id]!,
+    );
+    if (name == null || !mounted) {
+      return;
+    }
+    setState(() {
+      _categoryName[provisional.id] = name;
+      _categoryMapTo.remove(provisional.id);
+    });
+  }
+
+  Future<String?> _promptName({
+    required String title,
+    required String initial,
+  }) {
+    final l10n = AppLocalizations.of(context);
+    final controller = TextEditingController(text: initial);
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(labelText: l10n.mappingNewNameLabel),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l10n.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              final text = controller.text.trim();
+              if (text.isNotEmpty) {
+                Navigator.of(context).pop(text);
+              }
+            },
+            child: Text(l10n.commonSave),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final controller = VeriFinScope.of(context);
-    // 合并账本现有与本次将新建的账户/分类，供条目按 id 正确解析名称。
-    final accounts = <Account>[
-      ...controller.accounts,
-      ...widget.plan.newAccounts,
-    ];
-    final categories = <Category>[
-      ...controller.categories,
-      ...widget.plan.newCategories,
-    ];
+    final existingAccounts = controller.accounts;
+    final existingCategories = controller.categories;
+    final accounts = _mergedAccounts(existingAccounts);
+    final categories = _mergedCategories(existingCategories);
 
-    final included = _includedEntries;
-    final referencedAccountIds = <String>{};
-    final referencedCategoryIds = <String>{};
-    for (final entry in included) {
-      if (entry.accountId.isNotEmpty) {
-        referencedAccountIds.add(entry.accountId);
-      }
-      final toAccountId = entry.toAccountId;
-      if (toAccountId != null && toAccountId.isNotEmpty) {
-        referencedAccountIds.add(toAccountId);
-      }
-      if (entry.categoryId.isNotEmpty) {
-        referencedCategoryIds.add(entry.categoryId);
-      }
-    }
-    final newAccountCount = widget.plan.newAccounts
-        .where((account) => referencedAccountIds.contains(account.id))
-        .length;
-    final newCategoryCount = widget.plan.newCategories
-        .where((category) => referencedCategoryIds.contains(category.id))
-        .length;
+    final displayGroups = groupEntriesByDate(
+      _entries.map(_resolved).toList(growable: false),
+    );
+    final selectedIds = _entries
+        .where(_isIncluded)
+        .map((entry) => entry.id)
+        .toSet();
+    final includedCount = selectedIds.length;
 
     return Scaffold(
       body: SafeArea(
@@ -159,67 +365,76 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
                 showBack: true,
                 actions: <Widget>[
                   HeaderTextAction(
-                    label: included.length == _entries.length
+                    label: includedCount == _entries.length
                         ? l10n.importPreviewDeselectAll
                         : l10n.importPreviewSelectAll,
-                    onPressed: included.length == _entries.length
+                    onPressed: includedCount == _entries.length
                         ? _deselectAll
                         : _selectAll,
                   ),
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
-              child: VeriCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      l10n.importPreviewSelectedOf(
-                        included.length,
-                        _entries.length,
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+                children: <Widget>[
+                  _SummaryCard(
+                    included: includedCount,
+                    total: _entries.length,
+                    skipped: widget.plan.errorCount,
+                    onViewSkipped: _showSkippedRows,
+                  ),
+                  if (widget.plan.newAccounts.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: 10),
+                    _MappingCard(
+                      title: l10n.importAccountMapping,
+                      summary: _accountSummary(l10n),
+                      expanded: _accountsExpanded,
+                      onToggle: () => setState(
+                        () => _accountsExpanded = !_accountsExpanded,
                       ),
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: <Widget>[
-                        if (newAccountCount > 0)
-                          _SummaryChip(
-                            icon: Icons.account_balance_wallet_outlined,
-                            text: l10n.importPreviewNewAccounts(
-                              newAccountCount,
-                            ),
-                          ),
-                        if (newCategoryCount > 0)
-                          _SummaryChip(
-                            icon: Icons.category_outlined,
-                            text: l10n.importPreviewNewCategories(
-                              newCategoryCount,
-                            ),
-                          ),
-                        if (widget.plan.errorCount > 0)
-                          ActionChip(
-                            avatar: Icon(
-                              Icons.error_outline,
-                              size: 16,
-                              color: veriExpense,
-                            ),
-                            label: Text(
-                              l10n.importPreviewSkipped(widget.plan.errorCount),
-                            ),
-                            onPressed: _showSkippedRows,
+                      rows: <Widget>[
+                        for (final account in widget.plan.newAccounts)
+                          _MappingRow(
+                            source: account.name,
+                            decision: _accountDecisionText(l10n, account),
+                            keptNew: !_accountMapTo.containsKey(account.id),
+                            onRename: () => _renameAccount(account),
+                            onTap: () =>
+                                _pickAccountDecision(account, existingAccounts),
                           ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
+                  ],
+                  if (widget.plan.newCategories.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: 10),
+                    _MappingCard(
+                      title: l10n.importCategoryMapping,
+                      summary: _categorySummary(l10n),
+                      expanded: _categoriesExpanded,
+                      onToggle: () => setState(
+                        () => _categoriesExpanded = !_categoriesExpanded,
+                      ),
+                      rows: <Widget>[
+                        for (final category in widget.plan.newCategories)
+                          _MappingRow(
+                            source: category.label,
+                            decision: _categoryDecisionText(l10n, category),
+                            keptNew: !_categoryMapTo.containsKey(category.id),
+                            onRename: () => _renameCategory(category),
+                            onTap: () => _pickCategoryDecision(
+                              category,
+                              existingCategories,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 4),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(2, 6, 2, 8),
+                    child: Text(
                       l10n.importPreviewHint,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(
@@ -227,42 +442,40 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
                         ).colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(10, 4, 10, 12),
-                itemCount: _entries.length,
-                itemBuilder: (context, index) {
-                  final entry = _entries[index];
-                  final included = _isIncluded(entry);
-                  return Opacity(
-                    opacity: included ? 1 : 0.42,
-                    child: TransactionTile(
-                      entry,
-                      accounts: accounts,
-                      categories: categories,
-                      selectionMode: true,
-                      selected: included,
-                      onTap: () => _toggle(entry),
-                      onLongPress: () => _edit(entry, accounts, categories),
+                  ),
+                  for (final group in displayGroups) ...<Widget>[
+                    DateGroupHeader(date: group.date, entries: group.entries),
+                    const SizedBox(height: 8),
+                    Opacity(
+                      // 全组被排除时整体淡化。
+                      opacity:
+                          group.entries.any((e) => selectedIds.contains(e.id))
+                          ? 1
+                          : 0.5,
+                      child: TransactionListCard(
+                        entries: group.entries,
+                        accounts: accounts,
+                        categories: categories,
+                        selectionMode: true,
+                        selectedIds: selectedIds,
+                        onEntryTap: _toggle,
+                        onEntryLongPress: (entry) =>
+                            _edit(entry, existingAccounts, existingCategories),
+                      ),
                     ),
-                  );
-                },
+                    const SizedBox(height: 12),
+                  ],
+                ],
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
+              padding: const EdgeInsets.fromLTRB(14, 4, 14, 14),
               child: SizedBox(
                 width: double.infinity,
                 height: 48,
                 child: FilledButton(
-                  onPressed: included.isEmpty
-                      ? null
-                      : () => Navigator.of(context).pop(included),
-                  child: Text(l10n.importPreviewConfirm(included.length)),
+                  onPressed: includedCount == 0 ? null : _confirm,
+                  child: Text(l10n.importPreviewConfirm(includedCount)),
                 ),
               ),
             ),
@@ -271,30 +484,302 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
       ),
     );
   }
+
+  String _accountDecisionText(AppLocalizations l10n, Account provisional) {
+    final target = _accountMapTo[provisional.id];
+    if (target != null) {
+      final name = VeriFinScope.of(context).accounts
+          .firstWhere((a) => a.id == target, orElse: () => provisional)
+          .name;
+      return l10n.mappingRowMapped(name);
+    }
+    final name = _accountName[provisional.id]!;
+    return name == provisional.name
+        ? l10n.mappingRowNew
+        : l10n.mappingRowRenamed(name);
+  }
+
+  String _categoryDecisionText(AppLocalizations l10n, Category provisional) {
+    final target = _categoryMapTo[provisional.id];
+    if (target != null) {
+      final label = VeriFinScope.of(context).categoryById(target).label;
+      return l10n.mappingRowMapped(label);
+    }
+    final name = _categoryName[provisional.id]!;
+    return name == provisional.label
+        ? l10n.mappingRowNew
+        : l10n.mappingRowRenamed(name);
+  }
+
+  String _accountSummary(AppLocalizations l10n) {
+    final mapped = _accountMapTo.length;
+    final keptNew = widget.plan.newAccounts.length - mapped;
+    return l10n.mappingSummary(keptNew, mapped);
+  }
+
+  String _categorySummary(AppLocalizations l10n) {
+    final mapped = _categoryMapTo.length;
+    final keptNew = widget.plan.newCategories.length - mapped;
+    return l10n.mappingSummary(keptNew, mapped);
+  }
 }
 
-/// 汇总区的小胶囊（新建账户 / 新建分类计数）。
-class _SummaryChip extends StatelessWidget {
-  const _SummaryChip({required this.icon, required this.text});
+/// 顶部汇总卡：将导入笔数 + 跳过行入口。
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({
+    required this.included,
+    required this.total,
+    required this.skipped,
+    required this.onViewSkipped,
+  });
 
-  final IconData icon;
-  final String text;
+  final int included;
+  final int total;
+  final int skipped;
+  final VoidCallback onViewSkipped;
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(
-      context,
-    ).colorScheme.onSurface.withValues(alpha: 0.66);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Icon(icon, size: 16, color: color),
-        const SizedBox(width: 4),
-        Text(
-          text,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: color),
+    final l10n = AppLocalizations.of(context);
+    return VeriCard(
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Text(
+              l10n.importPreviewSelectedOf(included, total),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+          ),
+          if (skipped > 0)
+            ActionChip(
+              avatar: Icon(Icons.error_outline, size: 16, color: veriExpense),
+              label: Text(l10n.importPreviewSkipped(skipped)),
+              onPressed: onViewSkipped,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 可折叠的映射卡（导入账户 / 导入分类）。
+class _MappingCard extends StatelessWidget {
+  const _MappingCard({
+    required this.title,
+    required this.summary,
+    required this.expanded,
+    required this.onToggle,
+    required this.rows,
+  });
+
+  final String title;
+  final String summary;
+  final bool expanded;
+  final VoidCallback onToggle;
+  final List<Widget> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    return VeriCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          InkWell(
+            borderRadius: BorderRadius.circular(veriRadiusMd),
+            onTap: onToggle,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(13, 12, 10, 12),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          title,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          summary,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.55),
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(expanded ? Icons.expand_less : Icons.expand_more),
+                ],
+              ),
+            ),
+          ),
+          if (expanded) ...<Widget>[
+            const Divider(height: 1),
+            ...rows,
+            const SizedBox(height: 4),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// 映射区里的一行：来源名称 + 当前处理（新建 / 改名 / 映射到现有），可改名、可点开选择。
+class _MappingRow extends StatelessWidget {
+  const _MappingRow({
+    required this.source,
+    required this.decision,
+    required this.keptNew,
+    required this.onRename,
+    required this.onTap,
+  });
+
+  final String source;
+  final String decision;
+  final bool keptNew;
+  final VoidCallback onRename;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(13, 8, 6, 8),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    source,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    decision,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.55),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (keptNew)
+              IconButton(
+                tooltip: AppLocalizations.of(context).mappingRenameTooltip,
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                onPressed: onRename,
+              ),
+            const Icon(Icons.unfold_more, size: 18),
+            const SizedBox(width: 6),
+          ],
         ),
-      ],
+      ),
+    );
+  }
+}
+
+class _DecisionOption {
+  const _DecisionOption({
+    required this.id,
+    required this.label,
+    required this.leading,
+    required this.selected,
+  });
+
+  final String id;
+  final String label;
+  final Widget leading;
+  final bool selected;
+}
+
+/// 处理某个待新建账户/分类的选择弹窗：新建 或 映射到某个现有条目。
+class _DecisionSheet extends StatelessWidget {
+  const _DecisionSheet({
+    required this.title,
+    required this.keepNewLabel,
+    required this.mapSectionLabel,
+    required this.keepNewSelected,
+    required this.options,
+  });
+
+  static const String keepNewValue = '__keep_new__';
+
+  final String title;
+  final String keepNewLabel;
+  final String mapSectionLabel;
+  final bool keepNewSelected;
+  final List<_DecisionOption> options;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.6,
+        maxChildSize: 0.92,
+        builder: (context, scrollController) => ListView(
+          controller: scrollController,
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.add_circle_outline),
+              title: Text(keepNewLabel),
+              trailing: keepNewSelected
+                  ? const Icon(Icons.check, color: veriRoyal)
+                  : null,
+              onTap: () => Navigator.of(context).pop(keepNewValue),
+            ),
+            if (options.isNotEmpty) ...<Widget>[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 4),
+                child: Text(
+                  mapSectionLabel,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.55),
+                  ),
+                ),
+              ),
+              for (final option in options)
+                ListTile(
+                  leading: option.leading,
+                  title: Text(option.label),
+                  trailing: option.selected
+                      ? const Icon(Icons.check, color: veriRoyal)
+                      : null,
+                  onTap: () => Navigator.of(context).pop(option.id),
+                ),
+            ],
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
     );
   }
 }

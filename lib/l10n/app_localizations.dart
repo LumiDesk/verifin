@@ -4712,6 +4712,102 @@ abstract class AppLocalizations {
   /// **'没有可导入的交易'**
   String get importPreviewNothingToImport;
 
+  /// No description provided for @importAccountMapping.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入账户'**
+  String get importAccountMapping;
+
+  /// No description provided for @importCategoryMapping.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入分类'**
+  String get importCategoryMapping;
+
+  /// No description provided for @mappingSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建 {newCount} · 映射 {mappedCount}'**
+  String mappingSummary(int newCount, int mappedCount);
+
+  /// No description provided for @mappingRowNew.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建'**
+  String get mappingRowNew;
+
+  /// No description provided for @mappingRowRenamed.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建 · 改名为「{name}」'**
+  String mappingRowRenamed(String name);
+
+  /// No description provided for @mappingRowMapped.
+  ///
+  /// In zh, this message translates to:
+  /// **'映射到「{name}」'**
+  String mappingRowMapped(String name);
+
+  /// No description provided for @mappingAccountSheetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'账户「{name}」'**
+  String mappingAccountSheetTitle(String name);
+
+  /// No description provided for @mappingCategorySheetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'分类「{name}」'**
+  String mappingCategorySheetTitle(String name);
+
+  /// No description provided for @mappingKeepNewAccount.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建此账户'**
+  String get mappingKeepNewAccount;
+
+  /// No description provided for @mappingKeepNewCategory.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建此分类'**
+  String get mappingKeepNewCategory;
+
+  /// No description provided for @mappingMapToExistingAccount.
+  ///
+  /// In zh, this message translates to:
+  /// **'映射到现有账户'**
+  String get mappingMapToExistingAccount;
+
+  /// No description provided for @mappingMapToExistingCategory.
+  ///
+  /// In zh, this message translates to:
+  /// **'映射到现有分类'**
+  String get mappingMapToExistingCategory;
+
+  /// No description provided for @mappingRenameAccount.
+  ///
+  /// In zh, this message translates to:
+  /// **'重命名新账户'**
+  String get mappingRenameAccount;
+
+  /// No description provided for @mappingRenameCategory.
+  ///
+  /// In zh, this message translates to:
+  /// **'重命名新分类'**
+  String get mappingRenameCategory;
+
+  /// No description provided for @mappingRenameTooltip.
+  ///
+  /// In zh, this message translates to:
+  /// **'重命名'**
+  String get mappingRenameTooltip;
+
+  /// No description provided for @mappingNewNameLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'新名称'**
+  String get mappingNewNameLabel;
+
   /// No description provided for @importLocalTitle.
   ///
   /// In zh, this message translates to:

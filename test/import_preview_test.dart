@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/backup/payment_import.dart';
+import 'package:verifin/app/backup/transaction_import.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/app/veri_fin_scope.dart';
 import 'package:verifin/pages/entry_detail_page.dart';
@@ -17,6 +18,54 @@ const _csv =
     '日期,类型,金额,分类,账户,转入账户,备注\n'
     '2026-02-01,支出,12.5,测试餐饮,测试钱包A,,午饭\n'
     '2026-02-02,支出,30,测试交通,测试钱包B,,打车\n';
+
+// 两笔都引用同一个新账户「新钱包甲」，用于验证映射批量生效。
+const _mapCsv =
+    '日期,类型,金额,分类,账户,转入账户,备注\n'
+    '2026-02-01,支出,10,测试餐饮,新钱包甲,,a\n'
+    '2026-02-02,支出,20,测试餐饮,新钱包甲,,b\n';
+
+class _Holder {
+  ImportPreviewResult? result;
+}
+
+Future<_Holder> _openPreview(
+  WidgetTester tester,
+  dynamic controller,
+  ImportPlan plan,
+) async {
+  final holder = _Holder();
+  await tester.pumpWidget(
+    VeriFinScope(
+      controller: controller,
+      child: zhMaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () async {
+                  holder.result = await Navigator.of(context)
+                      .push<ImportPreviewResult>(
+                        MaterialPageRoute<ImportPreviewResult>(
+                          builder: (_) => ImportPreviewPage(
+                            plan: plan,
+                            sourceLabel: '其他 CSV',
+                          ),
+                        ),
+                      );
+                },
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.tap(find.text('open'));
+  await tester.pumpAndSettle();
+  return holder;
+}
 
 void main() {
   useTestDatabases();
@@ -92,36 +141,7 @@ void main() {
         ImportPlatform.genericCsv,
         _csvBytes(_csv),
       );
-      List<LedgerEntry>? result;
-      await tester.pumpWidget(
-        VeriFinScope(
-          controller: controller,
-          child: zhMaterialApp(
-            home: Builder(
-              builder: (context) => Scaffold(
-                body: Center(
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      result = await Navigator.of(context)
-                          .push<List<LedgerEntry>>(
-                            MaterialPageRoute<List<LedgerEntry>>(
-                              builder: (_) => ImportPreviewPage(
-                                plan: plan,
-                                sourceLabel: '其他 CSV',
-                              ),
-                            ),
-                          );
-                    },
-                    child: const Text('open'),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.tap(find.text('open'));
-      await tester.pumpAndSettle();
+      final holder = await _openPreview(tester, controller, plan);
 
       // 两笔交易都渲染。
       expect(find.text('测试餐饮'), findsOneWidget);
@@ -137,9 +157,85 @@ void main() {
       // 确认导入，返回被保留的那一笔。
       await tester.tap(find.text('确认导入（1）'));
       await tester.pumpAndSettle();
-      expect(result, isNotNull);
-      expect(result, hasLength(1));
-      expect(result!.single.note, '打车');
+      expect(holder.result, isNotNull);
+      expect(holder.result!.entries, hasLength(1));
+      expect(holder.result!.entries.single.note, '打车');
+    });
+
+    testWidgets('映射区把新账户整体映射到现有账户（批量生效）', (tester) async {
+      final controller = await makeController();
+      final cash = Account(
+        id: 'cash1',
+        bookId: controller.activeBook.id,
+        name: '现金',
+        type: AccountType.cash,
+        groupId: null,
+        initialBalance: 0,
+        iconCode: 'wallet',
+        note: '',
+        includeInAssets: true,
+        hidden: false,
+      );
+      controller.addAccount(cash);
+      final plan = controller.parsePlatformImport(
+        ImportPlatform.genericCsv,
+        _csvBytes(_mapCsv),
+      );
+      // 两笔都引用同一个新账户「新钱包甲」。
+      expect(plan.newAccounts.where((a) => a.name == '新钱包甲'), hasLength(1));
+
+      final holder = await _openPreview(tester, controller, plan);
+
+      // 展开「导入账户」映射区，点开唯一的账户行，映射到现有「现金」。
+      await tester.tap(find.text('导入账户'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.unfold_more));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('现金'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('确认导入（2）'));
+      await tester.pumpAndSettle();
+
+      expect(holder.result, isNotNull);
+      // 两笔都被整体改到现有「现金」账户。
+      expect(
+        holder.result!.entries.every((e) => e.accountId == 'cash1'),
+        isTrue,
+      );
+    });
+
+    testWidgets('映射区可给新账户改名', (tester) async {
+      final controller = await makeController();
+      final plan = controller.parsePlatformImport(
+        ImportPlatform.genericCsv,
+        _csvBytes(_mapCsv),
+      );
+      final provisionalId = plan.newAccounts
+          .firstWhere((a) => a.name == '新钱包甲')
+          .id;
+
+      final holder = await _openPreview(tester, controller, plan);
+
+      await tester.tap(find.text('导入账户'));
+      await tester.pumpAndSettle();
+      // 点改名图标 → 弹窗输入新名。
+      await tester.tap(find.byIcon(Icons.edit_outlined));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '我的钱包');
+      await tester.tap(find.text('保存'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('确认导入（2）'));
+      await tester.pumpAndSettle();
+
+      expect(holder.result, isNotNull);
+      expect(
+        holder.result!.candidateAccounts
+            .firstWhere((a) => a.id == provisionalId)
+            .name,
+        '我的钱包',
+      );
     });
   });
 
