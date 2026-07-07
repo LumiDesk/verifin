@@ -135,6 +135,25 @@ void main() {
     controller.dispose();
   });
 
+  test('规则日期回拨后重新补记不重复生成同一天的交易', () async {
+    final controller = await makeController();
+    final now = DateTime(2026, 7, 15);
+    controller.addRecurringRule(
+      _rule(freq: RecurringFrequency.monthly, start: DateTime(2026, 7, 1)),
+    );
+    expect(controller.applyDueRecurring(now), 1); // 7/1 一笔
+    expect(controller.entries.length, 1);
+    // 用户把规则 nextRunDate 回拨到 7/1，重新触发补记。
+    final rule = controller.recurringRules.single;
+    controller.updateRecurringRule(
+      rule.copyWith(nextRunDate: DateTime(2026, 7, 1)),
+    );
+    // 同一到期日 id 已存在，应跳过而非覆盖，交易数保持 1。
+    expect(controller.applyDueRecurring(now), 0);
+    expect(controller.entries.length, 1);
+    controller.dispose();
+  });
+
   test('周期规则随导出导入往返', () async {
     final source = await makeController();
     source.addRecurringRule(

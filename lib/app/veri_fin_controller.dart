@@ -338,6 +338,7 @@ class VeriFinController extends ChangeNotifier {
   int applyDueRecurring(DateTime now) {
     var generated = 0;
     var rulesChanged = false;
+    final existingIds = _entries.map((e) => e.id).toSet();
     for (var i = 0; i < _recurringRules.length; i++) {
       final rule = _recurringRules[i];
       final dueDates = dueDatesFor(rule, now);
@@ -345,9 +346,15 @@ class VeriFinController extends ChangeNotifier {
         continue;
       }
       for (final due in dueDates) {
+        // 补记 id 由 rule.id + 到期日毫秒确定。若用户把规则日期回拨重新触发补记，
+        // 同一到期日会生成同 id 条目，跳过以免覆盖用户可能手改过的那条。
+        final id = 'entry_recur_${rule.id}_${due.millisecondsSinceEpoch}';
+        if (!existingIds.add(id)) {
+          continue;
+        }
         _entries.add(
           LedgerEntry(
-            id: 'entry_recur_${rule.id}_${due.millisecondsSinceEpoch}',
+            id: id,
             bookId: rule.bookId,
             type: rule.type,
             amount: rule.amount,
