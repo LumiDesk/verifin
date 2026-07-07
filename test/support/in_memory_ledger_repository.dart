@@ -116,6 +116,21 @@ class InMemoryLedgerRepository implements LedgerRepository {
   }
 
   @override
+  Future<void> replaceAllLedgerData(LedgerDataSnapshot snapshot) async {
+    _books = List<LedgerBook>.of(snapshot.books);
+    _accounts = List<Account>.of(snapshot.accounts);
+    _groups = List<AccountGroup>.of(snapshot.accountGroups);
+    _categories = List<Category>.of(snapshot.categories);
+    _tags = List<Tag>.of(snapshot.tags);
+    _attachments = List<Attachment>.of(snapshot.attachments);
+    _entries = List<LedgerEntry>.of(snapshot.entries);
+    _recurringRules = List<RecurringRule>.of(snapshot.recurringRules);
+    _monthlyBudgets = Map<String, double>.of(snapshot.monthlyBudgets);
+    _categoryBudgets = Map<String, double>.of(snapshot.categoryBudgets);
+    _dailyBudgets = Map<String, double>.of(snapshot.dailyBudgets);
+  }
+
+  @override
   Future<bool> hasAnyData() async =>
       _entries.isNotEmpty ||
       _books.isNotEmpty ||

@@ -5,6 +5,36 @@ import 'package:sqflite_common/sqlite_api.dart';
 import '../app/models.dart';
 import 'app_database.dart';
 
+/// 账目类全量数据快照。用于「导入/恢复/重置/删账本」这类需要一次性原子替换
+/// 多张表的场景——见 [LedgerRepository.replaceAllLedgerData]。
+class LedgerDataSnapshot {
+  const LedgerDataSnapshot({
+    required this.books,
+    required this.accounts,
+    required this.accountGroups,
+    required this.categories,
+    required this.tags,
+    required this.attachments,
+    required this.entries,
+    required this.recurringRules,
+    required this.monthlyBudgets,
+    required this.categoryBudgets,
+    required this.dailyBudgets,
+  });
+
+  final List<LedgerBook> books;
+  final List<Account> accounts;
+  final List<AccountGroup> accountGroups;
+  final List<Category> categories;
+  final List<Tag> tags;
+  final List<Attachment> attachments;
+  final List<LedgerEntry> entries;
+  final List<RecurringRule> recurringRules;
+  final Map<String, double> monthlyBudgets;
+  final Map<String, double> categoryBudgets;
+  final Map<String, double> dailyBudgets;
+}
+
 /// 账目类数据仓储接口。生产实现为 [SqliteLedgerRepository]；测试可注入内存实现，
 /// 避免真实异步 I/O 与 widget 测试的 fake-async 冲突。
 ///
@@ -42,6 +72,11 @@ abstract interface class LedgerRepository {
 
   Future<Map<String, double>> loadDailyBudgets();
   Future<void> saveDailyBudgets(Map<String, double> budgets);
+
+  /// 在单个数据库事务中整体替换全部账目类表。用于导入/恢复/重置/删账本：
+  /// 保证跨表一致——中途失败会整体回滚，不会留下「entries 已换、accounts 还是旧的」
+  /// 这类孤儿引用状态。
+  Future<void> replaceAllLedgerData(LedgerDataSnapshot snapshot);
 
   Future<bool> hasAnyData();
 }
@@ -187,6 +222,60 @@ class SqliteLedgerRepository implements LedgerRepository {
   Future<void> saveDailyBudgets(Map<String, double> budgets) =>
       _saveBudgetMap('daily_budgets', budgets);
 
+  @override
+  Future<void> replaceAllLedgerData(LedgerDataSnapshot snapshot) async {
+    // 全部表在同一事务内清空重建：任一步失败即整体回滚，绝不留半新半旧状态。
+    await _db.transaction((txn) async {
+      await _replaceInTxn(
+        txn,
+        'ledger_books',
+        _indexed(snapshot.books, _bookToRow),
+      );
+      await _replaceInTxn(
+        txn,
+        'accounts',
+        _indexed(snapshot.accounts, _accountToRow),
+      );
+      await _replaceInTxn(
+        txn,
+        'account_groups',
+        snapshot.accountGroups.map(_groupToRow),
+      );
+      await _replaceInTxn(
+        txn,
+        'categories',
+        _indexed(snapshot.categories, _categoryToRow),
+      );
+      await _replaceInTxn(txn, 'tags', _indexed(snapshot.tags, _tagToRow));
+      await _replaceInTxn(
+        txn,
+        'attachments',
+        _indexed(snapshot.attachments, _attachmentToRow),
+      );
+      await _replaceInTxn(txn, 'entries', snapshot.entries.map(_entryToRow));
+      await _replaceInTxn(
+        txn,
+        'recurring_rules',
+        _indexed(snapshot.recurringRules, _recurringToRow),
+      );
+      await _replaceInTxn(
+        txn,
+        'monthly_budgets',
+        _budgetRows(snapshot.monthlyBudgets),
+      );
+      await _replaceInTxn(
+        txn,
+        'category_budgets',
+        _budgetRows(snapshot.categoryBudgets),
+      );
+      await _replaceInTxn(
+        txn,
+        'daily_budgets',
+        _budgetRows(snapshot.dailyBudgets),
+      );
+    });
+  }
+
   /// 是否已存在任何账目数据（用于判断迁移是否有内容写入）。
   @override
   Future<bool> hasAnyData() async {
@@ -212,16 +301,35 @@ class SqliteLedgerRepository implements LedgerRepository {
     String table,
     Iterable<Map<String, Object?>> rows,
   ) async {
-    final rowList = rows.toList();
     await _db.transaction((txn) async {
-      await txn.delete(table);
-      final batch = txn.batch();
-      for (final row in rowList) {
-        batch.insert(table, row, conflictAlgorithm: ConflictAlgorithm.replace);
-      }
-      await batch.commit(noResult: true);
+      await _replaceInTxn(txn, table, rows);
     });
   }
+
+  /// 在给定事务执行器内清空并重建单表。供 [_replaceAll]（单表）与
+  /// [replaceAllLedgerData]（多表共享一个事务）复用。
+  Future<void> _replaceInTxn(
+    Transaction txn,
+    String table,
+    Iterable<Map<String, Object?>> rows,
+  ) async {
+    final rowList = rows.toList();
+    await txn.delete(table);
+    final batch = txn.batch();
+    for (final row in rowList) {
+      batch.insert(table, row, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  static Iterable<Map<String, Object?>> _budgetRows(
+    Map<String, double> budgets,
+  ) => budgets.entries.map(
+    (entry) => <String, Object?>{
+      'scope_key': entry.key,
+      'amount': entry.value,
+    },
+  );
 
   Future<Map<String, double>> _loadBudgetMap(String table) async {
     final rows = await _db.query(table);
@@ -232,15 +340,7 @@ class SqliteLedgerRepository implements LedgerRepository {
   }
 
   Future<void> _saveBudgetMap(String table, Map<String, double> budgets) async {
-    await _replaceAll(
-      table,
-      budgets.entries.map(
-        (entry) => <String, Object?>{
-          'scope_key': entry.key,
-          'amount': entry.value,
-        },
-      ),
-    );
+    await _replaceAll(table, _budgetRows(budgets));
   }
 
   /// 为有序列表补充 sort_order 列（值为列表下标）。

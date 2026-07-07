@@ -1248,20 +1248,13 @@ class VeriFinController extends ChangeNotifier {
       _activeBookId = defaultLedgerBookId;
       _store.write(_activeBookKey, _activeBookId);
     }
-    if (_removeAttachmentsForEntries(removedEntryIds)) {
-      _persistAttachments();
-    }
-    _persistLedgerBooks();
-    _persistEntries();
-    _persistAccounts();
-    _persistAccountGroups();
-    _persistRecurringRules();
+    // 内存里剥离该账本的附件，落库交给下方整体写入（附件已含在快照里）。
+    _removeAttachmentsForEntries(removedEntryIds);
+    _persistAllLedgerData();
+    // 以下为 KV 偏好类，不在账目事务内。
     _persistAssetSectionCollapsed();
     _persistAssetAccountOrders();
     _persistAssetSectionOrders();
-    _persistBudgets();
-    _persistCategoryBudgets();
-    _persistDailyBudgets();
     notifyListeners();
     return true;
   }
@@ -1803,18 +1796,8 @@ class VeriFinController extends ChangeNotifier {
     for (final page in PanelPageKind.values) {
       _pagePanels[page] = _defaultPanelSettings(page.specs);
     }
-    // 把重置后的默认状态写回 SQLite。
-    _persistEntries();
-    _persistLedgerBooks();
-    _persistAccounts();
-    _persistAccountGroups();
-    _persistCategories();
-    _persistTags();
-    _persistAttachments();
-    _persistRecurringRules();
-    _persistBudgets();
-    _persistCategoryBudgets();
-    _persistDailyBudgets();
+    // 把重置后的默认状态写回 SQLite（单事务原子替换全部表）。
+    _persistAllLedgerData();
     themePreferenceListenable.value = _themePreference;
     notifyListeners();
   }
@@ -2043,18 +2026,8 @@ class VeriFinController extends ChangeNotifier {
     _pagePanels[PanelPageKind.home] = nextHomePanels;
     _pagePanels[PanelPageKind.reports] = nextReportPanels;
 
-    _persistLedgerBooks();
+    _persistAllLedgerData();
     _store.write(_activeBookKey, _activeBookId);
-    _persistEntries();
-    _persistAccounts();
-    _persistAccountGroups();
-    _persistCategories();
-    _persistTags();
-    _persistAttachments();
-    _persistRecurringRules();
-    _persistBudgets();
-    _persistCategoryBudgets();
-    _persistDailyBudgets();
     _store.write(_profileKey, jsonEncode(_profile.toJson()));
     _store.write(_themeKey, _themePreference.name);
     _store.write(_hapticsKey, _hapticsEnabled.toString());
@@ -2336,6 +2309,29 @@ class VeriFinController extends ChangeNotifier {
   void _persistDailyBudgets() {
     _trackWrite(
       _repository.saveDailyBudgets(Map<String, double>.of(_dailyBudgets)),
+    );
+  }
+
+  /// 一次性原子替换全部账目类表（导入/恢复/重置/删账本用）。相比逐表 `_persistX`，
+  /// 这些跨多表的整体操作若中途失败会整体回滚，不留孤儿引用（如 entries 已换但
+  /// accounts 还是旧的）。KV 偏好类写入不在事务内，另行处理。
+  void _persistAllLedgerData() {
+    _trackWrite(
+      _repository.replaceAllLedgerData(
+        LedgerDataSnapshot(
+          books: List<LedgerBook>.of(_ledgerBooks),
+          accounts: List<Account>.of(_accounts),
+          accountGroups: List<AccountGroup>.of(_accountGroups),
+          categories: List<Category>.of(_categories),
+          tags: List<Tag>.of(_tags),
+          attachments: List<Attachment>.of(_attachments),
+          entries: List<LedgerEntry>.of(_entries),
+          recurringRules: List<RecurringRule>.of(_recurringRules),
+          monthlyBudgets: Map<String, double>.of(_monthlyBudgets),
+          categoryBudgets: Map<String, double>.of(_categoryBudgets),
+          dailyBudgets: Map<String, double>.of(_dailyBudgets),
+        ),
+      ),
     );
   }
 

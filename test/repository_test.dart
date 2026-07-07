@@ -99,6 +99,103 @@ void main() {
     expect(loaded.map((e) => e.id).toList(), <String>['c']);
   });
 
+  test('replaceAllLedgerData 一次性原子替换全部表', () async {
+    final repo = await openRepo();
+    // 先放入一批旧数据。
+    await repo.saveEntries(<LedgerEntry>[
+      LedgerEntry(
+        id: 'old',
+        bookId: defaultLedgerBookId,
+        type: EntryType.expense,
+        amount: 1,
+        categoryId: 'dining',
+        accountId: 'alipay',
+        note: '',
+        occurredAt: DateTime(2026, 1, 1),
+      ),
+    ]);
+    await repo.saveAccounts(<Account>[
+      const Account(
+        id: 'alipay',
+        bookId: defaultLedgerBookId,
+        name: '旧账户',
+        type: AccountType.cash,
+        groupId: null,
+        initialBalance: 0,
+        iconCode: 'wallet',
+        note: '',
+        includeInAssets: true,
+        hidden: false,
+        cardLast4: '',
+      ),
+    ]);
+
+    // 用快照整体替换。
+    final snapshot = LedgerDataSnapshot(
+      books: <LedgerBook>[
+        LedgerBook(
+          id: defaultLedgerBookId,
+          name: '导入账本',
+          createdAt: DateTime(2026, 2, 1),
+          isDefault: true,
+        ),
+      ],
+      accounts: <Account>[
+        const Account(
+          id: 'new_acc',
+          bookId: defaultLedgerBookId,
+          name: '新账户',
+          type: AccountType.debitCard,
+          groupId: null,
+          initialBalance: 100,
+          iconCode: 'card',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+          cardLast4: '',
+        ),
+      ],
+      accountGroups: const <AccountGroup>[],
+      categories: <Category>[
+        Category(
+          id: 'cat',
+          label: '餐饮',
+          type: EntryType.expense,
+          iconCode: 'food',
+        ),
+      ],
+      tags: const <Tag>[],
+      attachments: const <Attachment>[],
+      entries: <LedgerEntry>[
+        LedgerEntry(
+          id: 'new_entry',
+          bookId: defaultLedgerBookId,
+          type: EntryType.expense,
+          amount: 20,
+          categoryId: 'cat',
+          accountId: 'new_acc',
+          note: '',
+          occurredAt: DateTime(2026, 2, 2),
+        ),
+      ],
+      recurringRules: const <RecurringRule>[],
+      monthlyBudgets: const <String, double>{'$defaultLedgerBookId:2026-02': 500},
+      categoryBudgets: const <String, double>{},
+      dailyBudgets: const <String, double>{},
+    );
+    await repo.replaceAllLedgerData(snapshot);
+
+    // 旧数据被整体替换、无残留、无孤儿引用。
+    final entries = await repo.loadEntries();
+    expect(entries.map((e) => e.id).toList(), <String>['new_entry']);
+    final accounts = await repo.loadAccounts();
+    expect(accounts.map((a) => a.id).toList(), <String>['new_acc']);
+    expect(entries.single.accountId, accounts.single.id);
+    expect(await repo.loadMonthlyBudgets(), <String, double>{
+      '$defaultLedgerBookId:2026-02': 500,
+    });
+  });
+
   test('账户/分组/账本/分类保留顺序与字段', () async {
     final repo = await openRepo();
     final books = <LedgerBook>[
