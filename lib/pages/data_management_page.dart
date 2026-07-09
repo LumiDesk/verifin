@@ -1117,8 +1117,9 @@ class DataManagementPage extends StatelessWidget {
       if (!context.mounted) {
         return;
       }
-      if (plan.importedCount == 0) {
-        // 无可导入交易：有错误行则列出，否则提示空。
+      // 既无交易、也无可创建账户（Tally 携带余额的账户）时才算空。
+      if (plan.importedCount == 0 && plan.standaloneAccountIds.isEmpty) {
+        // 无可导入内容：有错误行则列出，否则提示空。
         if (plan.errorCount > 0) {
           await _showImportResult(context, plan);
         } else {
@@ -1154,15 +1155,14 @@ class DataManagementPage extends StatelessWidget {
       if (!context.mounted) {
         return;
       }
-      final suffix = plan.errorCount > 0
-          ? AppLocalizations.of(context).skippedRows(plan.errorCount)
-          : '';
+      final l10n = AppLocalizations.of(context);
+      final suffix = plan.errorCount > 0 ? l10n.skippedRows(plan.errorCount) : '';
+      // 纯账户导入（无交易）时提示导入的账户数，否则提示交易笔数。
+      final summary = result.entries.isEmpty
+          ? l10n.importedAccounts(result.alwaysCreateAccountIds.length)
+          : l10n.importedEntries(result.entries.length);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${AppLocalizations.of(context).importedEntries(result.entries.length)}$suffix',
-          ),
-        ),
+        SnackBar(content: Text('$summary$suffix')),
       );
     } on FormatException catch (error) {
       if (context.mounted) {

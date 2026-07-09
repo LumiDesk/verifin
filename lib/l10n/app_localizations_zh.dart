@@ -2626,7 +2626,17 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get importPreviewNothingToImport => '没有可导入的交易';
+  String importPreviewConfirmAccountsOnly(int count) {
+    return '确认导入（$count 个账户）';
+  }
+
+  @override
+  String get importPreviewNothingToImport => '没有可导入的数据';
+
+  @override
+  String importedAccounts(int count) {
+    return '已导入 $count 个账户';
+  }
 
   @override
   String get importAccountMapping => '导入账户';

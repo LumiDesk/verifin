@@ -1704,7 +1704,23 @@
       }
     }
   },
-  "importPreviewNothingToImport": "没有可导入的交易",
+  "importPreviewConfirmAccountsOnly": "确认导入（{count} 个账户）",
+  "@importPreviewConfirmAccountsOnly": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importPreviewNothingToImport": "没有可导入的数据",
+  "importedAccounts": "已导入 {count} 个账户",
+  "@importedAccounts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "importAccountMapping": "导入账户",
   "importCategoryMapping": "导入分类",
   "mappingSummary": "新建 {newCount} · 映射 {mappedCount}",

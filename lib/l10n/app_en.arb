@@ -876,7 +876,23 @@
       }
     }
   },
-  "importPreviewNothingToImport": "No transactions to import",
+  "importPreviewConfirmAccountsOnly": "Import ({count} accounts)",
+  "@importPreviewConfirmAccountsOnly": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importPreviewNothingToImport": "No data to import",
+  "importedAccounts": "Imported {count} accounts",
+  "@importedAccounts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "importAccountMapping": "Import accounts",
   "importCategoryMapping": "Import categories",
   "mappingSummary": "{newCount} new · {mappedCount} mapped",

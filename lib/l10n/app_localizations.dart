@@ -4844,11 +4844,23 @@ abstract class AppLocalizations {
   /// **'确认导入（{count}）'**
   String importPreviewConfirm(int count);
 
+  /// No description provided for @importPreviewConfirmAccountsOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认导入（{count} 个账户）'**
+  String importPreviewConfirmAccountsOnly(int count);
+
   /// No description provided for @importPreviewNothingToImport.
   ///
   /// In zh, this message translates to:
-  /// **'没有可导入的交易'**
+  /// **'没有可导入的数据'**
   String get importPreviewNothingToImport;
+
+  /// No description provided for @importedAccounts.
+  ///
+  /// In zh, this message translates to:
+  /// **'已导入 {count} 个账户'**
+  String importedAccounts(int count);
 
   /// No description provided for @importAccountMapping.
   ///

@@ -432,9 +432,14 @@ _TallyBackup _parseTallyBackup(Uint8List bytes) {
     }
   }
 
+  // records 可缺省 / 为空：允许「只有账户、没有流水」的备份也能导入账户余额。
+  // 但一个既无 assets 又无 records 的文件基本不是 Tally 备份，视为格式错误。
   final records = decoded['records'];
   if (records is! List) {
-    throw const FormatException('Tally 备份不含交易记录（records）');
+    if (tallyAssets.isEmpty) {
+      throw const FormatException('Tally 备份不含交易记录（records）');
+    }
+    return _TallyBackup(<List<String>>[_canonicalHeader], tallyAssets);
   }
 
   final out = <List<String>>[_canonicalHeader];

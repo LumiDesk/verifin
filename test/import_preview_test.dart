@@ -169,6 +169,31 @@ void main() {
       expect(holder.result!.entries.single.note, '打车');
     });
 
+    testWidgets('纯账户导入：展示账户与余额，可用「账户」按钮确认', (tester) async {
+      final controller = await makeController();
+      final bytes = _tallyBytes(<String, Object?>{
+        'assets': <Object?>[
+          <String, Object?>{'id': 1, 'name': '妈妈', 'amount': 2000.0, 'type': 2},
+        ],
+        'records': <Object?>[],
+      });
+      final plan = controller.parsePlatformImport(ImportPlatform.tally, bytes);
+      final holder = await _openPreview(tester, controller, plan);
+
+      // 账户区默认展开，账户名与余额都可见。
+      expect(find.text('妈妈'), findsOneWidget);
+      expect(find.textContaining('2000'), findsWidgets);
+
+      // 无交易时确认按钮为「账户」变体。
+      final confirm = find.textContaining('个账户');
+      expect(confirm, findsWidgets);
+      await tester.tap(find.byType(FilledButton));
+      await tester.pumpAndSettle();
+      expect(holder.result, isNotNull);
+      expect(holder.result!.entries, isEmpty);
+      expect(holder.result!.alwaysCreateAccountIds, isNotEmpty);
+    });
+
     testWidgets('映射区把新账户整体映射到现有账户（批量生效）', (tester) async {
       final controller = await makeController();
       final cash = Account(
@@ -271,6 +296,33 @@ void main() {
           'note': '',
         },
       ],
+    });
+
+    test('只有账户、没有交易也能导入（standaloneAccountIds 非空）', () async {
+      final controller = await makeController();
+      final bytes = _tallyBytes(<String, Object?>{
+        'assets': <Object?>[
+          <String, Object?>{'id': 1, 'name': '现金', 'amount': 500.0, 'type': 0},
+          <String, Object?>{'id': 2, 'name': '花呗', 'amount': 300.0, 'type': 1},
+        ],
+        'records': <Object?>[],
+      });
+      final plan = controller.parsePlatformImport(ImportPlatform.tally, bytes);
+      expect(plan.importedCount, 0);
+      expect(plan.standaloneAccountIds, isNotEmpty);
+      expect(plan.newAccounts.map((a) => a.name), containsAll(<String>['现金', '花呗']));
+
+      // 空交易 + 独立账户：applyImportEntries 仍创建账户。
+      controller.applyImportEntries(
+        entries: const <LedgerEntry>[],
+        candidateAccounts: plan.newAccounts,
+        candidateCategories: plan.newCategories,
+        alwaysCreateAccountIds: plan.standaloneAccountIds,
+      );
+      final cash = controller.accounts.firstWhere((a) => a.name == '现金');
+      expect(controller.accountBalance(cash), 500);
+      final huabei = controller.accounts.firstWhere((a) => a.name == '花呗');
+      expect(controller.accountBalance(huabei), -300);
     });
 
     test('落库后账户余额对齐 Tally，无流水账户也被创建', () async {

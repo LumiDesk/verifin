@@ -4,6 +4,7 @@ import '../app/app_theme.dart';
 import '../app/backup/transaction_import.dart';
 import '../app/common_widgets.dart';
 import '../app/demo_data.dart';
+import '../app/ledger_math.dart';
 import '../app/models.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
@@ -64,10 +65,29 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
   final Map<String, String> _accountMapTo = <String, String>{};
   final Map<String, String> _categoryMapTo = <String, String>{};
 
-  bool _accountsExpanded = false;
+  // 携带余额的来源（Tally）默认展开账户区，便于核对账户与余额；其余默认折叠。
+  late bool _accountsExpanded = widget.plan.standaloneAccountIds.isNotEmpty;
   bool _categoriesExpanded = false;
 
   bool _isIncluded(LedgerEntry entry) => !_excluded.contains(entry.id);
+
+  /// 某待新建账户导入后的余额 = 初始余额 + 该账户在（全部）待导入交易中的增量合计。
+  /// 对携带余额的来源（如 Tally）即为该账户的当前余额；对纯交易来源即导入流水的净额。
+  double _accountResultingBalance(Account account) {
+    var balance = account.initialBalance;
+    for (final entry in widget.plan.entries) {
+      balance += accountDeltaForEntry(entry, account.id);
+    }
+    return balance;
+  }
+
+  /// 该来源是否携带账户余额（Tally 等）：有独立账户即认为带余额，用于决定是否展示金额。
+  bool get _hasAccountBalances => widget.plan.standaloneAccountIds.isNotEmpty;
+
+  /// 会被创建的独立账户数（未映射到现有账户的）。
+  int get _accountsToCreateCount => widget.plan.standaloneAccountIds
+      .where((id) => !_accountMapTo.containsKey(id))
+      .length;
 
   String _resolveAccountId(String id) => _accountMapTo[id] ?? id;
   String _resolveCategoryId(String id) => _categoryMapTo[id] ?? id;
@@ -349,14 +369,15 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
                 subtitle: widget.sourceLabel,
                 showBack: true,
                 actions: <Widget>[
-                  HeaderTextAction(
-                    label: includedCount == _entries.length
-                        ? l10n.importPreviewDeselectAll
-                        : l10n.importPreviewSelectAll,
-                    onPressed: includedCount == _entries.length
-                        ? _deselectAll
-                        : _selectAll,
-                  ),
+                  if (_entries.isNotEmpty)
+                    HeaderTextAction(
+                      label: includedCount == _entries.length
+                          ? l10n.importPreviewDeselectAll
+                          : l10n.importPreviewSelectAll,
+                      onPressed: includedCount == _entries.length
+                          ? _deselectAll
+                          : _selectAll,
+                    ),
                 ],
               ),
             ),
@@ -364,12 +385,14 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
                 children: <Widget>[
-                  _SummaryCard(
-                    included: includedCount,
-                    total: _entries.length,
-                    skipped: widget.plan.errorCount,
-                    onViewSkipped: _showSkippedRows,
-                  ),
+                  // 有交易或有跳过行时才显示交易汇总卡；纯账户导入时略去。
+                  if (_entries.isNotEmpty || widget.plan.errorCount > 0)
+                    _SummaryCard(
+                      included: includedCount,
+                      total: _entries.length,
+                      skipped: widget.plan.errorCount,
+                      onViewSkipped: _showSkippedRows,
+                    ),
                   if (widget.plan.newAccounts.isNotEmpty) ...<Widget>[
                     const SizedBox(height: 10),
                     _MappingCard(
@@ -385,6 +408,12 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
                             source: account.name,
                             decision: _accountDecisionText(l10n, account),
                             keptNew: !_accountMapTo.containsKey(account.id),
+                            // 携带余额的来源（Tally）展示每个账户导入后的余额，便于核对。
+                            amountText: _hasAccountBalances
+                                ? formatAmount(
+                                    _accountResultingBalance(account),
+                                  )
+                                : null,
                             onRename: () => _renameAccount(account),
                             onTap: () =>
                                 _pickAccountDecision(account, existingAccounts),
@@ -459,8 +488,17 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
                 width: double.infinity,
                 height: 48,
                 child: FilledButton(
-                  onPressed: includedCount == 0 ? null : _confirm,
-                  child: Text(l10n.importPreviewConfirm(includedCount)),
+                  // 有交易可导入、或有账户可创建（纯账户导入）时都可确认。
+                  onPressed: (includedCount == 0 && _accountsToCreateCount == 0)
+                      ? null
+                      : _confirm,
+                  child: Text(
+                    includedCount == 0
+                        ? l10n.importPreviewConfirmAccountsOnly(
+                            _accountsToCreateCount,
+                          )
+                        : l10n.importPreviewConfirm(includedCount),
+                  ),
                 ),
               ),
             ),
@@ -625,6 +663,7 @@ class _MappingRow extends StatelessWidget {
     required this.keptNew,
     required this.onRename,
     required this.onTap,
+    this.amountText,
   });
 
   final String source;
@@ -633,8 +672,12 @@ class _MappingRow extends StatelessWidget {
   final VoidCallback onRename;
   final VoidCallback onTap;
 
+  /// 可选：右侧展示的金额文案（如账户导入后的余额）。为空则不展示。
+  final String? amountText;
+
   @override
   Widget build(BuildContext context) {
+    final amount = amountText;
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -667,6 +710,19 @@ class _MappingRow extends StatelessWidget {
                 ],
               ),
             ),
+            if (amount != null) ...<Widget>[
+              const SizedBox(width: 8),
+              Text(
+                amount,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: const <FontFeature>[
+                    FontFeature.tabularFigures(),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+            ],
             if (keptNew)
               IconButton(
                 tooltip: AppLocalizations.of(context).mappingRenameTooltip,

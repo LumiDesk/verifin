@@ -2681,7 +2681,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get importPreviewNothingToImport => 'No transactions to import';
+  String importPreviewConfirmAccountsOnly(int count) {
+    return 'Import ($count accounts)';
+  }
+
+  @override
+  String get importPreviewNothingToImport => 'No data to import';
+
+  @override
+  String importedAccounts(int count) {
+    return 'Imported $count accounts';
+  }
 
   @override
   String get importAccountMapping => 'Import accounts';
