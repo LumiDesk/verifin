@@ -784,6 +784,7 @@
   "chosenBackupDir": "Backup folder selected: {label}",
   "backedUpFile": "Backed up: {name}",
   "backupFailedRetry": "Backup failed; please try again later",
+  "backupVerifyFailed": "Backup verification failed after writing (the file may be corrupted); please retry or choose another folder",
   "pickBackupFrequency": "Choose auto-backup frequency",
   "backupIntervalTitle": "How often to back up",
   "retentionTitle": "How many backups to keep",

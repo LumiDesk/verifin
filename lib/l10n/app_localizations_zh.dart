@@ -2323,6 +2323,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get backupFailedRetry => '备份操作失败，请稍后再试';
 
   @override
+  String get backupVerifyFailed => '备份写入后校验未通过（文件可能已损坏），请重试或更换备份目录';
+
+  @override
   String get pickBackupFrequency => '选择自动备份频率';
 
   @override

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -473,7 +475,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
     }
     setState(() => _biometricAvailable = available);
     if (available) {
-      _runBiometric();
+      unawaited(_runBiometric());
     }
   }
 

@@ -8,7 +8,6 @@ import '../app/chart_painters.dart';
 import '../app/common_widgets.dart';
 import '../app/credit_card.dart';
 import '../app/demo_data.dart';
-import '../app/entry_sheets.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
 import '../app/series_math.dart';
@@ -404,17 +403,12 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
   }
 
   Future<void> _editBalance(Account account, double balance) async {
-    final amount = await showModalBottomSheet<double>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) => NumberPadSheet(
-        title: AppLocalizations.of(context).balanceAdjustTooltip,
-        initialAmount: balance,
-        allowNegative: true,
-        allowZero: true,
-        hapticsEnabled: VeriFinScope.of(context).hapticsEnabled,
-      ),
+    final amount = await showNumberPadSheet(
+      context,
+      title: AppLocalizations.of(context).balanceAdjustTooltip,
+      initialAmount: balance,
+      allowNegative: true,
+      allowZero: true,
     );
     if (amount == null || !mounted) {
       return;
@@ -480,14 +474,9 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
     BuildContext context,
     Account account,
   ) async {
-    final amount = await showModalBottomSheet<double>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) => NumberPadSheet(
-        title: AppLocalizations.of(context).quickEntry,
-        hapticsEnabled: VeriFinScope.of(context).hapticsEnabled,
-      ),
+    final amount = await showNumberPadSheet(
+      context,
+      title: AppLocalizations.of(context).quickEntry,
     );
     if (!context.mounted || amount == null || amount <= 0) {
       return;

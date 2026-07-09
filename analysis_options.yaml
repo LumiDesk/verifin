@@ -21,8 +21,15 @@ linter:
   # `// ignore_for_file: name_of_lint` syntax on the line or in the file
   # producing the lint.
   rules:
-    # avoid_print: false  # Uncomment to disable the `avoid_print` rule
-    # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
+    # 在 flutter_lints 基础上收紧一组**偏正确性**的规则（风格类交给 dart format，
+    # 避免大面积无谓改动）。
+    avoid_dynamic_calls: true
+    unawaited_futures: true
+    null_check_on_nullable_type_parameter: true
+    no_adjacent_strings_in_list: true
+    avoid_type_to_string: true
+    unnecessary_statements: true
+    unnecessary_await_in_return: true
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options

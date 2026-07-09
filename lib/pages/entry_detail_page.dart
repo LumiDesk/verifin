@@ -5,7 +5,6 @@ import '../app/app_theme.dart';
 import '../app/category_suggest.dart';
 import '../app/common_widgets.dart';
 import '../app/demo_data.dart';
-import '../app/entry_sheets.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
 import '../app/veri_fin_controller.dart';
@@ -534,15 +533,10 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   }
 
   Future<void> _editAmount() async {
-    final amount = await showModalBottomSheet<double>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) => NumberPadSheet(
-        title: AppLocalizations.of(context).amountEditTitle,
-        initialAmount: _amount,
-        hapticsEnabled: VeriFinScope.of(context).hapticsEnabled,
-      ),
+    final amount = await showNumberPadSheet(
+      context,
+      title: AppLocalizations.of(context).amountEditTitle,
+      initialAmount: _amount,
     );
 
     if (!mounted || amount == null || amount <= 0) {
@@ -555,16 +549,11 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   }
 
   Future<void> _editFee() async {
-    final fee = await showModalBottomSheet<double>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) => NumberPadSheet(
-        title: AppLocalizations.of(context).transferFeeTitle,
-        initialAmount: _fee > 0 ? _fee : null,
-        allowZero: true,
-        hapticsEnabled: VeriFinScope.of(context).hapticsEnabled,
-      ),
+    final fee = await showNumberPadSheet(
+      context,
+      title: AppLocalizations.of(context).transferFeeTitle,
+      initialAmount: _fee > 0 ? _fee : null,
+      allowZero: true,
     );
     if (!mounted || fee == null || fee < 0) {
       return;
@@ -573,13 +562,10 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   }
 
   Future<void> _showAllCategories() async {
-    final selected = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => CategoryPickerSheet(
-        categories: _categoriesForType(VeriFinScope.of(context), _type),
-        selectedId: _categoryId,
-      ),
+    final selected = await showCategoryPickerSheet(
+      context,
+      categories: _categoriesForType(VeriFinScope.of(context), _type),
+      selectedId: _categoryId,
     );
 
     if (!mounted || selected == null) {

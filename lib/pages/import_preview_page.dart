@@ -8,6 +8,7 @@ import '../app/models.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
 import 'entry_detail_page.dart';
+import 'sheets.dart';
 
 /// 导入预览页确认后返回的结果：最终要落库的交易，以及（可能被改名的）待新建
 /// 账户 / 分类候选。落库时只创建其中被保留交易实际引用到的那些。
@@ -337,9 +338,11 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
     required String title,
     required String initial,
   }) {
-    return showDialog<String>(
+    return showTextInputDialog(
       context: context,
-      builder: (context) => _NamePromptDialog(title: title, initial: initial),
+      title: title,
+      label: AppLocalizations.of(context).mappingNewNameLabel,
+      initialValue: initial,
     );
   }
 
@@ -830,52 +833,3 @@ class _DecisionSheet extends StatelessWidget {
 
 /// 改名对话框。用 StatefulWidget 持有并在 [State.dispose]（路由完全移除、退出动画
 /// 结束后才触发）里释放控制器，避免退出动画期间 TextField 用到已释放的控制器。
-class _NamePromptDialog extends StatefulWidget {
-  const _NamePromptDialog({required this.title, required this.initial});
-
-  final String title;
-  final String initial;
-
-  @override
-  State<_NamePromptDialog> createState() => _NamePromptDialogState();
-}
-
-class _NamePromptDialogState extends State<_NamePromptDialog> {
-  late final TextEditingController _controller = TextEditingController(
-    text: widget.initial,
-  );
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return AlertDialog(
-      title: Text(widget.title),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        decoration: InputDecoration(labelText: l10n.mappingNewNameLabel),
-      ),
-      actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.commonCancel),
-        ),
-        FilledButton(
-          onPressed: () {
-            final text = _controller.text.trim();
-            if (text.isNotEmpty) {
-              Navigator.of(context).pop(text);
-            }
-          },
-          child: Text(l10n.commonSave),
-        ),
-      ],
-    );
-  }
-}

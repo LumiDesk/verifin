@@ -126,6 +126,60 @@ Future<T?> showOptionSheet<T>({
   );
 }
 
+/// 数字键盘弹窗:统一的金额输入入口(四则算式 + 结果预览)。触感偏好由内部从
+/// [VeriFinScope] 取,调用方不用手传。返回所输金额;取消返回 null。
+/// [allowNegative] 允许负数,[allowZero] 允许 0(如清除预算 / 手续费)。
+Future<double?> showNumberPadSheet(
+  BuildContext context, {
+  required String title,
+  double? initialAmount,
+  bool allowNegative = false,
+  bool allowZero = false,
+}) {
+  final hapticsEnabled = VeriFinScope.of(context).hapticsEnabled;
+  return showModalBottomSheet<double>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (_) => NumberPadSheet(
+      title: title,
+      initialAmount: initialAmount,
+      allowNegative: allowNegative,
+      allowZero: allowZero,
+      hapticsEnabled: hapticsEnabled,
+    ),
+  );
+}
+
+/// 多级分类选择弹窗:统一的分类选择入口(带图标、可折叠父子层级)。返回所选分类
+/// id;取消返回 null。[allLabel] 非空时顶部加「全部」项(筛选用)→ 返回
+/// [categoryPickerAll];[topLevelLabel] 非空时加「移到顶级」→ 返回
+/// [categoryPickerTopLevel]。[categories] 由调用方按类型过滤后传入(筛选场景可传全部)。
+Future<String?> showCategoryPickerSheet(
+  BuildContext context, {
+  required List<Category> categories,
+  required String selectedId,
+  String? title,
+  String? topLevelLabel,
+  String? allLabel,
+}) {
+  return showModalBottomSheet<String>(
+    context: context,
+    showDragHandle: true,
+    backgroundColor: Theme.of(context).colorScheme.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(veriRadiusLg)),
+    ),
+    builder: (_) => CategoryPickerSheet(
+      categories: categories,
+      selectedId: selectedId,
+      title: title,
+      topLevelLabel: topLevelLabel,
+      allLabel: allLabel,
+    ),
+  );
+}
+
 /// 账户选择弹窗:与资产页账户列表一致,展示账户图标、名称(含卡号后四位)和余额。
 /// 账户选择弹窗。返回所选账户；用户取消返回 null。
 /// 传入 [noneLabel] 时，列表顶部额外提供「无账户」选项，选它返回 id 为空串的
@@ -351,15 +405,14 @@ Future<String?> showAccountIconSheet({
         label: iconLabelForCode(l10n, code),
         group: l10n.iconGroupGeneric,
       ),
-    if (includeAssetIcons)
-      ...<AccountIconChoice>[
-        for (final option in accountAssetIconOptions)
-          AccountIconChoice(
-            code: option.code,
-            label: option.label,
-            group: option.groupLabel(l10n),
-          ),
-      ],
+    if (includeAssetIcons) ...<AccountIconChoice>[
+      for (final option in accountAssetIconOptions)
+        AccountIconChoice(
+          code: option.code,
+          label: option.label,
+          group: option.groupLabel(l10n),
+        ),
+    ],
   ];
 
   return showModalBottomSheet<String>(
@@ -461,12 +514,66 @@ class AccountIconChoice {
 
 /// 分类图标常用 emoji 快选（覆盖餐饮/出行/居家/娱乐/人情/理财等常见分类）。
 const List<String> categoryEmojiChoices = <String>[
-  '🍜', '🍔', '🍚', '🥗', '🍎', '☕', '🍺', '🍷', '🧋', '🍰',
-  '🍦', '🛒', '🛍️', '👕', '👗', '👟', '💄', '✂️', '🚌', '🚗',
-  '🚕', '⛽', '🚉', '✈️', '🅿️', '🚲', '🏠', '🔑', '💡', '💧',
-  '📱', '📶', '🔧', '🛋️', '🧺', '🎮', '🎬', '🎵', '⚽', '🏋️',
-  '📚', '🎓', '🐱', '🐶', '🍼', '🎁', '🧧', '❤️', '💊', '🏥',
-  '💰', '💵', '💳', '🧾', '📈', '💼', '🎉', '⭐', '🔥', '🏦',
+  '🍜',
+  '🍔',
+  '🍚',
+  '🥗',
+  '🍎',
+  '☕',
+  '🍺',
+  '🍷',
+  '🧋',
+  '🍰',
+  '🍦',
+  '🛒',
+  '🛍️',
+  '👕',
+  '👗',
+  '👟',
+  '💄',
+  '✂️',
+  '🚌',
+  '🚗',
+  '🚕',
+  '⛽',
+  '🚉',
+  '✈️',
+  '🅿️',
+  '🚲',
+  '🏠',
+  '🔑',
+  '💡',
+  '💧',
+  '📱',
+  '📶',
+  '🔧',
+  '🛋️',
+  '🧺',
+  '🎮',
+  '🎬',
+  '🎵',
+  '⚽',
+  '🏋️',
+  '📚',
+  '🎓',
+  '🐱',
+  '🐶',
+  '🍼',
+  '🎁',
+  '🧧',
+  '❤️',
+  '💊',
+  '🏥',
+  '💰',
+  '💵',
+  '💳',
+  '🧾',
+  '📈',
+  '💼',
+  '🎉',
+  '⭐',
+  '🔥',
+  '🏦',
 ];
 
 /// 分类图标选择器：内置图标网格 + 常用 emoji 快选 + 自由输入 emoji。
@@ -538,7 +645,9 @@ class _CategoryIconPickerBodyState extends State<_CategoryIconPickerBody> {
       child: Text(
         text,
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
+          color: Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: 0.55),
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -653,7 +762,9 @@ class _IconChoiceCell extends StatelessWidget {
           border: Border.all(
             color: selected
                 ? veriRoyal
-                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.10),
+                : Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.10),
             width: selected ? 2 : 1,
           ),
         ),

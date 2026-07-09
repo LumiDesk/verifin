@@ -23,53 +23,56 @@ import 'pages/privacy_consent_gate.dart';
 import 'pages/shell.dart';
 
 Future<void> main() async {
-  runZonedGuarded(
-    () async {
-      WidgetsFlutterBinding.ensureInitialized();
-      final store = await LocalKeyValueStore.create();
-      final logger = AppLogger(store);
-      // 未捕获的框架错误与异步错误都记入软件日志，便于用户反馈时提供诊断线索。
-      final previousOnError = FlutterError.onError;
-      FlutterError.onError = (details) {
-        logger.error(
-          details.exceptionAsString(),
-          source: 'flutter',
-          error: details.exception,
-        );
-        previousOnError?.call(details);
-      };
-      final VeriFinController controller;
-      try {
-        final database = await AppDatabase.open();
-        controller = await VeriFinController.create(
-          store,
-          repository: SqliteLedgerRepository(database),
-          logger: logger,
-          // 语言偏好为「跟随系统」时，首启动播种的默认数据（账本/分类/简介）按系统语言选文案。
-          systemIsEnglish:
-              PlatformDispatcher.instance.locale.languageCode.toLowerCase() !=
-              'zh',
-        );
-      } catch (error) {
-        // 数据库损坏或版本降级（用户安装了更旧 APK）时打开会抛异常。不做破坏性
-        // 处理（绝不删库），而是展示可诊断的错误页，明确告知用户数据很可能仍在、
-        // 不要清除应用数据，避免「白屏 → 误以为数据丢了 → 清数据 → 真丢」。
-        logger.error(
-          'Database open failed: $error',
-          source: 'startup',
-          error: error,
-        );
-        runApp(DatabaseErrorApp(detail: '$error'));
-        return;
-      }
-      // 打开应用时补记到期的周期交易。
-      controller.applyDueRecurring(DateTime.now());
-      runApp(VeriFinApp(controller: controller));
-    },
-    (error, stack) {
-      // runZonedGuarded 兜底：此时 logger 可能尚未创建（极早期崩溃），仅调试打印。
-      debugPrint('Uncaught zone error: $error');
-    },
+  // 应用运行的顶层 zone，故意不 await（fire-and-forget）；未捕获错误交给下方 onError。
+  unawaited(
+    runZonedGuarded(
+      () async {
+        WidgetsFlutterBinding.ensureInitialized();
+        final store = await LocalKeyValueStore.create();
+        final logger = AppLogger(store);
+        // 未捕获的框架错误与异步错误都记入软件日志，便于用户反馈时提供诊断线索。
+        final previousOnError = FlutterError.onError;
+        FlutterError.onError = (details) {
+          logger.error(
+            details.exceptionAsString(),
+            source: 'flutter',
+            error: details.exception,
+          );
+          previousOnError?.call(details);
+        };
+        final VeriFinController controller;
+        try {
+          final database = await AppDatabase.open();
+          controller = await VeriFinController.create(
+            store,
+            repository: SqliteLedgerRepository(database),
+            logger: logger,
+            // 语言偏好为「跟随系统」时，首启动播种的默认数据（账本/分类/简介）按系统语言选文案。
+            systemIsEnglish:
+                PlatformDispatcher.instance.locale.languageCode.toLowerCase() !=
+                'zh',
+          );
+        } catch (error) {
+          // 数据库损坏或版本降级（用户安装了更旧 APK）时打开会抛异常。不做破坏性
+          // 处理（绝不删库），而是展示可诊断的错误页，明确告知用户数据很可能仍在、
+          // 不要清除应用数据，避免「白屏 → 误以为数据丢了 → 清数据 → 真丢」。
+          logger.error(
+            'Database open failed: $error',
+            source: 'startup',
+            error: error,
+          );
+          runApp(DatabaseErrorApp(detail: '$error'));
+          return;
+        }
+        // 打开应用时补记到期的周期交易。
+        controller.applyDueRecurring(DateTime.now());
+        runApp(VeriFinApp(controller: controller));
+      },
+      (error, stack) {
+        // runZonedGuarded 兜底：此时 logger 可能尚未创建（极早期崩溃），仅调试打印。
+        debugPrint('Uncaught zone error: $error');
+      },
+    ),
   );
 }
 

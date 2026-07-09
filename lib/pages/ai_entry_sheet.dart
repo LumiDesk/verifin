@@ -107,6 +107,7 @@ class _AiEntrySheetState extends State<_AiEntrySheet> {
         _errorText = aiErrorMessage(l10n, error);
       });
     } catch (error) {
+      controller.logger?.error('AI 记账解析失败', source: 'ai', error: error);
       if (!mounted) {
         return;
       }

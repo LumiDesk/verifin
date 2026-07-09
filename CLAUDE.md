@@ -94,4 +94,5 @@ Android/测试差异统一用条件导出模式（`stub` + `if (dart.library.io)
 - **文档同步**：变更影响开发命令、架构、交付流程、配置或用户可见行为时，须在同一次变更中更新 `README.md`、`AGENTS.md`、`docs/`。
 - **CHANGELOG 同步**：凡用户可见的改动（新功能、界面/交互变化、修复、隐私安全项等），在同一次变更中往 `CHANGELOG.md` 的 `## [Unreleased]` 段落加一行（分类到 新增/优化/修复/安全 等小节）；纯内部重构、改测试/文档等对用户无感的不写。发版时再把 `Unreleased` 提升为版本号（见「发布与 CI」）。
 - UI 风格：紧凑型移动端工具风格；主色 `#346edb`，辅助蓝 `#3498db`，青绿色仅用于收入/正向状态。UI 规范见 `docs/ui-guidelines.md`。
+- **组件化优先**：写任何 widget/弹窗/对话框/格式化/计算前，先查 `docs/dev/components.md` 组件清单，命中就复用或参数化扩展，不新建变体。图标渲染走 `CategoryIconBox`/`AccountIconBox`（勿直接 `iconForCode`），弹窗走 `show*Sheet`/`showConfirmDialog`/`showTextInputDialog`（勿裸包 `showModalBottomSheet`/内联 `AlertDialog`）。完整代码规范见 `AGENTS.md` 的「代码规范 · 组件化与工程约定」。已知架构限制与技术债见 `docs/dev/known-limitations.md`。
 - 不要重写生成的平台工程文件（`android/`），除非任务明确要求；不要为简单需求引入额外工具链或依赖。

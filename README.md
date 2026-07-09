@@ -144,8 +144,11 @@ lib/
 | [`docs/automation.md`](docs/automation.md) | 自动化接入（Intent 接口，配 Tasker 示例） |
 | [`docs/dev/i18n-verification.md`](docs/dev/i18n-verification.md) | 多语言真机验证清单 |
 | [`docs/dev/verifin-sample-backup.json`](docs/dev/verifin-sample-backup.json) | 可导入的测试备份数据 |
-| [`AGENTS.md`](AGENTS.md) | 贡献与 Agent 开发规范 |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | 贡献指南（上手路线 + 提交前检查清单） |
+| [`AGENTS.md`](AGENTS.md) | 贡献与 Agent 开发规范（含代码规范·组件化） |
+| [`docs/dev/components.md`](docs/dev/components.md) | 组件清单（写新组件前先查） |
 | [`docs/dev/tech-decisions.md`](docs/dev/tech-decisions.md) | 关键技术决策与选型理由 |
+| [`docs/dev/known-limitations.md`](docs/dev/known-limitations.md) | 已知限制与技术债台账 |
 
 ## 📄 许可证
 

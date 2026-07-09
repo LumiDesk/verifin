@@ -2361,6 +2361,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupFailedRetry => 'Backup failed; please try again later';
 
   @override
+  String get backupVerifyFailed =>
+      'Backup verification failed after writing (the file may be corrupted); please retry or choose another folder';
+
+  @override
   String get pickBackupFrequency => 'Choose auto-backup frequency';
 
   @override

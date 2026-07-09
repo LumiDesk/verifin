@@ -7,18 +7,13 @@ import '../l10n/app_localizations.dart';
 
 /// 生物识别系统弹窗文案。不传时 `local_auth` 会用英文默认串，与
 /// `localizedReason` 语言不一致，故按当前语言组装。
+/// local_auth_android 2.x 精简了可定制文案，仅保留标题 / 提示 / 取消三项，
+/// 其余（未识别 / 需录入 / 跳转设置等）由系统统一呈现。
 AndroidAuthMessages _androidAuthMessages(AppLocalizations l10n) {
   return AndroidAuthMessages(
     signInTitle: l10n.bioSignInTitle,
-    biometricHint: l10n.bioHint,
-    biometricNotRecognized: l10n.bioNotRecognized,
-    biometricRequiredTitle: l10n.bioRequiredTitle,
-    biometricSuccess: l10n.bioSuccess,
+    signInHint: l10n.bioHint,
     cancelButton: l10n.commonCancel,
-    deviceCredentialsRequiredTitle: l10n.bioRequiredTitle,
-    deviceCredentialsSetupDescription: l10n.bioSetupDescription,
-    goToSettingsButton: l10n.bioGoToSettings,
-    goToSettingsDescription: l10n.bioGoToSettingsDesc,
   );
 }
 
@@ -61,12 +56,11 @@ class BiometricAuth {
       return await _auth.authenticate(
         localizedReason: reason,
         authMessages: <AuthMessages>[_androidAuthMessages(l10n)],
-        options: const AuthenticationOptions(
-          // 只用系统生物识别，不回落到设备 PIN/图案。
-          biometricOnly: true,
-          stickyAuth: true,
-          useErrorDialogs: true,
-        ),
+        // 只用系统生物识别，不回落到设备 PIN/图案。3.x 起选项为直接命名参数：
+        // stickyAuth → persistAcrossBackgrounding；useErrorDialogs 已移除（错误 UI
+        // 由系统统一呈现）。
+        biometricOnly: true,
+        persistAcrossBackgrounding: true,
       );
     } catch (_) {
       return false;

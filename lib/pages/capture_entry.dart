@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -187,23 +188,26 @@ Future<AiEntryDraft?> _runCaptureParse(
 ) async {
   final l10n = AppLocalizations.of(context);
   final rootNavigator = Navigator.of(context, rootNavigator: true);
-  // 识别中禁止返回/点穿，避免用户在等待中重复触发。
-  showDialog<void>(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => PopScope(
-      canPop: false,
-      child: AlertDialog(
-        content: Row(
-          children: <Widget>[
-            const SizedBox(
-              width: 22,
-              height: 22,
-              child: CircularProgressIndicator(strokeWidth: 2.5),
-            ),
-            const SizedBox(width: 16),
-            Expanded(child: Text(l10n.captureEntryRecognizing)),
-          ],
+  // 识别中禁止返回/点穿，避免用户在等待中重复触发。进度弹窗随后由 rootNavigator.pop
+  // 关闭，故不 await（fire-and-forget）。
+  unawaited(
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          content: Row(
+            children: <Widget>[
+              const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2.5),
+              ),
+              const SizedBox(width: 16),
+              Expanded(child: Text(l10n.captureEntryRecognizing)),
+            ],
+          ),
         ),
       ),
     ),

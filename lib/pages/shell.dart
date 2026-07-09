@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../app/app_theme.dart';
-import '../app/entry_sheets.dart';
 import '../app/platform_bridge.dart';
 import '../app/veri_fin_scope.dart';
 import '../app/models.dart';
@@ -15,6 +14,7 @@ import 'home_page.dart';
 import 'onboarding_page.dart';
 import 'profile_pages.dart';
 import 'reports_page.dart';
+import 'sheets.dart';
 
 class VeriFinShell extends StatefulWidget {
   const VeriFinShell({super.key});
@@ -161,14 +161,9 @@ class _VeriFinShellState extends State<VeriFinShell> {
       await startAiEntry(context);
       return;
     }
-    final amount = await showModalBottomSheet<double>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) => NumberPadSheet(
-        title: AppLocalizations.of(context).quickEntry,
-        hapticsEnabled: controller.hapticsEnabled,
-      ),
+    final amount = await showNumberPadSheet(
+      context,
+      title: AppLocalizations.of(context).quickEntry,
     );
 
     if (!context.mounted || amount == null || amount <= 0) {

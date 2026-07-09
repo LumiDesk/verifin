@@ -255,7 +255,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.edit_outlined));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), '我的钱包');
-      await tester.tap(find.text('保存'));
+      await tester.tap(find.text('确认'));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('确认导入（2）'));
@@ -274,7 +274,12 @@ void main() {
   group('Tally 导入：账户余额与无流水账户落库', () {
     Uint8List sampleBackup() => _tallyBytes(<String, Object?>{
       'assets': <Object?>[
-        <String, Object?>{'id': 1, 'name': '微信余额', 'amount': 1035.18, 'type': 0},
+        <String, Object?>{
+          'id': 1,
+          'name': '微信余额',
+          'amount': 1035.18,
+          'type': 0,
+        },
         <String, Object?>{'id': 2, 'name': 'qq钱包', 'amount': 0, 'type': 0},
         <String, Object?>{'id': 3, 'name': '妈妈', 'amount': 2000.0, 'type': 2},
       ],
@@ -310,7 +315,10 @@ void main() {
       final plan = controller.parsePlatformImport(ImportPlatform.tally, bytes);
       expect(plan.importedCount, 0);
       expect(plan.standaloneAccountIds, isNotEmpty);
-      expect(plan.newAccounts.map((a) => a.name), containsAll(<String>['现金', '花呗']));
+      expect(
+        plan.newAccounts.map((a) => a.name),
+        containsAll(<String>['现金', '花呗']),
+      );
 
       // 空交易 + 独立账户：applyImportEntries 仍创建账户。
       controller.applyImportEntries(

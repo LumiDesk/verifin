@@ -57,8 +57,14 @@ class BackupCoordinator {
             prepared: prepared,
           );
           anySucceeded = true;
-        } catch (_) {
-          // 本地目录失败（授权失效等）不影响 WebDAV 尝试。
+        } catch (error) {
+          // 本地目录失败（授权失效、写坏被回读校验拦下等）不影响 WebDAV 尝试；
+          // 记日志便于诊断，但不打断用户。
+          controller.logger?.error(
+            '本地自动备份失败',
+            source: 'backup',
+            error: error,
+          );
         }
       }
       if (toWebdav) {
@@ -74,8 +80,13 @@ class BackupCoordinator {
           anySucceeded = true;
           // 与本地一致：按保留份数清理远端旧的自动备份，避免无限累积。
           await _pruneWebdav(webdav, settings.retention);
-        } catch (_) {
-          // WebDAV 失败静默。
+        } catch (error) {
+          // WebDAV 失败不打断，但记日志便于诊断（网络 / 认证 / 服务器错误等）。
+          controller.logger?.error(
+            'WebDAV 自动备份失败',
+            source: 'backup',
+            error: error,
+          );
         }
       }
       if (anySucceeded) {

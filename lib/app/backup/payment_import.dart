@@ -431,7 +431,9 @@ _TallyBackup _parseTallyBackup(Uint8List bytes) {
       final amount = (asset['amount'] as num?)?.toDouble() ?? 0;
       // Tally 里 amount 恒为正，符号由 type 决定：负债(1)/分期(4)减少总资产、记负；
       // 资产(0)/借出(2)/理财(3)记正。isIncludedInTotal 缺省视为 true（兼容老数据）。
-      final signed = (rawType == 1 || rawType == 4) ? -amount.abs() : amount.abs();
+      final signed = (rawType == 1 || rawType == 4)
+          ? -amount.abs()
+          : amount.abs();
       final included = asset['isIncludedInTotal'] as bool? ?? true;
       tallyAssets.add(
         _TallyAsset(
@@ -606,9 +608,7 @@ _TallyTransfer _parseTallyTransferNote(String raw) {
     userNote = base.substring(markerIndex + marker.length).trim();
     base = base.substring(0, markerIndex);
   }
-  base = base
-      .replaceAll(RegExp(r'\s*\((?:账单|优惠)[^)]*\)\s*$'), '')
-      .trim();
+  base = base.replaceAll(RegExp(r'\s*\((?:账单|优惠)[^)]*\)\s*$'), '').trim();
   final arrow = base.indexOf(' -> ');
   if (arrow < 0) {
     return _TallyTransfer('', '', userNote.isEmpty ? base.trim() : userNote);

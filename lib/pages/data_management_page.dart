@@ -1,5 +1,6 @@
 // 数据管理页：从 profile_pages 拆出。集中导出/导入/初始化与备份子系统
 // （本地目录 SAF、加密、WebDAV、账单导入）的入口与流程。
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -21,6 +22,8 @@ import '../app/veri_fin_scope.dart';
 import 'app_log_page.dart';
 import 'import_preview_page.dart';
 import 'sheets.dart';
+
+part 'data_management_dialogs.dart';
 
 class DataManagementPage extends StatelessWidget {
   const DataManagementPage({super.key});
@@ -370,10 +373,13 @@ class DataManagementPage extends StatelessWidget {
     // 备份含加密（PBKDF2）与文件写入，耗时可感知：期间弹不可关闭的「备份中」转圈，
     // 避免点了没反应的错觉。
     final navigator = Navigator.of(context, rootNavigator: true);
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => _BackupProgressDialog(label: l10n.backingUp),
+    // 进度弹窗随后由 navigator.pop 关闭，故不 await（fire-and-forget）。
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => _BackupProgressDialog(label: l10n.backingUp),
+      ),
     );
     try {
       final now = DateTime.now();
@@ -389,6 +395,7 @@ class DataManagementPage extends StatelessWidget {
         SnackBar(content: Text(l10n.backedUpFile(result.filename))),
       );
     } catch (error) {
+      controller.logger?.error('手动备份失败', source: 'backup', error: error);
       navigator.pop(); // 关闭「备份中」
       messenger.showSnackBar(
         SnackBar(content: Text(_backupErrorText(l10n, error))),
@@ -405,6 +412,9 @@ class DataManagementPage extends StatelessWidget {
     }
     if (error is WebdavException) {
       return error.message;
+    }
+    if (error is BackupVerificationException) {
+      return l10n.backupVerifyFailed;
     }
     if (error is FormatException) {
       return l10n.backupInvalidFile;
@@ -745,26 +755,13 @@ class DataManagementPage extends StatelessWidget {
     if (chosen == null || !context.mounted) {
       return;
     }
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(AppLocalizations.of(context).restoreFromThisTitle),
-        content: Text(
-          AppLocalizations.of(context).restoreFromThisMessage(chosen.name),
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(AppLocalizations.of(context).commonCancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(AppLocalizations.of(context).restoreLabel),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: AppLocalizations.of(context).restoreFromThisTitle,
+      message: AppLocalizations.of(context).restoreFromThisMessage(chosen.name),
+      confirmLabel: AppLocalizations.of(context).restoreLabel,
     );
-    if (confirmed != true) {
+    if (!confirmed) {
       return;
     }
     try {
@@ -1134,15 +1131,18 @@ class DataManagementPage extends StatelessWidget {
         return;
       }
       final l10n = AppLocalizations.of(context);
-      final suffix = plan.errorCount > 0 ? l10n.skippedRows(plan.errorCount) : '';
+      final suffix = plan.errorCount > 0
+          ? l10n.skippedRows(plan.errorCount)
+          : '';
       // 纯账户导入（无交易）时提示导入的账户数，否则提示交易笔数。
       final summary = result.entries.isEmpty
           ? l10n.importedAccounts(result.alwaysCreateAccountIds.length)
           : l10n.importedEntries(result.entries.length);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$summary$suffix')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$summary$suffix')));
     } on FormatException catch (error) {
+      controller.logger?.error('账单导入格式错误', source: 'import', error: error);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1154,7 +1154,8 @@ class DataManagementPage extends StatelessWidget {
           ),
         );
       }
-    } catch (_) {
+    } catch (error) {
+      controller.logger?.error('账单导入失败', source: 'import', error: error);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1200,24 +1201,13 @@ class DataManagementPage extends StatelessWidget {
     BuildContext context,
     VeriFinController controller,
   ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(AppLocalizations.of(context).importLocalTitle),
-        content: Text(AppLocalizations.of(context).importLocalMessage),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(AppLocalizations.of(context).commonCancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(AppLocalizations.of(context).chooseFile),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: AppLocalizations.of(context).importLocalTitle,
+      message: AppLocalizations.of(context).importLocalMessage,
+      confirmLabel: AppLocalizations.of(context).chooseFile,
     );
-    if (confirmed != true || !context.mounted) {
+    if (!confirmed || !context.mounted) {
       return;
     }
     final fileTypeLabel = AppLocalizations.of(context).backupFileTypeLabel;
@@ -1308,283 +1298,3 @@ class _PlatformOption {
 }
 
 /// 备份进行中的不可关闭转圈弹窗。
-class _BackupProgressDialog extends StatelessWidget {
-  const _BackupProgressDialog({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      content: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          const SizedBox(
-            width: 22,
-            height: 22,
-            child: CircularProgressIndicator(strokeWidth: 2.4),
-          ),
-          const SizedBox(width: 16),
-          Flexible(child: Text(label)),
-        ],
-      ),
-    );
-  }
-}
-
-/// 输入解密口令的对话框。用 StatefulWidget 在 [State.dispose]（退出动画结束后）
-/// 释放控制器，避免退出动画期间 TextField 用到已释放控制器。
-class _PassphrasePromptDialog extends StatefulWidget {
-  const _PassphrasePromptDialog({
-    required this.title,
-    required this.message,
-    required this.errorText,
-  });
-
-  final String title;
-  final String message;
-  final String errorText;
-
-  @override
-  State<_PassphrasePromptDialog> createState() =>
-      _PassphrasePromptDialogState();
-}
-
-class _PassphrasePromptDialogState extends State<_PassphrasePromptDialog> {
-  final TextEditingController _controller = TextEditingController();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return AlertDialog(
-      title: Text(widget.title),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(widget.message),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _controller,
-            autofocus: true,
-            obscureText: true,
-            decoration: InputDecoration(
-              labelText: l10n.backupKeyLabel,
-              errorText: widget.errorText.isEmpty ? null : widget.errorText,
-            ),
-          ),
-        ],
-      ),
-      actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.commonCancel),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(_controller.text),
-          child: Text(l10n.okLabel),
-        ),
-      ],
-    );
-  }
-}
-
-/// 设置 / 修改加密口令的对话框（两次输入 + 校验）。控制器由 State 管理并释放。
-class _SetPassphraseDialog extends StatefulWidget {
-  const _SetPassphraseDialog({required this.isChange});
-
-  final bool isChange;
-
-  @override
-  State<_SetPassphraseDialog> createState() => _SetPassphraseDialogState();
-}
-
-class _SetPassphraseDialogState extends State<_SetPassphraseDialog> {
-  final TextEditingController _keyController = TextEditingController();
-  final TextEditingController _confirmController = TextEditingController();
-  String? _errorText;
-
-  @override
-  void dispose() {
-    _keyController.dispose();
-    _confirmController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return AlertDialog(
-      title: Text(widget.isChange ? l10n.changeKeyTitle : l10n.setKeyTitle),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(l10n.setKeyMessage),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _keyController,
-            autofocus: true,
-            obscureText: true,
-            decoration: InputDecoration(labelText: l10n.keyMinLabel),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _confirmController,
-            obscureText: true,
-            decoration: InputDecoration(
-              labelText: l10n.keyRepeatLabel,
-              errorText: _errorText,
-            ),
-          ),
-        ],
-      ),
-      actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.commonCancel),
-        ),
-        FilledButton(
-          onPressed: () {
-            final key = _keyController.text;
-            if (key.length < 4) {
-              setState(() => _errorText = l10n.keyTooShort);
-              return;
-            }
-            if (key != _confirmController.text) {
-              setState(() => _errorText = l10n.keyMismatch);
-              return;
-            }
-            Navigator.of(context).pop(key);
-          },
-          child: Text(l10n.commonSave),
-        ),
-      ],
-    );
-  }
-}
-
-/// 编辑 WebDAV 配置的对话框（含连通性测试）。控制器由 State 管理并释放。
-class _WebdavEditDialog extends StatefulWidget {
-  const _WebdavEditDialog({required this.existing});
-
-  final WebdavConfig existing;
-
-  @override
-  State<_WebdavEditDialog> createState() => _WebdavEditDialogState();
-}
-
-class _WebdavEditDialogState extends State<_WebdavEditDialog> {
-  late final TextEditingController _urlController = TextEditingController(
-    text: widget.existing.url,
-  );
-  late final TextEditingController _userController = TextEditingController(
-    text: widget.existing.username,
-  );
-  late final TextEditingController _passController = TextEditingController(
-    text: widget.existing.password,
-  );
-  String? _statusText;
-  bool _testing = false;
-
-  WebdavConfig _current() => WebdavConfig(
-    url: _urlController.text.trim(),
-    username: _userController.text.trim(),
-    password: _passController.text,
-    autoUpload: widget.existing.autoUpload,
-  );
-
-  @override
-  void dispose() {
-    _urlController.dispose();
-    _userController.dispose();
-    _passController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _test() async {
-    final l10n = AppLocalizations.of(context);
-    setState(() {
-      _testing = true;
-      _statusText = l10n.testingConnection;
-    });
-    try {
-      await webdavTestConnection(_current());
-      if (mounted) setState(() => _statusText = l10n.connectionOk);
-    } catch (error) {
-      if (mounted) {
-        setState(() => _statusText = l10n.connectionFailed('$error'));
-      }
-    } finally {
-      if (mounted) setState(() => _testing = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return AlertDialog(
-      title: Text(l10n.webdavServer),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            TextField(
-              controller: _urlController,
-              autofocus: true,
-              keyboardType: TextInputType.url,
-              decoration: InputDecoration(
-                labelText: l10n.webdavUrlLabel,
-                hintText: 'https://dav.example.com/verifin/',
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _userController,
-              decoration: InputDecoration(labelText: l10n.webdavUserLabel),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _passController,
-              obscureText: true,
-              decoration: InputDecoration(labelText: l10n.webdavPassLabel),
-            ),
-            if (_statusText != null) ...<Widget>[
-              const SizedBox(height: 10),
-              Text(_statusText!, style: Theme.of(context).textTheme.bodySmall),
-            ],
-          ],
-        ),
-      ),
-      actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.commonCancel),
-        ),
-        TextButton(
-          onPressed: _testing || _urlController.text.trim().isEmpty
-              ? null
-              : _test,
-          child: Text(l10n.testConnection),
-        ),
-        FilledButton(
-          onPressed: () {
-            if (_urlController.text.trim().isEmpty) {
-              setState(() => _statusText = l10n.fillServerUrl);
-              return;
-            }
-            Navigator.of(context).pop(_current());
-          },
-          child: Text(l10n.commonSave),
-        ),
-      ],
-    );
-  }
-}

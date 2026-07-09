@@ -14,6 +14,17 @@ class BackupWriteResult {
   final String? fileUri;
 }
 
+/// 备份写入后回读校验失败：文件写坏 / 被截断 / 读不回来。抛出它让调用方告警，
+/// 而不是让用户以为备份成功、实际文件已损坏（本地优先 App 的数据安全网）。
+class BackupVerificationException implements Exception {
+  const BackupVerificationException(this.filename);
+
+  final String filename;
+
+  @override
+  String toString() => 'Backup verification failed for "$filename"';
+}
+
 /// 一份准备好的备份内容：文件名 + 待写字节。未加密走 zip（.zip，附件不膨胀），
 /// 加密走既有文本信封（.json）。
 class PreparedBackup {
@@ -95,10 +106,9 @@ class BackupService {
       now: now,
       auto: false,
     );
-    final uri = await writeBackupBytesFile(
+    final uri = await _writeVerified(
       directoryUri: settings.directoryUri,
-      filename: prepared.filename,
-      bytes: prepared.bytes,
+      prepared: prepared,
     );
     return BackupWriteResult(filename: prepared.filename, fileUri: uri);
   }
@@ -125,13 +135,44 @@ class BackupService {
     required BackupSettings settings,
     required PreparedBackup prepared,
   }) async {
-    final uri = await writeBackupBytesFile(
+    final uri = await _writeVerified(
       directoryUri: settings.directoryUri,
-      filename: prepared.filename,
-      bytes: prepared.bytes,
+      prepared: prepared,
     );
     await _pruneOldAutoBackups(settings);
     return BackupWriteResult(filename: prepared.filename, fileUri: uri);
+  }
+
+  /// 写入备份并**立即回读逐字节比对**，防「写坏 / 截断却以为成功」。校验不通过抛
+  /// [BackupVerificationException]。无法回读（uri 为空的平台）时跳过校验、不阻断。
+  static Future<String?> _writeVerified({
+    required String directoryUri,
+    required PreparedBackup prepared,
+  }) async {
+    final uri = await writeBackupBytesFile(
+      directoryUri: directoryUri,
+      filename: prepared.filename,
+      bytes: prepared.bytes,
+    );
+    if (uri != null) {
+      final readBack = await readBackupBytesFile(uri);
+      if (readBack == null || !_bytesEqual(readBack, prepared.bytes)) {
+        throw BackupVerificationException(prepared.filename);
+      }
+    }
+    return uri;
+  }
+
+  static bool _bytesEqual(Uint8List a, Uint8List b) {
+    if (a.length != b.length) {
+      return false;
+    }
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   static Future<void> _pruneOldAutoBackups(BackupSettings settings) async {
