@@ -485,7 +485,10 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
               minTileHeight: 48,
               dense: true,
               contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-              leading: const VeriIconBox(icon: Icons.vertical_align_top, size: 32),
+              leading: const VeriIconBox(
+                icon: Icons.vertical_align_top,
+                size: 32,
+              ),
               title: Text(
                 widget.topLevelLabel!,
                 style: Theme.of(

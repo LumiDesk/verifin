@@ -170,10 +170,7 @@ void main() {
     expect(moved, 2);
     // 源分类被删除，其交易全部改指向目标。
     expect(controller.categories.any((c) => c.id == shoppingId), isFalse);
-    expect(
-      controller.entries.where((e) => e.categoryId == diningId).length,
-      3,
-    );
+    expect(controller.entries.where((e) => e.categoryId == diningId).length, 3);
     expect(controller.entries.any((e) => e.categoryId == shoppingId), isFalse);
   });
 

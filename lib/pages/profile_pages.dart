@@ -905,7 +905,9 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            AppLocalizations.of(context).categoryUsedByRecurring(recurringCount),
+            AppLocalizations.of(
+              context,
+            ).categoryUsedByRecurring(recurringCount),
           ),
         ),
       );
@@ -927,7 +929,9 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
     final confirmed = await showConfirmDialog(
       context,
       title: AppLocalizations.of(context).deleteCategoryTitle,
-      message: AppLocalizations.of(context).deleteCategoryMessage(category.label),
+      message: AppLocalizations.of(
+        context,
+      ).deleteCategoryMessage(category.label),
       confirmLabel: AppLocalizations.of(context).commonDelete,
       destructive: true,
     );

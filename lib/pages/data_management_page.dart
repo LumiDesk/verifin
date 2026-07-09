@@ -1121,14 +1121,16 @@ class DataManagementPage extends StatelessWidget {
         return;
       }
       final l10n = AppLocalizations.of(context);
-      final suffix = plan.errorCount > 0 ? l10n.skippedRows(plan.errorCount) : '';
+      final suffix = plan.errorCount > 0
+          ? l10n.skippedRows(plan.errorCount)
+          : '';
       // 纯账户导入（无交易）时提示导入的账户数，否则提示交易笔数。
       final summary = result.entries.isEmpty
           ? l10n.importedAccounts(result.alwaysCreateAccountIds.length)
           : l10n.importedEntries(result.entries.length);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$summary$suffix')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$summary$suffix')));
     } on FormatException catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

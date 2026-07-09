@@ -405,15 +405,14 @@ Future<String?> showAccountIconSheet({
         label: iconLabelForCode(l10n, code),
         group: l10n.iconGroupGeneric,
       ),
-    if (includeAssetIcons)
-      ...<AccountIconChoice>[
-        for (final option in accountAssetIconOptions)
-          AccountIconChoice(
-            code: option.code,
-            label: option.label,
-            group: option.groupLabel(l10n),
-          ),
-      ],
+    if (includeAssetIcons) ...<AccountIconChoice>[
+      for (final option in accountAssetIconOptions)
+        AccountIconChoice(
+          code: option.code,
+          label: option.label,
+          group: option.groupLabel(l10n),
+        ),
+    ],
   ];
 
   return showModalBottomSheet<String>(
@@ -515,12 +514,66 @@ class AccountIconChoice {
 
 /// 分类图标常用 emoji 快选（覆盖餐饮/出行/居家/娱乐/人情/理财等常见分类）。
 const List<String> categoryEmojiChoices = <String>[
-  '🍜', '🍔', '🍚', '🥗', '🍎', '☕', '🍺', '🍷', '🧋', '🍰',
-  '🍦', '🛒', '🛍️', '👕', '👗', '👟', '💄', '✂️', '🚌', '🚗',
-  '🚕', '⛽', '🚉', '✈️', '🅿️', '🚲', '🏠', '🔑', '💡', '💧',
-  '📱', '📶', '🔧', '🛋️', '🧺', '🎮', '🎬', '🎵', '⚽', '🏋️',
-  '📚', '🎓', '🐱', '🐶', '🍼', '🎁', '🧧', '❤️', '💊', '🏥',
-  '💰', '💵', '💳', '🧾', '📈', '💼', '🎉', '⭐', '🔥', '🏦',
+  '🍜',
+  '🍔',
+  '🍚',
+  '🥗',
+  '🍎',
+  '☕',
+  '🍺',
+  '🍷',
+  '🧋',
+  '🍰',
+  '🍦',
+  '🛒',
+  '🛍️',
+  '👕',
+  '👗',
+  '👟',
+  '💄',
+  '✂️',
+  '🚌',
+  '🚗',
+  '🚕',
+  '⛽',
+  '🚉',
+  '✈️',
+  '🅿️',
+  '🚲',
+  '🏠',
+  '🔑',
+  '💡',
+  '💧',
+  '📱',
+  '📶',
+  '🔧',
+  '🛋️',
+  '🧺',
+  '🎮',
+  '🎬',
+  '🎵',
+  '⚽',
+  '🏋️',
+  '📚',
+  '🎓',
+  '🐱',
+  '🐶',
+  '🍼',
+  '🎁',
+  '🧧',
+  '❤️',
+  '💊',
+  '🏥',
+  '💰',
+  '💵',
+  '💳',
+  '🧾',
+  '📈',
+  '💼',
+  '🎉',
+  '⭐',
+  '🔥',
+  '🏦',
 ];
 
 /// 分类图标选择器：内置图标网格 + 常用 emoji 快选 + 自由输入 emoji。
@@ -592,7 +645,9 @@ class _CategoryIconPickerBodyState extends State<_CategoryIconPickerBody> {
       child: Text(
         text,
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
+          color: Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: 0.55),
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -707,7 +762,9 @@ class _IconChoiceCell extends StatelessWidget {
           border: Border.all(
             color: selected
                 ? veriRoyal
-                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.10),
+                : Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.10),
             width: selected ? 2 : 1,
           ),
         ),

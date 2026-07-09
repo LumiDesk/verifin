@@ -102,9 +102,7 @@ void main() {
       iconCode: 'dining',
       parentId: 'dining',
     );
-    final lunchId = controller.categories
-        .firstWhere((c) => c.label == '午餐')
-        .id;
+    final lunchId = controller.categories.firstWhere((c) => c.label == '午餐').id;
     final tagId = controller.addTag('工作')!;
     controller
       ..addEntry(
@@ -130,7 +128,11 @@ void main() {
 
     final scrollable = find.byType(Scrollable).first;
     // 切到「子分类」维度 → 出现「午餐」。
-    await tester.scrollUntilVisible(find.text('子分类'), 250, scrollable: scrollable);
+    await tester.scrollUntilVisible(
+      find.text('子分类'),
+      250,
+      scrollable: scrollable,
+    );
     await tester.tap(find.text('子分类'));
     await tester.pumpAndSettle();
     expect(find.text('午餐'), findsWidgets);
@@ -144,7 +146,11 @@ void main() {
     // 回「分类」维度，点「餐饮」行下钻 → 弹层出现「午餐」。
     await tester.tap(find.text('分类').first);
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('餐饮'), 250, scrollable: scrollable);
+    await tester.scrollUntilVisible(
+      find.text('餐饮'),
+      250,
+      scrollable: scrollable,
+    );
     await tester.tap(find.text('餐饮').last);
     await tester.pumpAndSettle();
     expect(find.textContaining('的子分类'), findsOneWidget);

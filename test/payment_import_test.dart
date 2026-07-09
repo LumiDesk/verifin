@@ -459,7 +459,8 @@ void main() {
 
     test('转账：剥离「(账单:X 优惠:Y)」尾注', () {
       final transfer = plan.entries.firstWhere(
-        (e) => e.type == EntryType.transfer && e.occurredAt == discountTransferAt,
+        (e) =>
+            e.type == EntryType.transfer && e.occurredAt == discountTransferAt,
       );
       final from = plan.newAccounts.firstWhere(
         (a) => a.id == transfer.accountId,
@@ -499,7 +500,12 @@ void main() {
       final bytes = _buildTallyBackup(<String, Object?>{
         'assets': <Object?>[
           // 有流水的资产：当前余额 1035.18。
-          <String, Object?>{'id': 1, 'name': '微信余额', 'amount': 1035.18, 'type': 0},
+          <String, Object?>{
+            'id': 1,
+            'name': '微信余额',
+            'amount': 1035.18,
+            'type': 0,
+          },
           // 无流水的零余额钱包。
           <String, Object?>{'id': 2, 'name': 'qq钱包', 'amount': 0, 'type': 0},
           // 借出（type 2）：正值资产。

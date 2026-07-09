@@ -1629,7 +1629,9 @@ class VeriFinController extends ChangeNotifier {
 
   /// 引用该分类的周期规则数（用于 UI 提示）。
   int categoryRecurringRuleCount(String categoryId) {
-    return _recurringRules.where((rule) => rule.categoryId == categoryId).length;
+    return _recurringRules
+        .where((rule) => rule.categoryId == categoryId)
+        .length;
   }
 
   /// 把 [sourceId] 分类合并到 [targetId]：其全部交易与周期规则改指向 [targetId]，
