@@ -253,18 +253,22 @@ class VeriFinController extends ChangeNotifier {
     return _attachments.where((a) => a.entryId == entryId).length;
   }
 
-  /// 为交易新增一张图片附件（[dataUrl] 为压缩后的 JPEG data URL）。
-  // 附件 id 自增序号：连续两次 addAttachment 可能落在同一微秒，单靠
-  // microsecondsSinceEpoch 会生成相同 id，删一个会把同 id 的都删掉。加序号去重。
-  int _attachmentIdSeq = 0;
+  /// 进程内单调自增序号，配合微秒时间戳生成不会碰撞的 id：连续两次生成可能落在
+  /// 同一微秒，单靠 microsecondsSinceEpoch 会得到相同 id（删一个会连带删同 id 的）。
+  int _idSeq = 0;
 
+  /// 生成唯一 id：`前缀_微秒时间戳_单调序号`。即便同一微秒批量生成也各不相同。
+  String _generateId(String prefix) =>
+      '${prefix}_${DateTime.now().microsecondsSinceEpoch}_${_idSeq++}';
+
+  /// 为交易新增一张图片附件（[dataUrl] 为压缩后的 JPEG data URL）。
   void addAttachment(String entryId, String dataUrl) {
     if (dataUrl.isEmpty) {
       return;
     }
     _attachments.add(
       Attachment(
-        id: 'att_${DateTime.now().microsecondsSinceEpoch}_${_attachmentIdSeq++}',
+        id: _generateId('att'),
         entryId: entryId,
         dataUrl: dataUrl,
       ),
@@ -1193,7 +1197,7 @@ class VeriFinController extends ChangeNotifier {
     }
     final now = DateTime.now();
     final book = LedgerBook(
-      id: now.microsecondsSinceEpoch.toString(),
+      id: _generateId('book'),
       name: trimmedName,
       createdAt: now,
       isDefault: false,
@@ -1424,7 +1428,7 @@ class VeriFinController extends ChangeNotifier {
     _entries.insert(
       0,
       LedgerEntry(
-        id: now.microsecondsSinceEpoch.toString(),
+        id: _generateId('entry'),
         bookId: account.bookId,
         type: difference > 0 ? EntryType.income : EntryType.expense,
         amount: difference.abs(),
@@ -1486,7 +1490,7 @@ class VeriFinController extends ChangeNotifier {
     }
     _categories.add(
       Category(
-        id: 'category_${DateTime.now().microsecondsSinceEpoch}',
+        id: _generateId('category'),
         label: trimmedLabel,
         type: resolvedType,
         iconCode: iconCode,
@@ -1695,7 +1699,7 @@ class VeriFinController extends ChangeNotifier {
       return existing.id;
     }
     final tag = Tag(
-      id: 'tag_${DateTime.now().microsecondsSinceEpoch}',
+      id: _generateId('tag'),
       label: trimmed,
     );
     _tags.add(tag);
@@ -1762,7 +1766,7 @@ class VeriFinController extends ChangeNotifier {
     }
     _accountGroups.add(
       AccountGroup(
-        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        id: _generateId('group'),
         bookId: _activeBookId,
         name: trimmedName,
         iconCode: 'folder',

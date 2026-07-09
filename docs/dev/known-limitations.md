@@ -30,8 +30,12 @@
 
 以下为已识别、正在分批整改的工程化债；完成后从本节移除。
 
-- **单 Controller 过载**：`VeriFinController` 约 2600 行、~30 领域，待用 `part`/mixin 物理拆分；偏好类 KV 待中期剥为独立 notifier。
+- **单 Controller 过载**：`VeriFinController` 约 2600 行、~30 领域，待用 `part`/mixin 物理拆分。
 - **超大页面文件**：`profile_pages` / `budget_pages` / `transactions_pages` / `data_management_page` 待按子页拆分。
-- **时间/ID 硬编码 `DateTime.now()`**：ID 依赖 `microsecondsSinceEpoch`，理论有碰撞窗口（`addAttachment` 已加序号缓解），待注入 `Clock` + 稳健 ID。
 
 整改进度不在本文件逐条勾选；以 git 历史与 `CHANGELOG.md` 为准。
+
+### 有意缓做（评估后判定：高风险 / 低当前收益）
+
+- **偏好类 KV 剥离为独立 notifier**：可修掉「偏好改动触发全树重建」的性能问题，但需把 ~15 个偏好字段搬出 controller、新建独立 scope，**每个读取点都要改**，漏一个即运行时错误；而该性能问题属「规模变大才疼」。判定为中期项，规模/团队变大或出现掉帧后再单独做。
+- **`Clock` 依赖注入**：ID 碰撞隐患已通过统一的 `_generateId`（微秒时间戳 + 单调序号）根治；批量/幂等路径（导入计数器、周期规则确定性 id）本就安全。剩余的「时间可控测试」需求已由 `applyDueRecurring(now)` 这类传参覆盖，全量注入 Clock 收益有限，暂缓。
