@@ -30,7 +30,6 @@
 
 以下为已识别、正在分批整改的工程化债；完成后从本节移除。
 
-- **指标块复制**：等价 `SummaryMetric` 的统计小块被各页复制多份，待参数化收敛。
 - **单 Controller 过载**：`VeriFinController` 约 2600 行、~30 领域，待用 `part`/mixin 物理拆分；偏好类 KV 待中期剥为独立 notifier。
 - **超大页面文件**：`profile_pages` / `budget_pages` / `transactions_pages` / `data_management_page` 待按子页拆分。
 - **时间/ID 硬编码 `DateTime.now()`**：ID 依赖 `microsecondsSinceEpoch`，理论有碰撞窗口（`addAttachment` 已加序号缓解），待注入 `Clock` + 稳健 ID。
