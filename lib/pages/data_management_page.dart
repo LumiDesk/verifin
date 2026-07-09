@@ -406,6 +406,9 @@ class DataManagementPage extends StatelessWidget {
     if (error is WebdavException) {
       return error.message;
     }
+    if (error is BackupVerificationException) {
+      return l10n.backupVerifyFailed;
+    }
     if (error is FormatException) {
       return l10n.backupInvalidFile;
     }

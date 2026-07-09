@@ -1525,6 +1525,7 @@
     }
   },
   "backupFailedRetry": "备份操作失败，请稍后再试",
+  "backupVerifyFailed": "备份写入后校验未通过（文件可能已损坏），请重试或更换备份目录",
   "pickBackupFrequency": "选择自动备份频率",
   "backupIntervalTitle": "每隔多久备份一次",
   "retentionTitle": "保留最近几份备份",

@@ -4298,6 +4298,12 @@ abstract class AppLocalizations {
   /// **'备份操作失败，请稍后再试'**
   String get backupFailedRetry;
 
+  /// No description provided for @backupVerifyFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'备份写入后校验未通过（文件可能已损坏），请重试或更换备份目录'**
+  String get backupVerifyFailed;
+
   /// No description provided for @pickBackupFrequency.
   ///
   /// In zh, this message translates to:
