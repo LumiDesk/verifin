@@ -30,8 +30,19 @@
 
 以下为已识别、正在分批整改的工程化债；完成后从本节移除。
 
-- **单 Controller 过载**：`VeriFinController` 约 2600 行、~30 领域，待用 `part`/mixin 物理拆分。
-- **超大页面文件**：`profile_pages` / `budget_pages` / `transactions_pages` / `data_management_page` 待按子页拆分。
+- （已完成，2026-07）**单 Controller 过载**：`VeriFinController` 已用 mixin 物理拆分为
+  `veri_fin_controller.dart`（瘦身后的类：构造/`create`/`dispose`/注入字段）、
+  `veri_fin_controller_state.dart`（`_ControllerState` mixin：全部内存字段 + KV/SQLite 载入落库 + 基础 hub 方法）、
+  `veri_fin_controller_ops.dart`（`_ControllerOps mixin on ChangeNotifier, _ControllerState`：全部领域操作）。
+  单一 ops mixin 规避跨领域符号解析问题；偏好键、`_panelsKeyFor`、`_compareEntriesLatestFirst` 降为库级私有以便各 part 共享。
+- （已完成，2026-07）**超大页面文件**：`profile_pages` 拆为 settings/category/tag/profile-info/ledger-books 等独立库 + barrel 导出；
+  `budget_pages` / `assets_pages` / `data_management_page` 用 `part` 拆出趋势图/支撑件/快照计算/对话框/子页；
+  `transactions_pages` 抽出 `transaction_detail_page`。均纯机械拆分、零行为变化，`flutter analyze` 与全量测试通过。
+
+拆分方式备忘（供后续参考）：**独立页面**（无共享私有符号、可能被外部引用）→ 独立库 + `export` barrel，调用点 import 不变；
+**共享私有 widget/字段的同域代码** → `part`（同库、私有可见、import 只在主文件声明一次）；
+**单个超大有状态类** → mixin（`on ChangeNotifier` 可干净调用 `notifyListeners()`，`on 基础State mixin` 可访问其字段），
+extension 不行——其调用 `notifyListeners()` 会触发 `invalid_use_of_protected_member`。
 
 整改进度不在本文件逐条勾选；以 git 历史与 `CHANGELOG.md` 为准。
 
