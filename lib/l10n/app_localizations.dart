@@ -374,6 +374,12 @@ abstract class AppLocalizations {
   /// **'账户「{name}」删除后无法恢复。'**
   String accountDeleteMessage(String name);
 
+  /// No description provided for @accountRecurringRulesDisabled.
+  ///
+  /// In zh, this message translates to:
+  /// **'已停用 {count} 条引用该账户的周期记账并清空其账户，请前往复查'**
+  String accountRecurringRulesDisabled(int count);
+
   /// No description provided for @tagCreateTitle.
   ///
   /// In zh, this message translates to:
@@ -3613,6 +3619,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'已有 {count} 笔交易使用该分类，不能删除'**
   String categoryInUse(int count);
+
+  /// No description provided for @categoryUsedByRecurring.
+  ///
+  /// In zh, this message translates to:
+  /// **'该分类正被 {count} 条周期记账使用，请先修改或删除相关规则'**
+  String categoryUsedByRecurring(int count);
 
   /// No description provided for @moveSubFirst.
   ///

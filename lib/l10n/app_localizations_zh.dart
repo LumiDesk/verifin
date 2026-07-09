@@ -151,6 +151,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String accountRecurringRulesDisabled(int count) {
+    return '已停用 $count 条引用该账户的周期记账并清空其账户，请前往复查';
+  }
+
+  @override
   String get tagCreateTitle => '新建标签';
 
   @override
@@ -1945,6 +1950,11 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String categoryInUse(int count) {
     return '已有 $count 笔交易使用该分类，不能删除';
+  }
+
+  @override
+  String categoryUsedByRecurring(int count) {
+    return '该分类正被 $count 条周期记账使用，请先修改或删除相关规则';
   }
 
   @override

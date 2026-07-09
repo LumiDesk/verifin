@@ -928,6 +928,17 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
       );
       return;
     }
+    final recurringCount = controller.categoryRecurringRuleCount(category.id);
+    if (recurringCount > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context).categoryUsedByRecurring(recurringCount),
+          ),
+        ),
+      );
+      return;
+    }
     if (controller.childCategories(category.id).isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context).moveSubFirst)),

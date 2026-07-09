@@ -1352,16 +1352,46 @@ class VeriFinController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void deleteAccount(String accountId) {
+  /// 停用引用 [accountId] 的周期规则并清掉其账户引用（转出改为「无账户」、
+  /// 转入清空），避免删账户后规则继续往已不存在的账户补记。返回受影响的规则数，
+  /// 供 UI 提示用户前往复查。
+  int _detachAccountFromRecurringRules(String accountId) {
+    var affected = 0;
+    for (var i = 0; i < _recurringRules.length; i++) {
+      final rule = _recurringRules[i];
+      final hitsFrom = rule.accountId == accountId;
+      final hitsTo = rule.toAccountId == accountId;
+      if (!hitsFrom && !hitsTo) {
+        continue;
+      }
+      _recurringRules[i] = rule.copyWith(
+        active: false,
+        accountId: hitsFrom ? '' : null,
+        clearToAccountId: hitsTo,
+      );
+      affected++;
+    }
+    if (affected > 0) {
+      _persistRecurringRules();
+    }
+    return affected;
+  }
+
+  /// 删除账户。返回被停用的周期规则数（0 表示没有规则引用它）。
+  int deleteAccount(String accountId) {
+    final affectedRules = _detachAccountFromRecurringRules(accountId);
     _accounts.removeWhere((account) => account.id == accountId);
     _removeAccountFromOrders(accountId);
     _clearDefaultAccountRef(accountId);
     _persistAssetAccountOrders();
     _persistAccounts();
     notifyListeners();
+    return affectedRules;
   }
 
-  void deleteAccountAndRelatedEntries(String accountId) {
+  /// 删除账户及其相关交易。返回被停用的周期规则数。
+  int deleteAccountAndRelatedEntries(String accountId) {
+    final affectedRules = _detachAccountFromRecurringRules(accountId);
     final removedEntryIds = _entries
         .where((entry) => entryTouchesAccount(entry, accountId))
         .map((entry) => entry.id)
@@ -1377,6 +1407,7 @@ class VeriFinController extends ChangeNotifier {
     _persistAssetAccountOrders();
     _persistAccounts();
     notifyListeners();
+    return affectedRules;
   }
 
   void adjustAccountBalance(
@@ -1567,6 +1598,10 @@ class VeriFinController extends ChangeNotifier {
     if (category == null || categoryUsageCount(categoryId) > 0) {
       return false;
     }
+    // 仍被周期规则引用时不能删除，否则规则到期会生成悬空分类的交易。
+    if (categoryUsedByRecurringRule(categoryId)) {
+      return false;
+    }
     // 有子分类时不能直接删除，需先移动或删除子分类。
     if (hasChildren(_categories, categoryId)) {
       return false;
@@ -1585,6 +1620,16 @@ class VeriFinController extends ChangeNotifier {
 
   int categoryUsageCount(String categoryId) {
     return _entries.where((entry) => entry.categoryId == categoryId).length;
+  }
+
+  /// 是否有周期规则正引用该分类（含尚未生成过任何交易的规则）。
+  bool categoryUsedByRecurringRule(String categoryId) {
+    return _recurringRules.any((rule) => rule.categoryId == categoryId);
+  }
+
+  /// 引用该分类的周期规则数（用于 UI 提示）。
+  int categoryRecurringRuleCount(String categoryId) {
+    return _recurringRules.where((rule) => rule.categoryId == categoryId).length;
   }
 
   /// 把 [sourceId] 分类合并到 [targetId]：其全部交易与周期规则改指向 [targetId]，
@@ -2312,13 +2357,15 @@ class VeriFinController extends ChangeNotifier {
     onPersistError?.call(error);
   }
 
-  /// 等待挂起的 SQLite 写入落库（仅测试使用）。
-  @visibleForTesting
+  /// 等待挂起的 SQLite 写入落库。
   Future<void> waitForPendingWrites() => _pendingWrite;
 
-  /// 刷盘所有挂起的偏好类 KV 写入。应用切到后台时调用，确保应用锁 / 隐私同意等
-  /// 关键偏好在进程可能被系统回收前落盘。
-  Future<void> flushPreferenceWrites() => _store.flush();
+  /// 刷盘所有挂起写入：偏好类 KV **与** 账目类 SQLite。应用切到后台时调用，
+  /// 确保应用锁 / 隐私同意等关键偏好，以及用户刚记下的交易，在进程可能被系统
+  /// 回收前落盘（此前只刷 KV，SQLite 写入是 fire-and-forget，极端情况下会丢账）。
+  Future<void> flushPendingWrites() {
+    return Future.wait(<Future<void>>[_store.flush(), _pendingWrite]);
+  }
 
   void _persistLedgerBooks() {
     _trackWrite(_repository.saveBooks(List<LedgerBook>.of(_ledgerBooks)));

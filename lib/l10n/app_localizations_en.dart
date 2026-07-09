@@ -153,6 +153,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String accountRecurringRulesDisabled(int count) {
+    return 'Disabled $count recurring rule(s) that used this account and cleared their account; please review them';
+  }
+
+  @override
   String get tagCreateTitle => 'New tag';
 
   @override
@@ -1979,6 +1984,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String categoryInUse(int count) {
     return '$count transactions use this category; it can\'t be deleted';
+  }
+
+  @override
+  String categoryUsedByRecurring(int count) {
+    return 'This category is used by $count recurring rule(s); update or delete them first';
   }
 
   @override

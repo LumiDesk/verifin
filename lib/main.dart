@@ -234,8 +234,9 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
       pushWidgetData(_controller);
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
-      // 切后台时把挂起的偏好写入刷盘，缩小「刚改完设置就被系统回收 → 丢失」的窗口。
-      unawaited(_controller.flushPreferenceWrites());
+      // 切后台时把挂起写入刷盘（KV 偏好 + SQLite 账目），缩小「刚改完设置 /
+      // 刚记完账就被系统回收 → 丢失」的窗口。
+      unawaited(_controller.flushPendingWrites());
     }
   }
 

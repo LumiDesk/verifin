@@ -133,6 +133,14 @@
       }
     }
   },
+  "accountRecurringRulesDisabled": "已停用 {count} 条引用该账户的周期记账并清空其账户，请前往复查",
+  "@accountRecurringRulesDisabled": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "tagCreateTitle": "新建标签",
   "tagNameLabel": "标签名称",
   "entryTypeExpense": "支出",
@@ -1296,6 +1304,14 @@
   "systemCategoryUndeletable": "系统分类不能删除",
   "categoryInUse": "已有 {count} 笔交易使用该分类，不能删除",
   "@categoryInUse": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "categoryUsedByRecurring": "该分类正被 {count} 条周期记账使用，请先修改或删除相关规则",
+  "@categoryUsedByRecurring": {
     "placeholders": {
       "count": {
         "type": "int"
