@@ -507,6 +507,23 @@ class _CategoryIconPickerBodyState extends State<_CategoryIconPickerBody> {
     Navigator.of(context).pop(emojiIconCode(text.characters.first));
   }
 
+  /// 自适应列数的图标网格：按可用宽度均匀铺满，避免右侧留白不均。
+  Widget _iconGrid(List<Widget> cells) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 56,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 1,
+      ),
+      itemCount: cells.length,
+      itemBuilder: (context, index) => cells[index],
+    );
+  }
+
   Widget _sectionTitle(String text) {
     return Padding(
       padding: const EdgeInsets.only(top: 6, bottom: 8),
@@ -551,37 +568,27 @@ class _CategoryIconPickerBodyState extends State<_CategoryIconPickerBody> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       _sectionTitle(l10n.iconSectionBuiltin),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: <Widget>[
-                          for (final code in categoryIconCodes)
-                            _IconChoiceCell(
-                              selected: widget.selected == code,
-                              onTap: () => Navigator.of(context).pop(code),
-                              child: CategoryIconBox(iconCode: code, size: 40),
-                            ),
-                        ],
-                      ),
+                      _iconGrid(<Widget>[
+                        for (final code in categoryIconCodes)
+                          _IconChoiceCell(
+                            selected: widget.selected == code,
+                            onTap: () => Navigator.of(context).pop(code),
+                            child: CategoryIconBox(iconCode: code, size: 36),
+                          ),
+                      ]),
                       _sectionTitle(l10n.iconSectionEmoji),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: <Widget>[
-                          for (final emoji in categoryEmojiChoices)
-                            _IconChoiceCell(
-                              selected:
-                                  widget.selected == emojiIconCode(emoji),
-                              onTap: () => Navigator.of(
-                                context,
-                              ).pop(emojiIconCode(emoji)),
-                              child: CategoryIconBox(
-                                iconCode: emojiIconCode(emoji),
-                                size: 40,
-                              ),
+                      _iconGrid(<Widget>[
+                        for (final emoji in categoryEmojiChoices)
+                          _IconChoiceCell(
+                            selected: widget.selected == emojiIconCode(emoji),
+                            onTap: () =>
+                                Navigator.of(context).pop(emojiIconCode(emoji)),
+                            child: CategoryIconBox(
+                              iconCode: emojiIconCode(emoji),
+                              size: 36,
                             ),
-                        ],
-                      ),
+                          ),
+                      ]),
                       const SizedBox(height: 12),
                       Row(
                         children: <Widget>[
@@ -632,7 +639,7 @@ class _IconChoiceCell extends StatelessWidget {
       borderRadius: BorderRadius.circular(veriRadiusMd),
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(6),
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(veriRadiusMd),
           border: Border.all(

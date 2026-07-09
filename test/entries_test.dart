@@ -367,6 +367,33 @@ void main() {
     expect(find.textContaining('个子分类'), findsWidgets);
   });
 
+  testWidgets('merges a category into another via the hierarchical picker', (
+    WidgetTester tester,
+  ) async {
+    await pumpApp(tester);
+
+    await tapBottomTab(tester, 3);
+    await tester.tap(find.text('分类管理'));
+    await tester.pumpAndSettle();
+
+    // 点「交通」→「合并到其他分类」。
+    await tester.tap(find.text('交通').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('合并到其他分类'));
+    await tester.pumpAndSettle();
+
+    // 选择器为带图标的层级树；选目标「餐饮」。
+    await tester.tap(find.text('餐饮').last);
+    await tester.pumpAndSettle();
+    // 确认合并。
+    await tester.tap(find.text('合并'));
+    await tester.pumpAndSettle();
+
+    // 「交通」已被合并删除。
+    expect(find.text('交通'), findsNothing);
+    expect(find.text('餐饮'), findsWidgets);
+  });
+
   testWidgets('creates a tag in the tag management page', (
     WidgetTester tester,
   ) async {

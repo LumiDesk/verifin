@@ -5,6 +5,7 @@ import '../app/app_version.dart';
 import '../app/avatar_picker.dart';
 import '../app/category_tree.dart';
 import '../app/common_widgets.dart';
+import '../app/entry_sheets.dart';
 import '../app/image_cropper.dart';
 import '../app/image_sources.dart';
 import '../app/ledger_math.dart';
@@ -767,6 +768,43 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
   }
 
   /// 把该分类的全部交易并入另一个同类型分类，随后删除该分类（统一同义分类）。
+  /// 分类目标选择器（移动 / 合并共用）：带图标 + 层级树，自动排除自身及其后代。
+  /// [topLevelLabel] 非空时在顶部提供「移到顶级」选项（返回 [categoryPickerTopLevel]）。
+  Future<String?> _pickCategoryTarget({
+    required Category source,
+    required String title,
+    String? topLevelLabel,
+  }) {
+    final controller = VeriFinScope.of(context);
+    final all = controller.categories;
+    final candidates = controller
+        .categoriesForType(source.type)
+        .where(
+          (c) => c.id != source.id && !isDescendantOf(all, c.id, source.id),
+        )
+        .toList();
+    if (candidates.isEmpty && topLevelLabel == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).noMoveTarget)),
+      );
+      return Future<String?>.value();
+    }
+    return showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(veriRadiusLg)),
+      ),
+      builder: (context) => CategoryPickerSheet(
+        categories: candidates,
+        selectedId: '',
+        title: title,
+        topLevelLabel: topLevelLabel,
+      ),
+    );
+  }
+
   Future<void> _mergeCategory(Category category) async {
     final controller = VeriFinScope.of(context);
     final l10n = AppLocalizations.of(context);
@@ -777,23 +815,9 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
       ).showSnackBar(SnackBar(content: Text(l10n.moveSubFirst)));
       return;
     }
-    final candidates = controller
-        .categoriesForType(category.type)
-        .where((c) => c.id != category.id)
-        .toList();
-    if (candidates.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.noMoveTarget)));
-      return;
-    }
-    final targetId = await showOptionSheet<String>(
-      context: context,
+    final targetId = await _pickCategoryTarget(
+      source: category,
       title: l10n.mergeCategoryPickTitle(category.label),
-      values: candidates.map((c) => c.id).toList(),
-      selected: candidates.first.id,
-      showSelectedMarker: false,
-      labelOf: (value) => controller.categoryPathLabel(value),
     );
     if (!mounted || targetId == null) {
       return;
@@ -839,48 +863,24 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
 
   Future<void> _moveCategory(Category category) async {
     final controller = VeriFinScope.of(context);
-    final all = controller.categories;
-    // 候选父级：同类型、非自身、非自身后代、且不是当前父级。另加「移到顶级」。
-    final candidates = controller
-        .categoriesForType(category.type)
-        .where(
-          (c) =>
-              c.id != category.id &&
-              c.id != category.parentId &&
-              !isDescendantOf(all, c.id, category.id),
-        )
-        .toList();
-    final values = <String>[
-      if (category.parentId != null) _moveToRootValue,
-      ...candidates.map((c) => c.id),
-    ];
-    if (values.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).noMoveTarget)),
-      );
-      return;
-    }
-    final selected = await showOptionSheet<String>(
-      context: context,
-      title: AppLocalizations.of(context).moveCategoryTitle(category.label),
-      values: values,
-      selected: values.first,
-      showSelectedMarker: false,
-      labelOf: (value) => value == _moveToRootValue
-          ? AppLocalizations.of(context).topCategory
-          : controller.categoryPathLabel(value),
+    final l10n = AppLocalizations.of(context);
+    final selected = await _pickCategoryTarget(
+      source: category,
+      title: l10n.moveCategoryTitle(category.label),
+      // 已在顶级的分类不提供「移到顶级」。
+      topLevelLabel: category.parentId != null ? l10n.topCategory : null,
     );
     if (!mounted || selected == null) {
       return;
     }
     final moved = controller.moveCategory(
       category.id,
-      selected == _moveToRootValue ? null : selected,
+      selected == categoryPickerTopLevel ? null : selected,
     );
     if (!moved && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).cannotMoveHere)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.cannotMoveHere)));
     }
   }
 
@@ -978,9 +978,6 @@ bool _isProtectedCategory(String categoryId) {
   return categoryId == 'balance_adjust_expense' ||
       categoryId == 'balance_adjust_income';
 }
-
-/// 「移到顶级」在移动选项中的占位值（区别于任何真实分类 id）。
-const String _moveToRootValue = '__root__';
 
 class _CategoryManageRow extends StatelessWidget {
   const _CategoryManageRow({

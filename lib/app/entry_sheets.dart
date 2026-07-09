@@ -374,16 +374,27 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
 
 /// 记账时选择分类的底部弹窗。支持多级分类：父分类可展开/收起，
 /// 子分类缩进显示，点选任意层级的分类（父或子）都会返回其 id。
+/// [CategoryPickerSheet] 选择「移到顶级」时返回的哨兵值（区别于任何真实分类 id）。
+const String categoryPickerTopLevel = '__category_picker_top_level__';
+
 class CategoryPickerSheet extends StatefulWidget {
   const CategoryPickerSheet({
     super.key,
     required this.categories,
     required this.selectedId,
+    this.title,
+    this.topLevelLabel,
   });
 
   /// 当前类型下的全部分类（含各级子分类），由调用方按类型过滤后传入。
   final List<Category> categories;
   final String selectedId;
+
+  /// 弹窗标题；为空时用「全部分类」。
+  final String? title;
+
+  /// 非空时在列表顶部加一个「移到顶级」选项，点选返回 [categoryPickerTopLevel]。
+  final String? topLevelLabel;
 
   @override
   State<CategoryPickerSheet> createState() => _CategoryPickerSheetState();
@@ -431,12 +442,26 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            AppLocalizations.of(context).categoryAll,
+            widget.title ?? AppLocalizations.of(context).categoryAll,
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 10),
+          if (widget.topLevelLabel != null)
+            ListTile(
+              minTileHeight: 48,
+              dense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+              leading: const VeriIconBox(icon: Icons.vertical_align_top, size: 32),
+              title: Text(
+                widget.topLevelLabel!,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              onTap: () => Navigator.of(context).pop(categoryPickerTopLevel),
+            ),
           Flexible(
             child: ListView.separated(
               shrinkWrap: true,
