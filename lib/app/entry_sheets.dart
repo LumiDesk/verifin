@@ -377,6 +377,9 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
 /// [CategoryPickerSheet] 选择「移到顶级」时返回的哨兵值（区别于任何真实分类 id）。
 const String categoryPickerTopLevel = '__category_picker_top_level__';
 
+/// [CategoryPickerSheet] 选择「全部分类」时返回的哨兵值（筛选场景用）。
+const String categoryPickerAll = '__category_picker_all__';
+
 class CategoryPickerSheet extends StatefulWidget {
   const CategoryPickerSheet({
     super.key,
@@ -384,6 +387,7 @@ class CategoryPickerSheet extends StatefulWidget {
     required this.selectedId,
     this.title,
     this.topLevelLabel,
+    this.allLabel,
   });
 
   /// 当前类型下的全部分类（含各级子分类），由调用方按类型过滤后传入。
@@ -395,6 +399,10 @@ class CategoryPickerSheet extends StatefulWidget {
 
   /// 非空时在列表顶部加一个「移到顶级」选项，点选返回 [categoryPickerTopLevel]。
   final String? topLevelLabel;
+
+  /// 非空时在列表顶部加一个「全部」选项（筛选场景），点选返回 [categoryPickerAll]；
+  /// 当 [selectedId] 为 [categoryPickerAll] 时该项高亮。
+  final String? allLabel;
 
   @override
   State<CategoryPickerSheet> createState() => _CategoryPickerSheetState();
@@ -448,6 +456,30 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 10),
+          if (widget.allLabel != null)
+            ListTile(
+              minTileHeight: 48,
+              dense: true,
+              selected: widget.selectedId == categoryPickerAll,
+              selectedTileColor: veriRoyal.withValues(alpha: 0.12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(veriRadiusSm),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+              leading: const VeriIconBox(icon: Icons.select_all, size: 32),
+              title: Text(
+                widget.allLabel!,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: widget.selectedId == categoryPickerAll
+                      ? FontWeight.w800
+                      : FontWeight.w600,
+                ),
+              ),
+              trailing: widget.selectedId == categoryPickerAll
+                  ? const Icon(Icons.check, color: veriRoyal, size: 18)
+                  : null,
+              onTap: () => Navigator.of(context).pop(categoryPickerAll),
+            ),
           if (widget.topLevelLabel != null)
             ListTile(
               minTileHeight: 48,

@@ -544,27 +544,20 @@ class _TransactionsPageState extends State<TransactionsPage> {
   }
 
   Future<void> _pickCategoryFilter(VeriFinController controller) async {
-    // 按类型 + 层级（前序）平铺分类，子分类缩进展示，用户既能选大类也能选子类。
-    final depthOfId = <String, int>{};
-    final values = <String>[_allFilterValue];
-    for (final type in EntryType.values) {
-      for (final node in flattenTree(controller.categories, type)) {
-        depthOfId[node.category.id] = node.depth;
-        values.add(node.category.id);
-      }
-    }
-    final selected = await showOptionSheet<String>(
+    // 与记账 / 编辑交易用同一个分类选择器（带图标、可折叠层级树），顶部加「全部」项。
+    final selected = await showModalBottomSheet<String>(
       context: context,
-      title: AppLocalizations.of(context).filterCategoryTitle,
-      values: values,
-      selected: _selectedCategoryId ?? _allFilterValue,
-      labelOf: (value) => value == _allFilterValue
-          ? AppLocalizations.of(context).categoryAll
-          : '${'　' * (depthOfId[value] ?? 0)}${controller.categoryById(value).label}',
+      showDragHandle: true,
+      builder: (context) => CategoryPickerSheet(
+        categories: controller.categories,
+        selectedId: _selectedCategoryId ?? categoryPickerAll,
+        title: AppLocalizations.of(context).filterCategoryTitle,
+        allLabel: AppLocalizations.of(context).categoryAll,
+      ),
     );
-    if (selected != null) {
+    if (selected != null && mounted) {
       setState(() {
-        _selectedCategoryId = selected == _allFilterValue ? null : selected;
+        _selectedCategoryId = selected == categoryPickerAll ? null : selected;
       });
     }
   }
