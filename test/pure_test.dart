@@ -56,18 +56,22 @@ void main() {
   });
 
   test('monthlyNetValuesForType 按月聚合指定类型、只算当年、用净额', () {
-    LedgerEntry expense(String id, DateTime at, double amount, {double refunded = 0}) =>
-        LedgerEntry(
-          id: id,
-          bookId: 'b',
-          type: EntryType.expense,
-          amount: amount,
-          categoryId: 'c',
-          accountId: 'a',
-          note: '',
-          occurredAt: at,
-          refundedAmount: refunded,
-        );
+    LedgerEntry expense(
+      String id,
+      DateTime at,
+      double amount, {
+      double refunded = 0,
+    }) => LedgerEntry(
+      id: id,
+      bookId: 'b',
+      type: EntryType.expense,
+      amount: amount,
+      categoryId: 'c',
+      accountId: 'a',
+      note: '',
+      occurredAt: at,
+      refundedAmount: refunded,
+    );
     final entries = <LedgerEntry>[
       expense('a', DateTime(2026, 1, 5), 100),
       expense('b', DateTime(2026, 1, 20), 50, refunded: 20), // 净 30

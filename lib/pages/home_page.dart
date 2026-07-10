@@ -837,10 +837,7 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
                     onNext: () => _shiftFocus(1),
                   ),
                   const Spacer(),
-                  FilterPill(
-                    label: _type.label(l10n),
-                    onTap: _pickEntryType,
-                  ),
+                  FilterPill(label: _type.label(l10n), onTap: _pickEntryType),
                 ],
               ),
               const SizedBox(height: 10),
@@ -869,7 +866,9 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
                         color: totalColor,
                         values: chartValues,
                         xLabels: chartXLabels,
-                        yLabels: reportAxisLabels(chartValues.fold(0, math.max)),
+                        yLabels: reportAxisLabels(
+                          chartValues.fold(0, math.max),
+                        ),
                         labelColor: Theme.of(
                           context,
                         ).colorScheme.onSurface.withValues(alpha: 0.50),
@@ -882,7 +881,8 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
                             title: title,
                             lines: <ChartTooltipLine>[
                               ChartTooltipLine(
-                                text: '${_type.label(l10n)} ${amountTextOf(value)}',
+                                text:
+                                    '${_type.label(l10n)} ${amountTextOf(value)}',
                               ),
                             ],
                           );
@@ -1099,7 +1099,9 @@ class _DailyStatTile extends StatelessWidget {
                 children: <Widget>[
                   Text(
                     row.monthly
-                        ? AppLocalizations.of(context).monthNumber(row.date.month)
+                        ? AppLocalizations.of(
+                            context,
+                          ).monthNumber(row.date.month)
                         : '${row.date.month.toString().padLeft(2, '0')}.${row.date.day.toString().padLeft(2, '0')}',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w800,
