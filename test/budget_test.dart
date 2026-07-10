@@ -97,6 +97,46 @@ void main() {
     expect(find.text('预算 2400'), findsOneWidget);
   });
 
+  testWidgets('category budget list renders as a collapsible tree', (
+    WidgetTester tester,
+  ) async {
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store);
+    // 在种子分类「餐饮」下建一个子分类，形成父子层级。
+    controller.addCategory(
+      type: EntryType.expense,
+      label: '午餐',
+      iconCode: 'category',
+      parentId: 'dining',
+    );
+    controller.dispose();
+
+    await pumpApp(tester, store);
+    await tester.scrollUntilVisible(
+      find.byType(BudgetPanel),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    tester.widget<BudgetPanel>(find.byType(BudgetPanel)).onTap();
+    await tester.pumpAndSettle();
+
+    // 子分类默认展开可见。
+    await tester.scrollUntilVisible(
+      find.text('午餐'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('午餐'), findsOneWidget);
+
+    // 收起父分类后子分类隐藏，父分类仍在。
+    await tester.ensureVisible(find.byIcon(Icons.expand_more).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.expand_more).first);
+    await tester.pumpAndSettle();
+    expect(find.text('午餐'), findsNothing);
+    expect(find.text('餐饮'), findsOneWidget);
+  });
+
   testWidgets('shows category budget risk on home and budget page', (
     WidgetTester tester,
   ) async {

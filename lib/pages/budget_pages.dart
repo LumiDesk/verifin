@@ -33,6 +33,9 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
     widget.initialMonth.month,
   );
 
+  // 收起的父分类 id（默认全部展开，收起后隐藏其子树）。
+  final Set<String> _collapsedCategories = <String>{};
+
   @override
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
@@ -374,11 +377,15 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
                         ),
                       )
                     else
-                      for (final snapshot in categoryBudgetSnapshots)
-                        _CategoryBudgetRow(
-                          snapshot: snapshot,
-                          onTap: () => _editCategoryBudget(snapshot.category),
-                        ),
+                      ..._buildCategoryBudgetTree(
+                        controller,
+                        <String, CategoryBudgetSnapshot>{
+                          for (final snapshot in categoryBudgetSnapshots)
+                            snapshot.category.id: snapshot,
+                        },
+                        controller.rootCategoriesForType(EntryType.expense),
+                        0,
+                      ),
                   ],
                 ),
               ),
@@ -393,6 +400,50 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
     setState(() {
       _month = DateTime(_month.year, _month.month + delta);
     });
+  }
+
+  /// 递归渲染分类预算树：按分类的父子层级展开，父行显示已含子类的合计花销/预算，
+  /// 可折叠子树；点任意行给该分类设预算。顺序与分类管理页一致（按存储顺序），
+  /// 便于查找。[byId] 提供各分类的预算快照（父快照已聚合子类花销）。
+  List<Widget> _buildCategoryBudgetTree(
+    VeriFinController controller,
+    Map<String, CategoryBudgetSnapshot> byId,
+    List<Category> siblings,
+    int depth,
+  ) {
+    final rows = <Widget>[];
+    for (final category in siblings) {
+      final snapshot = byId[category.id];
+      if (snapshot == null) {
+        continue;
+      }
+      final children = controller.childCategories(category.id);
+      final collapsed = _collapsedCategories.contains(category.id);
+      rows.add(
+        _CategoryBudgetRow(
+          snapshot: snapshot,
+          depth: depth,
+          childCount: children.length,
+          collapsed: collapsed,
+          onToggle: children.isEmpty
+              ? null
+              : () => setState(() {
+                  if (collapsed) {
+                    _collapsedCategories.remove(category.id);
+                  } else {
+                    _collapsedCategories.add(category.id);
+                  }
+                }),
+          onTap: () => _editCategoryBudget(category),
+        ),
+      );
+      if (children.isNotEmpty && !collapsed) {
+        rows.addAll(
+          _buildCategoryBudgetTree(controller, byId, children, depth + 1),
+        );
+      }
+    }
+    return rows;
   }
 
   /// 预算金额输入统一走数字键盘（与记账一致，支持算式）；允许 0（清除该预算）。

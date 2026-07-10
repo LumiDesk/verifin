@@ -622,10 +622,27 @@ class _CategoryBudgetAlertCard extends StatelessWidget {
 }
 
 class _CategoryBudgetRow extends StatelessWidget {
-  const _CategoryBudgetRow({required this.snapshot, required this.onTap});
+  const _CategoryBudgetRow({
+    required this.snapshot,
+    required this.onTap,
+    this.depth = 0,
+    this.childCount = 0,
+    this.collapsed = false,
+    this.onToggle,
+  });
 
   final CategoryBudgetSnapshot snapshot;
   final VoidCallback onTap;
+
+  /// 分类层级深度（0 为顶级），用于左侧缩进。
+  final int depth;
+
+  /// 子分类数量（>0 时父行显示展开/收起箭头）。
+  final int childCount;
+  final bool collapsed;
+
+  /// 展开/收起子分类；无子分类时为 null（不显示折叠箭头）。
+  final VoidCallback? onToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -656,9 +673,36 @@ class _CategoryBudgetRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(veriRadiusSm),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: EdgeInsets.fromLTRB(depth * 22.0, 8, 0, 8),
           child: Row(
             children: <Widget>[
+              SizedBox(
+                width: 24,
+                child: onToggle == null
+                    ? (depth > 0
+                          ? Icon(
+                              Icons.subdirectory_arrow_right,
+                              size: 16,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.3),
+                            )
+                          : null)
+                    : IconButton(
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        iconSize: 22,
+                        onPressed: onToggle,
+                        icon: Icon(
+                          collapsed ? Icons.chevron_right : Icons.expand_more,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.55),
+                        ),
+                      ),
+              ),
+              const SizedBox(width: 4),
               CategoryIconBox(
                 iconCode: snapshot.category.iconCode,
                 color: color,
