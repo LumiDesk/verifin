@@ -42,7 +42,9 @@ enum ImportPlatform {
 }
 
 /// Veri Fin 规范列头：各平台归一化后统一转成这套列，再复用 [buildImportPlan]。
-/// 「手续费」仅转账用（一木转账带此列），其他来源数据行不含该列、按 0 处理。
+/// 「手续费」仅转账用（一木转账带此列）；「退款」为支出被退款/报销回款冲抵的金额
+/// （一木账单带此列，映射到 [LedgerEntry.refundedAmount]）。其他来源数据行不含这些
+/// 列、按 0 处理。新增列一律**追加在末尾**，避免打乱各归一化器按位置对齐的数据行。
 const List<String> _canonicalHeader = <String>[
   '日期',
   '类型',
@@ -52,6 +54,7 @@ const List<String> _canonicalHeader = <String>[
   '转入账户',
   '备注',
   '手续费',
+  '退款',
 ];
 
 /// 解析所选平台的账单文件字节，构建导入计划（纯函数，便于测试）。
@@ -278,6 +281,8 @@ List<List<String>> _normalizeYimuBill(List<List<String>> rows) {
     final level1 = _at(row, cols['类别']);
     final level2 = _at(row, cols['二级分类']);
     final category = level2.isNotEmpty ? level2 : level1;
+    // 位置对齐 [_canonicalHeader]：转入账户/手续费留空，退款取「退款」列（部分/全额
+    // 退回的金额）——由管线映射到 refundedAmount，使净额=金额−退款。
     out.add(<String>[
       _at(row, cols['日期']),
       type,
@@ -286,6 +291,8 @@ List<List<String>> _normalizeYimuBill(List<List<String>> rows) {
       _at(row, cols['账户']),
       '',
       _at(row, cols['备注']),
+      '',
+      _at(row, cols['退款']),
     ]);
   }
   return out;

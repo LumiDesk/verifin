@@ -48,6 +48,7 @@ const Map<String, List<String>> _headerAliases = <String, List<String>>{
   'toAccount': <String>['转入账户', 'toaccount', 'to account', '目标账户', '账户2'],
   'note': <String>['备注', 'note', 'memo', '说明', '描述', '备注信息'],
   'fee': <String>['手续费', 'fee', '服务费'],
+  'refunded': <String>['退款', 'refund', '退款金额', 'refunded'],
 };
 
 /// 可识别的导入来源，用于给用户友好提示。
@@ -430,6 +431,11 @@ ImportPlan buildImportPlan({
 
     final accountId = accountName.isEmpty ? '' : resolveAccount(accountName);
     final categoryId = resolveCategory(cell(row, 'category'), type);
+    // 支出可带「退款」列（部分/全额退回）：映射到 refundedAmount，钳制在 [0, 金额]，
+    // 使净额=金额−退款、退款回到原账户（与 App 内退款冲抵语义一致）。收入行忽略。
+    final refunded = type == EntryType.expense
+        ? _parseFee(cell(row, 'refunded')).clamp(0, amount).toDouble()
+        : 0.0;
     entries.add(
       LedgerEntry(
         id: nextId('entry'),
@@ -441,6 +447,7 @@ ImportPlan buildImportPlan({
         toAccountId: null,
         note: note,
         occurredAt: date,
+        refundedAmount: refunded,
       ),
     );
   }

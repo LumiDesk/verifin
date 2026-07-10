@@ -300,6 +300,31 @@ void main() {
     });
   });
 
+  group('一木记账 账单 xls（带「退款」列）', () {
+    // 真实模板（用户提供）：两条支出各带部分退款，退款列映射到 refundedAmount。
+    late ImportPlan plan;
+    setUp(() {
+      final bytes = File('test/fixtures/yimu_refund.xls').readAsBytesSync();
+      plan = run(ImportPlatform.yimuBill, Uint8List.fromList(bytes));
+    });
+
+    test('全部导入、无错误（退款不再导致导入失败）', () {
+      expect(plan.importedCount, 2);
+      expect(plan.errorCount, 0);
+    });
+
+    test('退款列映射到 refundedAmount，净额=金额−退款', () {
+      final e1 = plan.entries.firstWhere((e) => e.amount == 1818);
+      expect(e1.type, EntryType.expense);
+      expect(e1.refundedAmount, 202);
+      expect(e1.netAmount, 1616);
+
+      final e2 = plan.entries.firstWhere((e) => e.amount == 525);
+      expect(e2.refundedAmount, 500);
+      expect(e2.netAmount, 25);
+    });
+  });
+
   group('一木记账 转账 xls（独立文件，转出/转入账户 + 手续费）', () {
     late ImportPlan plan;
     setUp(() {
