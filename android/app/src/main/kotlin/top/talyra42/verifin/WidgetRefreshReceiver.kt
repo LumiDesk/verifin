@@ -15,8 +15,14 @@ import java.util.Calendar
 /// 本地午夜**安排一次刷新广播：触发时重绘全部三个小组件（重绘逻辑会读锚点日期/月份并自愈），
 /// 并顺手安排下一晚的刷新，形成每日一次的低功耗节律。
 ///
-/// 用 inexact 闹钟（[AlarmManager.set]），不需要精确闹钟权限；午夜后一小段延迟内刷新即可，
-/// 即便系统进一步推迟，小组件因任何原因重绘时也会依据锚点自愈。
+/// **必须用 [AlarmManager.setAndAllowWhileIdle] + [AlarmManager.RTC_WAKEUP]**：手机夜间静置会
+/// 进入 Doze，普通 `set()` 排的闹钟会被压到下一个维护窗口（深度 Doze 下可延迟数小时），
+/// 且 `RTC`（非唤醒）不会把设备唤醒——两者叠加会导致午夜闹钟整夜不触发，用户次日打开手机仍是
+/// 旧数据（历史 bug）。`setAndAllowWhileIdle` 允许闹钟在 Doze 下按约每 9 分钟一次的配额触发
+/// （每天一次的午夜刷新远低于此配额），配 `RTC_WAKEUP` 能主动唤醒设备。它**不需要**精确闹钟
+/// 权限（`SCHEDULE_EXACT_ALARM`），午夜后一小段延迟内刷新即可；即便仍被推迟，小组件因任何原因
+/// 重绘时也会依据锚点自愈。此外两个时间敏感小组件的 `updatePeriodMillis` 设为非 0，作为
+/// 「设备活跃时（如次日点亮屏幕）」的第二条兜底触发。
 object WidgetRefreshScheduler {
     private const val ACTION_MIDNIGHT_REFRESH =
         "top.talyra42.verifin.action.WIDGET_MIDNIGHT_REFRESH"
@@ -48,8 +54,13 @@ object WidgetRefreshScheduler {
             },
             flags,
         )
-        // set() 为非精确闹钟，无需 SCHEDULE_EXACT_ALARM 权限。
-        alarmManager.set(AlarmManager.RTC, next.timeInMillis, pending)
+        // setAndAllowWhileIdle 穿透 Doze、RTC_WAKEUP 唤醒设备；均无需 SCHEDULE_EXACT_ALARM 权限。
+        // minSdk >= 23，该 API 恒可用。
+        alarmManager.setAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            next.timeInMillis,
+            pending,
+        )
     }
 
     fun refreshAll(context: Context) {

@@ -4,7 +4,7 @@
     android:minHeight="70dp"
     android:targetCellWidth="3"
     android:targetCellHeight="1"
-    android:updatePeriodMillis="0"
+    android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/quick_entry_widget"
     android:previewLayout="@layout/quick_entry_widget"
     android:resizeMode="horizontal"

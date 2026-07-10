@@ -4,7 +4,7 @@
     android:minHeight="70dp"
     android:targetCellWidth="2"
     android:targetCellHeight="1"
-    android:updatePeriodMillis="0"
+    android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/stat_widget"
     android:previewLayout="@layout/stat_widget"
     android:resizeMode="horizontal"
