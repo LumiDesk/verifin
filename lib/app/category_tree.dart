@@ -48,7 +48,9 @@ List<String> ancestorIds(List<Category> all, String id) {
   final result = <String>[];
   final visited = <String>{id};
   var current = index[id]?.parentId;
-  while (current != null && index.containsKey(current) && visited.add(current)) {
+  while (current != null &&
+      index.containsKey(current) &&
+      visited.add(current)) {
     result.add(current);
     current = index[current]?.parentId;
   }

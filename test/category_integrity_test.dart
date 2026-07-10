@@ -10,16 +10,17 @@ import 'package:verifin/local_storage/local_storage.dart';
 
 import 'support/in_memory_ledger_repository.dart';
 
-LedgerEntry _expense(String id, String categoryId, double amount) => LedgerEntry(
-  id: id,
-  bookId: defaultLedgerBookId,
-  type: EntryType.expense,
-  amount: amount,
-  categoryId: categoryId,
-  accountId: 'cash',
-  note: '',
-  occurredAt: DateTime(2026, 7, 1),
-);
+LedgerEntry _expense(String id, String categoryId, double amount) =>
+    LedgerEntry(
+      id: id,
+      bookId: defaultLedgerBookId,
+      type: EntryType.expense,
+      amount: amount,
+      categoryId: categoryId,
+      accountId: 'cash',
+      note: '',
+      occurredAt: DateTime(2026, 7, 1),
+    );
 
 Future<VeriFinController> _controllerWith({
   required List<Category> categories,
@@ -124,10 +125,7 @@ void main() {
         'dining',
         EntryType.expense,
       );
-      expect(
-        diningChildren.fold<double>(0, (sum, s) => sum + s.amount),
-        30,
-      );
+      expect(diningChildren.fold<double>(0, (sum, s) => sum + s.amount), 30);
 
       final ghostChildren = reportCategoryChildStats(
         entries,
@@ -135,10 +133,7 @@ void main() {
         'ghost_dining',
         EntryType.expense,
       );
-      expect(
-        ghostChildren.fold<double>(0, (sum, s) => sum + s.amount),
-        70,
-      );
+      expect(ghostChildren.fold<double>(0, (sum, s) => sum + s.amount), 70);
     });
 
     test('categoryByIdFrom 对未知 id 返回占位而非列表首个分类', () {
@@ -271,8 +266,11 @@ void main() {
         iconCode: 'restaurant',
       );
       final after = controller.categories
-          .where((c) => normalizedCategoryLabel(c.label) == '餐饮' &&
-              c.type == EntryType.expense)
+          .where(
+            (c) =>
+                normalizedCategoryLabel(c.label) == '餐饮' &&
+                c.type == EntryType.expense,
+          )
           .length;
       expect(after, before);
     });

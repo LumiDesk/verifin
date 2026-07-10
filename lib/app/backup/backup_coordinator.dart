@@ -60,11 +60,7 @@ class BackupCoordinator {
         } catch (error) {
           // 本地目录失败（授权失效、写坏被回读校验拦下等）不影响 WebDAV 尝试；
           // 记日志便于诊断，但不打断用户。
-          controller.logger?.error(
-            '本地自动备份失败',
-            source: 'backup',
-            error: error,
-          );
+          controller.logger?.error('本地自动备份失败', source: 'backup', error: error);
         }
       }
       if (toWebdav) {
