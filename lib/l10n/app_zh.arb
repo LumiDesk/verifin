@@ -785,6 +785,62 @@
     }
   },
   "refundAmountTitle": "退款 / 报销回款金额",
+  "refundRecordsTitle": "退款",
+  "refundAdd": "添加退款",
+  "refundEditTitle": "编辑退款",
+  "refundStatusSettled": "已到账",
+  "refundStatusPending": "待到账",
+  "refundToAccountLabel": "到账账户",
+  "refundArrivalDateLabel": "到账日期",
+  "refundInitiatedDateLabel": "发起日期",
+  "refundAmountShort": "退款金额",
+  "refundIsSettledLabel": "已到账（钱已退回账户）",
+  "refundMarkSettled": "标记已到账",
+  "refundEmpty": "暂无退款，点下方添加",
+  "refundDeleteConfirm": "确定删除这笔退款吗？删除后原支出净额会恢复。",
+  "refundRemainingLabel": "剩余可退 {amount}",
+  "@refundRemainingLabel": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "refundOverCapNotice": "退款不能超过剩余可退，已按上限 {amount} 记入",
+  "@refundOverCapNotice": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "refundNetLabel": "净支出 {amount}",
+  "@refundNetLabel": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "refundSummaryLine": "已退 {count} 笔 · 净支出 {net}",
+  "@refundSummaryLine": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "net": {
+        "type": "String"
+      }
+    }
+  },
+  "refundPendingTotal": "待到账 {amount}",
+  "@refundPendingTotal": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "pickTypeTitle": "选择类型",
   "noteEditTitle": "编辑备注",
   "transferNeedsTwoAccounts": "转账需要两个不同的账户,请先添加转入账户。",

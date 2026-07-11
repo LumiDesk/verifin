@@ -301,7 +301,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                   const SizedBox(height: 12),
                   SegmentedButton<EntryType>(
                     key: const Key('entry_type_segmented_button'),
-                    segments: EntryType.values
+                    segments: EntryType.userSelectable
                         .map(
                           (type) => ButtonSegment<EntryType>(
                             value: type,

@@ -240,7 +240,7 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
               ),
               const SizedBox(height: 10),
               SegmentedButton<EntryType>(
-                segments: EntryType.values
+                segments: EntryType.userSelectable
                     .map(
                       (type) => ButtonSegment<EntryType>(
                         value: type,

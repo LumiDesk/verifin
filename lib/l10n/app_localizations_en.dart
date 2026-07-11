@@ -1344,6 +1344,71 @@ class AppLocalizationsEn extends AppLocalizations {
   String get refundAmountTitle => 'Refund / reimbursement amount';
 
   @override
+  String get refundRecordsTitle => 'Refunds';
+
+  @override
+  String get refundAdd => 'Add refund';
+
+  @override
+  String get refundEditTitle => 'Edit refund';
+
+  @override
+  String get refundStatusSettled => 'Received';
+
+  @override
+  String get refundStatusPending => 'Pending';
+
+  @override
+  String get refundToAccountLabel => 'Destination account';
+
+  @override
+  String get refundArrivalDateLabel => 'Arrival date';
+
+  @override
+  String get refundInitiatedDateLabel => 'Initiated date';
+
+  @override
+  String get refundAmountShort => 'Refund amount';
+
+  @override
+  String get refundIsSettledLabel => 'Received (money is back)';
+
+  @override
+  String get refundMarkSettled => 'Mark as received';
+
+  @override
+  String get refundEmpty => 'No refunds yet — add one below';
+
+  @override
+  String get refundDeleteConfirm =>
+      'Delete this refund? The original expense\'s net will be restored.';
+
+  @override
+  String refundRemainingLabel(String amount) {
+    return 'Refundable: $amount';
+  }
+
+  @override
+  String refundOverCapNotice(String amount) {
+    return 'Refund can\'t exceed the refundable amount; capped to $amount';
+  }
+
+  @override
+  String refundNetLabel(String amount) {
+    return 'Net expense $amount';
+  }
+
+  @override
+  String refundSummaryLine(int count, String net) {
+    return '$count refund(s) · net $net';
+  }
+
+  @override
+  String refundPendingTotal(String amount) {
+    return 'Pending $amount';
+  }
+
+  @override
   String get pickTypeTitle => 'Choose type';
 
   @override

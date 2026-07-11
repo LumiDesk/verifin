@@ -235,6 +235,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                       )
                     else
                       ...entries
+                          .where((e) => e.type != EntryType.refund)
                           .take(3)
                           .map(
                             (entry) => TransactionTile(
@@ -930,6 +931,7 @@ class AccountReportPage extends StatelessWidget {
                       )
                     else
                       ...entries
+                          .where((e) => e.type != EntryType.refund)
                           .take(6)
                           .map(
                             (entry) => TransactionTile(

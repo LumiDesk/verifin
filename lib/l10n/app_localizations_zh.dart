@@ -1323,6 +1323,70 @@ class AppLocalizationsZh extends AppLocalizations {
   String get refundAmountTitle => '退款 / 报销回款金额';
 
   @override
+  String get refundRecordsTitle => '退款';
+
+  @override
+  String get refundAdd => '添加退款';
+
+  @override
+  String get refundEditTitle => '编辑退款';
+
+  @override
+  String get refundStatusSettled => '已到账';
+
+  @override
+  String get refundStatusPending => '待到账';
+
+  @override
+  String get refundToAccountLabel => '到账账户';
+
+  @override
+  String get refundArrivalDateLabel => '到账日期';
+
+  @override
+  String get refundInitiatedDateLabel => '发起日期';
+
+  @override
+  String get refundAmountShort => '退款金额';
+
+  @override
+  String get refundIsSettledLabel => '已到账（钱已退回账户）';
+
+  @override
+  String get refundMarkSettled => '标记已到账';
+
+  @override
+  String get refundEmpty => '暂无退款，点下方添加';
+
+  @override
+  String get refundDeleteConfirm => '确定删除这笔退款吗？删除后原支出净额会恢复。';
+
+  @override
+  String refundRemainingLabel(String amount) {
+    return '剩余可退 $amount';
+  }
+
+  @override
+  String refundOverCapNotice(String amount) {
+    return '退款不能超过剩余可退，已按上限 $amount 记入';
+  }
+
+  @override
+  String refundNetLabel(String amount) {
+    return '净支出 $amount';
+  }
+
+  @override
+  String refundSummaryLine(int count, String net) {
+    return '已退 $count 笔 · 净支出 $net';
+  }
+
+  @override
+  String refundPendingTotal(String amount) {
+    return '待到账 $amount';
+  }
+
+  @override
   String get pickTypeTitle => '选择类型';
 
   @override

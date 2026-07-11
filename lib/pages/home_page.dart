@@ -47,7 +47,11 @@ class HomePage extends StatelessWidget {
       trendEntries,
       trendWindow,
     );
-    final recentEntries = entries.take(5).toList();
+    // 退款条目在原支出上管理，不单独进时间线（净额已体现在支出行）。
+    final recentEntries = entries
+        .where((e) => e.type != EntryType.refund)
+        .take(5)
+        .toList();
     final monthlyBudget = controller.monthlyBudget(now);
     final categoryBudgetSnapshots = computeCategoryBudgetSnapshots(
       controller: controller,
@@ -986,7 +990,7 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
     final selected = await showOptionSheet<EntryType>(
       context: context,
       title: AppLocalizations.of(context).statTypeTitle,
-      values: EntryType.values,
+      values: EntryType.userSelectable,
       selected: _type,
       labelOf: (value) => value.label(AppLocalizations.of(context)),
     );
