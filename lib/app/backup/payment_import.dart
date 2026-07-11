@@ -281,21 +281,39 @@ List<List<String>> _normalizeYimuBill(List<List<String>> rows) {
     final level1 = _at(row, cols['类别']);
     final level2 = _at(row, cols['二级分类']);
     final category = level2.isNotEmpty ? level2 : level1;
-    // 位置对齐 [_canonicalHeader]：转入账户/手续费留空，退款取「退款」列（部分/全额
-    // 退回的金额）——由管线映射到 refundedAmount，使净额=金额−退款。
+    // 退款只对支出有意义（收入行忽略退款列，避免虚增金额）。
+    final refund = type == '支出' ? _at(row, cols['退款']) : '';
+    // 一木「金额」列导出的是净额 = 原价 − 优惠 − 退款。原始应付额 = |净额| + 退款：优惠
+    // 是没花出去的钱不计入支出（故不加回）、退款是先付后退需加回。管线语义为「金额 − 退款
+    // = 净额」，故把应付额放金额列、退款单列——避免退款被减两次（净额算错），且全额退款行
+    // 净额=0 会被 _parseAmount 判非法而整单失败（issue #10）。位置对齐 [_canonicalHeader]。
+    final gross = _yimuGrossAmount(_at(row, cols['金额']), refund);
+    // 应付额为 0（净额 0 且无退款）= 一木里的空/无效记录，直接忽略、不导入也不报错。
+    if (gross <= 0) {
+      continue;
+    }
     out.add(<String>[
       _at(row, cols['日期']),
       type,
-      _at(row, cols['金额']),
+      gross.toStringAsFixed(2),
       category,
       _at(row, cols['账户']),
       '',
       _at(row, cols['备注']),
       '',
-      _at(row, cols['退款']),
+      refund,
     ]);
   }
   return out;
+}
+
+/// 把一木账单的净额（「金额」列 = 原价 − 优惠 − 退款）还原成原始应付额 = |净额| + 退款，
+/// 供导入管线按「金额 − 退款 = 净额」重新映射。修复 issue #10：退款被减两次、全额退款净额
+/// 为 0 触发「金额无效」而整单失败。优惠不加回（没花出去的钱）。非数字按 0 处理。
+double _yimuGrossAmount(String netRaw, String refundRaw) {
+  double num(String raw) =>
+      double.tryParse(raw.replaceAll(RegExp(r'[¥￥,，\s]'), '')) ?? 0;
+  return num(netRaw).abs() + num(refundRaw).abs();
 }
 
 // ---------------------------------------------------------------------------

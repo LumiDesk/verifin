@@ -300,28 +300,86 @@ void main() {
     });
   });
 
-  group('一木记账 账单 xls（带「退款」列）', () {
-    // 真实模板（用户提供）：两条支出各带部分退款，退款列映射到 refundedAmount。
+  group('一木记账 账单 xls（带「退款」列，真实导出）', () {
+    // 真实一木导出（用户提供，issue #10）：5 条收支，含部分退款、全额退款。
+    // 关键事实：一木「金额」列存的是【净额】（已扣退款），退款单列另计。归一化须把
+    // 原始金额还原为 |净额|+退款 再交管线，否则退款被减两次、且全额退款净额=0 会触发
+    // 「金额无效」使整单导入失败（此测试即回归守卫）。
     late ImportPlan plan;
     setUp(() {
       final bytes = File('test/fixtures/yimu_refund.xls').readAsBytesSync();
       plan = run(ImportPlatform.yimuBill, Uint8List.fromList(bytes));
     });
 
-    test('全部导入、无错误（退款不再导致导入失败）', () {
-      expect(plan.importedCount, 2);
+    test('全部 5 条导入、无错误（全额退款行不再报「金额无效」）', () {
+      expect(plan.importedCount, 5);
       expect(plan.errorCount, 0);
     });
 
-    test('退款列映射到 refundedAmount，净额=金额−退款', () {
-      final e1 = plan.entries.firstWhere((e) => e.amount == 1818);
-      expect(e1.type, EntryType.expense);
-      expect(e1.refundedAmount, 202);
-      expect(e1.netAmount, 1616);
+    test('部分退款：净额-5 + 退款10 → 原始金额15、退款10、净额5', () {
+      final e = plan.entries.firstWhere((e) => e.refundedAmount == 10);
+      expect(e.type, EntryType.expense);
+      expect(e.amount, 15);
+      expect(e.netAmount, 5);
+    });
 
-      final e2 = plan.entries.firstWhere((e) => e.amount == 525);
-      expect(e2.refundedAmount, 500);
-      expect(e2.netAmount, 25);
+    test('全额退款：净额0 + 退款20 → 原始金额20、退款20、净额0（旧版会崩）', () {
+      final e = plan.entries.firstWhere((e) => e.refundedAmount == 20);
+      expect(e.type, EntryType.expense);
+      expect(e.amount, 20);
+      expect(e.netAmount, 0);
+      expect(e.note, '阿巴阿巴');
+    });
+
+    test('无退款支出金额不受影响（|净额|即原始金额）', () {
+      final baseline = plan.entries.firstWhere((e) => e.note == 'baseline');
+      expect(baseline.type, EntryType.expense);
+      expect(baseline.amount, 15);
+      expect(baseline.refundedAmount, 0);
+
+      final withNote = plan.entries.firstWhere((e) => e.note == '备注测试');
+      expect(withNote.amount, closeTo(8.8, 1e-9));
+      expect(withNote.refundedAmount, 0);
+    });
+
+    test('收入行忽略退款列', () {
+      final income = plan.entries.firstWhere((e) => e.type == EntryType.income);
+      expect(income.amount, 100);
+      expect(income.refundedAmount, 0);
+    });
+  });
+
+  group('一木记账 账单 xls（带「优惠」列，真实导出）', () {
+    // 真实一木导出（用户提供，issue #10）：一木「金额」列 = 原价 − 优惠 − 退款。
+    // 「优惠」是没花出去的钱，不该记成支出，故导入时忽略（记实付=|净额|+退款）；只有
+    // 「退款」是先付后退的钱需加回。另含一笔真·0 元支出，验证其被跳过而非拖垮整单。
+    late ImportPlan plan;
+    setUp(() {
+      final bytes = File(
+        'test/fixtures/yimu_refund_discount.xls',
+      ).readAsBytesSync();
+      plan = run(ImportPlatform.yimuBill, Uint8List.fromList(bytes));
+    });
+
+    test('优惠不加回：礼物原价143、优惠20 → 记实付123（退款0、净额123）', () {
+      final gift = plan.entries.firstWhere((e) => e.amount == 123);
+      expect(gift.type, EntryType.expense);
+      expect(gift.refundedAmount, 0);
+      expect(gift.netAmount, 123);
+    });
+
+    test('优惠+全额退款：原价12811、优惠500、全退 → 金额12311、退款12311、净额0', () {
+      final phone = plan.entries.firstWhere((e) => e.refundedAmount == 12311);
+      expect(phone.type, EntryType.expense);
+      expect(phone.amount, 12311); // 优惠后应付，而非原价 12811。
+      expect(phone.netAmount, 0);
+    });
+
+    test('真·0 元空记录被静默忽略（不导入也不报错）', () {
+      // R6：净额 0、无退款无优惠，是一木里的空记录 → 归一化阶段直接跳过。
+      expect(plan.entries.any((e) => e.note == '阿巴阿巴'), isFalse);
+      expect(plan.errorCount, 0);
+      expect(plan.importedCount, 6); // 其它 6 行正常导入。
     });
   });
 
