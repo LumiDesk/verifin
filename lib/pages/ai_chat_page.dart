@@ -249,22 +249,27 @@ class _AiChatPageState extends State<AiChatPage> {
     final l10n = AppLocalizations.of(context);
     final configured = VeriFinScope.of(context).aiSettings.isConfigured;
     return Scaffold(
-      body: VeriPage(
-        child: SafeArea(
+      body: SafeArea(
+        child: VeriPage(
           child: Column(
             children: <Widget>[
-              VeriHeader(
-                title: l10n.aiChatTitle,
-                showBack: true,
-                actions: <Widget>[
-                  if (_messages.isNotEmpty)
-                    HeaderAction(
-                      icon: Icons.delete_sweep_outlined,
-                      tooltip: l10n.aiChatClearHistory,
-                      destructive: true,
-                      onPressed: _streaming ? null : _clearHistory,
-                    ),
-                ],
+              // 与统计分析/收支统计等页保持一致：头部套 fromLTRB(14, 8, 14, 0) 内边距，
+              // 使返回箭头/标题的位置和其它页对齐（VeriHeader 自身无横向内边距）。
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+                child: VeriHeader(
+                  title: l10n.aiChatTitle,
+                  showBack: true,
+                  actions: <Widget>[
+                    if (_messages.isNotEmpty)
+                      HeaderAction(
+                        icon: Icons.delete_sweep_outlined,
+                        tooltip: l10n.aiChatClearHistory,
+                        destructive: true,
+                        onPressed: _streaming ? null : _clearHistory,
+                      ),
+                  ],
+                ),
               ),
               Expanded(
                 child: configured
