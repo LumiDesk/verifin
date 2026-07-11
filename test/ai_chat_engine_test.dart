@@ -45,7 +45,8 @@ AiToolContext _ctx() {
   );
 }
 
-Future<List<AiChatEvent>> _collect(Stream<AiChatEvent> stream) => stream.toList();
+Future<List<AiChatEvent>> _collect(Stream<AiChatEvent> stream) =>
+    stream.toList();
 
 void main() {
   final engine = AiChatEngine(tools: buildAiQueryTools(), maxToolRounds: 3);
@@ -103,7 +104,10 @@ void main() {
   });
 
   test('工具轮次超上限也会终止（不无限循环）', () async {
-    final loopEngine = AiChatEngine(tools: buildAiQueryTools(), maxToolRounds: 2);
+    final loopEngine = AiChatEngine(
+      tools: buildAiQueryTools(),
+      maxToolRounds: 2,
+    );
     final events = await _collect(
       loopEngine.run(
         // 每轮都回工具调用，永不作答。
