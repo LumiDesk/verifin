@@ -17,6 +17,7 @@ class NumberPadSheet extends StatefulWidget {
     this.allowNegative = false,
     this.allowZero = false,
     this.hapticsEnabled = true,
+    this.maxAmount,
   });
 
   final String title;
@@ -24,6 +25,10 @@ class NumberPadSheet extends StatefulWidget {
   final bool allowNegative;
   final bool allowZero;
   final bool hapticsEnabled;
+
+  /// 可选金额上限：非空时输入框下方展示「最多 {max}」提示（超上限时变红），
+  /// 点 OK 确认的结果会被封顶到该值。用于退款「剩余可退」等有上限的输入。
+  final double? maxAmount;
 
   @override
   State<NumberPadSheet> createState() => _NumberPadSheetState();
@@ -109,6 +114,25 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
                     ],
                   ),
                 ),
+                if (widget.maxAmount != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6, left: 4),
+                    child: Text(
+                      AppLocalizations.of(
+                        context,
+                      ).numberPadMax(formatAmount(widget.maxAmount!)),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: _amount > widget.maxAmount! + 0.0001
+                            ? veriExpense
+                            : Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.55),
+                        fontWeight: _amount > widget.maxAmount! + 0.0001
+                            ? FontWeight.w700
+                            : FontWeight.w400,
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 10),
                 // 5 行键盘：前 3 行满 4 列，最后两行左侧为 2×3 数字区
                 // （1 2 3 / 00 0 .，小数点落在 0 右边），右下角 OK 占竖两格。
@@ -298,7 +322,10 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
       }
     }
     if (value == 'OK') {
-      Navigator.of(context).pop(_amount);
+      final max = widget.maxAmount;
+      // 有上限时确认即封顶（配合下方「最多 xxx」提示，超额当场生效、不必等保存）。
+      final result = max != null && _amount > max ? max : _amount;
+      Navigator.of(context).pop(result);
       return;
     }
 

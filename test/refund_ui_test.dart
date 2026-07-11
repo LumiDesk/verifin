@@ -165,4 +165,80 @@ void main() {
     expect(controller.pendingRefunds, isEmpty);
     expect(controller.entries.firstWhere((e) => e.id == 'e3').netAmount, 60);
   });
+
+  testWidgets('添加退款：数字键盘显示「最多」上限并当场封顶', (WidgetTester tester) async {
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store);
+    final bookId = controller.activeBook.id;
+    controller
+      ..addAccount(
+        Account(
+          id: 'cash',
+          bookId: bookId,
+          name: '现金',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 1000,
+          iconCode: 'cash',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+        ),
+      )
+      ..addEntry(
+        LedgerEntry(
+          id: 'e4',
+          bookId: bookId,
+          type: EntryType.expense,
+          amount: 200,
+          categoryId: 'dining',
+          accountId: 'cash',
+          note: '',
+          occurredAt: DateTime(2026, 7, 4),
+        ),
+      );
+    // 先退 50 → 剩余可退 150。
+    controller.addRefund(
+      expenseId: 'e4',
+      amount: 50,
+      accountId: 'cash',
+      initiatedAt: DateTime(2026, 7, 4),
+      settledAt: DateTime(2026, 7, 5),
+    );
+
+    await tester.binding.setSurfaceSize(const Size(460, 2600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(
+          theme: buildVeriFinTheme(Brightness.light),
+          home: const TransactionDetailPage(entryId: 'e4'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 打开添加退款弹窗：默认金额=剩余可退 150。
+    await tester.tap(find.text('添加退款'));
+    await tester.pumpAndSettle();
+    expect(find.text('+150'), findsOneWidget);
+
+    // 点大金额进数字键盘 → 清空 → 输 999（超上限）。
+    await tester.tap(find.text('+150'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('number_key_C')));
+    await tester.tap(find.byKey(const Key('number_key_9')));
+    await tester.tap(find.byKey(const Key('number_key_9')));
+    await tester.tap(find.byKey(const Key('number_key_9')));
+    await tester.pump();
+    // 数字键盘里显示「最多 150」。
+    expect(find.text('最多 150'), findsOneWidget);
+
+    // 确认 → 封顶为 150 回到退款弹窗（不是 999）。
+    await tester.tap(find.byKey(const Key('number_pad_ok')));
+    await tester.pumpAndSettle();
+    expect(find.text('+150'), findsOneWidget);
+    expect(find.text('+999'), findsNothing);
+  });
 }

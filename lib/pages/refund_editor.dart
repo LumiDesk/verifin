@@ -259,18 +259,11 @@ class _RefundSheetState extends State<_RefundSheet> {
       context,
       title: l10n.refundAmountShort,
       initialAmount: _amount > 0 ? _amount : null,
+      // 数字键盘内显示「最多 剩余可退」并在 OK 时当场封顶（决策 D：禁止超额）。
+      maxAmount: _maxRefund,
     );
     if (value == null || value <= 0 || !mounted) return;
-    final max = _maxRefund;
-    if (value > max + 0.0001) {
-      // 决策 D：禁止超额，截到剩余可退并提示。
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.refundOverCapNotice(formatAmount(max)))),
-      );
-      setState(() => _amount = max);
-    } else {
-      setState(() => _amount = value);
-    }
+    setState(() => _amount = value);
   }
 
   Future<void> _pickAccount() async {
@@ -384,11 +377,27 @@ class _RefundSheetState extends State<_RefundSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(
-              widget.existing == null ? l10n.refundAdd : l10n.refundEditTitle,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    widget.existing == null
+                        ? l10n.refundAdd
+                        : l10n.refundEditTitle,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                // 删除放右上角，与底部「保存」彻底分开，避免误触。
+                if (widget.existing != null)
+                  IconButton(
+                    onPressed: _delete,
+                    icon: const Icon(Icons.delete_outline),
+                    color: veriExpense,
+                    tooltip: l10n.commonDelete,
+                  ),
+              ],
             ),
             const SizedBox(height: 12),
             // 大金额（点击改）+ 剩余可退提示。
@@ -458,18 +467,6 @@ class _RefundSheetState extends State<_RefundSheet> {
                 child: Text(l10n.commonSave),
               ),
             ),
-            if (widget.existing != null)
-              Align(
-                alignment: Alignment.center,
-                child: TextButton.icon(
-                  onPressed: _delete,
-                  icon: Icon(Icons.delete_outline, color: veriExpense),
-                  label: Text(
-                    l10n.commonDelete,
-                    style: TextStyle(color: veriExpense),
-                  ),
-                ),
-              ),
           ],
         ),
       ),
