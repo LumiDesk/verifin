@@ -434,6 +434,12 @@ abstract class AppLocalizations {
   /// **'网络支付'**
   String get accountTypeOnlinePayment;
 
+  /// No description provided for @accountTypeCreditAccount.
+  ///
+  /// In zh, this message translates to:
+  /// **'信用账户'**
+  String get accountTypeCreditAccount;
+
   /// No description provided for @accountTypeCreditCard.
   ///
   /// In zh, this message translates to:
@@ -1622,6 +1628,36 @@ abstract class AppLocalizations {
   /// **'请输入 1-4 位数字'**
   String get cardLast4Invalid;
 
+  /// No description provided for @cardNumberLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'完整卡号（选填）'**
+  String get cardNumberLabel;
+
+  /// No description provided for @cardNumberTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'完整卡号'**
+  String get cardNumberTitle;
+
+  /// No description provided for @cardLast4Follow.
+  ///
+  /// In zh, this message translates to:
+  /// **'跟随卡号'**
+  String get cardLast4Follow;
+
+  /// No description provided for @cardCopyTooltip.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制卡号'**
+  String get cardCopyTooltip;
+
+  /// No description provided for @copiedToClipboard.
+  ///
+  /// In zh, this message translates to:
+  /// **'已复制到剪贴板'**
+  String get copiedToClipboard;
+
   /// No description provided for @accountBalanceLabel.
   ///
   /// In zh, this message translates to:
@@ -1771,6 +1807,84 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'还款日'**
   String get dueDay;
+
+  /// No description provided for @creditLimitLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'信用额度'**
+  String get creditLimitLabel;
+
+  /// No description provided for @creditLimitEditTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'设置信用额度'**
+  String get creditLimitEditTitle;
+
+  /// No description provided for @creditUsedLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'已用'**
+  String get creditUsedLabel;
+
+  /// No description provided for @creditAvailableLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'可用额度'**
+  String get creditAvailableLabel;
+
+  /// No description provided for @currentBillLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'本期账单'**
+  String get currentBillLabel;
+
+  /// No description provided for @creditRepayTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'还款'**
+  String get creditRepayTitle;
+
+  /// No description provided for @creditRepayAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'还款'**
+  String get creditRepayAction;
+
+  /// No description provided for @creditRepayAmountLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'还款金额'**
+  String get creditRepayAmountLabel;
+
+  /// No description provided for @creditRepayFromAccount.
+  ///
+  /// In zh, this message translates to:
+  /// **'扣款账户'**
+  String get creditRepayFromAccount;
+
+  /// No description provided for @creditRepayNoAccountLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'无账户（代还）'**
+  String get creditRepayNoAccountLabel;
+
+  /// No description provided for @creditRepayNoAccountHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'他人代还，不从你的账户扣款'**
+  String get creditRepayNoAccountHint;
+
+  /// No description provided for @creditRepayDefaultNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'还款'**
+  String get creditRepayDefaultNote;
+
+  /// No description provided for @creditRepaySuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'已记录还款'**
+  String get creditRepaySuccess;
 
   /// No description provided for @monthlyDayLabel.
   ///

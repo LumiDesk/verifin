@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/l10n/app_localizations_zh.dart';
 import 'package:verifin/app/amount_format.dart' as amount_format;
+import 'package:verifin/app/credit_card.dart';
 import 'package:verifin/app/image_cropper.dart';
 import 'package:verifin/app/ledger_math.dart';
 import 'package:verifin/app/models.dart';
@@ -249,5 +250,85 @@ void main() {
     expect(formatExpenseAmount(12), '-12.00');
     expect(formatIncomeAmount(12.5), '12.50');
     expect(formatSignedAmount(12), '+12.00');
+  });
+
+  test('cardLast4Of 取完整卡号末四位数字', () {
+    expect(cardLast4Of('6222 0000 0000 1234'), '1234');
+    expect(cardLast4Of('621226123456'), '3456');
+    expect(cardLast4Of('12'), '12');
+    expect(cardLast4Of(''), '');
+    expect(cardLast4Of('卡号1234'), '1234');
+  });
+
+  test('initialCardLast4Follows 由数据反推跟随开关初始态', () {
+    // 新账户：两者皆空 → 跟随（默认打开）。
+    expect(initialCardLast4Follows('', ''), isTrue);
+    // 仅手填后四位、无完整卡号 → 不跟随（保留手填值）。
+    expect(initialCardLast4Follows('', '8888'), isFalse);
+    // 完整卡号存在且后四位正是其末四位 → 跟随。
+    expect(initialCardLast4Follows('6222000000001234', '1234'), isTrue);
+    // 完整卡号存在但后四位是另设的值 → 不跟随。
+    expect(initialCardLast4Follows('6222000000001234', '9999'), isFalse);
+  });
+
+  test('信用额度：已用与可用', () {
+    // 欠款 = 负余额绝对值。
+    expect(usedCredit(-3200), 3200);
+    // 余额为正（存入/超额还款）时已用为 0。
+    expect(usedCredit(500), 0);
+    // 可用 = 额度 − 已用。
+    expect(availableCredit(5000, -3200), 1800);
+    expect(availableCredit(5000, 0), 5000);
+    // 未设额度返回 null。
+    expect(availableCredit(null, -3200), isNull);
+  });
+
+  test('账单周期：下一账单日与当前周期窗口', () {
+    // 今天在账单日之前 → 下一账单日为本月账单日。
+    final before = nextStatementDate(20, DateTime(2026, 7, 10));
+    expect(before, DateTime(2026, 7, 20));
+    // 今天已过本月账单日 → 顺延到下月。
+    final after = nextStatementDate(5, DateTime(2026, 7, 10));
+    expect(after, DateTime(2026, 8, 5));
+    // 当前周期：上一账单日次日 至 下一账单日当天。
+    final cycle = currentBillingCycle(5, DateTime(2026, 7, 10));
+    expect(cycle.start, DateTime(2026, 7, 6));
+    expect(cycle.end, DateTime(2026, 8, 5));
+  });
+
+  test('本期账单：只统计周期内本账户支出净额，退款冲抵、还款不计', () {
+    LedgerEntry expense(String id, double amount, DateTime at, {double refund = 0}) {
+      return LedgerEntry(
+        id: id,
+        bookId: 'default',
+        type: EntryType.expense,
+        amount: amount,
+        categoryId: 'c',
+        accountId: 'card',
+        note: '',
+        occurredAt: at,
+        refundedAmount: refund,
+      );
+    }
+
+    final cycle = currentBillingCycle(5, DateTime(2026, 7, 10));
+    final entries = <LedgerEntry>[
+      expense('a', 100, DateTime(2026, 7, 8)), // 周期内
+      expense('b', 200, DateTime(2026, 7, 8), refund: 50), // 周期内，净额 150
+      expense('c', 999, DateTime(2026, 6, 30)), // 周期外（上个周期）
+      // 还款：转账进本卡，不计入支出。
+      LedgerEntry(
+        id: 'r',
+        bookId: 'default',
+        type: EntryType.transfer,
+        amount: 500,
+        categoryId: '',
+        accountId: 'bank',
+        toAccountId: 'card',
+        note: '',
+        occurredAt: DateTime(2026, 7, 9),
+      ),
+    ];
+    expect(billingCycleExpense(entries, 'card', cycle), 250);
   });
 }

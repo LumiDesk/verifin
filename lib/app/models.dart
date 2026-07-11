@@ -113,6 +113,9 @@ enum LocalePreference {
 
 enum AccountType {
   onlinePayment,
+  // 信用账户：花呗 / 白条等有额度、账单日、还款、但无实体卡号的信用类账户。
+  // 放在网络支付与信用卡之间。能力矩阵见 docs/dev/tech-decisions.md「账户类型能力矩阵」。
+  creditAccount,
   creditCard,
   debitCard,
   investment,
@@ -122,6 +125,8 @@ enum AccountType {
     switch (this) {
       case AccountType.onlinePayment:
         return l10n.accountTypeOnlinePayment;
+      case AccountType.creditAccount:
+        return l10n.accountTypeCreditAccount;
       case AccountType.creditCard:
         return l10n.accountTypeCreditCard;
       case AccountType.debitCard:
@@ -140,8 +145,14 @@ enum AccountType {
     );
   }
 
+  /// 是否有实体卡号（完整卡号 + 后四位）：信用卡、储蓄卡。
   bool get supportsCardLast4 {
     return this == AccountType.creditCard || this == AccountType.debitCard;
+  }
+
+  /// 是否为信用类账户，支持额度 / 账单日 / 还款日 / 还款：信用卡、信用账户。
+  bool get supportsCredit {
+    return this == AccountType.creditCard || this == AccountType.creditAccount;
   }
 }
 
@@ -578,6 +589,8 @@ class Account {
     required this.includeInAssets,
     required this.hidden,
     this.cardLast4 = '',
+    this.cardNumber = '',
+    this.creditLimit,
     this.statementDay,
     this.dueDay,
   });
@@ -593,6 +606,14 @@ class Account {
   final bool includeInAssets;
   final bool hidden;
   final String cardLast4;
+
+  /// 完整卡号（选填，仅信用卡/储蓄卡 supportsCardLast4）。列表/首页仍只展示后四位，
+  /// 详情页可展示完整卡号并一键复制。「后四位跟随完整卡号」在编辑页由本地开关控制，
+  /// 不额外持久化：保存时若开关打开则把 cardLast4 同步为本值的末四位。
+  final String cardNumber;
+
+  /// 信用额度上限（选填，仅信用卡/信用账户 supportsCredit）。设置后展示已用/可用额度。
+  final double? creditLimit;
 
   /// 信用卡账单日（每月 1–28，可选）。花呗类用户可不设置。
   final int? statementDay;
@@ -612,6 +633,9 @@ class Account {
     bool? includeInAssets,
     bool? hidden,
     String? cardLast4,
+    String? cardNumber,
+    double? creditLimit,
+    bool clearCreditLimit = false,
     int? statementDay,
     bool clearStatementDay = false,
     int? dueDay,
@@ -629,6 +653,8 @@ class Account {
       includeInAssets: includeInAssets ?? this.includeInAssets,
       hidden: hidden ?? this.hidden,
       cardLast4: cardLast4 ?? this.cardLast4,
+      cardNumber: cardNumber ?? this.cardNumber,
+      creditLimit: clearCreditLimit ? null : creditLimit ?? this.creditLimit,
       statementDay: clearStatementDay
           ? null
           : statementDay ?? this.statementDay,
@@ -649,6 +675,8 @@ class Account {
       'includeInAssets': includeInAssets,
       'hidden': hidden,
       'cardLast4': cardLast4,
+      'cardNumber': cardNumber,
+      if (creditLimit != null) 'creditLimit': creditLimit,
       if (statementDay != null) 'statementDay': statementDay,
       if (dueDay != null) 'dueDay': dueDay,
     };
@@ -667,10 +695,28 @@ class Account {
       includeInAssets: json['includeInAssets'] as bool? ?? true,
       hidden: json['hidden'] as bool? ?? false,
       cardLast4: json['cardLast4'] as String? ?? '',
+      cardNumber: json['cardNumber'] as String? ?? '',
+      creditLimit: (json['creditLimit'] as num?)?.toDouble(),
       statementDay: (json['statementDay'] as num?)?.toInt(),
       dueDay: (json['dueDay'] as num?)?.toInt(),
     );
   }
+}
+
+/// 从完整卡号提取后四位（只取数字，末四位）。空号返回空串。
+String cardLast4Of(String cardNumber) {
+  final digits = cardNumber.replaceAll(RegExp(r'\D'), '');
+  return digits.length > 4 ? digits.substring(digits.length - 4) : digits;
+}
+
+/// 打开账户编辑时「后四位跟随完整卡号」开关的初始状态（不额外持久化，由数据反推）：
+/// 完整卡号为空时——后四位也为空则跟随（新账户默认打开）、后四位已手填则不跟随（保留手填值）；
+/// 完整卡号非空时——后四位正好等于其末四位则跟随、否则视为手填、不跟随。
+bool initialCardLast4Follows(String cardNumber, String cardLast4) {
+  if (cardNumber.isEmpty) {
+    return cardLast4.isEmpty;
+  }
+  return cardLast4 == cardLast4Of(cardNumber);
 }
 
 class AccountGroup {

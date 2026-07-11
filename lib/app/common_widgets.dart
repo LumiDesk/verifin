@@ -7,6 +7,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../l10n/app_localizations.dart';
 import 'account_icon_assets.dart';
 import 'app_theme.dart';
+import 'credit_card.dart';
 import 'demo_data.dart';
 import 'ledger_math.dart';
 import 'models.dart';
@@ -1264,35 +1265,56 @@ class _AccountRow extends StatelessWidget {
               AccountIconBox(iconCode: account.iconCode),
               const SizedBox(width: 10),
               Expanded(
-                child: Text.rich(
-                  TextSpan(
-                    text: account.name,
-                    children: <TextSpan>[
-                      if (account.cardLast4.isNotEmpty &&
-                          account.type.supportsCardLast4)
-                        TextSpan(
-                          text: ' (${account.cardLast4})',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurface.withValues(alpha: 0.42),
-                                fontSize:
-                                    (Theme.of(
-                                          context,
-                                        ).textTheme.titleMedium?.fontSize ??
-                                        16) *
-                                    0.82,
-                                fontWeight: FontWeight.w700,
-                              ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text.rich(
+                      TextSpan(
+                        text: account.name,
+                        children: <TextSpan>[
+                          if (account.cardLast4.isNotEmpty &&
+                              account.type.supportsCardLast4)
+                            TextSpan(
+                              text: ' (${account.cardLast4})',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.42),
+                                    fontSize:
+                                        (Theme.of(context)
+                                                    .textTheme
+                                                    .titleMedium
+                                                    ?.fontSize ??
+                                                16) *
+                                        0.82,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                            ),
+                        ],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (account.type.supportsCredit &&
+                        account.creditLimit != null)
+                      Text(
+                        '${AppLocalizations.of(context).creditAvailableLabel} '
+                        '${formatAmount(availableCredit(account.creditLimit, balance) ?? 0)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.55),
                         ),
-                    ],
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(width: 10),
@@ -1911,4 +1933,112 @@ Future<bool> showConfirmDialog(
     ),
   );
   return confirmed ?? false;
+}
+
+/// 「完整卡号 + 后四位」输入组，含「后四位跟随完整卡号」开关（仅信用卡/储蓄卡使用）。
+/// 开关打开时后四位只读、自动取完整卡号末四位；关闭后可手填、独立于完整卡号。开关初始态
+/// 由 [initialCardLast4Follows] 从两控制器当前值反推，不额外持久化。调用方读两控制器取值，
+/// 后四位建议以 [cardLast4Of] 归一化后落库。
+class CardNumberFields extends StatefulWidget {
+  const CardNumberFields({
+    super.key,
+    required this.numberController,
+    required this.last4Controller,
+  });
+
+  final TextEditingController numberController;
+  final TextEditingController last4Controller;
+
+  @override
+  State<CardNumberFields> createState() => _CardNumberFieldsState();
+}
+
+class _CardNumberFieldsState extends State<CardNumberFields> {
+  late bool _follows;
+
+  @override
+  void initState() {
+    super.initState();
+    _follows = initialCardLast4Follows(
+      widget.numberController.text,
+      widget.last4Controller.text,
+    );
+    widget.numberController.addListener(_onNumberChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.numberController.removeListener(_onNumberChanged);
+    super.dispose();
+  }
+
+  void _onNumberChanged() {
+    if (!_follows) {
+      return;
+    }
+    final derived = cardLast4Of(widget.numberController.text);
+    if (widget.last4Controller.text != derived) {
+      widget.last4Controller.text = derived;
+    }
+  }
+
+  void _toggleFollows(bool value) {
+    setState(() => _follows = value);
+    if (value) {
+      widget.last4Controller.text = cardLast4Of(widget.numberController.text);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        TextFormField(
+          controller: widget.numberController,
+          keyboardType: TextInputType.number,
+          maxLength: 32,
+          decoration: InputDecoration(
+            labelText: l10n.cardNumberLabel,
+            counterText: '',
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: TextFormField(
+                controller: widget.last4Controller,
+                enabled: !_follows,
+                maxLength: 4,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: l10n.cardLast4Label,
+                  counterText: '',
+                ),
+                validator: (value) {
+                  final text = value?.trim() ?? '';
+                  if (text.isEmpty) {
+                    return null;
+                  }
+                  if (!RegExp(r'^\d{1,4}$').hasMatch(text)) {
+                    return l10n.cardLast4Invalid;
+                  }
+                  return null;
+                },
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              l10n.cardLast4Follow,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            Switch(value: _follows, onChanged: _toggleFollows),
+          ],
+        ),
+      ],
+    );
+  }
 }

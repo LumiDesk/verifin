@@ -185,6 +185,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountTypeOnlinePayment => 'Online payment';
 
   @override
+  String get accountTypeCreditAccount => 'Credit account';
+
+  @override
   String get accountTypeCreditCard => 'Credit card';
 
   @override
@@ -836,6 +839,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cardLast4Invalid => 'Enter 1-4 digits';
 
   @override
+  String get cardNumberLabel => 'Full card number (optional)';
+
+  @override
+  String get cardNumberTitle => 'Full card number';
+
+  @override
+  String get cardLast4Follow => 'Follow number';
+
+  @override
+  String get cardCopyTooltip => 'Copy card number';
+
+  @override
+  String get copiedToClipboard => 'Copied to clipboard';
+
+  @override
   String get accountBalanceLabel => 'Account balance';
 
   @override
@@ -913,6 +931,46 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dueDay => 'Due day';
+
+  @override
+  String get creditLimitLabel => 'Credit limit';
+
+  @override
+  String get creditLimitEditTitle => 'Set credit limit';
+
+  @override
+  String get creditUsedLabel => 'Used';
+
+  @override
+  String get creditAvailableLabel => 'Available';
+
+  @override
+  String get currentBillLabel => 'This cycle';
+
+  @override
+  String get creditRepayTitle => 'Repayment';
+
+  @override
+  String get creditRepayAction => 'Repay';
+
+  @override
+  String get creditRepayAmountLabel => 'Repayment amount';
+
+  @override
+  String get creditRepayFromAccount => 'Payment account';
+
+  @override
+  String get creditRepayNoAccountLabel => 'No account (paid by others)';
+
+  @override
+  String get creditRepayNoAccountHint =>
+      'Paid by someone else; no account deducted';
+
+  @override
+  String get creditRepayDefaultNote => 'Repayment';
+
+  @override
+  String get creditRepaySuccess => 'Repayment recorded';
 
   @override
   String monthlyDayLabel(int day) {

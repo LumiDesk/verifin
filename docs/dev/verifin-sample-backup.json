@@ -336,8 +336,27 @@
         "includeInAssets": true,
         "hidden": false,
         "cardLast4": "8321",
+        "cardNumber": "6225888812348321",
+        "creditLimit": 30000.0,
         "statementDay": 5,
         "dueDay": 25
+      },
+      {
+        "id": "acc_huabei",
+        "bookId": "default",
+        "name": "花呗",
+        "type": "creditAccount",
+        "groupId": "group_credit",
+        "initialBalance": -560.0,
+        "iconCode": "wallet",
+        "note": "每月 10 日还款",
+        "includeInAssets": true,
+        "hidden": false,
+        "cardLast4": "",
+        "cardNumber": "",
+        "creditLimit": 5000.0,
+        "statementDay": 1,
+        "dueDay": 10
       },
       {
         "id": "acc_debit",

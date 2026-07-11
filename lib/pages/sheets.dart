@@ -813,6 +813,48 @@ Future<String?> showTextInputDialog({
   return trimmed;
 }
 
+/// 编辑完整卡号 + 后四位（含「后四位跟随卡号」开关）。确认返回归一化后的两值，取消返回 null。
+Future<({String number, String last4})?> showCardNumberDialog({
+  required BuildContext context,
+  required String initialNumber,
+  required String initialLast4,
+}) async {
+  final numberController = TextEditingController(text: initialNumber);
+  final last4Controller = TextEditingController(text: initialLast4);
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(AppLocalizations.of(context).cardNumberTitle),
+      content: SingleChildScrollView(
+        child: CardNumberFields(
+          numberController: numberController,
+          last4Controller: last4Controller,
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text(AppLocalizations.of(context).commonCancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: Text(AppLocalizations.of(context).commonConfirm),
+        ),
+      ],
+    ),
+  );
+  final number = numberController.text.trim();
+  final last4 = cardLast4Of(last4Controller.text);
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    numberController.dispose();
+    last4Controller.dispose();
+  });
+  if (confirmed != true) {
+    return null;
+  }
+  return (number: number, last4: last4);
+}
+
 Future<void> confirmDeleteAccount(
   BuildContext context,
   Account account,

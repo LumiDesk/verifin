@@ -12,6 +12,7 @@ class _AddAccountPageState extends State<AddAccountPage> {
   final _nameController = TextEditingController();
   final _balanceController = TextEditingController();
   final _cardLast4Controller = TextEditingController();
+  final _cardNumberController = TextEditingController();
   final _noteController = TextEditingController();
   AccountType _type = AccountType.onlinePayment;
   String _iconCode = 'wallet';
@@ -30,6 +31,7 @@ class _AddAccountPageState extends State<AddAccountPage> {
     _nameController.dispose();
     _balanceController.dispose();
     _cardLast4Controller.dispose();
+    _cardNumberController.dispose();
     _noteController.dispose();
     super.dispose();
   }
@@ -80,24 +82,11 @@ class _AddAccountPageState extends State<AddAccountPage> {
                 ),
                 const SizedBox(height: 10),
                 if (_type.supportsCardLast4) ...<Widget>[
-                  TextFormField(
-                    controller: _cardLast4Controller,
-                    maxLength: 4,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: AppLocalizations.of(context).cardLast4Label,
-                      counterText: '',
-                    ),
-                    validator: (value) {
-                      final text = value?.trim() ?? '';
-                      if (text.isEmpty) {
-                        return null;
-                      }
-                      if (!RegExp(r'^\d{1,4}$').hasMatch(text)) {
-                        return AppLocalizations.of(context).cardLast4Invalid;
-                      }
-                      return null;
-                    },
+                  CardNumberFields(
+                    // key 随类型变化，切换账户类型时重置内部跟随开关状态。
+                    key: ValueKey<AccountType>(_type),
+                    numberController: _cardNumberController,
+                    last4Controller: _cardLast4Controller,
                   ),
                   const SizedBox(height: 10),
                 ],
@@ -159,6 +148,7 @@ class _AddAccountPageState extends State<AddAccountPage> {
         _type = selected;
         if (!_type.supportsCardLast4) {
           _cardLast4Controller.clear();
+          _cardNumberController.clear();
         }
       });
     }
@@ -254,7 +244,10 @@ class _AddAccountPageState extends State<AddAccountPage> {
         includeInAssets: true,
         hidden: false,
         cardLast4: _type.supportsCardLast4
-            ? _cardLast4Controller.text.trim()
+            ? cardLast4Of(_cardLast4Controller.text)
+            : '',
+        cardNumber: _type.supportsCardLast4
+            ? _cardNumberController.text.trim()
             : '',
       ),
     );

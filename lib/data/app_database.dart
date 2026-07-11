@@ -13,7 +13,7 @@ class AppDatabase {
   final Database db;
 
   static const String defaultDatabaseName = 'verifin.db';
-  static const int schemaVersion = 10;
+  static const int schemaVersion = 11;
 
   /// 打开（或创建）数据库。测试通过 [factory]/[path] 注入 ffi 与内存路径；
   /// 真实平台留空则由 [resolveDatabaseFactory]/[resolveDatabasePath] 决定。
@@ -118,6 +118,14 @@ class AppDatabase {
         await _dedupeCategories(db);
         await db.execute(_categoriesUniqueIndex);
       }
+    }
+    // v10 → v11：完整卡号（信用卡/储蓄卡）与信用额度（信用卡/信用账户，可空）。
+    // 判 accounts 存在只为兼容迁移测试的最小桩库（真实库自 v1 起必有 accounts）。
+    if (oldVersion < 11 && await _tableExists(db, 'accounts')) {
+      await db.execute(
+        "ALTER TABLE accounts ADD COLUMN card_number TEXT NOT NULL DEFAULT ''",
+      );
+      await db.execute('ALTER TABLE accounts ADD COLUMN credit_limit REAL');
     }
   }
 
@@ -256,6 +264,8 @@ class AppDatabase {
       include_in_assets INTEGER NOT NULL,
       hidden INTEGER NOT NULL,
       card_last4 TEXT NOT NULL,
+      card_number TEXT NOT NULL DEFAULT '',
+      credit_limit REAL,
       sort_order INTEGER NOT NULL,
       statement_day INTEGER,
       due_day INTEGER
