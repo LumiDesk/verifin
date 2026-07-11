@@ -258,8 +258,9 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
   bool get _canSubmit {
     final result = _result;
     if (result == null) {
-      // 算式不完整/无效（如末尾挂着运算符）时不允许确认。
-      return false;
+      // 空输入在允许零时视为 0（清空后可直接确认为 0，如清除预算/信用额度）；
+      // 非空但算式不完整/无效（如末尾挂着运算符）时才不允许确认。
+      return _input.isEmpty && widget.allowZero;
     }
     if (widget.allowNegative) {
       return widget.allowZero || !isZeroAmount(result);

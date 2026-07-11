@@ -824,6 +824,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cardLast4Invalid => '请输入 1-4 位数字';
 
   @override
+  String get cardLabel => '卡号';
+
+  @override
   String get cardNumberLabel => '完整卡号（选填）';
 
   @override
@@ -837,6 +840,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get copiedToClipboard => '已复制到剪贴板';
+
+  @override
+  String get accountSectionBasic => '基本信息';
+
+  @override
+  String get accountSectionCard => '卡片信息';
+
+  @override
+  String get accountSectionCredit => '信用';
+
+  @override
+  String get accountSectionDisplay => '展示与记账';
+
+  @override
+  String get accountSectionDanger => '危险操作';
 
   @override
   String get accountBalanceLabel => '账户余额';

@@ -212,6 +212,11 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
     }
     final controller = VeriFinScope.of(context);
     final fromId = _noAccount ? '' : (_fromAccountId ?? '');
+    // 用转账分类（「转出」），与普通转账一致，避免列表按空分类回退成「已删除分类」。
+    final transferCategories = controller.categoriesForType(EntryType.transfer);
+    final categoryId = transferCategories.isEmpty
+        ? ''
+        : transferCategories.first.id;
     _saving = true;
     controller.addEntry(
       LedgerEntry(
@@ -219,7 +224,7 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
         bookId: controller.activeBook.id,
         type: EntryType.transfer,
         amount: _amount,
-        categoryId: '',
+        categoryId: categoryId,
         accountId: fromId,
         toAccountId: widget.account.id,
         note: _noteController.text.trim(),

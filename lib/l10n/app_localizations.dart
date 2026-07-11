@@ -1628,6 +1628,12 @@ abstract class AppLocalizations {
   /// **'请输入 1-4 位数字'**
   String get cardLast4Invalid;
 
+  /// No description provided for @cardLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'卡号'**
+  String get cardLabel;
+
   /// No description provided for @cardNumberLabel.
   ///
   /// In zh, this message translates to:
@@ -1657,6 +1663,36 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'已复制到剪贴板'**
   String get copiedToClipboard;
+
+  /// No description provided for @accountSectionBasic.
+  ///
+  /// In zh, this message translates to:
+  /// **'基本信息'**
+  String get accountSectionBasic;
+
+  /// No description provided for @accountSectionCard.
+  ///
+  /// In zh, this message translates to:
+  /// **'卡片信息'**
+  String get accountSectionCard;
+
+  /// No description provided for @accountSectionCredit.
+  ///
+  /// In zh, this message translates to:
+  /// **'信用'**
+  String get accountSectionCredit;
+
+  /// No description provided for @accountSectionDisplay.
+  ///
+  /// In zh, this message translates to:
+  /// **'展示与记账'**
+  String get accountSectionDisplay;
+
+  /// No description provided for @accountSectionDanger.
+  ///
+  /// In zh, this message translates to:
+  /// **'危险操作'**
+  String get accountSectionDanger;
 
   /// No description provided for @accountBalanceLabel.
   ///

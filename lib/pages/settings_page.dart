@@ -316,16 +316,7 @@ class SettingsPage extends StatelessWidget {
   }
 
   static Widget _sectionLabel(BuildContext context, String text) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(6, 4, 6, 8),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
+    return SectionLabel(text);
   }
 }
 

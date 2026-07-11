@@ -1577,6 +1577,27 @@ class ToolEntry extends StatelessWidget {
   }
 }
 
+/// 分组小标题（设置页 / 账户详情页等分区卡片上方的灰色标签）。
+class SectionLabel extends StatelessWidget {
+  const SectionLabel(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(6, 4, 6, 8),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
 class SettingsRow extends StatelessWidget {
   const SettingsRow({
     super.key,

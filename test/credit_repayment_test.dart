@@ -87,6 +87,13 @@ void main() {
     );
     expect(repayment.amount, 500);
     expect(repayment.accountId, bank.id);
+    // 用真实转账分类（非空），列表不会回退成「已删除分类」。
+    final transferCategoryIds = controller
+        .categoriesForType(EntryType.transfer)
+        .map((c) => c.id)
+        .toList();
+    expect(repayment.categoryId, isNotEmpty);
+    expect(transferCategoryIds, contains(repayment.categoryId));
   });
 
   testWidgets('信用卡还款：无账户（代还）只增额度不扣任何账户', (WidgetTester tester) async {
