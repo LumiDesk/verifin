@@ -138,4 +138,60 @@ void main() {
       );
     }
   });
+
+  group('AiResultDisplay 序列化往返', () {
+    void roundTrip(AiResultDisplay original) {
+      final restored = aiResultDisplayFromJson(original.toJson());
+      expect(restored.runtimeType, original.runtimeType);
+    }
+
+    test('stat', () {
+      const d = AiStatDisplay(
+        title: '汇总',
+        items: <AiStatItem>[
+          AiStatItem(label: '支出', value: 300),
+          AiStatItem(label: '净额', value: 700, emphasize: true),
+        ],
+      );
+      roundTrip(d);
+      final r = aiResultDisplayFromJson(d.toJson())! as AiStatDisplay;
+      expect(r.items.last.emphasize, isTrue);
+      expect(r.items.first.value, 300);
+    });
+
+    test('ranking / trend / transactions / table', () {
+      roundTrip(
+        const AiRankingDisplay(
+          title: '排行',
+          rows: <AiRankingRow>[
+            AiRankingRow(label: '餐饮', amount: 400, percent: 0.8, count: 3),
+          ],
+        ),
+      );
+      roundTrip(
+        const AiTrendDisplay(
+          title: '趋势',
+          values: <double>[1, 2, 3],
+          labels: <String>['一', '二', '三'],
+        ),
+      );
+      roundTrip(
+        const AiTransactionsDisplay(title: '明细', entryIds: <String>['a', 'b']),
+      );
+      final table = aiResultDisplayFromJson(
+        const AiTableDisplay(
+          title: '表',
+          headers: <String>['名称', '金额'],
+          rows: <List<String>>[
+            <String>['餐饮', '400'],
+          ],
+        ).toJson(),
+      );
+      expect((table! as AiTableDisplay).rows.first, <String>['餐饮', '400']);
+    });
+
+    test('未知 kind 返回 null', () {
+      expect(aiResultDisplayFromJson(<String, Object?>{'kind': 'zzz'}), isNull);
+    });
+  });
 }

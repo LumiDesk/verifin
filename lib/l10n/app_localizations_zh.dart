@@ -2686,6 +2686,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiChatNoMatchingTx => '无匹配交易';
 
   @override
+  String get aiClearConfig => '清空配置';
+
+  @override
+  String get aiClearConfigMessage => '将清空请求地址、API Key 与模型。清空后需重新填写才能使用 AI 功能。';
+
+  @override
+  String get aiConfigCleared => '配置已清空';
+
+  @override
   String get aiSettingsIntro =>
       '填写任意 OpenAI 兼容服务的请求地址、API Key 与模型。你的输入只会发送到这里配置的服务，配置只存本机、不进备份。';
 

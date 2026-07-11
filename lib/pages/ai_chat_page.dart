@@ -25,11 +25,12 @@ class _ChatMessage {
     required this.role,
     this.text = '',
     this.status = _MsgStatus.done,
-  });
+    List<AiResultDisplay>? displays,
+  }) : displays = displays ?? <AiResultDisplay>[];
 
   final _Role role;
   String text;
-  final List<AiResultDisplay> displays = <AiResultDisplay>[];
+  final List<AiResultDisplay> displays;
   _MsgStatus status;
 
   /// 助手正在查询 / 思考时的状态标签（有值即显示带转圈的提示）。
@@ -54,8 +55,17 @@ class _AiChatPageState extends State<AiChatPage> {
   bool _streaming = false;
   bool _restored = false;
 
-  /// 落库的历史消息上限（仅计文本消息），防止 KV 无限增长。
+  /// 落库的历史消息上限，防止 KV 无限增长。
   static const int _historyLimit = 40;
+
+  @override
+  void initState() {
+    super.initState();
+    // 输入内容变化时刷新发送按钮的可用态（空内容不可发送）。
+    _input.addListener(_onInputChanged);
+  }
+
+  void _onInputChanged() => setState(() {});
 
   @override
   void didChangeDependencies() {
@@ -64,12 +74,21 @@ class _AiChatPageState extends State<AiChatPage> {
       return;
     }
     _restored = true;
-    // 重开时恢复历史文字（结果卡片不落库，故只还原对话文本）。
+    // 重开时恢复历史文字与结果卡片（displays 已序列化落库）。
     for (final message in VeriFinScope.of(context).aiChatHistory) {
+      final rawDisplays = message['displays'];
+      final displays = <AiResultDisplay>[
+        if (rawDisplays is List)
+          for (final d in rawDisplays.whereType<Map>())
+            if (aiResultDisplayFromJson(Map<String, Object?>.from(d))
+                case final AiResultDisplay display)
+              display,
+      ];
       _messages.add(
         _ChatMessage(
           role: message['role'] == 'user' ? _Role.user : _Role.assistant,
-          text: message['content'] ?? '',
+          text: message['content']?.toString() ?? '',
+          displays: displays,
         ),
       );
     }
@@ -77,19 +96,25 @@ class _AiChatPageState extends State<AiChatPage> {
 
   @override
   void dispose() {
+    _input.removeListener(_onInputChanged);
     _input.dispose();
     _scroll.dispose();
     super.dispose();
   }
 
-  /// 把当前对话的文本消息落库（截断到最近 [_historyLimit] 条）。
+  bool get _canSend => !_streaming && _input.text.trim().isNotEmpty;
+
+  /// 把当前对话落库（文本 + 序列化的结果卡片，截断到最近 [_historyLimit] 条）。
   void _saveHistory() {
-    final all = <Map<String, String>>[
+    final all = <Map<String, Object?>>[
       for (final m in _messages)
-        if (m.status == _MsgStatus.done && m.text.trim().isNotEmpty)
-          <String, String>{
+        if (m.status == _MsgStatus.done &&
+            (m.text.trim().isNotEmpty || m.displays.isNotEmpty))
+          <String, Object?>{
             'role': m.role == _Role.user ? 'user' : 'assistant',
             'content': m.text.trim(),
+            if (m.displays.isNotEmpty)
+              'displays': m.displays.map((d) => d.toJson()).toList(),
           },
     ];
     final trimmed = all.length > _historyLimit
@@ -224,19 +249,34 @@ class _AiChatPageState extends State<AiChatPage> {
     final l10n = AppLocalizations.of(context);
     final configured = VeriFinScope.of(context).aiSettings.isConfigured;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.aiChatTitle),
-        actions: <Widget>[
-          if (_messages.isNotEmpty)
-            IconButton(
-              tooltip: l10n.aiChatClearHistory,
-              onPressed: _streaming ? null : _clearHistory,
-              icon: const Icon(Icons.delete_sweep_outlined),
-            ),
-        ],
-      ),
-      body: SafeArea(
-        child: configured ? _buildChat(context) : _buildUnconfigured(context),
+      body: VeriPage(
+        child: SafeArea(
+          child: Column(
+            children: <Widget>[
+              VeriHeader(
+                title: l10n.aiChatTitle,
+                showBack: true,
+                actions: <Widget>[
+                  if (_messages.isNotEmpty)
+                    HeaderAction(
+                      icon: Icons.delete_sweep_outlined,
+                      tooltip: l10n.aiChatClearHistory,
+                      destructive: true,
+                      onPressed: _streaming ? null : _clearHistory,
+                    ),
+                ],
+              ),
+              Expanded(
+                child: configured
+                    ? (_messages.isEmpty
+                          ? _buildEmptyState(context)
+                          : _buildMessageList(context))
+                    : _buildUnconfigured(context),
+              ),
+              if (configured) _buildInputBar(context),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -272,22 +312,12 @@ class _AiChatPageState extends State<AiChatPage> {
     );
   }
 
-  Widget _buildChat(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        Expanded(
-          child: _messages.isEmpty
-              ? _buildEmptyState(context)
-              : ListView.builder(
-                  controller: _scroll,
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-                  itemCount: _messages.length,
-                  itemBuilder: (context, index) =>
-                      _MessageView(message: _messages[index]),
-                ),
-        ),
-        _buildInputBar(context),
-      ],
+  Widget _buildMessageList(BuildContext context) {
+    return ListView.builder(
+      controller: _scroll,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
+      itemCount: _messages.length,
+      itemBuilder: (context, index) => _MessageView(message: _messages[index]),
     );
   }
 
@@ -331,54 +361,98 @@ class _AiChatPageState extends State<AiChatPage> {
   }
 
   Widget _buildInputBar(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final canSend = _canSend;
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: isDark ? veriSurfaceDark : veriSurfaceLight,
         border: Border(
-          top: BorderSide(
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.08),
-          ),
+          top: BorderSide(color: isDark ? Colors.white10 : veriLine),
         ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: <Widget>[
           Expanded(
-            child: TextField(
-              controller: _input,
-              minLines: 1,
-              maxLines: 4,
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _send(),
-              decoration: InputDecoration(
-                hintText: AppLocalizations.of(context).aiChatInputHint,
-                filled: true,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(veriRadiusLg),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white10 : veriSurfaceAltLight,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: isDark ? Colors.white12 : veriLine),
+              ),
+              child: TextField(
+                controller: _input,
+                minLines: 1,
+                maxLines: 5,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _send(),
+                style: const TextStyle(fontSize: 15.5, height: 1.45),
+                decoration: InputDecoration(
+                  hintText: AppLocalizations.of(context).aiChatInputHint,
+                  isDense: true,
+                  filled: false,
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 13,
+                  ),
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 8),
-          IconButton.filled(
-            onPressed: _streaming ? null : _send,
-            icon: _streaming
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.arrow_upward),
-          ),
+          const SizedBox(width: 10),
+          _SendButton(enabled: canSend, streaming: _streaming, onTap: _send),
         ],
+      ),
+    );
+  }
+}
+
+/// 底部发送按钮：可用=主色圆钮 + 白色箭头；流式=主色 + 转圈；不可用=灰底灰标、不可点。
+class _SendButton extends StatelessWidget {
+  const _SendButton({
+    required this.enabled,
+    required this.streaming,
+    required this.onTap,
+  });
+
+  final bool enabled;
+  final bool streaming;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final disabledBg = isDark ? Colors.white12 : const Color(0xFFDCE3EE);
+    final disabledFg = Theme.of(
+      context,
+    ).colorScheme.onSurface.withValues(alpha: 0.35);
+    final active = enabled || streaming;
+    return Material(
+      color: active ? veriRoyal : disabledBg,
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        child: SizedBox(
+          width: 46,
+          height: 46,
+          child: streaming
+              ? const Padding(
+                  padding: EdgeInsets.all(13),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : Icon(
+                  Icons.arrow_upward_rounded,
+                  color: enabled ? Colors.white : disabledFg,
+                  size: 22,
+                ),
+        ),
       ),
     );
   }
@@ -391,64 +465,111 @@ class _MessageView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     if (message.role == _Role.user) {
       return Align(
         alignment: Alignment.centerRight,
         child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 6),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          margin: const EdgeInsets.symmetric(vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
           constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.82,
+            maxWidth: MediaQuery.of(context).size.width * 0.8,
           ),
           decoration: BoxDecoration(
             color: veriRoyal,
-            borderRadius: BorderRadius.circular(veriRadiusLg),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(18),
+              topRight: Radius.circular(18),
+              bottomLeft: Radius.circular(18),
+              bottomRight: Radius.circular(4),
+            ),
           ),
           child: Text(
             message.text,
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15.5,
+              height: 1.45,
+            ),
           ),
         ),
       );
     }
     final isError = message.status == _MsgStatus.error;
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
+      margin: const EdgeInsets.symmetric(vertical: 7),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           if (message.statusLabel != null)
             Padding(
-              padding: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.only(bottom: 8, left: 2),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   const SizedBox(
-                    width: 14,
-                    height: 14,
+                    width: 15,
+                    height: 15,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 9),
                   Text(
                     message.statusLabel!,
-                    style: Theme.of(context).textTheme.bodySmall,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
                   ),
                 ],
               ),
             ),
           for (final display in message.displays) ...<Widget>[
             AiResultView(display: display),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
           ],
           if (message.text.trim().isNotEmpty)
             isError
-                ? Text(
+                ? _ErrorBubble(text: message.text)
+                : GptMarkdown(
                     message.text,
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 15.5,
+                      height: 1.6,
+                      color: theme.colorScheme.onSurface,
                     ),
-                  )
-                : GptMarkdown(message.text),
+                  ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 助手出错时的提示气泡（红边淡底，比裸红字更精致）。
+class _ErrorBubble extends StatelessWidget {
+  const _ErrorBubble({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final error = Theme.of(context).colorScheme.error;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        color: error.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(veriRadiusMd),
+        border: Border.all(color: error.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(Icons.error_outline, size: 18, color: error),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(color: error, fontSize: 14, height: 1.45),
+            ),
+          ),
         ],
       ),
     );

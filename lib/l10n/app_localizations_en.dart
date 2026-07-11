@@ -2736,6 +2736,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiChatNoMatchingTx => 'No matching transactions';
 
   @override
+  String get aiClearConfig => 'Clear configuration';
+
+  @override
+  String get aiClearConfigMessage =>
+      'This clears the base URL, API key and model. You\'ll need to re-enter them to use AI features.';
+
+  @override
+  String get aiConfigCleared => 'Configuration cleared';
+
+  @override
   String get aiSettingsIntro =>
       'Enter the request URL, API key and model of any OpenAI-compatible service. Your input is only sent to the service configured here; the config stays on this device and is not backed up.';
 

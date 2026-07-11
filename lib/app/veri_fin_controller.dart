@@ -216,29 +216,40 @@ Map<String, List<String>> _decodeStringListMap(Object? value) {
   });
 }
 
-/// 解码 AI 聊天记录（`[{role, content}, …]`）；损坏数据回退空列表。
-List<Map<String, String>> _decodeChatHistory(String? raw) {
+/// 解码 AI 聊天记录（`[{role, content, displays?}, …]`）；损坏数据回退空列表。
+/// `displays` 为结果卡片的 JSON 列表（[AiResultDisplay] 序列化），原样保留供聊天页还原。
+List<Map<String, Object?>> _decodeChatHistory(String? raw) {
   if (raw == null || raw.isEmpty) {
-    return <Map<String, String>>[];
+    return <Map<String, Object?>>[];
   }
   try {
     final decoded = jsonDecode(raw);
     if (decoded is List) {
       return decoded
           .whereType<Map>()
-          .map(
-            (item) => <String, String>{
+          .map((item) {
+            final displays = item['displays'];
+            return <String, Object?>{
               'role': item['role']?.toString() ?? 'user',
               'content': item['content']?.toString() ?? '',
-            },
+              if (displays is List)
+                'displays': displays
+                    .whereType<Map>()
+                    .map((d) => Map<String, Object?>.from(d))
+                    .toList(),
+            };
+          })
+          .where(
+            (m) =>
+                (m['content']! as String).isNotEmpty ||
+                (m['displays'] as List?)?.isNotEmpty == true,
           )
-          .where((m) => m['content']!.isNotEmpty)
           .toList();
     }
   } catch (_) {
     // 损坏记录忽略。
   }
-  return <Map<String, String>>[];
+  return <Map<String, Object?>>[];
 }
 
 String _categoryBudgetKey(String bookId, DateTime month, String categoryId) {

@@ -77,6 +77,32 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     });
   }
 
+  Future<void> _clearConfig() async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showConfirmDialog(
+      context,
+      title: l10n.aiClearConfig,
+      message: l10n.aiClearConfigMessage,
+      confirmLabel: l10n.aiClearConfig,
+      destructive: true,
+    );
+    if (!confirmed || !mounted) {
+      return;
+    }
+    VeriFinScope.of(context).setAiSettings(const AiSettings());
+    _baseUrlController.clear();
+    _apiKeyController.clear();
+    _modelController.clear();
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _statusIsError = false;
+      _statusText = null;
+    });
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.aiConfigCleared)));
+  }
+
   Future<void> _testConnection() async {
     final l10n = AppLocalizations.of(context);
     final settings = _current();
@@ -140,7 +166,23 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
             children: <Widget>[
-              VeriHeader(title: l10n.aiSettingsTitle, showBack: true),
+              VeriHeader(
+                title: l10n.aiSettingsTitle,
+                showBack: true,
+                actions: <Widget>[
+                  HeaderAction(
+                    icon: Icons.delete_outline,
+                    tooltip: l10n.aiClearConfig,
+                    destructive: true,
+                    onPressed:
+                        (_baseUrlController.text.isEmpty &&
+                            _apiKeyController.text.isEmpty &&
+                            _modelController.text.isEmpty)
+                        ? null
+                        : _clearConfig,
+                  ),
+                ],
+              ),
               const SizedBox(height: 10),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),

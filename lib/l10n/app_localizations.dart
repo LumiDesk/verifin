@@ -4982,6 +4982,24 @@ abstract class AppLocalizations {
   /// **'无匹配交易'**
   String get aiChatNoMatchingTx;
 
+  /// No description provided for @aiClearConfig.
+  ///
+  /// In zh, this message translates to:
+  /// **'清空配置'**
+  String get aiClearConfig;
+
+  /// No description provided for @aiClearConfigMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'将清空请求地址、API Key 与模型。清空后需重新填写才能使用 AI 功能。'**
+  String get aiClearConfigMessage;
+
+  /// No description provided for @aiConfigCleared.
+  ///
+  /// In zh, this message translates to:
+  /// **'配置已清空'**
+  String get aiConfigCleared;
+
   /// No description provided for @aiSettingsIntro.
   ///
   /// In zh, this message translates to:

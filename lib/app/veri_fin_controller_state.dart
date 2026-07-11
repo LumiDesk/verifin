@@ -82,9 +82,10 @@ mixin _ControllerState on ChangeNotifier {
   bool _amountForceTwoDecimals = false;
   AiSettings _aiSettings = const AiSettings();
 
-  /// AI 对话查询的聊天记录：只存用户/助手的文本消息（`{role, content}`），结果卡片
-  /// 不落库（重开时只恢复文字）。设备本地偏好，不进 JSON 备份、初始化保留。
-  List<Map<String, String>> _aiChatHistory = <Map<String, String>>[];
+  /// AI 对话查询的聊天记录：每条 `{role, content, displays?}`——助手消息可带序列化的
+  /// 结果卡片（`displays` 为 [AiResultDisplay] 的 JSON），重开时连同图表一起还原。
+  /// 设备本地偏好，不进 JSON 备份、初始化保留。
+  List<Map<String, Object?>> _aiChatHistory = <Map<String, Object?>>[];
 
   void _loadDefaultAccounts() {
     final raw = _store.read(_defaultAccountKey);

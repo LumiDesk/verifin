@@ -70,7 +70,8 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), '本月花了多少');
-    await tester.tap(find.byIcon(Icons.arrow_upward));
+    await tester.pump();
+    await tester.tap(find.byIcon(Icons.arrow_upward_rounded));
     await tester.pumpAndSettle();
 
     // 用户气泡
@@ -97,7 +98,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), '在吗');
-    await tester.tap(find.byIcon(Icons.arrow_upward));
+    await tester.pump();
+    await tester.tap(find.byIcon(Icons.arrow_upward_rounded));
     await tester.pumpAndSettle();
     expect(find.text('在吗'), findsOneWidget);
 
@@ -106,6 +108,48 @@ void main() {
     await tester.tap(find.text('清空'));
     await tester.pumpAndSettle();
     expect(find.text('在吗'), findsNothing);
+    controller.dispose();
+  });
+
+  testWidgets('重开时从历史还原结果卡片（图表不再丢失）', (tester) async {
+    final controller = await makeController()
+      ..setAiSettings(
+        const AiSettings(baseUrl: 'http://x/v1', apiKey: 'k', model: 'm'),
+      )
+      ..setAiChatHistory(<Map<String, Object?>>[
+        <String, Object?>{'role': 'user', 'content': '分类排行'},
+        <String, Object?>{
+          'role': 'assistant',
+          'content': '这是排行',
+          'displays': <Map<String, Object?>>[
+            <String, Object?>{
+              'kind': 'ranking',
+              'title': '本月 · 支出分类排行',
+              'rows': <Map<String, Object?>>[
+                <String, Object?>{
+                  'label': '餐饮',
+                  'amount': 400,
+                  'percent': 0.8,
+                  'count': 3,
+                },
+              ],
+            },
+          ],
+        },
+      ]);
+
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(home: const AiChatPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 历史文字与还原的结果卡片都在。
+    expect(find.text('分类排行'), findsOneWidget);
+    expect(find.textContaining('支出分类排行'), findsOneWidget);
+    expect(find.text('餐饮'), findsWidgets);
     controller.dispose();
   });
 }

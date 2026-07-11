@@ -51,6 +51,20 @@ Widget _emptyHint(BuildContext context, String text) {
   );
 }
 
+/// 图表纵轴 3 档标签：max / max·½ / 0（紧凑格式）。
+List<String> _yLabels(BuildContext context, Iterable<double> values) {
+  final max = values.fold<double>(0, (m, v) => v.abs() > m ? v.abs() : m);
+  if (max <= 0) {
+    return const <String>[];
+  }
+  final l10n = AppLocalizations.of(context);
+  return <String>[
+    formatCompactAmount(l10n, max),
+    formatCompactAmount(l10n, max / 2),
+    '0',
+  ];
+}
+
 class _StatCard extends StatelessWidget {
   const _StatCard(this.display);
   final AiStatDisplay display;
@@ -108,31 +122,34 @@ class _RankingCard extends StatelessWidget {
         ),
       );
     }
-    final values = rows.map((r) => r.amount).toList();
-    final labels = rows.map((r) => r.label).toList();
+    // 柱状图只画前若干名，避免横轴标签拥挤；完整明细在下方列表。
+    final chartRows = rows.take(7).toList();
+    final values = chartRows.map((r) => r.amount).toList();
+    final labels = chartRows.map((r) => r.label).toList();
     return VeriCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           _cardTitle(context, display.title),
           SizedBox(
-            height: 150,
+            height: 172,
             child: InteractiveBarChart(
               values: values,
               xLabels: labels,
+              yLabels: _yLabels(context, values),
               tooltipOf: (index) => ChartTooltip(
                 title: labels[index],
                 lines: <ChartTooltipLine>[
                   ChartTooltipLine(text: formatAmount(values[index])),
                   ChartTooltipLine(
                     text:
-                        '${(rows[index].percent * 100).toStringAsFixed(1)}% · ${AppLocalizations.of(context).entriesCount(rows[index].count)}',
+                        '${(chartRows[index].percent * 100).toStringAsFixed(1)}% · ${AppLocalizations.of(context).entriesCount(chartRows[index].count)}',
                   ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           for (final row in rows.take(8))
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
@@ -192,11 +209,12 @@ class _TrendCard extends StatelessWidget {
         children: <Widget>[
           _cardTitle(context, display.title),
           SizedBox(
-            height: 150,
+            height: 172,
             child: InteractiveTrendChart(
               color: display.isExpense ? veriRoyal : veriMint,
               values: display.values,
               xLabels: display.labels,
+              yLabels: _yLabels(context, display.values),
               tooltipOf: (index) => ChartTooltip(
                 title: index < display.labels.length
                     ? display.labels[index]
@@ -270,48 +288,84 @@ class _TableCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final headerStyle = Theme.of(
-      context,
-    ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700);
-    final cellStyle = Theme.of(context).textTheme.bodySmall;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final headerBg = isDark ? Colors.white10 : veriSurfaceAltLight;
+    final divider = theme.colorScheme.onSurface.withValues(alpha: 0.07);
+    final headerStyle = theme.textTheme.bodyMedium?.copyWith(
+      fontWeight: FontWeight.w700,
+      fontSize: 13.5,
+    );
+    final cellStyle = theme.textTheme.bodyMedium?.copyWith(
+      fontSize: 13.5,
+      height: 1.4,
+    );
+
+    // 无竖线、仅头部底色 + 行间细分隔线的精致表格；首列左对齐、其余右对齐。
+    TableRow rowFor(List<String> cells, {required bool header}) {
+      return TableRow(
+        children: <Widget>[
+          for (var i = 0; i < display.headers.length; i += 1)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              child: Text(
+                i < cells.length ? cells[i] : '',
+                textAlign: i == 0 ? TextAlign.left : TextAlign.right,
+                style: header ? headerStyle : cellStyle,
+              ),
+            ),
+        ],
+      );
+    }
+
     return VeriCard(
+      padding: const EdgeInsets.fromLTRB(13, 13, 13, 6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           _cardTitle(context, display.title),
-          Table(
-            border: TableBorder.all(
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.12),
-              width: 0.5,
-            ),
-            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-            children: <TableRow>[
-              TableRow(
-                children: <Widget>[
-                  for (final header in display.headers)
-                    Padding(
-                      padding: const EdgeInsets.all(6),
-                      child: Text(header, style: headerStyle),
-                    ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(veriRadiusMd),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: divider),
+                borderRadius: BorderRadius.circular(veriRadiusMd),
+              ),
+              child: Table(
+                border: TableBorder(
+                  horizontalInside: BorderSide(color: divider),
+                ),
+                defaultColumnWidth: const IntrinsicColumnWidth(),
+                columnWidths: const <int, TableColumnWidth>{
+                  0: FlexColumnWidth(),
+                },
+                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                children: <TableRow>[
+                  TableRow(
+                    decoration: BoxDecoration(color: headerBg),
+                    children: <Widget>[
+                      for (var i = 0; i < display.headers.length; i += 1)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          child: Text(
+                            display.headers[i],
+                            textAlign: i == 0
+                                ? TextAlign.left
+                                : TextAlign.right,
+                            style: headerStyle,
+                          ),
+                        ),
+                    ],
+                  ),
+                  for (final row in display.rows) rowFor(row, header: false),
                 ],
               ),
-              for (final row in display.rows)
-                TableRow(
-                  children: <Widget>[
-                    for (var i = 0; i < display.headers.length; i += 1)
-                      Padding(
-                        padding: const EdgeInsets.all(6),
-                        child: Text(
-                          i < row.length ? row[i] : '',
-                          style: cellStyle,
-                        ),
-                      ),
-                  ],
-                ),
-            ],
+            ),
           ),
+          const SizedBox(height: 7),
         ],
       ),
     );

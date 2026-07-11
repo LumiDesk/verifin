@@ -56,15 +56,110 @@ class AiToolResult {
 }
 
 /// 结果渲染规格，与具体 widget 解耦——聊天页按类型映射到图表 / 列表 / 卡片。
+///
+/// 可 [toJson]/[aiResultDisplayFromJson] 序列化，以便随聊天历史落库、重开时还原卡片
+/// （交易列表只存 id，重开按当前数据实时解析）。
 sealed class AiResultDisplay {
   const AiResultDisplay();
+
+  Map<String, Object?> toJson();
 }
+
+/// 从 JSON 还原展示规格；无法识别返回 null。
+AiResultDisplay? aiResultDisplayFromJson(Map<String, Object?> json) {
+  final title = json['title']?.toString() ?? '';
+  switch (json['kind']) {
+    case 'stat':
+      return AiStatDisplay(
+        title: title,
+        items: _jsonList(json['items'])
+            .map(
+              (e) => AiStatItem(
+                label: e['label']?.toString() ?? '',
+                value: _asDouble(e['value']),
+                emphasize: e['emphasize'] == true,
+              ),
+            )
+            .toList(),
+      );
+    case 'ranking':
+      return AiRankingDisplay(
+        title: title,
+        rows: _jsonList(json['rows'])
+            .map(
+              (e) => AiRankingRow(
+                label: e['label']?.toString() ?? '',
+                amount: _asDouble(e['amount']),
+                percent: _asDouble(e['percent']),
+                count: _asDouble(e['count']).round(),
+              ),
+            )
+            .toList(),
+      );
+    case 'trend':
+      return AiTrendDisplay(
+        title: title,
+        values: (json['values'] as List? ?? const <Object?>[])
+            .map(_asDouble)
+            .toList(),
+        labels: (json['labels'] as List? ?? const <Object?>[])
+            .map((e) => e.toString())
+            .toList(),
+        isExpense: json['isExpense'] != false,
+      );
+    case 'transactions':
+      return AiTransactionsDisplay(
+        title: title,
+        entryIds: (json['entryIds'] as List? ?? const <Object?>[])
+            .map((e) => e.toString())
+            .toList(),
+      );
+    case 'table':
+      return AiTableDisplay(
+        title: title,
+        headers: (json['headers'] as List? ?? const <Object?>[])
+            .map((e) => e.toString())
+            .toList(),
+        rows: (json['rows'] as List? ?? const <Object?>[])
+            .whereType<List>()
+            .map((row) => row.map((e) => e.toString()).toList())
+            .toList(),
+      );
+    default:
+      return null;
+  }
+}
+
+List<Map<String, Object?>> _jsonList(Object? value) =>
+    (value as List? ?? const <Object?>[])
+        .whereType<Map>()
+        .map((e) => Map<String, Object?>.from(e))
+        .toList();
+
+double _asDouble(Object? value) => value is num
+    ? value.toDouble()
+    : (value is String ? double.tryParse(value) ?? 0 : 0);
 
 /// 一组统计指标（如收支汇总）。
 class AiStatDisplay extends AiResultDisplay {
   const AiStatDisplay({required this.title, required this.items});
   final String title;
   final List<AiStatItem> items;
+
+  @override
+  Map<String, Object?> toJson() => <String, Object?>{
+    'kind': 'stat',
+    'title': title,
+    'items': items
+        .map(
+          (i) => <String, Object?>{
+            'label': i.label,
+            'value': i.value,
+            'emphasize': i.emphasize,
+          },
+        )
+        .toList(),
+  };
 }
 
 class AiStatItem {
@@ -85,6 +180,22 @@ class AiRankingDisplay extends AiResultDisplay {
   const AiRankingDisplay({required this.title, required this.rows});
   final String title;
   final List<AiRankingRow> rows;
+
+  @override
+  Map<String, Object?> toJson() => <String, Object?>{
+    'kind': 'ranking',
+    'title': title,
+    'rows': rows
+        .map(
+          (r) => <String, Object?>{
+            'label': r.label,
+            'amount': r.amount,
+            'percent': r.percent,
+            'count': r.count,
+          },
+        )
+        .toList(),
+  };
 }
 
 class AiRankingRow {
@@ -114,6 +225,15 @@ class AiTrendDisplay extends AiResultDisplay {
   final List<double> values;
   final List<String> labels;
   final bool isExpense;
+
+  @override
+  Map<String, Object?> toJson() => <String, Object?>{
+    'kind': 'trend',
+    'title': title,
+    'values': values,
+    'labels': labels,
+    'isExpense': isExpense,
+  };
 }
 
 /// 一组具体交易，渲染为**可点击**的交易列表（点击进详情页）。
@@ -121,6 +241,13 @@ class AiTransactionsDisplay extends AiResultDisplay {
   const AiTransactionsDisplay({required this.title, required this.entryIds});
   final String title;
   final List<String> entryIds;
+
+  @override
+  Map<String, Object?> toJson() => <String, Object?>{
+    'kind': 'transactions',
+    'title': title,
+    'entryIds': entryIds,
+  };
 }
 
 /// 通用表格（模型自定义多列数据时）。
@@ -133,6 +260,14 @@ class AiTableDisplay extends AiResultDisplay {
   final String title;
   final List<String> headers;
   final List<List<String>> rows;
+
+  @override
+  Map<String, Object?> toJson() => <String, Object?>{
+    'kind': 'table',
+    'title': title,
+    'headers': headers,
+    'rows': rows,
+  };
 }
 
 /// 工具契约。实现类应无状态、纯函数式。

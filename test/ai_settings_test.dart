@@ -1,12 +1,43 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/ai/ai_settings.dart';
 import 'package:verifin/app/models.dart';
+import 'package:verifin/app/veri_fin_scope.dart';
 import 'package:verifin/local_storage/local_storage.dart';
+import 'package:verifin/pages/ai_settings_page.dart';
 
 import 'support/test_harness.dart';
 
 void main() {
   useTestDatabases();
+
+  testWidgets('设置页「清空配置」按钮清空并落库', (tester) async {
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store)
+      ..setAiSettings(
+        const AiSettings(baseUrl: 'https://x/v1', apiKey: 'k', model: 'm'),
+      );
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(home: const AiSettingsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.delete_outline));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('清空配置').last);
+    await tester.pumpAndSettle();
+
+    expect(controller.aiSettings.isConfigured, isFalse);
+    controller.dispose();
+
+    // 重启后确认已落库清空。
+    final restarted = await makeController(store);
+    expect(restarted.aiSettings.isConfigured, isFalse);
+    restarted.dispose();
+  });
 
   group('AiSettings', () {
     test('isConfigured requires all three fields', () {

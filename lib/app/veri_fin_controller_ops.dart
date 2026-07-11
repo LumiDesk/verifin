@@ -514,15 +514,15 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
-  /// AI 对话查询的聊天记录（仅用户/助手文本消息 `{role, content}`）。
-  /// 设备本地、不进 JSON 备份、初始化保留。
-  List<Map<String, String>> get aiChatHistory =>
-      List<Map<String, String>>.unmodifiable(_aiChatHistory);
+  /// AI 对话查询的聊天记录（每条 `{role, content, displays?}`，助手消息可带序列化的
+  /// 结果卡片）。设备本地、不进 JSON 备份、初始化保留。
+  List<Map<String, Object?>> get aiChatHistory =>
+      List<Map<String, Object?>>.unmodifiable(_aiChatHistory);
 
   /// 覆盖保存聊天记录。不 notifyListeners——历史无响应式依赖，只由聊天页读写，
   /// 避免每条消息触发全应用重建。
-  void setAiChatHistory(List<Map<String, String>> history) {
-    _aiChatHistory = List<Map<String, String>>.from(history);
+  void setAiChatHistory(List<Map<String, Object?>> history) {
+    _aiChatHistory = List<Map<String, Object?>>.from(history);
     if (_aiChatHistory.isEmpty) {
       _store.delete(_aiChatHistoryKey);
     } else {
@@ -531,7 +531,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   }
 
   /// 清空聊天记录。
-  void clearAiChatHistory() => setAiChatHistory(<Map<String, String>>[]);
+  void clearAiChatHistory() => setAiChatHistory(<Map<String, Object?>>[]);
 
   /// 用户是否已同意隐私政策与用户协议（首启动前为 false）。
   bool get onboardingCompleted => _onboardingCompleted;
