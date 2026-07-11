@@ -263,6 +263,140 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                 ),
               ),
               const SizedBox(height: 10),
+              SectionLabel(AppLocalizations.of(context).accountSectionBasic),
+              VeriCard(
+                child: Column(
+                  children: <Widget>[
+                    SettingsRow(
+                      icon: Icons.category_outlined,
+                      title: AppLocalizations.of(context).commonType,
+                      trailing: currentAccount.type.label(
+                        AppLocalizations.of(context),
+                      ),
+                      trailingIcon: Icons.chevron_right,
+                      onTap: () => _pickAccountType(currentAccount),
+                    ),
+                    const Divider(height: 1),
+                    SettingsRow(
+                      icon: Icons.badge_outlined,
+                      title: AppLocalizations.of(context).commonName,
+                      trailing: currentAccount.name,
+                      trailingIcon: Icons.chevron_right,
+                      onTap: () => _editAccountName(currentAccount),
+                    ),
+                    const Divider(height: 1),
+                    SettingsRow(
+                      icon: Icons.image_outlined,
+                      title: AppLocalizations.of(context).commonIcon,
+                      trailing: iconLabelForCode(
+                        AppLocalizations.of(context),
+                        currentAccount.iconCode,
+                      ),
+                      trailingIcon: Icons.chevron_right,
+                      onTap: () => _pickAccountIcon(currentAccount),
+                    ),
+                    const Divider(height: 1),
+                    SettingsRow(
+                      icon: Icons.currency_yuan,
+                      title: AppLocalizations.of(context).commonCurrency,
+                      trailing: AppLocalizations.of(context).currencyCny,
+                    ),
+                    const Divider(height: 1),
+                    SettingsRow(
+                      icon: Icons.notes,
+                      title: AppLocalizations.of(context).commonNote,
+                      trailing: currentAccount.note.isEmpty
+                          ? AppLocalizations.of(context).commonNoneShort
+                          : currentAccount.note,
+                      trailingIcon: Icons.chevron_right,
+                      onTap: () => _editAccountNote(currentAccount),
+                    ),
+                    const Divider(height: 1),
+                    SettingsRow(
+                      icon: Icons.folder_outlined,
+                      title: AppLocalizations.of(context).commonGroup,
+                      trailing: groupName,
+                      trailingIcon: Icons.chevron_right,
+                      onTap: () => _pickAccountGroup(currentAccount),
+                    ),
+                  ],
+                ),
+              ),
+              if (currentAccount.type.supportsCardLast4) ...<Widget>[
+                const SizedBox(height: 12),
+                SectionLabel(AppLocalizations.of(context).accountSectionCard),
+                VeriCard(
+                  child: Column(
+                    children: <Widget>[
+                      SettingsRow(
+                        icon: Icons.credit_card,
+                        title: AppLocalizations.of(context).cardLabel,
+                        trailing: currentAccount.cardLast4.isEmpty
+                            ? AppLocalizations.of(context).notSet
+                            : currentAccount.cardLast4,
+                        trailingIcon: Icons.chevron_right,
+                        onTap: () => _editCard(currentAccount),
+                      ),
+                      if (currentAccount.cardNumber.isNotEmpty) ...<Widget>[
+                        const Divider(height: 1),
+                        SettingsRow(
+                          icon: Icons.numbers_outlined,
+                          title: AppLocalizations.of(context).cardNumberTitle,
+                          trailing: currentAccount.cardNumber,
+                          trailingIcon: Icons.copy_outlined,
+                          onTap: () =>
+                              _copyCardNumber(currentAccount.cardNumber),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+              if (currentAccount.type.supportsCredit) ...<Widget>[
+                const SizedBox(height: 12),
+                SectionLabel(AppLocalizations.of(context).accountSectionCredit),
+                VeriCard(
+                  child: Column(
+                    children: <Widget>[
+                      SettingsRow(
+                        icon: Icons.speed_outlined,
+                        title: AppLocalizations.of(context).creditLimitLabel,
+                        trailing: currentAccount.creditLimit == null
+                            ? AppLocalizations.of(context).notSet
+                            : formatAmount(currentAccount.creditLimit!),
+                        trailingIcon: Icons.chevron_right,
+                        onTap: () => _editCreditLimit(currentAccount),
+                      ),
+                      const Divider(height: 1),
+                      SettingsRow(
+                        icon: Icons.event_note_outlined,
+                        title: AppLocalizations.of(context).statementDay,
+                        trailing: currentAccount.statementDay == null
+                            ? AppLocalizations.of(context).notSet
+                            : AppLocalizations.of(
+                                context,
+                              ).monthlyDayLabel(currentAccount.statementDay!),
+                        trailingIcon: Icons.chevron_right,
+                        onTap: () => _pickBillingDay(currentAccount, false),
+                      ),
+                      const Divider(height: 1),
+                      SettingsRow(
+                        icon: Icons.event_available_outlined,
+                        title: AppLocalizations.of(context).dueDay,
+                        trailing: currentAccount.dueDay == null
+                            ? AppLocalizations.of(context).notSet
+                            : AppLocalizations.of(
+                                context,
+                              ).monthlyDayLabel(currentAccount.dueDay!),
+                        trailingIcon: Icons.chevron_right,
+                        onTap: () => _pickBillingDay(currentAccount, true),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              SectionLabel(AppLocalizations.of(context).accountSectionDisplay),
               VeriCard(
                 child: Column(
                   children: <Widget>[
@@ -287,127 +421,9 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                         );
                       },
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              VeriCard(
-                child: Column(
-                  children: <Widget>[
-                    SettingsRow(
-                      icon: Icons.category_outlined,
-                      title: AppLocalizations.of(context).commonType,
-                      trailing: currentAccount.type.label(
-                        AppLocalizations.of(context),
-                      ),
-                      trailingIcon: Icons.chevron_right,
-                      onTap: () => _pickAccountType(currentAccount),
-                    ),
-                    const Divider(),
-                    SettingsRow(
-                      icon: Icons.badge_outlined,
-                      title: AppLocalizations.of(context).commonName,
-                      trailing: currentAccount.name,
-                      trailingIcon: Icons.chevron_right,
-                      onTap: () => _editAccountName(currentAccount),
-                    ),
-                    const Divider(),
-                    if (currentAccount.type.supportsCardLast4) ...<Widget>[
-                      SettingsRow(
-                        icon: Icons.credit_card,
-                        title: AppLocalizations.of(context).cardLast4Label,
-                        trailing: currentAccount.cardLast4.isEmpty
-                            ? AppLocalizations.of(context).notSet
-                            : currentAccount.cardLast4,
-                        trailingIcon: Icons.chevron_right,
-                        onTap: () => _editCard(currentAccount),
-                      ),
-                      const Divider(),
-                      if (currentAccount.cardNumber.isNotEmpty) ...<Widget>[
-                        SettingsRow(
-                          icon: Icons.numbers_outlined,
-                          title: AppLocalizations.of(context).cardNumberTitle,
-                          trailing: currentAccount.cardNumber,
-                          trailingIcon: Icons.copy_outlined,
-                          onTap: () =>
-                              _copyCardNumber(currentAccount.cardNumber),
-                        ),
-                        const Divider(),
-                      ],
-                    ],
-                    if (currentAccount.type.supportsCredit) ...<Widget>[
-                      SettingsRow(
-                        icon: Icons.speed_outlined,
-                        title: AppLocalizations.of(context).creditLimitLabel,
-                        trailing: currentAccount.creditLimit == null
-                            ? AppLocalizations.of(context).notSet
-                            : formatAmount(currentAccount.creditLimit!),
-                        trailingIcon: Icons.chevron_right,
-                        onTap: () => _editCreditLimit(currentAccount),
-                      ),
-                      const Divider(),
-                      SettingsRow(
-                        icon: Icons.event_note_outlined,
-                        title: AppLocalizations.of(context).statementDay,
-                        trailing: currentAccount.statementDay == null
-                            ? AppLocalizations.of(context).notSet
-                            : AppLocalizations.of(
-                                context,
-                              ).monthlyDayLabel(currentAccount.statementDay!),
-                        trailingIcon: Icons.chevron_right,
-                        onTap: () => _pickBillingDay(currentAccount, false),
-                      ),
-                      const Divider(),
-                      SettingsRow(
-                        icon: Icons.event_available_outlined,
-                        title: AppLocalizations.of(context).dueDay,
-                        trailing: currentAccount.dueDay == null
-                            ? AppLocalizations.of(context).notSet
-                            : AppLocalizations.of(
-                                context,
-                              ).monthlyDayLabel(currentAccount.dueDay!),
-                        trailingIcon: Icons.chevron_right,
-                        onTap: () => _pickBillingDay(currentAccount, true),
-                      ),
-                      const Divider(),
-                    ],
-                    SettingsRow(
-                      icon: Icons.image_outlined,
-                      title: AppLocalizations.of(context).commonIcon,
-                      trailing: iconLabelForCode(
-                        AppLocalizations.of(context),
-                        currentAccount.iconCode,
-                      ),
-                      trailingIcon: Icons.chevron_right,
-                      onTap: () => _pickAccountIcon(currentAccount),
-                    ),
-                    const Divider(),
-                    SettingsRow(
-                      icon: Icons.currency_yuan,
-                      title: AppLocalizations.of(context).commonCurrency,
-                      trailing: AppLocalizations.of(context).currencyCny,
-                    ),
-                    const Divider(),
-                    SettingsRow(
-                      icon: Icons.notes,
-                      title: AppLocalizations.of(context).commonNote,
-                      trailing: currentAccount.note.isEmpty
-                          ? AppLocalizations.of(context).commonNoneShort
-                          : currentAccount.note,
-                      trailingIcon: Icons.chevron_right,
-                      onTap: () => _editAccountNote(currentAccount),
-                    ),
-                    const Divider(),
-                    SettingsRow(
-                      icon: Icons.folder_outlined,
-                      title: AppLocalizations.of(context).commonGroup,
-                      trailing: groupName,
-                      trailingIcon: Icons.chevron_right,
-                      onTap: () => _pickAccountGroup(currentAccount),
-                    ),
-                    const Divider(),
                     // 设为该账本记账时的默认付款账户（关闭即清除默认）。隐藏账户不提供。
-                    if (!currentAccount.hidden)
+                    if (!currentAccount.hidden) ...<Widget>[
+                      const Divider(height: 1),
                       CompactSwitchRow(
                         icon: Icons.push_pin_outlined,
                         title: Text(
@@ -421,21 +437,23 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                           value ? currentAccount.id : null,
                         ),
                       ),
-                    if (!currentAccount.hidden) const Divider(),
-                    SettingsRow(
-                      icon: Icons.delete_outline,
-                      title: AppLocalizations.of(context).accountDelete,
-                      trailing: entries.isEmpty
-                          ? AppLocalizations.of(context).deletableLabel
-                          : AppLocalizations.of(context).hasEntriesLabel,
-                      trailingIcon: Icons.chevron_right,
-                      onTap: () => confirmDeleteAccount(
-                        context,
-                        currentAccount,
-                        entries,
-                      ),
-                    ),
+                    ],
                   ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              SectionLabel(AppLocalizations.of(context).accountSectionDanger),
+              VeriCard(
+                child: SettingsRow(
+                  icon: Icons.delete_outline,
+                  title: AppLocalizations.of(context).accountDelete,
+                  contentColor: veriExpense,
+                  trailing: entries.isEmpty
+                      ? AppLocalizations.of(context).deletableLabel
+                      : AppLocalizations.of(context).hasEntriesLabel,
+                  trailingIcon: Icons.chevron_right,
+                  onTap: () =>
+                      confirmDeleteAccount(context, currentAccount, entries),
                 ),
               ),
             ],

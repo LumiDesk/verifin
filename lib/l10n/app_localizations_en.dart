@@ -839,6 +839,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cardLast4Invalid => 'Enter 1-4 digits';
 
   @override
+  String get cardLabel => 'Card number';
+
+  @override
   String get cardNumberLabel => 'Full card number (optional)';
 
   @override
@@ -852,6 +855,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get copiedToClipboard => 'Copied to clipboard';
+
+  @override
+  String get accountSectionBasic => 'Basic info';
+
+  @override
+  String get accountSectionCard => 'Card details';
+
+  @override
+  String get accountSectionCredit => 'Credit';
+
+  @override
+  String get accountSectionDisplay => 'Display & bookkeeping';
+
+  @override
+  String get accountSectionDanger => 'Danger zone';
 
   @override
   String get accountBalanceLabel => 'Account balance';
