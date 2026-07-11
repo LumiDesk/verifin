@@ -150,6 +150,7 @@
   "themeLight": "浅色",
   "themeDark": "深色",
   "accountTypeOnlinePayment": "网络支付",
+  "accountTypeCreditAccount": "信用账户",
   "accountTypeCreditCard": "信用卡",
   "accountTypeDebitCard": "储蓄卡",
   "accountTypeInvestment": "投资账户",

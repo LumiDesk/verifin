@@ -434,6 +434,12 @@ abstract class AppLocalizations {
   /// **'网络支付'**
   String get accountTypeOnlinePayment;
 
+  /// No description provided for @accountTypeCreditAccount.
+  ///
+  /// In zh, this message translates to:
+  /// **'信用账户'**
+  String get accountTypeCreditAccount;
+
   /// No description provided for @accountTypeCreditCard.
   ///
   /// In zh, this message translates to:

@@ -482,6 +482,8 @@ class SqliteLedgerRepository implements LedgerRepository {
         'include_in_assets': a.includeInAssets ? 1 : 0,
         'hidden': a.hidden ? 1 : 0,
         'card_last4': a.cardLast4,
+        'card_number': a.cardNumber,
+        'credit_limit': a.creditLimit,
         'sort_order': index,
         'statement_day': a.statementDay,
         'due_day': a.dueDay,
@@ -499,6 +501,8 @@ class SqliteLedgerRepository implements LedgerRepository {
     includeInAssets: (row['include_in_assets'] as int) != 0,
     hidden: (row['hidden'] as int) != 0,
     cardLast4: row['card_last4'] as String? ?? '',
+    cardNumber: row['card_number'] as String? ?? '',
+    creditLimit: (row['credit_limit'] as num?)?.toDouble(),
     statementDay: (row['statement_day'] as num?)?.toInt(),
     dueDay: (row['due_day'] as num?)?.toInt(),
   );

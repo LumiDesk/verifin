@@ -56,6 +56,7 @@
   "themeLight": "Light",
   "themeDark": "Dark",
   "accountTypeOnlinePayment": "Online payment",
+  "accountTypeCreditAccount": "Credit account",
   "accountTypeCreditCard": "Credit card",
   "accountTypeDebitCard": "Debit card",
   "accountTypeInvestment": "Investment",

@@ -183,6 +183,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get accountTypeOnlinePayment => '网络支付';
 
   @override
+  String get accountTypeCreditAccount => '信用账户';
+
+  @override
   String get accountTypeCreditCard => '信用卡';
 
   @override

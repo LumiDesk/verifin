@@ -185,6 +185,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountTypeOnlinePayment => 'Online payment';
 
   @override
+  String get accountTypeCreditAccount => 'Credit account';
+
+  @override
   String get accountTypeCreditCard => 'Credit card';
 
   @override
