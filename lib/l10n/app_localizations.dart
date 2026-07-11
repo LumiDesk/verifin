@@ -4892,6 +4892,96 @@ abstract class AppLocalizations {
   /// **'未配置'**
   String get aiNotConfigured;
 
+  /// No description provided for @aiChatTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 助手'**
+  String get aiChatTitle;
+
+  /// No description provided for @aiChatClearHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'清空聊天记录'**
+  String get aiChatClearHistory;
+
+  /// No description provided for @aiChatClearMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'将删除当前所有对话，无法恢复。'**
+  String get aiChatClearMessage;
+
+  /// No description provided for @aiChatClearConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'清空'**
+  String get aiChatClearConfirm;
+
+  /// No description provided for @aiChatThinking.
+  ///
+  /// In zh, this message translates to:
+  /// **'思考中…'**
+  String get aiChatThinking;
+
+  /// No description provided for @aiChatQuerying.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在查询…'**
+  String get aiChatQuerying;
+
+  /// No description provided for @aiChatUnconfiguredHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'先配置 AI，才能开始对话查询账目'**
+  String get aiChatUnconfiguredHint;
+
+  /// No description provided for @aiChatGoConfigure.
+  ///
+  /// In zh, this message translates to:
+  /// **'去配置 AI'**
+  String get aiChatGoConfigure;
+
+  /// No description provided for @aiChatEmptyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'问问 AI 你的账目'**
+  String get aiChatEmptyTitle;
+
+  /// No description provided for @aiChatInputHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'问问你的账目…'**
+  String get aiChatInputHint;
+
+  /// No description provided for @aiChatHintTopCategory.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个月花最多的是哪些分类？'**
+  String get aiChatHintTopCategory;
+
+  /// No description provided for @aiChatHintLargeExpense.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近三个月有哪些大额支出？'**
+  String get aiChatHintLargeExpense;
+
+  /// No description provided for @aiChatHintMonthSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月收支情况怎么样？'**
+  String get aiChatHintMonthSummary;
+
+  /// No description provided for @aiChatNoData.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无数据'**
+  String get aiChatNoData;
+
+  /// No description provided for @aiChatNoMatchingTx.
+  ///
+  /// In zh, this message translates to:
+  /// **'无匹配交易'**
+  String get aiChatNoMatchingTx;
+
   /// No description provided for @aiSettingsIntro.
   ///
   /// In zh, this message translates to:

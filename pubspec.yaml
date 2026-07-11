@@ -65,6 +65,8 @@ dependencies:
   flutter_timezone: ^5.1.0
   # 截图识账：端上离线 OCR（中文模型），图片不出设备，只把识别文本交给用户自配 AI。
   google_mlkit_text_recognition: ^0.15.1
+  # AI 对话查询的助手答复按 Markdown 渲染（表格/列表/加粗）；纯 Dart、为 LLM 输出设计。
+  gpt_markdown: ^1.1.7
 
 dev_dependencies:
   flutter_test:

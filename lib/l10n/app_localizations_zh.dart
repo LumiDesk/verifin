@@ -2641,6 +2641,51 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiNotConfigured => '未配置';
 
   @override
+  String get aiChatTitle => 'AI 助手';
+
+  @override
+  String get aiChatClearHistory => '清空聊天记录';
+
+  @override
+  String get aiChatClearMessage => '将删除当前所有对话，无法恢复。';
+
+  @override
+  String get aiChatClearConfirm => '清空';
+
+  @override
+  String get aiChatThinking => '思考中…';
+
+  @override
+  String get aiChatQuerying => '正在查询…';
+
+  @override
+  String get aiChatUnconfiguredHint => '先配置 AI，才能开始对话查询账目';
+
+  @override
+  String get aiChatGoConfigure => '去配置 AI';
+
+  @override
+  String get aiChatEmptyTitle => '问问 AI 你的账目';
+
+  @override
+  String get aiChatInputHint => '问问你的账目…';
+
+  @override
+  String get aiChatHintTopCategory => '这个月花最多的是哪些分类？';
+
+  @override
+  String get aiChatHintLargeExpense => '最近三个月有哪些大额支出？';
+
+  @override
+  String get aiChatHintMonthSummary => '本月收支情况怎么样？';
+
+  @override
+  String get aiChatNoData => '暂无数据';
+
+  @override
+  String get aiChatNoMatchingTx => '无匹配交易';
+
+  @override
   String get aiSettingsIntro =>
       '填写任意 OpenAI 兼容服务的请求地址、API Key 与模型。你的输入只会发送到这里配置的服务，配置只存本机、不进备份。';
 

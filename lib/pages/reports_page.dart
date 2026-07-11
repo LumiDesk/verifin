@@ -11,6 +11,7 @@ import '../app/ledger_math.dart';
 import '../app/models.dart';
 import '../app/series_math.dart';
 import '../app/veri_fin_scope.dart';
+import 'ai_chat_page.dart';
 import 'budget_pages.dart';
 import 'panel_settings_page.dart';
 import 'report_analysis_page.dart';
@@ -243,14 +244,26 @@ class ReportsPage extends StatelessWidget {
           PageHeader(
             title: AppLocalizations.of(context).tabReports,
             subtitle: AppLocalizations.of(context).reportsSubtitle,
-            trailing: HeaderAction(
-              icon: Icons.insights_outlined,
-              tooltip: AppLocalizations.of(context).statAnalysisTitle,
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const ReportAnalysisPage(),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                HeaderAction(
+                  icon: Icons.smart_toy_outlined,
+                  tooltip: AppLocalizations.of(context).aiChatTitle,
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(builder: (_) => const AiChatPage()),
+                  ),
                 ),
-              ),
+                HeaderAction(
+                  icon: Icons.insights_outlined,
+                  tooltip: AppLocalizations.of(context).statAnalysisTitle,
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const ReportAnalysisPage(),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           for (final id in panelIds) ...<Widget>[

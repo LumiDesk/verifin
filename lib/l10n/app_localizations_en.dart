@@ -2686,6 +2686,56 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiNotConfigured => 'Not set';
 
   @override
+  String get aiChatTitle => 'AI Assistant';
+
+  @override
+  String get aiChatClearHistory => 'Clear chat history';
+
+  @override
+  String get aiChatClearMessage =>
+      'This deletes the current conversation and cannot be undone.';
+
+  @override
+  String get aiChatClearConfirm => 'Clear';
+
+  @override
+  String get aiChatThinking => 'Thinking…';
+
+  @override
+  String get aiChatQuerying => 'Querying…';
+
+  @override
+  String get aiChatUnconfiguredHint =>
+      'Configure AI first to start asking about your finances';
+
+  @override
+  String get aiChatGoConfigure => 'Configure AI';
+
+  @override
+  String get aiChatEmptyTitle => 'Ask AI about your finances';
+
+  @override
+  String get aiChatInputHint => 'Ask about your finances…';
+
+  @override
+  String get aiChatHintTopCategory =>
+      'Which categories did I spend the most on this month?';
+
+  @override
+  String get aiChatHintLargeExpense =>
+      'What are my large expenses in the last 3 months?';
+
+  @override
+  String get aiChatHintMonthSummary =>
+      'How\'s my income and spending this month?';
+
+  @override
+  String get aiChatNoData => 'No data';
+
+  @override
+  String get aiChatNoMatchingTx => 'No matching transactions';
+
+  @override
   String get aiSettingsIntro =>
       'Enter the request URL, API key and model of any OpenAI-compatible service. Your input is only sent to the service configured here; the config stays on this device and is not backed up.';
 
