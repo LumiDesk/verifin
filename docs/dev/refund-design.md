@@ -1,7 +1,10 @@
 # 退款功能扩展 · 设计方案（草案）
 
-> 状态：**已定案（待你确认 §5.5 一处口径后开工）**。对应 GitHub Issue #6 第 1 条「退款相关账单功能」。
-> 本文保留你的 `「」` 批注作为决策记录；下方「决策速览」为据此定案的最终范围。
+> 状态：**已实现（v1）**。对应 GitHub Issue #6 第 1 条「退款相关账单功能」。
+> 本文保留你的 `「」` 批注作为决策记录；下方「决策速览」为最终范围。实现落点：模型/数学/迁移见
+> `models.dart`·`ledger_math.dart`·`veri_fin_controller_*.dart`·`app_database.dart`；UI 见
+> `refund_editor.dart`·`pending_refunds_page.dart`；技术决策见 `tech-decisions.md`「报销/退款模型」，
+> 时间线可见性的取舍见 `known-limitations.md` L3。
 
 ---
 
