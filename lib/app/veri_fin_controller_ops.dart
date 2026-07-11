@@ -52,13 +52,8 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     return _attachments.where((a) => a.entryId == entryId).length;
   }
 
-  /// 进程内单调自增序号，配合微秒时间戳生成不会碰撞的 id：连续两次生成可能落在
-  /// 同一微秒，单靠 microsecondsSinceEpoch 会得到相同 id（删一个会连带删同 id 的）。
-  int _idSeq = 0;
-
-  /// 生成唯一 id：`前缀_微秒时间戳_单调序号`。即便同一微秒批量生成也各不相同。
-  String _generateId(String prefix) =>
-      '${prefix}_${DateTime.now().microsecondsSinceEpoch}_${_idSeq++}';
+  // id 生成（_generateId / _idSeq）已下沉到 _ControllerState，便于载入期的
+  // _syncRefundData() 等基础流程合成条目时复用。
 
   /// 为交易新增一张图片附件（[dataUrl] 为压缩后的 JPEG data URL）。
   void addAttachment(String entryId, String dataUrl) {
@@ -907,6 +902,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     }
     _entries.addAll(entries);
     _entries.sort(_compareEntriesLatestFirst);
+    // 导入数据里的旧式单标量退款（如一木账单的「退款」列）迁成关联退款条目、
+    // 并重算净额缓存，使余额/统计当场即正确（不必等下次载入自愈）。
+    _syncRefundData();
     _persistAccounts();
     _persistCategories();
     _persistEntries();
@@ -937,17 +935,148 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
-  /// 设置支出被退款 / 报销回款冲抵的金额（回到原账户）。
-  /// [amount] 会被限制在 `[0, 原金额]`；设为 0 即撤销冲抵。
-  void setEntryRefundedAmount(String entryId, double amount) {
-    final index = _entries.indexWhere((item) => item.id == entryId);
-    if (index == -1 || _entries[index].type != EntryType.expense) {
-      return;
+  LedgerEntry? _entryOrNull(String id) {
+    for (final entry in _entries) {
+      if (entry.id == id) return entry;
     }
-    final entry = _entries[index];
-    final clamped = amount.clamp(0, entry.amount).toDouble();
-    _entries[index] = entry.copyWith(refundedAmount: clamped);
+    return null;
+  }
+
+  /// 某笔支出下的退款条目（到账优先、发起其次的时间倒序）。含待到账。
+  List<LedgerEntry> refundsForEntry(String expenseId) {
+    final list = _entries
+        .where((e) => e.type == EntryType.refund && e.refundOf == expenseId)
+        .toList();
+    list.sort((a, b) {
+      final ad = a.settledAt ?? a.occurredAt;
+      final bd = b.settledAt ?? b.occurredAt;
+      return bd.compareTo(ad);
+    });
+    return List<LedgerEntry>.unmodifiable(list);
+  }
+
+  /// 当前账本所有「待到账」退款（发起日倒序），用于「待退款」清单页。
+  List<LedgerEntry> get pendingRefunds {
+    final list = _entries
+        .where((e) => e.bookId == _activeBookId && e.isPendingRefund)
+        .toList();
+    list.sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
+    return List<LedgerEntry>.unmodifiable(list);
+  }
+
+  /// 某笔支出已挂的退款总额（含待到账），用于「剩余可退」与超额拦截。
+  double refundedTotalFor(String expenseId) {
+    var sum = 0.0;
+    for (final e in _entries) {
+      if (e.type == EntryType.refund && e.refundOf == expenseId) {
+        sum += e.amount;
+      }
+    }
+    return sum;
+  }
+
+  /// 某笔支出「剩余可退」额 = 原金额 − 已挂退款（含待到账），钳到 `[0, amount]`。
+  /// 决策 D：禁止超额，退款上限为原金额。
+  double remainingRefundable(String expenseId) {
+    final expense = _entryOrNull(expenseId);
+    if (expense == null || expense.type != EntryType.expense) return 0;
+    return (expense.amount - refundedTotalFor(expenseId))
+        .clamp(0.0, expense.amount)
+        .toDouble();
+  }
+
+  /// 给某笔支出添加一笔退款。金额自动截到「剩余可退」（决策 D：禁止超额）。
+  /// [settledAt] 为 null 表示「待到账」（不进余额 / 净额，只进待退款清单）。
+  /// 返回实际记入的退款条目；金额 ≤ 0 或支出不存在时返回 null。
+  LedgerEntry? addRefund({
+    required String expenseId,
+    required double amount,
+    required String accountId,
+    required DateTime initiatedAt,
+    DateTime? settledAt,
+    String note = '',
+  }) {
+    final expense = _entryOrNull(expenseId);
+    if (expense == null || expense.type != EntryType.expense) return null;
+    final capped = amount.clamp(0.0, remainingRefundable(expenseId)).toDouble();
+    if (capped <= 0) return null;
+    final refund = LedgerEntry(
+      id: _generateId('entry'),
+      bookId: expense.bookId,
+      type: EntryType.refund,
+      amount: capped,
+      categoryId: expense.categoryId,
+      accountId: accountId,
+      note: note,
+      occurredAt: initiatedAt,
+      refundOf: expenseId,
+      settledAt: settledAt,
+    );
+    _entries.add(refund);
+    _entries.sort(_compareEntriesLatestFirst);
+    _syncRefundCache(); // 重算原支出净额缓存
     _persistEntries();
+    notifyListeners();
+    onEntryAdded?.call();
+    return refund;
+  }
+
+  /// 更新一笔退款（金额/到账账户/发起日期/备注/到账状态）。
+  /// 金额自动截到「剩余可退（不含本笔旧值）」，防止超额。
+  void updateRefund(LedgerEntry refund) {
+    final index = _entries.indexWhere(
+      (e) => e.id == refund.id && e.type == EntryType.refund,
+    );
+    if (index == -1) return;
+    final expenseId = refund.refundOf ?? _entries[index].refundOf;
+    final expense = expenseId == null ? null : _entryOrNull(expenseId);
+    var otherSum = 0.0;
+    for (final e in _entries) {
+      if (e.id != refund.id &&
+          e.type == EntryType.refund &&
+          e.refundOf == expenseId) {
+        otherSum += e.amount;
+      }
+    }
+    final cap = expense == null
+        ? refund.amount
+        : (expense.amount - otherSum).clamp(0.0, expense.amount).toDouble();
+    _entries[index] = refund.copyWith(
+      amount: refund.amount.clamp(0.0, cap).toDouble(),
+    );
+    _entries.sort(_compareEntriesLatestFirst);
+    _syncRefundCache();
+    _persistEntries();
+    notifyListeners();
+  }
+
+  /// 标记退款「已到账」（传到账日期）或改回「待到账」（传 null）。
+  void setRefundSettled(String refundId, DateTime? settledAt) {
+    final index = _entries.indexWhere(
+      (e) => e.id == refundId && e.type == EntryType.refund,
+    );
+    if (index == -1) return;
+    _entries[index] = _entries[index].copyWith(
+      settledAt: settledAt,
+      clearSettledAt: settledAt == null,
+    );
+    _syncRefundCache();
+    _persistEntries();
+    notifyListeners();
+  }
+
+  /// 删除一笔退款条目（原支出净额缓存随之恢复）。
+  void deleteRefund(String refundId) {
+    final index = _entries.indexWhere(
+      (e) => e.id == refundId && e.type == EntryType.refund,
+    );
+    if (index == -1) return;
+    _entries.removeAt(index);
+    _syncRefundCache();
+    _persistEntries();
+    if (_removeAttachmentsForEntries(<String>{refundId})) {
+      _persistAttachments();
+    }
     notifyListeners();
   }
 
@@ -1035,22 +1164,40 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   }
 
   void deleteEntry(String entryId) {
-    _entries.removeWhere((entry) => entry.id == entryId);
+    // 删支出时级联删除挂它的退款条目；删退款时由 _syncRefundData 恢复原支出净额缓存。
+    final refundIds = _entries
+        .where((e) => e.type == EntryType.refund && e.refundOf == entryId)
+        .map((e) => e.id)
+        .toSet();
+    final removeIds = <String>{entryId, ...refundIds};
+    _entries.removeWhere((entry) => removeIds.contains(entry.id));
+    _syncRefundCache();
     _persistEntries();
-    if (_removeAttachmentsForEntries(<String>{entryId})) {
+    if (_removeAttachmentsForEntries(removeIds)) {
       _persistAttachments();
     }
     notifyListeners();
   }
 
-  /// 批量删除交易（连同附件级联清理）。
+  /// 批量删除交易（连同关联退款条目与附件级联清理）。
   void deleteEntries(Set<String> entryIds) {
     if (entryIds.isEmpty) {
       return;
     }
-    _entries.removeWhere((entry) => entryIds.contains(entry.id));
+    final refundIds = _entries
+        .where(
+          (e) =>
+              e.type == EntryType.refund &&
+              e.refundOf != null &&
+              entryIds.contains(e.refundOf),
+        )
+        .map((e) => e.id)
+        .toSet();
+    final removeIds = <String>{...entryIds, ...refundIds};
+    _entries.removeWhere((entry) => removeIds.contains(entry.id));
+    _syncRefundCache();
     _persistEntries();
-    if (_removeAttachmentsForEntries(entryIds)) {
+    if (_removeAttachmentsForEntries(removeIds)) {
       _persistAttachments();
     }
     notifyListeners();
@@ -1904,6 +2051,8 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     // 备份恢复零参照完整性校验，是「幽灵同名分类」的唯一现实入口（内部不一致的外部/
     // 异构/手改备份）；覆盖后跑一遍自愈，堵住这个入口。落库统一由下方 _persistAllLedgerData。
     _healCategoryData();
+    // 退款自愈：把导入数据里的旧标量退款迁成关联退款条目并重算净额缓存。
+    _syncRefundData();
     _persistAllLedgerData();
     _store.write(_activeBookKey, _activeBookId);
     _store.write(_profileKey, jsonEncode(_profile.toJson()));

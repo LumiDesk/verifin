@@ -11,6 +11,7 @@ import '../app/series_math.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
+import 'pending_refunds_page.dart';
 import 'sheets.dart';
 import 'transaction_detail_page.dart';
 
@@ -147,7 +148,10 @@ class _TransactionsPageState extends State<TransactionsPage> {
   @override
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
-    final entries = _sortedEntries(_filteredEntries(controller.entries));
+    // 退款条目在原支出上管理，不单独进交易列表（净额已体现在支出行）。
+    final entries = _sortedEntries(
+      _filteredEntries(controller.entries),
+    ).where((e) => e.type != EntryType.refund).toList();
     final expense = sumByType(entries, EntryType.expense);
     final income = sumByType(entries, EntryType.income);
     final groupedEntries = groupEntriesByDate(entries);
@@ -200,12 +204,26 @@ class _TransactionsPageState extends State<TransactionsPage> {
                         _selectedIds.clear();
                       }),
                     )
-                  else if (entries.isNotEmpty)
-                    HeaderAction(
-                      icon: Icons.checklist,
-                      tooltip: AppLocalizations.of(context).multiSelect,
-                      onPressed: () => setState(() => _selectionMode = true),
-                    ),
+                  else ...<Widget>[
+                    if (controller.pendingRefunds.isNotEmpty)
+                      HeaderAction(
+                        icon: Icons.schedule,
+                        tooltip: AppLocalizations.of(
+                          context,
+                        ).pendingRefundsTitle,
+                        onPressed: () => Navigator.of(context).push<void>(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const PendingRefundsPage(),
+                          ),
+                        ),
+                      ),
+                    if (entries.isNotEmpty)
+                      HeaderAction(
+                        icon: Icons.checklist,
+                        tooltip: AppLocalizations.of(context).multiSelect,
+                        onPressed: () => setState(() => _selectionMode = true),
+                      ),
+                  ],
                 ],
               ),
               const SizedBox(height: 8),

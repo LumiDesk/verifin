@@ -276,6 +276,8 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       EntryType.expense => veriExpense,
       EntryType.income => veriIncome,
       EntryType.transfer => veriBlue,
+      // 退款不在此页手动选择，仅作穷尽兜底（正向流入用青绿）。
+      EntryType.refund => veriIncome,
     };
 
     return Scaffold(
@@ -299,7 +301,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                   const SizedBox(height: 12),
                   SegmentedButton<EntryType>(
                     key: const Key('entry_type_segmented_button'),
-                    segments: EntryType.values
+                    segments: EntryType.userSelectable
                         .map(
                           (type) => ButtonSegment<EntryType>(
                             value: type,

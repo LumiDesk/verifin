@@ -410,6 +410,12 @@ abstract class AppLocalizations {
   /// **'转账'**
   String get entryTypeTransfer;
 
+  /// No description provided for @entryTypeRefund.
+  ///
+  /// In zh, this message translates to:
+  /// **'退款'**
+  String get entryTypeRefund;
+
   /// No description provided for @themeSystem.
   ///
   /// In zh, this message translates to:
@@ -2551,6 +2557,138 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'退款 / 报销回款金额'**
   String get refundAmountTitle;
+
+  /// No description provided for @refundRecordsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'退款'**
+  String get refundRecordsTitle;
+
+  /// No description provided for @refundAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加退款'**
+  String get refundAdd;
+
+  /// No description provided for @refundEditTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'编辑退款'**
+  String get refundEditTitle;
+
+  /// No description provided for @refundStatusSettled.
+  ///
+  /// In zh, this message translates to:
+  /// **'已到账'**
+  String get refundStatusSettled;
+
+  /// No description provided for @refundStatusPending.
+  ///
+  /// In zh, this message translates to:
+  /// **'待到账'**
+  String get refundStatusPending;
+
+  /// No description provided for @refundToAccountLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'到账账户'**
+  String get refundToAccountLabel;
+
+  /// No description provided for @refundArrivalDateLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'到账日期'**
+  String get refundArrivalDateLabel;
+
+  /// No description provided for @refundInitiatedDateLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'发起日期'**
+  String get refundInitiatedDateLabel;
+
+  /// No description provided for @refundAmountShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'退款金额'**
+  String get refundAmountShort;
+
+  /// No description provided for @refundIsSettledLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'已到账（钱已退回账户）'**
+  String get refundIsSettledLabel;
+
+  /// No description provided for @refundMarkSettled.
+  ///
+  /// In zh, this message translates to:
+  /// **'标记已到账'**
+  String get refundMarkSettled;
+
+  /// No description provided for @refundEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无退款，点下方添加'**
+  String get refundEmpty;
+
+  /// No description provided for @refundDeleteConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定删除这笔退款吗？删除后原支出净额会恢复。'**
+  String get refundDeleteConfirm;
+
+  /// No description provided for @refundRemainingLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'剩余可退 {amount}'**
+  String refundRemainingLabel(String amount);
+
+  /// No description provided for @refundOverCapNotice.
+  ///
+  /// In zh, this message translates to:
+  /// **'退款不能超过剩余可退，已按上限 {amount} 记入'**
+  String refundOverCapNotice(String amount);
+
+  /// No description provided for @refundNetLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'净支出 {amount}'**
+  String refundNetLabel(String amount);
+
+  /// No description provided for @refundSummaryLine.
+  ///
+  /// In zh, this message translates to:
+  /// **'已退 {count} 笔 · 净支出 {net}'**
+  String refundSummaryLine(int count, String net);
+
+  /// No description provided for @refundPendingTotal.
+  ///
+  /// In zh, this message translates to:
+  /// **'待到账 {amount}'**
+  String refundPendingTotal(String amount);
+
+  /// No description provided for @pendingRefundsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'待退款'**
+  String get pendingRefundsTitle;
+
+  /// No description provided for @pendingRefundsSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'已申请、还没到账的退款'**
+  String get pendingRefundsSubtitle;
+
+  /// No description provided for @pendingRefundsEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有待到账的退款'**
+  String get pendingRefundsEmpty;
+
+  /// No description provided for @pendingRefundsCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 笔在路上'**
+  String pendingRefundsCount(int count);
 
   /// No description provided for @pickTypeTitle.
   ///

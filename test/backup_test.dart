@@ -230,6 +230,11 @@ void main() {
     );
     expect(reimbursed.reimbursable, isTrue);
     expect(reimbursed.netAmount, 20.0);
+    // 样例带一条关联退款条目（新格式：refundOf + settledAt），导入后应能读回。
+    final sampleRefunds = controller.refundsForEntry('entry_20260703_001');
+    expect(sampleRefunds.length, 1);
+    expect(sampleRefunds.single.amount, 8.5);
+    expect(sampleRefunds.single.settledAt, isNotNull);
     expect(
       controller.categoryBudget(DateTime(2026, 7), 'dining'),
       greaterThan(0),

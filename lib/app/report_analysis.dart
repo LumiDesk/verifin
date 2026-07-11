@@ -116,6 +116,9 @@ ReportSummary reportSummary(Iterable<LedgerEntry> entries) {
         expenseCount += 1;
       case EntryType.transfer:
         break;
+      case EntryType.refund:
+        // 退款不计入收支汇总——冲减已体现在原支出净额里，再计一次即重复。
+        break;
     }
   }
   return ReportSummary(

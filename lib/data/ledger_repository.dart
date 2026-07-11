@@ -365,6 +365,8 @@ class SqliteLedgerRepository implements LedgerRepository {
     'fee': e.fee,
     'reimbursable': e.reimbursable ? 1 : 0,
     'refunded_amount': e.refundedAmount,
+    'refund_of': e.refundOf,
+    'settled_at': e.settledAt?.millisecondsSinceEpoch,
   };
 
   static LedgerEntry _entryFromRow(Map<String, Object?> row) => LedgerEntry(
@@ -381,6 +383,10 @@ class SqliteLedgerRepository implements LedgerRepository {
     fee: (row['fee'] as num?)?.toDouble() ?? 0,
     reimbursable: ((row['reimbursable'] as int?) ?? 0) != 0,
     refundedAmount: (row['refunded_amount'] as num?)?.toDouble() ?? 0,
+    refundOf: row['refund_of'] as String?,
+    settledAt: row['settled_at'] == null
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(row['settled_at'] as int),
   );
 
   static List<String> _decodeTagIds(Object? raw) {

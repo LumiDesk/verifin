@@ -8,6 +8,7 @@ import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
 import 'attachments_editor.dart';
+import 'refund_editor.dart';
 import 'sheets.dart';
 
 class TransactionDetailPage extends StatefulWidget {
@@ -32,7 +33,6 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
   late List<String> _tagIds;
   late double _fee;
   late bool _reimbursable;
-  late double _refundedAmount;
   late final TextEditingController _noteController;
 
   @override
@@ -58,7 +58,6 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     _tagIds = List<String>.of(entry.tagIds);
     _fee = entry.fee;
     _reimbursable = entry.reimbursable;
-    _refundedAmount = entry.refundedAmount;
     _noteController = TextEditingController(text: entry.note);
   }
 
@@ -120,6 +119,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       EntryType.expense => formatExpenseAmount(_amount),
       EntryType.income => '+${formatIncomeAmount(_amount)}',
       EntryType.transfer => formatAmount(_amount),
+      EntryType.refund => '+${formatIncomeAmount(_amount)}',
     };
 
     return Scaffold(
@@ -262,7 +262,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                       placeholder: _tagLabels(controller).isEmpty,
                       onTap: _pickTags,
                     ),
-                    if (_type == EntryType.expense) ...<Widget>[
+                    if (_type == EntryType.expense)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         child: Row(
@@ -280,20 +280,14 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                           ],
                         ),
                       ),
-                      DetailInfoRow(
-                        label: AppLocalizations.of(context).refundLabel,
-                        value: _refundedAmount > 0
-                            ? AppLocalizations.of(context).refundedAmountLabel(
-                                formatAmount(_refundedAmount),
-                              )
-                            : AppLocalizations.of(context).commonNoneShort,
-                        placeholder: _refundedAmount <= 0,
-                        onTap: _editRefund,
-                      ),
-                    ],
                   ],
                 ),
               ),
+              // 退款区（关联退款条目，即时增删改，不走保存按钮）。
+              if (_type == EntryType.expense) ...<Widget>[
+                const SizedBox(height: 12),
+                RefundSection(expenseId: widget.entryId),
+              ],
               const SizedBox(height: 12),
               VeriCard(
                 child: Builder(
@@ -345,25 +339,11 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     setState(() => _fee = fee);
   }
 
-  Future<void> _editRefund() async {
-    final refunded = await showNumberPadSheet(
-      context,
-      title: AppLocalizations.of(context).refundAmountTitle,
-      initialAmount: _refundedAmount > 0 ? _refundedAmount : null,
-      allowZero: true,
-    );
-    if (refunded == null || refunded < 0 || !mounted) {
-      return;
-    }
-    // 冲抵金额不超过原支出金额。
-    setState(() => _refundedAmount = refunded.clamp(0, _amount).toDouble());
-  }
-
   Future<void> _pickType() async {
     final selected = await showOptionSheet<EntryType>(
       context: context,
       title: AppLocalizations.of(context).pickTypeTitle,
-      values: EntryType.values,
+      values: EntryType.userSelectable,
       selected: _type,
       labelOf: (value) => value.label(AppLocalizations.of(context)),
     );
@@ -539,7 +519,8 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
         tagIds: _tagIds,
         fee: _type == EntryType.transfer ? _fee : 0,
         reimbursable: _type == EntryType.expense && _reimbursable,
-        refundedAmount: _type == EntryType.expense ? _refundedAmount : 0,
+        // 退款由关联退款条目管理（见 RefundSection），此处只保留净额缓存不动。
+        refundedAmount: _type == EntryType.expense ? entry.refundedAmount : 0,
       ),
     );
     Navigator.of(context).pop();

@@ -47,7 +47,11 @@ class HomePage extends StatelessWidget {
       trendEntries,
       trendWindow,
     );
-    final recentEntries = entries.take(5).toList();
+    // 退款条目在原支出上管理，不单独进时间线（净额已体现在支出行）。
+    final recentEntries = entries
+        .where((e) => e.type != EntryType.refund)
+        .take(5)
+        .toList();
     final monthlyBudget = controller.monthlyBudget(now);
     final categoryBudgetSnapshots = computeCategoryBudgetSnapshots(
       controller: controller,
@@ -770,12 +774,14 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
       EntryType.expense => formatExpenseAmount(total),
       EntryType.income => formatIncomeAmount(total),
       EntryType.transfer => formatAmount(total),
+      EntryType.refund => formatIncomeAmount(total),
     };
 
     String amountTextOf(double value) => switch (_type) {
       EntryType.expense => formatExpenseAmount(value),
       EntryType.income => '+${formatIncomeAmount(value)}',
       EntryType.transfer => formatAmount(value),
+      EntryType.refund => '+${formatIncomeAmount(value)}',
     };
 
     return Scaffold(
@@ -984,7 +990,7 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
     final selected = await showOptionSheet<EntryType>(
       context: context,
       title: AppLocalizations.of(context).statTypeTitle,
-      values: EntryType.values,
+      values: EntryType.userSelectable,
       selected: _type,
       labelOf: (value) => value.label(AppLocalizations.of(context)),
     );
@@ -1079,6 +1085,7 @@ class _DailyStatTile extends StatelessWidget {
       EntryType.expense => formatExpenseAmount(row.amount),
       EntryType.income => '+${formatIncomeAmount(row.amount)}',
       EntryType.transfer => formatAmount(row.amount),
+      EntryType.refund => '+${formatIncomeAmount(row.amount)}',
     };
     return InkWell(
       onTap: onTap,

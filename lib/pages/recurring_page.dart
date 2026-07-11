@@ -103,6 +103,8 @@ class _RecurringRow extends StatelessWidget {
       EntryType.expense => '-',
       EntryType.income => '+',
       EntryType.transfer => '',
+      // 周期规则不产生退款，仅作穷尽兜底。
+      EntryType.refund => '+',
     };
     return InkWell(
       onTap: onTap,
@@ -238,7 +240,7 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
               ),
               const SizedBox(height: 10),
               SegmentedButton<EntryType>(
-                segments: EntryType.values
+                segments: EntryType.userSelectable
                     .map(
                       (type) => ButtonSegment<EntryType>(
                         value: type,

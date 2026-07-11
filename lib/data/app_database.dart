@@ -13,7 +13,7 @@ class AppDatabase {
   final Database db;
 
   static const String defaultDatabaseName = 'verifin.db';
-  static const int schemaVersion = 12;
+  static const int schemaVersion = 13;
 
   /// 打开（或创建）数据库。测试通过 [factory]/[path] 注入 ffi 与内存路径；
   /// 真实平台留空则由 [resolveDatabaseFactory]/[resolveDatabasePath] 决定。
@@ -134,6 +134,14 @@ class AppDatabase {
         'ALTER TABLE accounts ADD COLUMN card_last4_follows INTEGER NOT NULL DEFAULT 0',
       );
     }
+    // v12 → v13：退款独立条目。交易新增 refund_of（指向原支出，退款条目专用）与
+    // settled_at（到账日期毫秒，NULL=待到账）。历史 refunded_amount 标量在 controller
+    // 载入时的 _syncRefundData() 里合成为已到账退款条目并作缓存重算，此处只加列。
+    // 判 entries 存在只为兼容迁移测试的最小桩库（真实库自 v1 起必有 entries）。
+    if (oldVersion < 13 && await _tableExists(db, 'entries')) {
+      await db.execute('ALTER TABLE entries ADD COLUMN refund_of TEXT');
+      await db.execute('ALTER TABLE entries ADD COLUMN settled_at INTEGER');
+    }
   }
 
   static Future<bool> _tableExists(Database db, String name) async {
@@ -253,7 +261,9 @@ class AppDatabase {
       tag_ids TEXT,
       fee REAL NOT NULL DEFAULT 0,
       reimbursable INTEGER NOT NULL DEFAULT 0,
-      refunded_amount REAL NOT NULL DEFAULT 0
+      refunded_amount REAL NOT NULL DEFAULT 0,
+      refund_of TEXT,
+      settled_at INTEGER
     )
     ''',
     'CREATE INDEX idx_entries_book ON entries (book_id)',

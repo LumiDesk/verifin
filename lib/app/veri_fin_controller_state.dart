@@ -205,7 +205,10 @@ mixin _ControllerState on ChangeNotifier {
       ..addAll(await _repository.loadDailyBudgets());
     // 一次性分类参照完整性自愈：修复历史/异构备份带入的孤儿 parentId、悬空分类引用、
     // 重复同名分类（消除「幽灵同名分类」的数据根因）。改动了才落库。
-    if (_healCategoryData()) {
+    // 退款数据自愈：迁移旧标量退款为关联退款条目并重算净额缓存。
+    final categoryHealed = _healCategoryData();
+    final refundHealed = _syncRefundData();
+    if (categoryHealed || refundHealed) {
       _persistAllLedgerData();
     }
     notifyListeners();
@@ -348,6 +351,87 @@ mixin _ControllerState on ChangeNotifier {
     return changed;
   }
 
+  /// 历史迁移：把旧版单标量退款（支出 `refundedAmount > 0` 却没有任何关联退款条目）
+  /// 合成为一条「已到账」退款条目（金额=标量、日期/账户取原支出、备注空），让旧数据
+  /// 平滑升级到新模型并使历史退款可见。迁移后余额与净额恒等不变（支出改扣全额、退款
+  /// 条目补回同额），只是把「一个数」变成「一条可见事件」。返回是否合成了条目。
+  ///
+  /// **只在载入/导入时调用一次**——绝不在退款增删改后调用：删掉最后一笔退款时缓存尚未
+  /// 清零，若在此判「有标量却无条目」会把退款又合成回来（曾导致删退款后余额不减）。
+  bool _migrateLegacyRefunds() {
+    final expensesWithRefundEntry = <String>{
+      for (final e in _entries)
+        if (e.type == EntryType.refund && e.refundOf != null) e.refundOf!,
+    };
+    final synthesized = <LedgerEntry>[];
+    for (final e in _entries) {
+      if (e.type == EntryType.expense &&
+          e.refundedAmount > 0 &&
+          !expensesWithRefundEntry.contains(e.id)) {
+        final amount = e.refundedAmount.clamp(0.0, e.amount).toDouble();
+        if (amount <= 0) continue;
+        synthesized.add(
+          LedgerEntry(
+            id: _generateId('entry'),
+            bookId: e.bookId,
+            type: EntryType.refund,
+            amount: amount,
+            categoryId: e.categoryId,
+            accountId: e.accountId,
+            note: '',
+            occurredAt: e.occurredAt, // 发起日期沿用原支出日
+            refundOf: e.id,
+            settledAt: e.occurredAt, // 历史退款视为已到账
+          ),
+        );
+      }
+    }
+    if (synthesized.isEmpty) return false;
+    _entries.addAll(synthesized);
+    return true;
+  }
+
+  /// 重算每笔支出的净额缓存 [LedgerEntry.refundedAmount] = 「挂它的·已到账·退款金额之和」
+  /// （钳到 `[0, amount]`）；无到账退款则归零。该缓存只驱动统计净额（[LedgerEntry.netAmount]），
+  /// 账户余额不读它。**待到账**退款（`settledAt == null`）不计入（cash basis）。
+  /// 每次退款增删改后调用；返回是否有改动。
+  bool _syncRefundCache() {
+    final settledByExpense = <String, double>{};
+    for (final e in _entries) {
+      if (e.type == EntryType.refund &&
+          e.settledAt != null &&
+          e.refundOf != null) {
+        settledByExpense[e.refundOf!] =
+            (settledByExpense[e.refundOf!] ?? 0) + e.amount;
+      }
+    }
+    var changed = false;
+    for (var i = 0; i < _entries.length; i++) {
+      final e = _entries[i];
+      if (e.type != EntryType.expense) continue;
+      final target = (settledByExpense[e.id] ?? 0)
+          .clamp(0.0, e.amount)
+          .toDouble();
+      if ((e.refundedAmount - target).abs() > 0.0001) {
+        _entries[i] = e.copyWith(refundedAmount: target);
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
+  /// 载入/导入时的退款自愈（幂等）：先迁移旧标量为退款条目，再重算净额缓存并排序。
+  /// 返回是否有改动（调用方据此决定落库）。
+  bool _syncRefundData() {
+    final migrated = _migrateLegacyRefunds();
+    final cached = _syncRefundCache();
+    final changed = migrated || cached;
+    if (changed) {
+      _entries.sort(_compareEntriesLatestFirst);
+    }
+    return changed;
+  }
+
   void _removeAccountFromOrders(String accountId) {
     for (final order in _assetAccountOrders.values) {
       order.remove(accountId);
@@ -426,6 +510,15 @@ mixin _ControllerState on ChangeNotifier {
         ..addAll(_decodeStringListMap(decoded));
     });
   }
+
+  /// 进程内单调自增序号，配合微秒时间戳生成不会碰撞的 id：连续两次生成可能落在
+  /// 同一微秒，单靠 microsecondsSinceEpoch 会得到相同 id（删一个会连带删同 id 的）。
+  int _idSeq = 0;
+
+  /// 生成唯一 id：`前缀_微秒时间戳_单调序号`。即便同一微秒批量生成也各不相同。
+  /// 放在状态层，供 [_syncRefundData] 等载入期基础流程与 [_ControllerOps] 共用。
+  String _generateId(String prefix) =>
+      '${prefix}_${DateTime.now().microsecondsSinceEpoch}_${_idSeq++}';
 
   void _persistEntries() {
     _trackWrite(_repository.saveEntries(List<LedgerEntry>.of(_entries)));

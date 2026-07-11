@@ -161,6 +161,8 @@ EntrySuggestion suggestEntry({
     EntryType.income => incomeCategoryIds,
     EntryType.expense => expenseCategoryIds,
     EntryType.transfer => const <String>{},
+    // 退款条目不作记账自动识别的候选（其分类沿用原支出）。
+    EntryType.refund => const <String>{},
   };
 
   final catWeight = <String, double>{};

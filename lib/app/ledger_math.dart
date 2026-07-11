@@ -14,14 +14,18 @@ double signedAmount(LedgerEntry entry) {
       return entry.amount;
     case EntryType.transfer:
       return 0;
+    case EntryType.refund:
+      // 退款不计入收支：冲减已体现在原支出的净额（netAmount）里，若再计一次即重复。
+      return 0;
   }
 }
 
 double accountDeltaForEntry(LedgerEntry entry, String accountId) {
   switch (entry.type) {
     case EntryType.expense:
-      // 退款回到原账户，账户净支出为「金额 − 已冲抵」。
-      return entry.accountId == accountId ? -entry.netAmount : 0;
+      // 支出按「全额」扣原账户；退款的回款由独立的退款条目（refund）单独入到账账户，
+      // 故此处不再扣净额——否则退款会被重复计（尤其退到不同账户时）。
+      return entry.accountId == accountId ? -entry.amount : 0;
     case EntryType.income:
       return entry.accountId == accountId ? entry.amount : 0;
     case EntryType.transfer:
@@ -35,6 +39,10 @@ double accountDeltaForEntry(LedgerEntry entry, String accountId) {
         delta += entry.amount;
       }
       return delta;
+    case EntryType.refund:
+      // 只有「已到账」退款影响余额，钱进到账账户（accountId）；待到账不动余额。
+      if (entry.settledAt == null) return 0;
+      return entry.accountId == accountId ? entry.amount : 0;
   }
 }
 
@@ -50,6 +58,9 @@ Color colorForType(EntryType type) {
       return veriIncome;
     case EntryType.transfer:
       return veriRoyal;
+    case EntryType.refund:
+      // 退款是「钱回来」的正向流入，沿用收入的青绿色。
+      return veriIncome;
   }
 }
 

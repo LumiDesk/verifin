@@ -5,7 +5,13 @@ import '../l10n/app_localizations.dart';
 enum EntryType {
   expense,
   income,
-  transfer;
+  transfer,
+
+  /// 退款：挂在某笔原支出（[LedgerEntry.refundOf]）上的独立条目，把钱退回某账户。
+  /// 类比转账——不计入收支统计、只影响账户余额（仅「已到账」`settledAt != null` 时）；
+  /// 并通过缓存 [LedgerEntry.refundedAmount] 冲减原支出净额。不能在普通记账页手动选择，
+  /// 只能从「原支出 → 添加退款」创建。
+  refund;
 
   String label(AppLocalizations l10n) {
     switch (this) {
@@ -15,6 +21,8 @@ enum EntryType {
         return l10n.entryTypeIncome;
       case EntryType.transfer:
         return l10n.entryTypeTransfer;
+      case EntryType.refund:
+        return l10n.entryTypeRefund;
     }
   }
 
@@ -26,6 +34,8 @@ enum EntryType {
         return 'income';
       case EntryType.transfer:
         return 'transfer';
+      case EntryType.refund:
+        return 'refund';
     }
   }
 
@@ -35,6 +45,14 @@ enum EntryType {
       orElse: () => EntryType.expense,
     );
   }
+
+  /// 用户可在记账 / 编辑 / 统计界面直接选择的类型（不含 [refund]——退款只能从
+  /// 「原支出 → 添加退款」创建，不作为普通可选类型）。
+  static const List<EntryType> userSelectable = <EntryType>[
+    EntryType.expense,
+    EntryType.income,
+    EntryType.transfer,
+  ];
 }
 
 enum ThemePreference {
@@ -227,6 +245,8 @@ class LedgerEntry {
     this.fee = 0,
     this.reimbursable = false,
     this.refundedAmount = 0,
+    this.refundOf,
+    this.settledAt,
   });
 
   final String id;
@@ -247,12 +267,29 @@ class LedgerEntry {
   final double fee;
 
   /// 是否标记为「待报销」（仅支出有意义）。仅作标记，不影响金额；
-  /// 报销/退款到账通过 [refundedAmount] 冲抵原交易。
+  /// 报销/退款到账通过关联的退款条目（[EntryType.refund]）冲抵原交易。
   final bool reimbursable;
 
-  /// 已被退款 / 报销回款冲抵的金额（仅支出有意义，回到原账户）。
-  /// 统计与账户余额都按「金额 − 已冲抵」的净额计算。
+  /// 已被退款 / 报销回款冲抵的金额（仅支出有意义）——**派生缓存**，
+  /// 恒等于「挂在本支出上的·已到账·退款条目金额之和」，由 controller 的
+  /// `_syncRefundData()` 在载入 / 导入 / 退款增删改时重算并落库，从不独立写入。
+  /// 只驱动 **统计口径的净额**（[netAmount]）；**账户余额不读它**——余额是
+  /// 「支出扣全额 + 退款条目给到账账户加」，故支持退款到不同账户。
   final double refundedAmount;
+
+  /// 退款条目专用：指向被退的原支出 `id`（仅 [EntryType.refund] 非空）。
+  final String? refundOf;
+
+  /// 退款条目专用：**到账日期**；`null` = 待到账（pending）。
+  /// 待到账退款不进余额 / 净额 / 收支统计，只进「待退款」清单；`occurredAt` 复用为
+  /// **发起日期**。仅 [EntryType.refund] 有意义。
+  final DateTime? settledAt;
+
+  /// 是否为「待到账」退款（已申请、钱还没回来）。
+  bool get isPendingRefund => type == EntryType.refund && settledAt == null;
+
+  /// 是否为「已到账」退款（真正影响余额 / 净额）。
+  bool get isSettledRefund => type == EntryType.refund && settledAt != null;
 
   /// 净支出额（原金额减去已退款/报销回款）。非支出返回原金额。
   /// 净额钳制在 [0, amount]：编辑时把金额改到低于已退款额、或损坏备份导入越界值时，
@@ -278,6 +315,10 @@ class LedgerEntry {
     double? fee,
     bool? reimbursable,
     double? refundedAmount,
+    String? refundOf,
+    bool clearRefundOf = false,
+    DateTime? settledAt,
+    bool clearSettledAt = false,
   }) {
     return LedgerEntry(
       id: id ?? this.id,
@@ -293,6 +334,8 @@ class LedgerEntry {
       fee: fee ?? this.fee,
       reimbursable: reimbursable ?? this.reimbursable,
       refundedAmount: refundedAmount ?? this.refundedAmount,
+      refundOf: clearRefundOf ? null : refundOf ?? this.refundOf,
+      settledAt: clearSettledAt ? null : settledAt ?? this.settledAt,
     );
   }
 
@@ -311,6 +354,8 @@ class LedgerEntry {
       if (fee != 0) 'fee': fee,
       if (reimbursable) 'reimbursable': true,
       if (refundedAmount != 0) 'refundedAmount': refundedAmount,
+      if (refundOf != null) 'refundOf': refundOf,
+      if (settledAt != null) 'settledAt': settledAt!.toIso8601String(),
     };
   }
 
@@ -331,6 +376,8 @@ class LedgerEntry {
       fee: (json['fee'] as num?)?.toDouble() ?? 0,
       reimbursable: json['reimbursable'] as bool? ?? false,
       refundedAmount: (json['refundedAmount'] as num?)?.toDouble() ?? 0,
+      refundOf: json['refundOf'] as String?,
+      settledAt: DateTime.tryParse(json['settledAt'] as String? ?? ''),
     );
   }
 }

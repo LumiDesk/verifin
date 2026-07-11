@@ -60,6 +60,63 @@ void main() {
     expect(reloaded.entries.single.id, '1');
   });
 
+  test('退款关联条目（refund_of/settled_at）写入 SQLite 并被新控制器读回', () async {
+    final repo = await openRepo();
+    final controller = await VeriFinController.create(
+      LocalKeyValueStore(),
+      repository: repo,
+    );
+    final bookId = controller.activeBook.id;
+    controller
+      ..addAccount(
+        Account(
+          id: 'cash',
+          bookId: bookId,
+          name: '现金',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 1000,
+          iconCode: 'cash',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+        ),
+      )
+      ..addEntry(
+        entry('4', amount: 100).copyWith(bookId: bookId, accountId: 'cash'),
+      );
+    // 一笔已到账、一笔待到账。
+    controller.addRefund(
+      expenseId: '4',
+      amount: 30,
+      accountId: 'cash',
+      initiatedAt: DateTime(2026, 5, 4),
+      settledAt: DateTime(2026, 5, 6),
+    );
+    controller.addRefund(
+      expenseId: '4',
+      amount: 20,
+      accountId: 'cash',
+      initiatedAt: DateTime(2026, 5, 10),
+    );
+    await controller.waitForPendingWrites();
+
+    final reloaded = await VeriFinController.create(
+      LocalKeyValueStore(),
+      repository: repo,
+    );
+    final refunds = reloaded.refundsForEntry('4');
+    expect(refunds.length, 2);
+    // settled_at 忠实往返：一笔有到账日、一笔为待到账（null）。
+    expect(refunds.where((r) => r.settledAt != null).single.amount, 30);
+    expect(refunds.where((r) => r.isPendingRefund).single.amount, 20);
+    // 只有已到账的 30 冲减净额、进余额；待到账的 20 不动。
+    final expense = reloaded.entries.firstWhere((e) => e.id == '4');
+    expect(expense.netAmount, 70);
+    final cash = reloaded.accounts.firstWhere((a) => a.id == 'cash');
+    expect(reloaded.accountBalance(cash), 930); // 1000 − 100 + 30
+  });
+
   test('账本/账户/分组写入 SQLite 并被新控制器读回', () async {
     final repo = await openRepo();
     final controller = await VeriFinController.create(
