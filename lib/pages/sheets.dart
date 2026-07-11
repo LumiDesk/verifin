@@ -135,6 +135,7 @@ Future<double?> showNumberPadSheet(
   double? initialAmount,
   bool allowNegative = false,
   bool allowZero = false,
+  double? maxAmount,
 }) {
   final hapticsEnabled = VeriFinScope.of(context).hapticsEnabled;
   return showModalBottomSheet<double>(
@@ -147,6 +148,7 @@ Future<double?> showNumberPadSheet(
       allowNegative: allowNegative,
       allowZero: allowZero,
       hapticsEnabled: hapticsEnabled,
+      maxAmount: maxAmount,
     ),
   );
 }

@@ -1689,6 +1689,14 @@
   "setAsDefaultAccount": "设为默认账户",
   "setAsDefaultAccountHint": "记账时默认用此账户付款",
   "calcIncomplete": "算式不完整",
+  "numberPadMax": "最多 {amount}",
+  "@numberPadMax": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "aiSettingsTitle": "AI 记账设置",
   "aiConfigured": "已配置",
   "aiNotConfigured": "未配置",

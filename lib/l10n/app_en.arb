@@ -889,6 +889,7 @@
   "setAsDefaultAccount": "Set as default account",
   "setAsDefaultAccountHint": "Used as the default payment account for entries",
   "calcIncomplete": "Incomplete expression",
+  "numberPadMax": "Max {amount}",
   "aiSettingsTitle": "AI entry settings",
   "aiConfigured": "Configured",
   "aiNotConfigured": "Not set",

@@ -4868,6 +4868,12 @@ abstract class AppLocalizations {
   /// **'算式不完整'**
   String get calcIncomplete;
 
+  /// No description provided for @numberPadMax.
+  ///
+  /// In zh, this message translates to:
+  /// **'最多 {amount}'**
+  String numberPadMax(String amount);
+
   /// No description provided for @aiSettingsTitle.
   ///
   /// In zh, this message translates to:

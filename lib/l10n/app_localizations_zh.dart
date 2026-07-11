@@ -2627,6 +2627,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get calcIncomplete => '算式不完整';
 
   @override
+  String numberPadMax(String amount) {
+    return '最多 $amount';
+  }
+
+  @override
   String get aiSettingsTitle => 'AI 记账设置';
 
   @override
