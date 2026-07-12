@@ -5,6 +5,7 @@ import 'import/alipay.dart';
 import 'import/csv_template.dart';
 import 'import/mint.dart';
 import 'import/plan_builder.dart';
+import 'import/qianji.dart';
 import 'import/raw_import.dart';
 import 'import/tally.dart';
 import 'import/wechat.dart';
@@ -25,6 +26,7 @@ enum ImportPlatform {
   mint,
   yimuBill,
   yimuTransfer,
+  qianji,
   tally,
   csvTemplate;
 
@@ -46,6 +48,7 @@ ParsedImport parsePlatformBytes(ImportPlatform platform, Uint8List bytes) =>
       ImportPlatform.mint => parseMint(bytes),
       ImportPlatform.yimuBill => parseYimuBill(bytes),
       ImportPlatform.yimuTransfer => parseYimuTransfer(bytes),
+      ImportPlatform.qianji => parseQianji(bytes),
       ImportPlatform.tally => parseTally(bytes),
       ImportPlatform.csvTemplate => parseCsvTemplate(bytes),
     };

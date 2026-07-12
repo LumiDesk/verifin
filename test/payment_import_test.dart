@@ -245,8 +245,8 @@ void main() {
     });
   });
 
-  group('通用 CSV（钱迹/随手记/模板，UTF-8 逗号）', () {
-    test('走别名识别导入', () {
+  group('CSV 模板（UTF-8 逗号，本应用模板列）', () {
+    test('模板表头导入', () {
       const content = '日期,类型,金额,分类,账户,转入账户,备注\n2026-07-01,支出,23.5,餐饮,现金,,午饭\n';
       final plan = run(
         ImportPlatform.csvTemplate,
@@ -734,6 +734,98 @@ void main() {
     test('所有资产账户均被补齐（含无流水的）', () {
       final names = plan.newAccounts.map((a) => a.name).toSet();
       expect(names, containsAll(<String>['微信余额', 'qq钱包', '妈妈', '花呗', '公积金']));
+    });
+  });
+
+  group('钱迹 CSV（完整明细导出，全类型）', () {
+    late ImportPlan plan;
+    late Map<String, String> idToName;
+    setUp(() {
+      final bytes = File('test/fixtures/qianji_sample.csv').readAsBytesSync();
+      plan = run(ImportPlatform.qianji, Uint8List.fromList(bytes));
+      idToName = <String, String>{
+        for (final a in plan.newAccounts) a.id: a.name,
+      };
+    });
+    LedgerEntry byNote(String note) =>
+        plan.entries.firstWhere((e) => e.note == note);
+    String? acctName(String? id) =>
+        (id == null || id.isEmpty) ? null : idToName[id];
+
+    test('全类型导入、无错误行、退款折叠不单独成条', () {
+      expect(plan.errorCount, 0);
+      // 12 行数据里「退款(e1)」被折叠进原支出，故 11 条。
+      expect(plan.importedCount, 11);
+    });
+
+    test('支出：关联退款折叠进 refundedAmount（净额=金额−退款）', () {
+      final e = byNote('午饭');
+      expect(e.type, EntryType.expense);
+      expect(e.amount, 30);
+      expect(e.refundedAmount, 10);
+      expect(acctName(e.accountId), '现金');
+    });
+
+    test('二级分类还原父子层级', () {
+      final sub = plan.newCategories.firstWhere((c) => c.label == '午餐');
+      final parent = plan.newCategories.firstWhere((c) => c.id == sub.parentId);
+      expect(parent.label, '三餐');
+    });
+
+    test('标签导入并挂到交易', () {
+      expect(plan.newTags.any((t) => t.label == '工作'), isTrue);
+      expect(byNote('午饭').tagIds, hasLength(1));
+    });
+
+    test('孤立退款（原单不在文件）回落为收入、不丢钱', () {
+      final e = byNote('孤立退款');
+      expect(e.type, EntryType.income);
+      expect(e.amount, 5);
+    });
+
+    test('转账带手续费；还款=资金账户→信用卡 的转账', () {
+      final t = byNote('取现');
+      expect(t.type, EntryType.transfer);
+      expect(t.fee, 2);
+      expect(acctName(t.accountId), '现金');
+      expect(acctName(t.toAccountId), '工商银行');
+      final h = byNote('还花呗');
+      expect(h.type, EntryType.transfer);
+      expect(acctName(h.accountId), '工商银行');
+      expect(acctName(h.toAccountId), '花呗');
+    });
+
+    test('报销记为支出、报销记录记为收入', () {
+      final b = byNote('车票');
+      expect(b.type, EntryType.expense);
+      expect(b.amount, 114);
+      final br = byNote('报销到账');
+      expect(br.type, EntryType.income);
+      expect(br.amount, 114);
+      expect(acctName(br.accountId), '工商银行');
+    });
+
+    test('债务箭头 A->B 拆成转账（对方当账户）', () {
+      final lend = byNote('借给张三');
+      expect(lend.type, EntryType.transfer);
+      expect(acctName(lend.accountId), '现金');
+      expect(acctName(lend.toAccountId), '张三');
+      final collect = byNote('张三还钱');
+      expect(acctName(collect.accountId), '张三');
+      expect(acctName(collect.toAccountId), '现金');
+    });
+
+    test('债务无箭头：对方当账户、真实资金账户留空', () {
+      final e = byNote('好评返款');
+      expect(e.type, EntryType.transfer);
+      expect(e.accountId, isEmpty);
+      expect(acctName(e.toAccountId), '幻隐旗舰店');
+    });
+
+    test('债务利息记为收入', () {
+      final e = byNote('利息');
+      expect(e.type, EntryType.income);
+      expect(e.amount, 2);
     });
   });
 }

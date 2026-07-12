@@ -883,6 +883,13 @@ class DataManagementPage extends StatelessWidget {
         assetPath: 'assets/import_icons/yimu.png',
       ),
       _PlatformOption(
+        ImportPlatform.qianji,
+        Icons.book_outlined,
+        l10n.platformQianji,
+        l10n.platformQianjiHint,
+        assetPath: 'assets/import_icons/qianji.png',
+      ),
+      _PlatformOption(
         ImportPlatform.tally,
         Icons.receipt_long_outlined,
         l10n.platformTally,
@@ -1011,6 +1018,7 @@ class DataManagementPage extends StatelessWidget {
       ImportPlatform.mint => l10n.platformMint,
       ImportPlatform.yimuBill => l10n.platformYimuBill,
       ImportPlatform.yimuTransfer => l10n.platformYimuTransfer,
+      ImportPlatform.qianji => l10n.platformQianji,
       ImportPlatform.tally => l10n.platformTally,
       ImportPlatform.csvTemplate => l10n.platformCsvTemplate,
     };
@@ -1024,6 +1032,7 @@ class DataManagementPage extends StatelessWidget {
       ImportPlatform.mint => l10n.mintImportGuide,
       ImportPlatform.yimuBill => l10n.yimuBillImportGuide,
       ImportPlatform.yimuTransfer => l10n.yimuTransferImportGuide,
+      ImportPlatform.qianji => l10n.qianjiImportGuide,
       ImportPlatform.tally => l10n.tallyImportGuide,
       ImportPlatform.csvTemplate => l10n.csvTemplateImportGuide,
     };

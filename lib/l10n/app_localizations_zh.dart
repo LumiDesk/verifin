@@ -2336,6 +2336,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get platformYimuTransferHint => '转账还款导出（.xls）';
 
   @override
+  String get platformQianji => '钱迹';
+
+  @override
+  String get platformQianjiHint => '明细导出 CSV';
+
+  @override
   String get platformTally => 'Tally 记账';
 
   @override
@@ -2377,6 +2383,10 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get yimuTransferImportGuide =>
       '一木记账 App →「我的」→「导入/导出」→「数据导出」→「转账还款导出」，选择 Excel（.xls）保存到本机后在此选择。\n\n导入转账记录，保留转出/转入账户与手续费。收支账单请用另一个入口「一木记账 · 账单」。菜单以实际 App 版本为准。';
+
+  @override
+  String get qianjiImportGuide =>
+      '钱迹 App →「我的」→「设置」→「备份与导出」→「导出账单」→ 选择「CSV」格式（明细）、时间范围为「全部」，得到 QianJi 开头的 .csv 文件，保存到本机后在此选择。\n\n支出、收入、转账、信用卡还款、退款、报销与债务（借出/收款/借入/还款）都会导入：退款按「关联账单」自动冲抵原支出（净额=原额−退款）；债务把「对方」当作一个账户，其余额表示与对方的净欠款（正=对方欠你）。分类按二级分类还原层级，标签一并导入。菜单以实际 App 版本为准。';
 
   @override
   String get tallyImportGuide =>

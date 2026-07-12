@@ -2375,6 +2375,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get platformYimuTransferHint => 'Transfer export (.xls)';
 
   @override
+  String get platformQianji => 'Qianji';
+
+  @override
+  String get platformQianjiHint => 'Detail export CSV';
+
+  @override
   String get platformTally => 'Tally';
 
   @override
@@ -2416,6 +2422,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get yimuTransferImportGuide =>
       'In YiMu (一木记账): Me → Import/Export → Export data → Export transfers, choose Excel (.xls) and save it to your phone, then choose it here.\n\nImports transfer records, keeping both accounts and the fee. For income/expense bills, use the separate \"YiMu · Bills\" entry. Menu paths may vary by app version.';
+
+  @override
+  String get qianjiImportGuide =>
+      'In Qianji (钱迹): Me → Settings → Backup & export → Export bills → choose the \"CSV\" (detail) format with the \"All\" time range. You get a .csv file starting with \"QianJi\"; save it to your phone, then choose it here.\n\nExpense, income, transfer, credit-card repayment, refund, reimbursement and debts (lend/collect/borrow/repay) are all imported: refunds offset the original expense via their linked bill (net = original − refund); debts treat the other party as an account whose balance is the net amount owed (positive = they owe you). Categories restore the two-level hierarchy and tags are imported too. Menu paths may vary by app version.';
 
   @override
   String get tallyImportGuide =>
