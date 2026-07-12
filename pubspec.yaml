@@ -36,9 +36,6 @@ dependencies:
   # 版本由 flutter_localizations 固定,供 gen-l10n 生成代码使用。
   intl: any
 
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.8
   shared_preferences: ^2.5.5
   image_picker: ^1.2.3
   image: ^4.9.1
