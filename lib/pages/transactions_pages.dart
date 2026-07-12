@@ -5,7 +5,7 @@ import '../app/amount_format.dart' as amount_format;
 import '../app/app_theme.dart';
 import '../app/category_tree.dart';
 import '../app/common_widgets.dart';
-import '../app/demo_data.dart';
+import '../app/model_lookup.dart';
 import '../app/entry_sheets.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';

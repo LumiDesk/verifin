@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../app/account_icon_assets.dart';
 import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
-import '../app/demo_data.dart';
+import '../app/icon_catalog.dart';
 import '../app/entry_sheets.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';

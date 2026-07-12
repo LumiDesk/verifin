@@ -2,7 +2,7 @@
 // 聚合下钻取数、以及控制器载入 / 导入时的一次性分类参照完整性自愈。
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/category_tree.dart';
-import 'package:verifin/app/demo_data.dart';
+import 'package:verifin/app/model_lookup.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/app/report_analysis.dart';
 import 'package:verifin/app/veri_fin_controller.dart';

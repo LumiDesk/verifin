@@ -13,6 +13,7 @@ import 'backup/transaction_import.dart';
 import 'backup/webdav_config.dart';
 import 'category_tree.dart';
 import 'demo_data.dart';
+import 'model_lookup.dart';
 import 'amount_format.dart' as amount_format;
 import 'home_metrics.dart';
 import 'ledger_math.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'category_tree.dart';
-import 'demo_data.dart';
+import 'model_lookup.dart';
 import 'ledger_math.dart';
 import 'models.dart';
 import '../l10n/app_localizations.dart';

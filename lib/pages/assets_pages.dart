@@ -8,7 +8,7 @@ import '../app/app_theme.dart';
 import '../app/avatar_picker.dart';
 import '../app/chart_painters.dart';
 import '../app/common_widgets.dart';
-import '../app/demo_data.dart';
+import '../app/icon_catalog.dart';
 import '../app/image_cropper.dart';
 import '../app/image_sources.dart';
 import '../app/ledger_math.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app/common_widgets.dart';
-import '../app/demo_data.dart';
+import '../app/model_lookup.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
 import '../app/veri_fin_controller.dart';

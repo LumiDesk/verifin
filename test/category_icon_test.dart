@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/common_widgets.dart';
-import 'package:verifin/app/demo_data.dart';
+import 'package:verifin/app/icon_catalog.dart';
 import 'package:verifin/pages/sheets.dart';
 
 import 'support/test_harness.dart';

@@ -8,7 +8,7 @@ import '../app/app_theme.dart';
 import '../app/chart_painters.dart';
 import '../app/common_widgets.dart';
 import '../app/credit_card.dart';
-import '../app/demo_data.dart';
+import '../app/icon_catalog.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
 import '../app/series_math.dart';
