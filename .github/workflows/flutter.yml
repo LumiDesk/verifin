@@ -61,7 +61,10 @@ jobs:
         run: flutter pub get
 
       - name: Build release APK
-        run: flutter build apk --release
+        # 只构建 arm64-v8a：2019 年后的安卓机几乎全是 arm64，一个包覆盖 99%+ 设备，
+        # 相比 universal（打包 armeabi-v7a/arm64/x86_64 三套原生库）体积约减半。
+        # 极老的 32 位机型装不了——已在 Release 说明中告知。
+        run: flutter build apk --release --target-platform android-arm64
 
       - name: Prepare APK artifact
         shell: bash
@@ -69,7 +72,7 @@ jobs:
           mkdir -p release-artifacts
           short_sha="${GITHUB_SHA::7}"
           version_name="${GITHUB_REF_NAME}"
-          cp build/app/outputs/flutter-apk/app-release.apk "release-artifacts/verifin-${version_name}-${short_sha}.apk"
+          cp build/app/outputs/flutter-apk/app-release.apk "release-artifacts/verifin-${version_name}-arm64-${short_sha}.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -97,3 +100,7 @@ jobs:
           make_latest: 'false'
           body: |
             ⚠️ 预发布（待验证）：此版本由 CI 自动构建，尚未经真机验收。
+
+            📦 安装包为 **arm64-v8a** 架构，覆盖 2019 年后绝大多数安卓机型。极少数 32 位老设备可能无法安装。
+
+            💡 本版含存储与性能优化，更新前建议先在「数据管理」里**导出一次备份**以防万一。

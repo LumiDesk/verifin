@@ -44,8 +44,14 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("verifinRelease")
+            // 开启 R8 代码裁剪 + 资源裁剪，减小 APK：裁掉未用到的插件 Java/Kotlin
+            // 代码与未引用资源。反射依赖点（ML Kit 识别器、本地通知的 Gson 序列化等）
+            // 由 proguard-rules.pro 的 keep 规则保护，勿删。改动后必须用 CI 的 release
+            // APK 真机验证反射相关功能（截图识账 / 记账提醒 / 生物解锁 / 图片选择）。
+            isMinifyEnabled = true
+            isShrinkResources = true
             // 默认优化规则（枚举 values()/valueOf、注解、反射等关键 keep）必须保留，
-            // 再追加本项目的 R8 规则（ML Kit 缺类豁免 + 识别器反射类 keep）。
+            // 再追加本项目的 R8 规则（ML Kit 缺类豁免 + 识别器/通知反射类 keep）。
             // 只传自定义文件会顶掉默认规则，导致 ML Kit 反射实例化被裁成 release NPE。
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
