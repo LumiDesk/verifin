@@ -281,7 +281,7 @@ mixin _ControllerState on ChangeNotifier {
 
     // ---- 2) 合并重复分类（同 type + parentId + label）----
     String dedupeKey(Category c) =>
-        '${c.type.storageValue} ${c.parentId ?? ''} ${c.label}';
+        '${c.type.storageValue}\u0000${c.parentId ?? ''}\u0000${c.label}';
     final canonical = <String, String>{}; // key -> 保留的 id
     final remap = <String, String>{}; // 被并入的 id -> 保留的 id
     for (final c in _categories) {
