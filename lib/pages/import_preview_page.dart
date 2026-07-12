@@ -17,12 +17,17 @@ class ImportPreviewResult {
     required this.entries,
     required this.candidateAccounts,
     required this.candidateCategories,
+    this.candidateTags = const <Tag>[],
     this.alwaysCreateAccountIds = const <String>{},
   });
 
   final List<LedgerEntry> entries;
   final List<Account> candidateAccounts;
   final List<Category> candidateCategories;
+
+  /// 解析计划里待新建的标签（可能已被改名 / 映射到现有标签）。落库时只创建被保留
+  /// 交易实际引用到的那些。
+  final List<Tag> candidateTags;
 
   /// 即便没有交易引用也要创建的候选账户 id（Tally 携带余额的账户）；已被用户映射到
   /// 现有账户的不在其中。
@@ -61,13 +66,18 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
     for (final category in widget.plan.newCategories)
       category.id: category.label,
   };
-  // 映射：待新建账户/分类 id → 映射到的现有条目 id（存在=映射，缺省=新建）。
+  late final Map<String, String> _tagName = <String, String>{
+    for (final tag in widget.plan.newTags) tag.id: tag.label,
+  };
+  // 映射：待新建账户/分类/标签 id → 映射到的现有条目 id（存在=映射，缺省=新建）。
   final Map<String, String> _accountMapTo = <String, String>{};
   final Map<String, String> _categoryMapTo = <String, String>{};
+  final Map<String, String> _tagMapTo = <String, String>{};
 
   // 携带余额的来源（Tally）默认展开账户区，便于核对账户与余额；其余默认折叠。
   late bool _accountsExpanded = widget.plan.standaloneAccountIds.isNotEmpty;
   bool _categoriesExpanded = false;
+  bool _tagsExpanded = false;
 
   bool _isIncluded(LedgerEntry entry) => !_excluded.contains(entry.id);
 
@@ -95,16 +105,30 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
 
   String _resolveAccountId(String id) => _accountMapTo[id] ?? id;
   String _resolveCategoryId(String id) => _categoryMapTo[id] ?? id;
+  String _resolveTagId(String id) => _tagMapTo[id] ?? id;
 
-  /// 把交易里对「待新建账户/分类」的引用解析为最终 id（映射后）。
+  /// 待新建分类映射后的最终 parentId：父级被映射到现有分类时，子分类的 parentId 也
+  /// 一并改指向该现有分类，避免子分类挂到一个不会被创建的父候选上。
+  String? _resolvedParentId(String? parentId) =>
+      parentId == null ? null : _resolveCategoryId(parentId);
+
+  /// 把交易里对「待新建账户/分类/标签」的引用解析为最终 id（映射后）。
   LedgerEntry _resolved(LedgerEntry entry) {
     final toAccountId = entry.toAccountId;
+    // 多个待新建标签可能被映射到同一现有标签，映射后去重。
+    final tagIds = <String>[];
+    for (final id in entry.tagIds.map(_resolveTagId)) {
+      if (!tagIds.contains(id)) {
+        tagIds.add(id);
+      }
+    }
     return entry.copyWith(
       accountId: _resolveAccountId(entry.accountId),
       categoryId: _resolveCategoryId(entry.categoryId),
       toAccountId: (toAccountId == null || toAccountId.isEmpty)
           ? toAccountId
           : _resolveAccountId(toAccountId),
+      tagIds: tagIds,
     );
   }
 
@@ -118,7 +142,10 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
   List<Category> _mergedCategories(List<Category> existing) => <Category>[
     ...existing,
     ...widget.plan.newCategories.map(
-      (category) => category.copyWith(label: _categoryName[category.id]),
+      (category) => category.copyWith(
+        label: _categoryName[category.id],
+        parentId: _resolvedParentId(category.parentId),
+      ),
     ),
   ];
 
@@ -188,9 +215,14 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
             .toList(),
         candidateCategories: widget.plan.newCategories
             .map(
-              (category) =>
-                  category.copyWith(label: _categoryName[category.id]),
+              (category) => category.copyWith(
+                label: _categoryName[category.id],
+                parentId: _resolvedParentId(category.parentId),
+              ),
             )
+            .toList(),
+        candidateTags: widget.plan.newTags
+            .map((tag) => tag.copyWith(label: _tagName[tag.id]))
             .toList(),
         // 映射到现有账户的独立账户不再新建（交易已改指向现有账户）。
         alwaysCreateAccountIds: widget.plan.standaloneAccountIds
@@ -334,6 +366,55 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
     });
   }
 
+  // ── 标签映射 ────────────────────────────────────────────────
+  Future<void> _pickTagDecision(Tag provisional, List<Tag> existing) async {
+    final l10n = AppLocalizations.of(context);
+    final result = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => _DecisionSheet(
+        title: l10n.mappingTagSheetTitle(_tagName[provisional.id]!),
+        keepNewLabel: l10n.mappingKeepNewTag,
+        mapSectionLabel: l10n.mappingMapToExistingTag,
+        keepNewSelected: !_tagMapTo.containsKey(provisional.id),
+        options: <_DecisionOption>[
+          for (final tag in existing)
+            _DecisionOption(
+              id: tag.id,
+              label: tag.label,
+              leading: const Icon(Icons.sell_outlined, color: veriRoyal),
+              selected: _tagMapTo[provisional.id] == tag.id,
+            ),
+        ],
+      ),
+    );
+    if (result == null || !mounted) {
+      return;
+    }
+    setState(() {
+      if (result == _DecisionSheet.keepNewValue) {
+        _tagMapTo.remove(provisional.id);
+      } else {
+        _tagMapTo[provisional.id] = result;
+      }
+    });
+  }
+
+  Future<void> _renameTag(Tag provisional) async {
+    final name = await _promptName(
+      title: AppLocalizations.of(context).mappingRenameTag,
+      initial: _tagName[provisional.id]!,
+    );
+    if (name == null || !mounted) {
+      return;
+    }
+    setState(() {
+      _tagName[provisional.id] = name;
+      _tagMapTo.remove(provisional.id);
+    });
+  }
+
   Future<String?> _promptName({
     required String title,
     required String initial,
@@ -451,6 +532,26 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
                       ],
                     ),
                   ],
+                  if (widget.plan.newTags.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: 10),
+                    _MappingCard(
+                      title: l10n.importTagMapping,
+                      summary: _tagSummary(l10n),
+                      expanded: _tagsExpanded,
+                      onToggle: () =>
+                          setState(() => _tagsExpanded = !_tagsExpanded),
+                      rows: <Widget>[
+                        for (final tag in widget.plan.newTags)
+                          _MappingRow(
+                            source: tag.label,
+                            decision: _tagDecisionText(l10n, tag),
+                            keptNew: !_tagMapTo.containsKey(tag.id),
+                            onRename: () => _renameTag(tag),
+                            onTap: () => _pickTagDecision(tag, controller.tags),
+                          ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 4),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(2, 6, 2, 8),
@@ -540,6 +641,20 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
         : l10n.mappingRowRenamed(name);
   }
 
+  String _tagDecisionText(AppLocalizations l10n, Tag provisional) {
+    final target = _tagMapTo[provisional.id];
+    if (target != null) {
+      final label = VeriFinScope.of(
+        context,
+      ).tags.firstWhere((t) => t.id == target, orElse: () => provisional).label;
+      return l10n.mappingRowMapped(label);
+    }
+    final name = _tagName[provisional.id]!;
+    return name == provisional.label
+        ? l10n.mappingRowNew
+        : l10n.mappingRowRenamed(name);
+  }
+
   String _accountSummary(AppLocalizations l10n) {
     final mapped = _accountMapTo.length;
     final keptNew = widget.plan.newAccounts.length - mapped;
@@ -549,6 +664,12 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
   String _categorySummary(AppLocalizations l10n) {
     final mapped = _categoryMapTo.length;
     final keptNew = widget.plan.newCategories.length - mapped;
+    return l10n.mappingSummary(keptNew, mapped);
+  }
+
+  String _tagSummary(AppLocalizations l10n) {
+    final mapped = _tagMapTo.length;
+    final keptNew = widget.plan.newTags.length - mapped;
     return l10n.mappingSummary(keptNew, mapped);
   }
 }

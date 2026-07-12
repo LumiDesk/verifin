@@ -16,6 +16,7 @@ class ImportPlan {
     required this.newAccounts,
     required this.newCategories,
     required this.errors,
+    this.newTags = const <Tag>[],
     this.source,
     this.standaloneAccountIds = const <String>{},
   });
@@ -23,6 +24,9 @@ class ImportPlan {
   final List<LedgerEntry> entries;
   final List<Account> newAccounts;
   final List<Category> newCategories;
+
+  /// 为匹配交易里的标签名需要新建的标签（去重后）。标签全局共享、不分账本。
+  final List<Tag> newTags;
   final List<ImportRowError> errors;
 
   /// 识别到的导入来源（钱迹 / 随手记 / 模板），未识别为 null。
@@ -44,11 +48,13 @@ const Map<String, List<String>> _headerAliases = <String, List<String>>{
   'type': <String>['类型', 'type', '收支', '收支类型', '交易类型'],
   'amount': <String>['金额', 'amount', '数额', '钱数', '金额（元）'],
   'category': <String>['分类', 'category', '类别', '一级分类', '分类名称'],
+  'subcategory': <String>['子分类', '二级分类', '子类', 'subcategory'],
   'account': <String>['账户', 'account', '账号', '转出账户', '账户1', '支付账户'],
   'toAccount': <String>['转入账户', 'toaccount', 'to account', '目标账户', '账户2'],
   'note': <String>['备注', 'note', 'memo', '说明', '描述', '备注信息'],
   'fee': <String>['手续费', 'fee', '服务费'],
   'refunded': <String>['退款', 'refund', '退款金额', 'refunded'],
+  'tags': <String>['标签', 'tags', 'tag'],
 };
 
 /// 可识别的导入来源，用于给用户友好提示。
@@ -278,6 +284,7 @@ ImportPlan buildImportPlan({
   required List<Account> existingAccounts,
   required List<Category> existingCategories,
   required DateTime now,
+  List<Tag> existingTags = const <Tag>[],
 }) {
   if (rows.isEmpty) {
     throw const FormatException('文件为空');
@@ -290,8 +297,10 @@ ImportPlan buildImportPlan({
 
   final workingAccounts = List<Account>.from(existingAccounts);
   final workingCategories = List<Category>.from(existingCategories);
+  final workingTags = List<Tag>.from(existingTags);
   final newAccounts = <Account>[];
   final newCategories = <Category>[];
+  final newTags = <Tag>[];
   final entries = <LedgerEntry>[];
   final errors = <ImportRowError>[];
   var idCounter = 0;
@@ -345,16 +354,19 @@ ImportPlan buildImportPlan({
     return account.id;
   }
 
-  String resolveCategory(String name, EntryType type) {
+  // 解析/新建单个分类；[parentId] 限定层级（顶级传 null）。名称按归一化比较（容忍
+  // 大小写/首尾空白/全半角差异），且**同一父级下**同名才复用——顶级与子级同名（如
+  // 顶级「理财支出」与某父分类下的子「理财支出」）互不误合，与唯一索引
+  // (label,type,IFNULL(parent_id,'')) 对齐。
+  String resolveCategory(String name, EntryType type, {String? parentId}) {
     if (name.isEmpty) {
       return '';
     }
-    // 名称按归一化比较（容忍大小写/首尾空白/全半角差异），命中即复用现有分类，
-    // 不因近似同名而增殖出重复分类。
     final normalized = normalizedCategoryLabel(name);
     final match = workingCategories.firstWhere(
       (category) =>
           category.type == type &&
+          category.parentId == parentId &&
           normalizedCategoryLabel(category.label) == normalized,
       orElse: () => const Category(
         id: '',
@@ -371,10 +383,61 @@ ImportPlan buildImportPlan({
       label: name,
       type: type,
       iconCode: 'category',
+      parentId: parentId,
     );
     workingCategories.add(category);
     newCategories.add(category);
     return category.id;
+  }
+
+  // 解析分类层级：一级 [parentLabel] + 二级 [subLabel]（如一木「类别 / 二级分类」）。
+  // 两者都在时建/复用「父 → 子」层级、返回子分类 id；只有一个时按顶级分类处理。
+  String resolveCategoryHierarchy(
+    String parentLabel,
+    String subLabel,
+    EntryType type,
+  ) {
+    if (subLabel.isEmpty) {
+      return resolveCategory(parentLabel, type);
+    }
+    if (parentLabel.isEmpty) {
+      return resolveCategory(subLabel, type);
+    }
+    final parentId = resolveCategory(parentLabel, type);
+    return resolveCategory(subLabel, type, parentId: parentId);
+  }
+
+  // 解析标签串（如一木用「, 」分隔的多标签「客户, 代购」）：按逗号（半/全角）拆分、
+  // 去空去重（按归一化名），复用现有同名标签、否则新建，返回标签 id 列表。
+  List<String> resolveTags(String raw) {
+    if (raw.trim().isEmpty) {
+      return const <String>[];
+    }
+    final ids = <String>[];
+    final seen = <String>{};
+    for (final part in raw.split(RegExp(r'[,，]'))) {
+      final label = part.trim();
+      if (label.isEmpty) {
+        continue;
+      }
+      final normalized = normalizedCategoryLabel(label);
+      if (!seen.add(normalized)) {
+        continue;
+      }
+      final match = workingTags.firstWhere(
+        (tag) => normalizedCategoryLabel(tag.label) == normalized,
+        orElse: () => const Tag(id: '', label: ''),
+      );
+      if (match.id.isNotEmpty) {
+        ids.add(match.id);
+        continue;
+      }
+      final tag = Tag(id: nextId('tag'), label: label);
+      workingTags.add(tag);
+      newTags.add(tag);
+      ids.add(tag.id);
+    }
+    return ids;
   }
 
   for (var i = 1; i < rows.length; i++) {
@@ -398,6 +461,7 @@ ImportPlan buildImportPlan({
     // 账户可空：留空表示「无账户」（只记金额、不计入任何账户余额）。
     final accountName = cell(row, 'account');
     final note = cell(row, 'note');
+    final tagIds = resolveTags(cell(row, 'tags'));
 
     if (type == EntryType.transfer) {
       final toName = cell(row, 'toAccount');
@@ -424,13 +488,18 @@ ImportPlan buildImportPlan({
           note: note,
           occurredAt: date,
           fee: _parseFee(cell(row, 'fee')),
+          tagIds: tagIds,
         ),
       );
       continue;
     }
 
     final accountId = accountName.isEmpty ? '' : resolveAccount(accountName);
-    final categoryId = resolveCategory(cell(row, 'category'), type);
+    final categoryId = resolveCategoryHierarchy(
+      cell(row, 'category'),
+      cell(row, 'subcategory'),
+      type,
+    );
     // 支出可带「退款」列（部分/全额退回）：映射到 refundedAmount，钳制在 [0, 金额]，
     // 使净额=金额−退款、退款回到原账户（与 App 内退款冲抵语义一致）。收入行忽略。
     final refunded = type == EntryType.expense
@@ -448,6 +517,7 @@ ImportPlan buildImportPlan({
         note: note,
         occurredAt: date,
         refundedAmount: refunded,
+        tagIds: tagIds,
       ),
     );
   }
@@ -456,6 +526,7 @@ ImportPlan buildImportPlan({
     entries: entries,
     newAccounts: newAccounts,
     newCategories: newCategories,
+    newTags: newTags,
     errors: errors,
     source: source,
   );

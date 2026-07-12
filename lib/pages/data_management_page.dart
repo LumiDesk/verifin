@@ -1125,6 +1125,7 @@ class DataManagementPage extends StatelessWidget {
         entries: result.entries,
         candidateAccounts: result.candidateAccounts,
         candidateCategories: result.candidateCategories,
+        candidateTags: result.candidateTags,
         alwaysCreateAccountIds: result.alwaysCreateAccountIds,
       );
       if (!context.mounted) {

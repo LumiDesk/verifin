@@ -1928,6 +1928,7 @@
   },
   "importAccountMapping": "导入账户",
   "importCategoryMapping": "导入分类",
+  "importTagMapping": "导入标签",
   "mappingSummary": "新建 {newCount} · 映射 {mappedCount}",
   "@mappingSummary": {
     "placeholders": {
@@ -1972,12 +1973,23 @@
       }
     }
   },
+  "mappingTagSheetTitle": "标签「{name}」",
+  "@mappingTagSheetTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "mappingKeepNewAccount": "新建此账户",
   "mappingKeepNewCategory": "新建此分类",
+  "mappingKeepNewTag": "新建此标签",
   "mappingMapToExistingAccount": "映射到现有账户",
   "mappingMapToExistingCategory": "映射到现有分类",
+  "mappingMapToExistingTag": "映射到现有标签",
   "mappingRenameAccount": "重命名新账户",
   "mappingRenameCategory": "重命名新分类",
+  "mappingRenameTag": "重命名新标签",
   "mappingRenameTooltip": "重命名",
   "mappingNewNameLabel": "新名称",
   "importLocalTitle": "导入本地备份？",

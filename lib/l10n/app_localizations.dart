@@ -5426,6 +5426,12 @@ abstract class AppLocalizations {
   /// **'导入分类'**
   String get importCategoryMapping;
 
+  /// No description provided for @importTagMapping.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入标签'**
+  String get importTagMapping;
+
   /// No description provided for @mappingSummary.
   ///
   /// In zh, this message translates to:
@@ -5462,6 +5468,12 @@ abstract class AppLocalizations {
   /// **'分类「{name}」'**
   String mappingCategorySheetTitle(String name);
 
+  /// No description provided for @mappingTagSheetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'标签「{name}」'**
+  String mappingTagSheetTitle(String name);
+
   /// No description provided for @mappingKeepNewAccount.
   ///
   /// In zh, this message translates to:
@@ -5473,6 +5485,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'新建此分类'**
   String get mappingKeepNewCategory;
+
+  /// No description provided for @mappingKeepNewTag.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建此标签'**
+  String get mappingKeepNewTag;
 
   /// No description provided for @mappingMapToExistingAccount.
   ///
@@ -5486,6 +5504,12 @@ abstract class AppLocalizations {
   /// **'映射到现有分类'**
   String get mappingMapToExistingCategory;
 
+  /// No description provided for @mappingMapToExistingTag.
+  ///
+  /// In zh, this message translates to:
+  /// **'映射到现有标签'**
+  String get mappingMapToExistingTag;
+
   /// No description provided for @mappingRenameAccount.
   ///
   /// In zh, this message translates to:
@@ -5497,6 +5521,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'重命名新分类'**
   String get mappingRenameCategory;
+
+  /// No description provided for @mappingRenameTag.
+  ///
+  /// In zh, this message translates to:
+  /// **'重命名新标签'**
+  String get mappingRenameTag;
 
   /// No description provided for @mappingRenameTooltip.
   ///

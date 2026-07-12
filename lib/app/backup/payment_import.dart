@@ -55,6 +55,8 @@ const List<String> _canonicalHeader = <String>[
   '备注',
   '手续费',
   '退款',
+  '子分类',
+  '标签',
 ];
 
 /// 解析所选平台的账单文件字节，构建导入计划（纯函数，便于测试）。
@@ -68,6 +70,7 @@ ImportPlan buildPlatformImportPlan({
   required List<Account> existingAccounts,
   required List<Category> existingCategories,
   required DateTime now,
+  List<Tag> existingTags = const <Tag>[],
 }) {
   // Tally 备份携带账户余额与类型，走专用路径：先归一化交易，再用 assets 修正账户
   // 初始余额、补建无流水的账户（见 [_applyTallyAssets]）。
@@ -79,6 +82,7 @@ ImportPlan buildPlatformImportPlan({
       existingAccounts: existingAccounts,
       existingCategories: existingCategories,
       now: now,
+      existingTags: existingTags,
     );
     return _applyTallyAssets(
       plan: plan,
@@ -257,9 +261,11 @@ List<List<String>> _normalizeMint(String content) {
 }
 
 // ---------------------------------------------------------------------------
-// 一木记账「账单导出」：日期/收支类型/金额(带符号)/类别/二级分类/账户。金额符号仅表
-// 方向（管线取绝对值），分类取二级分类（用户实际选择的叶子）、为空回退一级类别。
-// 只认账单表头，选错文件（如转账/其他导出）即报错，不做跨类型猜测。
+// 一木记账「账单导出」：日期/收支类型/金额(带符号)/类别/二级分类/账户/备注/标签。金额
+// 符号仅表方向（管线取绝对值）。一级「类别」→分类、二级「二级分类」→子分类，还原成父子
+// 层级（子分类挂在父分类下，见 buildImportPlan.resolveCategoryHierarchy）；备注原样导入；
+// 标签用「, 」分隔的多标签整串传下，由管线拆分建标签。只认账单表头，选错文件（如转账/
+// 其他导出）即报错，不做跨类型猜测。
 // ---------------------------------------------------------------------------
 
 List<List<String>> _normalizeYimuBill(List<List<String>> rows) {
@@ -280,7 +286,6 @@ List<List<String>> _normalizeYimuBill(List<List<String>> rows) {
     }
     final level1 = _at(row, cols['类别']);
     final level2 = _at(row, cols['二级分类']);
-    final category = level2.isNotEmpty ? level2 : level1;
     // 退款只对支出有意义（收入行忽略退款列，避免虚增金额）。
     final refund = type == '支出' ? _at(row, cols['退款']) : '';
     // 一木「金额」列导出的是净额 = 原价 − 优惠 − 退款。原始应付额 = |净额| + 退款：优惠
@@ -296,12 +301,14 @@ List<List<String>> _normalizeYimuBill(List<List<String>> rows) {
       _at(row, cols['日期']),
       type,
       gross.toStringAsFixed(2),
-      category,
+      level1,
       _at(row, cols['账户']),
       '',
       _at(row, cols['备注']),
       '',
       refund,
+      level2,
+      _at(row, cols['标签']),
     ]);
   }
   return out;

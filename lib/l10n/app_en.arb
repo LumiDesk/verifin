@@ -1034,6 +1034,7 @@
   },
   "importAccountMapping": "Import accounts",
   "importCategoryMapping": "Import categories",
+  "importTagMapping": "Import tags",
   "mappingSummary": "{newCount} new · {mappedCount} mapped",
   "@mappingSummary": {
     "placeholders": {
@@ -1078,12 +1079,23 @@
       }
     }
   },
+  "mappingTagSheetTitle": "Tag \"{name}\"",
+  "@mappingTagSheetTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "mappingKeepNewAccount": "Create this account",
   "mappingKeepNewCategory": "Create this category",
+  "mappingKeepNewTag": "Create this tag",
   "mappingMapToExistingAccount": "Map to existing account",
   "mappingMapToExistingCategory": "Map to existing category",
+  "mappingMapToExistingTag": "Map to existing tag",
   "mappingRenameAccount": "Rename new account",
   "mappingRenameCategory": "Rename new category",
+  "mappingRenameTag": "Rename new tag",
   "mappingRenameTooltip": "Rename",
   "mappingNewNameLabel": "New name",
   "importLocalTitle": "Import local backup?",

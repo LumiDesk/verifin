@@ -826,6 +826,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       existingAccounts: accounts,
       existingCategories: categories,
       now: DateTime.now(),
+      existingTags: tags,
     );
     _applyImportPlan(plan);
     return plan;
@@ -843,10 +844,16 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       }
       _categories.addAll(plan.newCategories);
     }
+    if (plan.newTags.isNotEmpty) {
+      _tags.addAll(plan.newTags);
+    }
     _entries.addAll(plan.entries);
     _entries.sort(_compareEntriesLatestFirst);
     _persistAccounts();
     _persistCategories();
+    if (plan.newTags.isNotEmpty) {
+      _persistTags();
+    }
     _persistEntries();
     notifyListeners();
     // 导入也新增了交易：触发自动备份与小组件刷新，与手动记账一致。
@@ -863,6 +870,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       existingAccounts: accounts,
       existingCategories: categories,
       now: DateTime.now(),
+      existingTags: tags,
     );
   }
 
@@ -874,6 +882,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     required List<LedgerEntry> entries,
     required List<Account> candidateAccounts,
     required List<Category> candidateCategories,
+    List<Tag> candidateTags = const <Tag>[],
     Set<String> alwaysCreateAccountIds = const <String>{},
   }) {
     if (entries.isEmpty && alwaysCreateAccountIds.isEmpty) {
@@ -881,6 +890,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     }
     final referencedAccountIds = <String>{};
     final referencedCategoryIds = <String>{};
+    final referencedTagIds = <String>{};
     for (final entry in entries) {
       if (entry.accountId.isNotEmpty) {
         referencedAccountIds.add(entry.accountId);
@@ -892,6 +902,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       if (entry.categoryId.isNotEmpty) {
         referencedCategoryIds.add(entry.categoryId);
       }
+      referencedTagIds.addAll(entry.tagIds);
     }
     final existingAccountIds = _accounts.map((account) => account.id).toSet();
     final newAccounts = candidateAccounts
@@ -912,6 +923,32 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
               !existingCategoryIds.contains(category.id),
         )
         .toList();
+    // 分类映射后，子分类的 parentId 可能指向一个「被映射到现有分类、自身不再新建」的
+    // 父候选。这里把这类悬空 parentId 一并保留创建，避免子分类挂到不存在的父上（由
+    // _healCategoryData 兜底重挂顶级，但优先按候选补建父级更贴近用户来源层级）。
+    final createdCategoryIds = newCategories.map((c) => c.id).toSet();
+    for (var i = 0; i < newCategories.length; i++) {
+      final parentId = newCategories[i].parentId;
+      if (parentId != null &&
+          !createdCategoryIds.contains(parentId) &&
+          !existingCategoryIds.contains(parentId)) {
+        final parent = candidateCategories
+            .where((c) => c.id == parentId)
+            .firstOrNull;
+        if (parent != null) {
+          newCategories.add(parent);
+          createdCategoryIds.add(parent.id);
+        }
+      }
+    }
+    final existingTagIds = _tags.map((tag) => tag.id).toSet();
+    final newTags = candidateTags
+        .where(
+          (tag) =>
+              referencedTagIds.contains(tag.id) &&
+              !existingTagIds.contains(tag.id),
+        )
+        .toList();
 
     _accounts.addAll(newAccounts);
     if (newCategories.isNotEmpty) {
@@ -921,6 +958,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       }
       _categories.addAll(newCategories);
     }
+    if (newTags.isNotEmpty) {
+      _tags.addAll(newTags);
+    }
     _entries.addAll(entries);
     _entries.sort(_compareEntriesLatestFirst);
     // 导入数据里的旧式单标量退款（如一木账单的「退款」列）迁成关联退款条目、
@@ -928,6 +968,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _syncRefundData();
     _persistAccounts();
     _persistCategories();
+    if (newTags.isNotEmpty) {
+      _persistTags();
+    }
     _persistEntries();
     notifyListeners();
     // 导入也新增了交易：触发自动备份与小组件刷新，与手动记账一致。

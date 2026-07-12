@@ -3014,6 +3014,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get importCategoryMapping => 'Import categories';
 
   @override
+  String get importTagMapping => 'Import tags';
+
+  @override
   String mappingSummary(int newCount, int mappedCount) {
     return '$newCount new · $mappedCount mapped';
   }
@@ -3042,10 +3045,18 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String mappingTagSheetTitle(String name) {
+    return 'Tag \"$name\"';
+  }
+
+  @override
   String get mappingKeepNewAccount => 'Create this account';
 
   @override
   String get mappingKeepNewCategory => 'Create this category';
+
+  @override
+  String get mappingKeepNewTag => 'Create this tag';
 
   @override
   String get mappingMapToExistingAccount => 'Map to existing account';
@@ -3054,10 +3065,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mappingMapToExistingCategory => 'Map to existing category';
 
   @override
+  String get mappingMapToExistingTag => 'Map to existing tag';
+
+  @override
   String get mappingRenameAccount => 'Rename new account';
 
   @override
   String get mappingRenameCategory => 'Rename new category';
+
+  @override
+  String get mappingRenameTag => 'Rename new tag';
 
   @override
   String get mappingRenameTooltip => 'Rename';

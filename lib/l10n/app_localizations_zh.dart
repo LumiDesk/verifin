@@ -2949,6 +2949,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get importCategoryMapping => '导入分类';
 
   @override
+  String get importTagMapping => '导入标签';
+
+  @override
   String mappingSummary(int newCount, int mappedCount) {
     return '新建 $newCount · 映射 $mappedCount';
   }
@@ -2977,10 +2980,18 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String mappingTagSheetTitle(String name) {
+    return '标签「$name」';
+  }
+
+  @override
   String get mappingKeepNewAccount => '新建此账户';
 
   @override
   String get mappingKeepNewCategory => '新建此分类';
+
+  @override
+  String get mappingKeepNewTag => '新建此标签';
 
   @override
   String get mappingMapToExistingAccount => '映射到现有账户';
@@ -2989,10 +3000,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mappingMapToExistingCategory => '映射到现有分类';
 
   @override
+  String get mappingMapToExistingTag => '映射到现有标签';
+
+  @override
   String get mappingRenameAccount => '重命名新账户';
 
   @override
   String get mappingRenameCategory => '重命名新分类';
+
+  @override
+  String get mappingRenameTag => '重命名新标签';
 
   @override
   String get mappingRenameTooltip => '重命名';
