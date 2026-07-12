@@ -188,6 +188,10 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
                     widget.plan.newCategories.any((c) => c.id == category.id),
               )
               .toList(),
+          // 待新建标签（可能已改名）传入草稿，令导入的标签能正确显示与勾选。
+          extraTags: widget.plan.newTags
+              .map((tag) => tag.copyWith(label: _tagName[tag.id]))
+              .toList(),
         ),
       ),
     );

@@ -953,8 +953,16 @@ enum AccountDeleteAction { hide, delete }
 Future<List<String>?> pickEntryTags({
   required BuildContext context,
   required List<String> selectedIds,
+  List<Tag> extraTags = const <Tag>[],
 }) {
   final controller = VeriFinScope.of(context);
+  // 合并 controller 已落库标签与临时标签（导入草稿待新建、尚未落库），临时标签
+  // 排在后面、去重按 id，保证草稿里既能看到又能勾选它们。
+  final existingIds = controller.tags.map((tag) => tag.id).toSet();
+  final tags = <Tag>[
+    ...controller.tags,
+    ...extraTags.where((tag) => !existingIds.contains(tag.id)),
+  ];
   return showModalBottomSheet<List<String>>(
     context: context,
     showDragHandle: true,
@@ -969,7 +977,7 @@ Future<List<String>?> pickEntryTags({
           maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.6,
         ),
         child: TagSelectorSheet(
-          tags: controller.tags,
+          tags: tags,
           selectedIds: selectedIds,
           onCreateTag: () async {
             final l10n = AppLocalizations.of(sheetContext);

@@ -504,5 +504,42 @@ void main() {
       // 未落库：账本交易数不变。
       expect(controller.entries.length, before);
     });
+
+    testWidgets('临时标签（导入待新建）在草稿页显示标签名而非「添加标签」', (tester) async {
+      final controller = await makeController();
+      // 交易引用一个尚未落库的临时标签 id，经 extraTags 传入草稿页解析。
+      const provisional = Tag(id: 'tag_x', label: '代购');
+      final entry = LedgerEntry(
+        id: 'draft_tag',
+        bookId: controller.activeBook.id,
+        type: EntryType.expense,
+        amount: 20,
+        categoryId: '',
+        accountId: '',
+        note: '',
+        occurredAt: DateTime(2026, 3, 1, 9, 0),
+        tagIds: const <String>['tag_x'],
+      );
+      await tester.pumpWidget(
+        VeriFinScope(
+          controller: controller,
+          child: zhMaterialApp(
+            home: EntryDetailPage.draft(
+              entry: entry,
+              extraTags: const <Tag>[provisional],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      // 标签字段在表单下方（懒加载 ListView），滚动到可见处再断言。
+      await tester.scrollUntilVisible(
+        find.text('代购'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      // 显示临时标签名，且未回退成空态占位。
+      expect(find.text('代购'), findsOneWidget);
+    });
   });
 }

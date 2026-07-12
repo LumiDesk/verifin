@@ -21,20 +21,23 @@ class EntryDetailPage extends StatefulWidget {
     this.initialDraft,
   }) : draftEntry = null,
        draftExtraAccounts = null,
-       draftExtraCategories = null;
+       draftExtraCategories = null,
+       draftExtraTags = null;
 
   /// 草稿编辑模式：编辑一条已有交易（如导入预览里的条目），保存时**不落库**，
   /// 而是通过 `Navigator.pop` 返回修改后的 [LedgerEntry] 供上层处理。
-  /// [extraAccounts]/[extraCategories] 是尚未落库的临时账户/分类（如导入将新建的），
-  /// 合并进选择器与展示，保证草稿引用到它们时能正确解析、不被回退。
+  /// [extraAccounts]/[extraCategories]/[extraTags] 是尚未落库的临时账户/分类/标签
+  /// （如导入将新建的），合并进选择器与展示，保证草稿引用到它们时能正确解析、不被回退。
   EntryDetailPage.draft({
     super.key,
     required LedgerEntry entry,
     List<Account> extraAccounts = const <Account>[],
     List<Category> extraCategories = const <Category>[],
+    List<Tag> extraTags = const <Tag>[],
   }) : draftEntry = entry,
        draftExtraAccounts = extraAccounts,
        draftExtraCategories = extraCategories,
+       draftExtraTags = extraTags,
        initialAmount = entry.amount,
        initialAccountId = null,
        initialDraft = null;
@@ -48,9 +51,10 @@ class EntryDetailPage extends StatefulWidget {
   /// 草稿编辑模式下要编辑的交易；非空即进入「返回草稿不落库」模式。
   final LedgerEntry? draftEntry;
 
-  /// 草稿模式下额外可选的临时账户 / 分类（未落库，如导入待新建项）。
+  /// 草稿模式下额外可选的临时账户 / 分类 / 标签（未落库，如导入待新建项）。
   final List<Account>? draftExtraAccounts;
   final List<Category>? draftExtraCategories;
+  final List<Tag>? draftExtraTags;
 
   @override
   State<EntryDetailPage> createState() => _EntryDetailPageState();
@@ -482,7 +486,8 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                   const SizedBox(height: 14),
                   EntryTagField(
                     tagIds: _tagIds,
-                    tagLabelOf: (id) => controller.tagById(id)?.label,
+                    tagLabelOf: (id) =>
+                        controller.tagById(id)?.label ?? _extraTagLabel(id),
                     onTap: _pickTags,
                   ),
                   if (_type == EntryType.expense) ...<Widget>[
@@ -702,8 +707,27 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     });
   }
 
+  /// 草稿模式下临时标签（导入待新建）的名称，供展示解析——这些标签尚未落库，
+  /// controller 查不到，故回退到 [EntryDetailPage.draftExtraTags]。
+  String? _extraTagLabel(String id) {
+    final extras = widget.draftExtraTags;
+    if (extras == null) {
+      return null;
+    }
+    for (final tag in extras) {
+      if (tag.id == id) {
+        return tag.label;
+      }
+    }
+    return null;
+  }
+
   Future<void> _pickTags() async {
-    final result = await pickEntryTags(context: context, selectedIds: _tagIds);
+    final result = await pickEntryTags(
+      context: context,
+      selectedIds: _tagIds,
+      extraTags: widget.draftExtraTags ?? const <Tag>[],
+    );
     if (!mounted || result == null) {
       return;
     }
