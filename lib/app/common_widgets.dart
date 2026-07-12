@@ -140,8 +140,7 @@ class TransactionTile extends StatelessWidget {
                               style: Theme.of(context).textTheme.titleLarge
                                   ?.copyWith(
                                     fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: veriRoyal,
+                                    fontWeight: FontWeight.w700,
                                   ),
                             ),
                           ),
@@ -150,8 +149,7 @@ class TransactionTile extends StatelessWidget {
                             style: Theme.of(context).textTheme.titleLarge
                                 ?.copyWith(
                                   fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: veriRoyal,
+                                  fontWeight: FontWeight.w700,
                                 ),
                           ),
                         ],
@@ -165,7 +163,6 @@ class TransactionTile extends StatelessWidget {
                                 ?.copyWith(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
-                                  color: veriRoyal,
                                 ),
                           ),
                         ),
