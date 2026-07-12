@@ -450,31 +450,70 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
     _collapsed = <String>{};
   }
 
-  /// 按折叠状态前序展开可见节点。
-  List<CategoryNode> _visibleNodes() {
-    final result = <CategoryNode>[];
+  /// 按类型分区（支出→收入→转账）并按折叠状态前序展开：每个非空类型前插入一行
+  /// 类型标题，区内根分类保持列表顺序（= 用户在分类页拖拽设置的顺序），子分类缩进。
+  List<_CategoryPickerRow> _buildRows() {
+    final rows = <_CategoryPickerRow>[];
     final visited = <String>{};
-    void walk(String? parentId, int depth) {
-      final children = widget.categories.where((c) => c.parentId == parentId);
-      for (final child in children) {
+    void walkChildren(String parentId, int depth) {
+      for (final child in widget.categories.where(
+        (c) => c.parentId == parentId,
+      )) {
         if (!visited.add(child.id)) {
           continue;
         }
-        result.add(CategoryNode(category: child, depth: depth));
+        rows.add(
+          _CategoryPickerRow.node(CategoryNode(category: child, depth: depth)),
+        );
         final hasKids = widget.categories.any((c) => c.parentId == child.id);
         if (hasKids && !_collapsed.contains(child.id)) {
-          walk(child.id, depth + 1);
+          walkChildren(child.id, depth + 1);
         }
       }
     }
 
-    walk(null, 0);
-    return result;
+    // 类型顺序固定为 支出→收入→转账；末尾兜底追加任何其它出现过的顶级类型（防御，
+    // 正常不会有 refund 类分类）。
+    final types = <EntryType>[
+      for (final type in const <EntryType>[
+        EntryType.expense,
+        EntryType.income,
+        EntryType.transfer,
+      ])
+        if (widget.categories.any((c) => c.parentId == null && c.type == type))
+          type,
+    ];
+    for (final root in widget.categories.where((c) => c.parentId == null)) {
+      if (!types.contains(root.type)) {
+        types.add(root.type);
+      }
+    }
+
+    for (final type in types) {
+      rows.add(_CategoryPickerRow.header(type));
+      for (final root in widget.categories.where(
+        (c) => c.parentId == null && c.type == type,
+      )) {
+        if (!visited.add(root.id)) {
+          continue;
+        }
+        rows.add(
+          _CategoryPickerRow.node(CategoryNode(category: root, depth: 0)),
+        );
+        final hasKids = widget.categories.any((c) => c.parentId == root.id);
+        if (hasKids && !_collapsed.contains(root.id)) {
+          walkChildren(root.id, 1);
+        }
+      }
+    }
+    return rows;
   }
 
   @override
   Widget build(BuildContext context) {
-    final nodes = _visibleNodes();
+    final rows = _buildRows();
+    // 「全部」「移到顶级」等非分类的元操作项用中性主题色（深浅色自适应），不用蓝色。
+    final metaIconColor = Theme.of(context).colorScheme.onSurfaceVariant;
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 0, 14, 18),
       child: Column(
@@ -498,7 +537,11 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
                 borderRadius: BorderRadius.circular(veriRadiusSm),
               ),
               contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-              leading: const VeriIconBox(icon: Icons.select_all, size: 32),
+              leading: VeriIconBox(
+                icon: Icons.select_all,
+                color: metaIconColor,
+                size: 32,
+              ),
               title: Text(
                 widget.allLabel!,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -517,8 +560,9 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
               minTileHeight: 48,
               dense: true,
               contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-              leading: const VeriIconBox(
+              leading: VeriIconBox(
                 icon: Icons.vertical_align_top,
+                color: metaIconColor,
                 size: 32,
               ),
               title: Text(
@@ -532,15 +576,41 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
           Flexible(
             child: ListView.separated(
               shrinkWrap: true,
-              itemCount: nodes.length,
-              separatorBuilder: (_, _) => Divider(
-                height: 1,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.06),
-              ),
+              itemCount: rows.length,
+              separatorBuilder: (context, index) {
+                // 类型标题行两侧不画分隔线。
+                if (rows[index].isHeader || rows[index + 1].isHeader) {
+                  return const SizedBox.shrink();
+                }
+                return Divider(
+                  height: 1,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.06),
+                );
+              },
               itemBuilder: (context, index) {
-                final node = nodes[index];
+                final row = rows[index];
+                if (row.isHeader) {
+                  final type = row.headerType!;
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      left: 8,
+                      right: 8,
+                      top: index == 0 ? 2 : 14,
+                      bottom: 4,
+                    ),
+                    child: Text(
+                      type.label(AppLocalizations.of(context)),
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: colorForType(type),
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  );
+                }
+                final node = row.node!;
                 final category = node.category;
                 final isSelected = category.id == widget.selectedId;
                 final hasKids = widget.categories.any(
@@ -609,6 +679,20 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
       ),
     );
   }
+}
+
+/// 分类选择弹窗的列表行：要么是一行类型标题（[headerType]），要么是一个分类节点
+/// （[node]）。用于把分类按 支出/收入/转账 分区展示。
+class _CategoryPickerRow {
+  const _CategoryPickerRow.header(EntryType type)
+    : headerType = type,
+      node = null;
+  const _CategoryPickerRow.node(CategoryNode this.node) : headerType = null;
+
+  final EntryType? headerType;
+  final CategoryNode? node;
+
+  bool get isHeader => headerType != null;
 }
 
 /// 记账时给交易多选标签的底部弹窗。展示已有标签的 FilterChip 供多选，

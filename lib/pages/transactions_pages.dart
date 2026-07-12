@@ -679,22 +679,20 @@ class _TransactionsPageState extends State<TransactionsPage> {
   }
 
   Future<void> _pickAccountFilter(VeriFinController controller) async {
-    final values = <String>[
-      _allFilterValue,
-      for (final account in controller.accounts) account.id,
-    ];
-    final selected = await showOptionSheet<String>(
+    // 与记账 / 编辑用同一个账户选择器（带图标+余额、按资产视图模式分区），顶部加「全部」项。
+    final selected = await showAccountPickerSheet(
       context: context,
       title: AppLocalizations.of(context).filterAccountTitle,
-      values: values,
-      selected: _selectedAccountId ?? _allFilterValue,
-      labelOf: (value) => value == _allFilterValue
-          ? AppLocalizations.of(context).allAccounts
-          : accountById(controller.accounts, value).name,
+      accounts: controller.accounts,
+      selectedId: _selectedAccountId ?? accountPickerAllId,
+      balanceOf: controller.accountBalance,
+      allLabel: AppLocalizations.of(context).allAccounts,
     );
-    if (selected != null) {
+    if (selected != null && mounted) {
       setState(() {
-        _selectedAccountId = selected == _allFilterValue ? null : selected;
+        _selectedAccountId = selected.id == accountPickerAllId
+            ? null
+            : selected.id;
       });
     }
   }
@@ -815,12 +813,13 @@ class _TransactionsPageState extends State<TransactionsPage> {
   }
 
   Future<void> _batchChangeCategory(VeriFinController controller) async {
-    final selected = await showOptionSheet<String>(
-      context: context,
+    // 与记账 / 编辑用同一个多级分类选择器（带图标、按 支出/收入/转账 分区）；批量赋值
+    // 传全部分类、不带「全部」项，选中即落到该具体分类。
+    final selected = await showCategoryPickerSheet(
+      context,
+      categories: controller.categories,
+      selectedId: '',
       title: AppLocalizations.of(context).changeCategoryTitle,
-      values: controller.categories.map((c) => c.id).toList(),
-      selected: controller.categories.first.id,
-      labelOf: (id) => controller.categoryById(id).label,
     );
     if (selected == null || !mounted) {
       return;
@@ -845,19 +844,20 @@ class _TransactionsPageState extends State<TransactionsPage> {
     if (controller.accounts.isEmpty) {
       return;
     }
-    final selected = await showOptionSheet<String>(
+    // 与记账 / 编辑用同一个账户选择器（带图标、余额，按资产视图模式分区）。
+    final selected = await showAccountPickerSheet(
       context: context,
       title: AppLocalizations.of(context).changeAccountTitle,
-      values: controller.accounts.map((a) => a.id).toList(),
-      selected: controller.accounts.first.id,
-      labelOf: (id) => accountById(controller.accounts, id).name,
+      accounts: controller.accounts,
+      selectedId: null,
+      balanceOf: controller.accountBalance,
     );
     if (selected == null || !mounted) {
       return;
     }
     final changed = controller.setEntriesAccount(
       Set<String>.of(_selectedIds),
-      selected,
+      selected.id,
     );
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

@@ -118,4 +118,64 @@ void main() {
 
     expect(find.text('暂无交易'), findsOneWidget);
   });
+
+  testWidgets('批量改分类弹出的是多级分类选择器（按类型分区）', (WidgetTester tester) async {
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store);
+    final bookId = controller.activeBook.id;
+    controller
+      ..addEntry(_entry('a', bookId))
+      ..addEntry(_entry('b', bookId))
+      ..dispose();
+
+    await pumpApp(tester, store);
+    await tester.tap(find.text('最近交易'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('多选'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('全选'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('改分类'));
+    await tester.pumpAndSettle();
+
+    // 新的多级分类选择器按类型分区、每区带类型标题（旧的扁平弹窗没有）。
+    expect(find.text('支出'), findsWidgets);
+  });
+
+  testWidgets('批量改账户弹出的账户选择器展示余额', (WidgetTester tester) async {
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store);
+    final bookId = controller.activeBook.id;
+    controller
+      ..addAccount(
+        Account(
+          id: 'zs',
+          bookId: bookId,
+          name: '招商',
+          type: AccountType.debitCard,
+          groupId: null,
+          initialBalance: 12340,
+          iconCode: 'bank',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+        ),
+      )
+      ..addEntry(_entry('a', bookId))
+      ..addEntry(_entry('b', bookId))
+      ..dispose();
+
+    await pumpApp(tester, store);
+    await tester.tap(find.text('最近交易'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('多选'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('全选'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('改账户'));
+    await tester.pumpAndSettle();
+
+    // 新的账户选择器每行显示余额（旧的扁平弹窗只有账户名）。
+    expect(find.text('12340'), findsOneWidget);
+  });
 }

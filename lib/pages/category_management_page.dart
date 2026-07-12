@@ -4,6 +4,7 @@ import '../app/app_theme.dart';
 import '../app/category_tree.dart';
 import '../app/common_widgets.dart';
 import '../app/entry_sheets.dart';
+import '../app/ledger_math.dart';
 import '../l10n/app_localizations.dart';
 import '../app/models.dart';
 import '../app/veri_fin_controller.dart';
@@ -463,7 +464,11 @@ class _CategoryManageRow extends StatelessWidget {
                       ),
               ),
               const SizedBox(width: 4),
-              CategoryIconBox(iconCode: category.iconCode, size: 30),
+              CategoryIconBox(
+                iconCode: category.iconCode,
+                color: colorForType(category.type),
+                size: 30,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(

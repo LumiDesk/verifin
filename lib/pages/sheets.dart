@@ -8,6 +8,7 @@ import '../app/entry_sheets.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
 import '../app/net_security.dart';
+import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
 
@@ -182,10 +183,28 @@ Future<String?> showCategoryPickerSheet(
   );
 }
 
-/// 账户选择弹窗:与资产页账户列表一致,展示账户图标、名称(含卡号后四位)和余额。
-/// 账户选择弹窗。返回所选账户；用户取消返回 null。
+/// 选「全部账户」（筛选场景）时返回的哨兵 [Account]，其 id 为 [accountPickerAllId]。
+const String accountPickerAllId = '__account_picker_all__';
+const Account _accountPickerAllSentinel = Account(
+  id: accountPickerAllId,
+  bookId: '',
+  name: '',
+  type: AccountType.cash,
+  groupId: null,
+  initialBalance: 0,
+  iconCode: 'wallet',
+  note: '',
+  includeInAssets: false,
+  hidden: false,
+);
+
+/// 账户选择弹窗:与资产页账户列表一致,展示账户图标、名称(含卡号后四位)和余额,并
+/// **按当前资产视图模式分区**（类型视图→按账户类型；分组视图→按用户分组+未分组），
+/// 分区顺序与区内账户顺序都与资产页一致。返回所选账户；用户取消返回 null。
 /// 传入 [noneLabel] 时，列表顶部额外提供「无账户」选项，选它返回 id 为空串的
 /// 哨兵 [Account]（调用方用 `selected.id.isEmpty` 判别「只记金额、不计入账户」）。
+/// 传入 [allLabel] 时（筛选场景），列首额外提供「全部」项，选它返回 id 为
+/// [accountPickerAllId] 的哨兵 [Account]（调用方用 `selected.id == accountPickerAllId` 判别）。
 Future<Account?> showAccountPickerSheet({
   required BuildContext context,
   required String title,
@@ -194,6 +213,7 @@ Future<Account?> showAccountPickerSheet({
   required double Function(Account account) balanceOf,
   String? noneLabel,
   String? noneHint,
+  String? allLabel,
 }) {
   return showModalBottomSheet<Account>(
     context: context,
@@ -203,7 +223,70 @@ Future<Account?> showAccountPickerSheet({
       borderRadius: BorderRadius.vertical(top: Radius.circular(veriRadiusLg)),
     ),
     builder: (context) {
+      final controller = VeriFinScope.of(context);
+      final l10n = AppLocalizations.of(context);
+      final sections = _accountPickerSections(controller, l10n, accounts);
+      final headerColor = Theme.of(context).colorScheme.onSurfaceVariant;
       final maxHeight = MediaQuery.sizeOf(context).height * 0.72;
+
+      final children = <Widget>[];
+      if (noneLabel != null) {
+        children.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: _NoneAccountRow(
+              label: noneLabel,
+              hint: noneHint,
+              selected: (selectedId ?? '').isEmpty,
+            ),
+          ),
+        );
+      }
+      if (allLabel != null) {
+        children.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: _AllAccountsRow(
+              label: allLabel,
+              selected: selectedId == accountPickerAllId,
+            ),
+          ),
+        );
+      }
+      for (var s = 0; s < sections.length; s++) {
+        final section = sections[s];
+        children.add(
+          Padding(
+            padding: EdgeInsets.only(
+              left: 10,
+              right: 10,
+              top: s == 0 && children.isEmpty ? 2 : 12,
+              bottom: 4,
+            ),
+            child: Text(
+              section.title,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: headerColor,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.4,
+              ),
+            ),
+          ),
+        );
+        for (final account in section.accounts) {
+          children.add(
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: _AccountPickerRow(
+                account: account,
+                balance: balanceOf(account),
+                selected: account.id == selectedId,
+              ),
+            ),
+          );
+        }
+      }
+
       return SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
@@ -220,31 +303,7 @@ Future<Account?> showAccountPickerSheet({
                   ),
                 ),
                 const SizedBox(height: 10),
-                Flexible(
-                  child: ListView(
-                    shrinkWrap: true,
-                    children: <Widget>[
-                      if (noneLabel != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: _NoneAccountRow(
-                            label: noneLabel,
-                            hint: noneHint,
-                            selected: (selectedId ?? '').isEmpty,
-                          ),
-                        ),
-                      for (final account in accounts)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: _AccountPickerRow(
-                            account: account,
-                            balance: balanceOf(account),
-                            selected: account.id == selectedId,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
+                Flexible(child: ListView(shrinkWrap: true, children: children)),
               ],
             ),
           ),
@@ -252,6 +311,63 @@ Future<Account?> showAccountPickerSheet({
       );
     },
   );
+}
+
+/// 账户选择器分区：按当前资产视图模式（类型/分组）把 [accounts] 分区并排序，顺序与
+/// 资产页完全一致——复用 controller 的 `sortedAssetSections` / `sortedAccountsForAssetSection`
+/// （这两处排序偏好随备份还原，见导出的 `assetAccountOrders`/`assetSectionOrders`）。空区剔除。
+List<({String title, List<Account> accounts})> _accountPickerSections(
+  VeriFinController controller,
+  AppLocalizations l10n,
+  List<Account> accounts,
+) {
+  final mode = controller.assetAccountViewMode;
+  final result = <({String title, List<Account> accounts})>[];
+  if (mode == AssetAccountViewMode.group) {
+    final ordered = controller.sortedAssetSections<AccountGroup>(
+      mode: mode,
+      sections: <AccountGroup>[
+        ...controller.accountGroups,
+        AccountGroup(
+          id: 'ungrouped',
+          bookId: controller.activeBook.id,
+          name: l10n.assetsUngrouped,
+          iconCode: 'folder',
+          sortOrder: 999,
+        ),
+      ],
+      idOf: (group) => group.id,
+    );
+    for (final group in ordered) {
+      final inGroup = controller.sortedAccountsForAssetSection(
+        mode: mode,
+        sectionId: group.id,
+        accounts: accounts.where(
+          (account) => (account.groupId ?? 'ungrouped') == group.id,
+        ),
+      );
+      if (inGroup.isNotEmpty) {
+        result.add((title: group.name, accounts: inGroup));
+      }
+    }
+  } else {
+    final ordered = controller.sortedAssetSections<AccountType>(
+      mode: mode,
+      sections: AccountType.values,
+      idOf: (type) => type.name,
+    );
+    for (final type in ordered) {
+      final inType = controller.sortedAccountsForAssetSection(
+        mode: mode,
+        sectionId: type.name,
+        accounts: accounts.where((account) => account.type == type),
+      );
+      if (inType.isNotEmpty) {
+        result.add((title: type.label(l10n), accounts: inType));
+      }
+    }
+  }
+  return result;
 }
 
 class _AccountPickerRow extends StatelessWidget {
@@ -385,6 +501,47 @@ class _NoneAccountRow extends StatelessWidget {
             hidden: false,
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// 「全部账户」选项（筛选场景）：中性图标、选中返回 [_accountPickerAllSentinel]。
+class _AllAccountsRow extends StatelessWidget {
+  const _AllAccountsRow({required this.label, required this.selected});
+
+  final String label;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? veriRoyal.withValues(alpha: 0.12) : Colors.transparent,
+      borderRadius: BorderRadius.circular(veriRadiusSm),
+      child: ListTile(
+        minTileHeight: 48,
+        dense: true,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(veriRadiusSm),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+        leading: VeriIconBox(
+          icon: Icons.select_all,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          size: 32,
+        ),
+        title: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+          ),
+        ),
+        trailing: selected
+            ? const Icon(Icons.check, color: veriRoyal, size: 18)
+            : null,
+        onTap: () => Navigator.of(context).pop(_accountPickerAllSentinel),
       ),
     );
   }
