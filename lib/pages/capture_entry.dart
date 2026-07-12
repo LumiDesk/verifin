@@ -77,7 +77,7 @@ AiEntryContext buildAiEntryContext(VeriFinController controller) {
 /// 原生侧有待处理的分享/采集内容时调用（开屏冷启动主动拉取、运行中被通知）。
 /// 图片优先于文本；取走即清，无内容则静默返回。
 Future<void> startSharedCaptureEntry(BuildContext context) async {
-  final imageBytes = await AppPlatformBridge.consumeCaptureImage();
+  final imageBytes = await AppCaptureBridge.consumeCaptureImage();
   if (!context.mounted) {
     return;
   }
@@ -85,7 +85,7 @@ Future<void> startSharedCaptureEntry(BuildContext context) async {
     await startScreenshotEntry(context, sharedImageBytes: imageBytes);
     return;
   }
-  final text = await AppPlatformBridge.consumeCaptureText();
+  final text = await AppCaptureBridge.consumeCaptureText();
   if (!context.mounted || text == null || text.trim().isEmpty) {
     return;
   }

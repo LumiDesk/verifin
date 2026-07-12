@@ -11,7 +11,7 @@ Future<bool> downloadTextFile({
   required String content,
   String mimeType = 'application/json',
 }) async {
-  final savedToDownloads = await AppPlatformBridge.saveTextToDownloads(
+  final savedToDownloads = await AppStorageBridge.saveTextToDownloads(
     filename: filename,
     content: content,
     mimeType: mimeType,
@@ -40,7 +40,7 @@ Future<bool> downloadBytesFile({
   required Uint8List bytes,
   String mimeType = 'application/zip',
 }) async {
-  final savedToDownloads = await AppPlatformBridge.saveBytesToDownloads(
+  final savedToDownloads = await AppStorageBridge.saveBytesToDownloads(
     filename: filename,
     bytes: bytes,
     mimeType: mimeType,

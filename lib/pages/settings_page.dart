@@ -344,7 +344,7 @@ class _UpdateCheckDialogState extends State<_UpdateCheckDialog> {
       _checking = true;
       _downloading = false;
     });
-    final result = await AppPlatformBridge.checkForUpdate(
+    final result = await AppUpdateBridge.checkForUpdate(
       includePrerelease: _includePrerelease,
     );
     if (!mounted) {
@@ -383,7 +383,7 @@ class _UpdateCheckDialogState extends State<_UpdateCheckDialog> {
       }
     }
     setState(() => _downloading = true);
-    final result = await AppPlatformBridge.downloadLatestUpdate(
+    final result = await AppUpdateBridge.downloadLatestUpdate(
       includePrerelease: _includePrerelease,
     );
     if (!mounted) {
@@ -468,7 +468,7 @@ class _UpdateCheckDialogState extends State<_UpdateCheckDialog> {
             if (_downloading) ...<Widget>[
               const SizedBox(height: 14),
               ValueListenableBuilder<UpdateDownloadProgress?>(
-                valueListenable: AppPlatformBridge.updateProgress,
+                valueListenable: AppUpdateBridge.updateProgress,
                 builder: (context, progress, _) {
                   final knownSize = progress != null && progress.totalBytes > 0;
                   return Column(

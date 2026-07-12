@@ -144,7 +144,7 @@ class _WidgetCard extends StatelessWidget {
   Future<void> _addToHome(BuildContext context) async {
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final ok = await AppPlatformBridge.pinWidget(spec.widgetKey);
+    final ok = await AppWidgetBridge.pinWidget(spec.widgetKey);
     messenger.showSnackBar(
       SnackBar(
         content: Text(ok ? l10n.widgetPinRequested : l10n.widgetPinUnsupported),

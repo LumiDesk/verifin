@@ -192,7 +192,7 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
     _controller.onPersistError = _handlePersistError;
     // 应用锁开关变化时同步 FLAG_SECURE；开屏按当前状态对齐一次。
     _controller.onAppLockChanged = _handleAppLockChanged;
-    AppPlatformBridge.setSecureFlag(_controller.appLockEnabled);
+    AppSecurityBridge.setSecureFlag(_controller.appLockEnabled);
     // 记账提醒：配置变化时重排本地通知，开屏按当前配置对齐一次。
     _controller.onReminderChanged = _handleReminderChanged;
     _notifications.apply(
@@ -219,7 +219,7 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
   }
 
   void _handleAppLockChanged(bool appLockEnabled) {
-    AppPlatformBridge.setSecureFlag(appLockEnabled);
+    AppSecurityBridge.setSecureFlag(appLockEnabled);
   }
 
   void _handleReminderChanged(ReminderSettings settings) {

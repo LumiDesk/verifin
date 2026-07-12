@@ -6,7 +6,7 @@ import 'series_math.dart';
 import 'veri_fin_controller.dart';
 
 /// 把当前账本的桌面小组件数据（今日支出 / 本月可用预算 / 资产总额）推送到 Android。
-/// 非 Android 平台由 [AppPlatformBridge] 静默忽略；在打开应用、回前台、记账后调用。
+/// 非 Android 平台由 [AppWidgetBridge] 静默忽略；在打开应用、回前台、记账后调用。
 Future<void> pushWidgetData(VeriFinController controller) async {
   final l10n = l10nForPreference(controller.localePreference);
   final now = DateTime.now();
@@ -30,7 +30,7 @@ Future<void> pushWidgetData(VeriFinController controller) async {
 
   String two(int n) => n.toString().padLeft(2, '0');
 
-  await AppPlatformBridge.updateWidgetData(
+  await AppWidgetBridge.updateWidgetData(
     todayAmount: formatAmount(todayTotal),
     todayLabel: l10n.widgetTodayExpense,
     budgetAmount: formatAmount(remaining.abs()),

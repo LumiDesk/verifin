@@ -31,8 +31,8 @@ class _VeriFinShellState extends State<VeriFinShell> {
   @override
   void initState() {
     super.initState();
-    AppPlatformBridge.setQuickEntryHandler(_openQuickEntryFromPlatform);
-    AppPlatformBridge.setSharedCaptureHandler(_openSharedCaptureFromPlatform);
+    AppCaptureBridge.setQuickEntryHandler(_openQuickEntryFromPlatform);
+    AppCaptureBridge.setSharedCaptureHandler(_openSharedCaptureFromPlatform);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // 隐私政策 / 用户协议同意由 PrivacyConsentGate 门卫处理；本壳只在同意后
       // 才会被构建，故此处直接展示新用户引导。
@@ -40,7 +40,7 @@ class _VeriFinShellState extends State<VeriFinShell> {
       if (!mounted) {
         return;
       }
-      if (await AppPlatformBridge.consumeInitialQuickEntryIntent() && mounted) {
+      if (await AppCaptureBridge.consumeInitialQuickEntryIntent() && mounted) {
         await _openQuickEntryFromPlatform();
       }
       if (!mounted) {
@@ -66,8 +66,8 @@ class _VeriFinShellState extends State<VeriFinShell> {
 
   @override
   void dispose() {
-    AppPlatformBridge.clearQuickEntryHandler();
-    AppPlatformBridge.clearSharedCaptureHandler();
+    AppCaptureBridge.clearQuickEntryHandler();
+    AppCaptureBridge.clearSharedCaptureHandler();
     _pageController.dispose();
     super.dispose();
   }

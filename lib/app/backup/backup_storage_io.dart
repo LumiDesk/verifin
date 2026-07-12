@@ -18,7 +18,7 @@ class PickedBackupDirectory {
 
 Future<PickedBackupDirectory?> pickBackupDirectory() async {
   if (Platform.isAndroid) {
-    final result = await AppPlatformBridge.pickBackupDirectory();
+    final result = await AppStorageBridge.pickBackupDirectory();
     if (result == null || (result['uri'] ?? '').isEmpty) {
       return null;
     }
@@ -41,7 +41,7 @@ Future<String?> writeBackupFile({
   String mimeType = 'application/json',
 }) async {
   if (Platform.isAndroid) {
-    return AppPlatformBridge.writeBackupFile(
+    return AppStorageBridge.writeBackupFile(
       directoryUri: directoryUri,
       filename: filename,
       content: content,
@@ -61,7 +61,7 @@ Future<String?> writeBackupBytesFile({
   String mimeType = 'application/zip',
 }) async {
   if (Platform.isAndroid) {
-    return AppPlatformBridge.writeBackupBytes(
+    return AppStorageBridge.writeBackupBytes(
       directoryUri: directoryUri,
       filename: filename,
       bytes: bytes,
@@ -76,7 +76,7 @@ Future<String?> writeBackupBytesFile({
 /// 读取备份文件原始字节（zip 与旧版 JSON 统一按字节读入，调用方再判别格式）。
 Future<Uint8List?> readBackupBytesFile(String fileUri) async {
   if (Platform.isAndroid) {
-    return AppPlatformBridge.readBackupBytes(fileUri);
+    return AppStorageBridge.readBackupBytes(fileUri);
   }
   final file = File.fromUri(Uri.parse(fileUri));
   if (!file.existsSync()) {
@@ -87,7 +87,7 @@ Future<Uint8List?> readBackupBytesFile(String fileUri) async {
 
 Future<List<BackupFileInfo>> listBackupFiles(String directoryUri) async {
   if (Platform.isAndroid) {
-    final raw = await AppPlatformBridge.listBackupFiles(directoryUri);
+    final raw = await AppStorageBridge.listBackupFiles(directoryUri);
     return raw.map(BackupFileInfo.fromMap).toList();
   }
   final dir = Directory(directoryUri);
@@ -118,7 +118,7 @@ Future<List<BackupFileInfo>> listBackupFiles(String directoryUri) async {
 
 Future<String?> readBackupFile(String fileUri) async {
   if (Platform.isAndroid) {
-    return AppPlatformBridge.readBackupFile(fileUri);
+    return AppStorageBridge.readBackupFile(fileUri);
   }
   final file = File.fromUri(Uri.parse(fileUri));
   if (!file.existsSync()) {
@@ -129,7 +129,7 @@ Future<String?> readBackupFile(String fileUri) async {
 
 Future<bool> deleteBackupFile(String fileUri) async {
   if (Platform.isAndroid) {
-    return AppPlatformBridge.deleteBackupFile(fileUri);
+    return AppStorageBridge.deleteBackupFile(fileUri);
   }
   final file = File.fromUri(Uri.parse(fileUri));
   if (!file.existsSync()) {
