@@ -141,6 +141,19 @@ Map<String, int> columnIndex(List<String> header) {
   return map;
 }
 
+/// 按优先级取第一个存在的列索引，容忍同一字段在不同来源/版本里的**列名别名**
+/// （如一木不同版本的子分类列：6.5.7「二级分类」、5.9.1「子类」，见 issue #12）。
+/// 全部别名都不存在时返回 null（`cellAt` 遇 null 返回空串）。
+int? columnOf(Map<String, int> cols, List<String> names) {
+  for (final name in names) {
+    final idx = cols[name];
+    if (idx != null) {
+      return idx;
+    }
+  }
+  return null;
+}
+
 /// 安全取一行的某列（越界/空索引返回空串，去首尾空白）。
 String cellAt(List<String> row, int? index) {
   if (index == null || index < 0 || index >= row.length) {

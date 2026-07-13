@@ -379,6 +379,66 @@ void main() {
     });
   });
 
+  group('一木记账 账单 xls（一木 5.9.1 子分类列名为「子类」，issue #12）', () {
+    // 报告人 PlatoMml 的真实导出（一木 v5.9.1）：子分类列叫「子类」而非「二级分类」
+    // （6.5.7 的叫法）。此前精确匹配「二级分类」→ 读不到「子类」→ 只落主分类。
+    // 现在两名都认，父子层级应正确还原（回归守卫）。
+    late ImportPlan plan;
+    setUp(() {
+      final bytes = File(
+        'test/fixtures/yimu_subcategory_zilei.xls',
+      ).readAsBytesSync();
+      plan = run(ImportPlatform.yimuBill, Uint8List.fromList(bytes));
+    });
+
+    Category leafOf(LedgerEntry e) =>
+        plan.newCategories.firstWhere((c) => c.id == e.categoryId);
+    Category parentOf(Category leaf) =>
+        plan.newCategories.firstWhere((c) => c.id == leaf.parentId);
+
+    test('3 条支出全部导入、无错误', () {
+      expect(plan.importedCount, 3);
+      expect(plan.errorCount, 0);
+    });
+
+    test('「子类」还原成父子层级：食品餐饮 → 午餐', () {
+      final entry = plan.entries.firstWhere((e) => e.amount == 18.5);
+      final leaf = leafOf(entry);
+      expect(leaf.label, '午餐');
+      final parent = parentOf(leaf);
+      expect(parent.label, '食品餐饮');
+      expect(parent.parentId, isNull);
+      expect(parent.type, EntryType.expense);
+    });
+
+    test('另一父级：出行交通 → 加油', () {
+      final entry = plan.entries.firstWhere((e) => e.amount == 80);
+      final leaf = leafOf(entry);
+      expect(leaf.label, '加油');
+      expect(parentOf(leaf).label, '出行交通');
+    });
+
+    test('同一父分类被两个子分类复用（食品餐饮 只建一次）', () {
+      final foods = plan.newCategories
+          .where((c) => c.label == '食品餐饮' && c.parentId == null)
+          .toList();
+      expect(foods, hasLength(1));
+      final children = plan.newCategories
+          .where((c) => c.parentId == foods.single.id)
+          .map((c) => c.label)
+          .toSet();
+      expect(children, containsAll(<String>['午餐', '饮料酒水']));
+    });
+
+    test('标签一并导入（「代购」挂到对应支出）', () {
+      final entry = plan.entries.firstWhere((e) => e.amount == 18.5);
+      final labels = entry.tagIds
+          .map((id) => plan.newTags.firstWhere((t) => t.id == id).label)
+          .toList();
+      expect(labels, contains('代购'));
+    });
+  });
+
   group('一木记账 账单 xls（带「退款」列，真实导出）', () {
     // 真实一木导出（用户提供，issue #10）：5 条收支，含部分退款、全额退款。
     // 关键事实：一木「金额」列存的是【净额】（已扣退款），退款单列另计。归一化须把

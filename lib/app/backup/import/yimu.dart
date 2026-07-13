@@ -22,6 +22,9 @@ ParsedImport parseYimuBill(Uint8List bytes) {
     throw const FormatException('未找到一木「账单导出」表头（日期/收支类型/金额），请确认选择的是一木账单导出的 xls');
   }
   final cols = columnIndex(rows[headerIndex]);
+  // 子分类列名随一木版本不同：6.5.7 叫「二级分类」、5.9.1 叫「子类」（issue #12）。
+  // 认这两个别名，读不到就当无子分类（只落主分类）。
+  final subCategoryCol = columnOf(cols, const <String>['二级分类', '子类']);
   final records = <RawImportRecord>[];
   final errors = <ImportRowError>[];
   for (var i = headerIndex + 1; i < rows.length; i++) {
@@ -53,7 +56,7 @@ ParsedImport parseYimuBill(Uint8List bytes) {
         type: typeText == '支出' ? EntryType.expense : EntryType.income,
         amount: gross,
         category: cellAt(row, cols['类别']),
-        subCategory: cellAt(row, cols['二级分类']),
+        subCategory: cellAt(row, subCategoryCol),
         account: cellAt(row, cols['账户']),
         note: cellAt(row, cols['备注']),
         refunded: parseImportFee(refund),
