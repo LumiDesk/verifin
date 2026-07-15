@@ -1616,10 +1616,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   /// 该分类及其全部子分类合计引用的交易笔数。用于分类管理列表展示笔数，
   /// 使「大类」也能反映记在子类下的消费（避免只记子类时大类恒显示 0 笔的困惑）。
   int categoryUsageCountInTree(String categoryId) {
-    final ids = <String>{
-      categoryId,
-      ...descendantIds(categories, categoryId),
-    };
+    final ids = <String>{categoryId, ...descendantIds(categories, categoryId)};
     return _entries.where((entry) => ids.contains(entry.categoryId)).length;
   }
 

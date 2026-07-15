@@ -99,12 +99,14 @@ main.write_text(
 )
 PY
 
-dart format lib/app/app_version.dart
+# 格式化整个项目，避免 CI 的 dart format 检查（ci.yml）因遗漏格式化而变红。
+# 工作区在脚本开头已强制干净，故此处 add -A 只会纳入版本号改动与格式化修正。
+dart format .
 flutter pub get
 flutter analyze
 flutter test
 
-git add pubspec.yaml pubspec.lock lib/app/app_version.dart
+git add -A
 git commit -m "chore: release $tag"
 git tag "$tag"
 git push origin main

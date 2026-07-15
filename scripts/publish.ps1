@@ -154,14 +154,16 @@ Write-TextNoBom -Path $appVersionPath -Text $newAppVersion
 
 Write-Host "Bumping version to $nextVersion (tag $tag)..."
 
-# 格式化、拉依赖、静态检查、测试。
-Invoke-Native { dart format lib/app/app_version.dart }
+# 格式化整个项目、拉依赖、静态检查、测试。
+# 格式化整项目避免 CI 的 dart format 检查（ci.yml）因遗漏格式化而变红。
+Invoke-Native { dart format . }
 Invoke-Native { flutter pub get }
 Invoke-Native { flutter analyze }
 Invoke-Native { flutter test }
 
-# 提交、打标签、推送。
-Invoke-Native { git add pubspec.yaml pubspec.lock lib/app/app_version.dart }
+# 提交、打标签、推送。工作区在脚本开头已强制干净，
+# 故 add -A 只会纳入版本号改动与格式化修正。
+Invoke-Native { git add -A }
 Invoke-Native { git commit -m "chore: release $tag" }
 Invoke-Native { git tag $tag }
 Invoke-Native { git push origin main }
