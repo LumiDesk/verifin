@@ -90,7 +90,7 @@
 | 图表 | 全部 `CustomPainter` 自绘（趋势 / 柱状 / 环形，带命中测试与数据气泡） |
 | 平台能力 | `local_auth`（生物解锁）、`flutter_local_notifications`（提醒）、`image_picker`（附件）、原生 `AppWidgetProvider`（桌面小组件）、MethodChannel 桥（SAF / 磁贴 / 更新检查） |
 | 测试 | 322 例 widget / 单元测试（内存仓储）+ ffi 真实 SQLite 数据层测试 |
-| CI / 发布 | GitHub Actions：推 `vX.Y.Z` 标签 → analyze + test + release APK + GitHub Release |
+| CI / 发布 | GitHub Actions：推 `vX.Y.Z` 标签 → analyze + test + release APK/AAB + GitHub Release |
 
 ## 🚀 快速开始
 
@@ -110,7 +110,7 @@ Android 包名 `top.talyra42.verifin`。本地不构建交付 APK——正式安
 
 ## 📦 构建与发布
 
-- CI（`.github/workflows/flutter.yml`）只在推送 `vX.Y.Z` 标签时触发：analyze → test → `flutter build apk --release --target-platform android-arm64` → 创建 GitHub Release（APK 命名 `verifin-vX.Y.Z-arm64-短提交号.apk`）。**只出 arm64-v8a 单架构包**（覆盖 2019 年后绝大多数机型、比 universal 约减半；极老 32 位设备装不了）；release 开启 R8 代码/资源裁剪，反射依赖点由 `android/app/proguard-rules.pro` 的 keep 规则保护。
+- CI（`.github/workflows/flutter.yml`）只在推送 `vX.Y.Z` 标签时触发：analyze → test → `flutter build apk --release --target-platform android-arm64` + `flutter build appbundle --release` → 创建 GitHub Release（APK 命名 `verifin-vX.Y.Z-arm64-短提交号.apk`，AAB 命名 `verifin-vX.Y.Z-短提交号.aab`）。自建分发的**安装包只出 arm64-v8a 单架构 APK**（覆盖 2019 年后绝大多数机型、比 universal 约减半；极老 32 位设备装不了）；AAB 含全部 ABI，供 Google Play 上架 / 所有权验证用（由 Play 按设备分发）。release 开启 R8 代码/资源裁剪，反射依赖点由 `android/app/proguard-rules.pro` 的 keep 规则保护。
 - 发版一条命令：
 
   ```bash

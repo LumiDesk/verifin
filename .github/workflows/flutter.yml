@@ -38,7 +38,7 @@ jobs:
         run: flutter test
 
   android:
-    name: Android APK
+    name: Android APK + AAB
     runs-on: ubuntu-latest
     needs: checks
     steps:
@@ -66,35 +66,44 @@ jobs:
         # 极老的 32 位机型装不了——已在 Release 说明中告知。
         run: flutter build apk --release --target-platform android-arm64
 
-      - name: Prepare APK artifact
+      - name: Build release App Bundle
+        # Google Play 上架 / 所有权验证需要 AAB（.aab）。与 APK 同用 verifinRelease
+        # 签名配置签名；AAB 内含全部 ABI，由 Play 按设备分发（自建 APK 分发仍走上面的
+        # arm64 APK）。
+        run: flutter build appbundle --release
+
+      - name: Prepare release artifacts
         shell: bash
         run: |
           mkdir -p release-artifacts
           short_sha="${GITHUB_SHA::7}"
           version_name="${GITHUB_REF_NAME}"
           cp build/app/outputs/flutter-apk/app-release.apk "release-artifacts/verifin-${version_name}-arm64-${short_sha}.apk"
+          cp build/app/outputs/bundle/release/app-release.aab "release-artifacts/verifin-${version_name}-${short_sha}.aab"
 
-      - name: Upload APK artifact
+      - name: Upload release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: verifin-android-apk
-          path: release-artifacts/*.apk
+          name: verifin-android-release
+          path: release-artifacts/*
 
   release:
     name: GitHub Release
     runs-on: ubuntu-latest
     needs: android
     steps:
-      - name: Download APK artifact
+      - name: Download release artifacts
         uses: actions/download-artifact@v4
         with:
-          name: verifin-android-apk
+          name: verifin-android-release
           path: release-artifacts
 
       - name: Create pre-release
         uses: softprops/action-gh-release@v2
         with:
-          files: release-artifacts/**/*.apk
+          files: |
+            release-artifacts/**/*.apk
+            release-artifacts/**/*.aab
           # 默认发预发布：不标记为 Latest，待真机测试通过后在 GitHub 手动改为正式版。
           prerelease: true
           make_latest: 'false'
