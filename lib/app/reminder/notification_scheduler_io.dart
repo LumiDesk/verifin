@@ -59,10 +59,14 @@ class NotificationScheduler {
     try {
       final info = await FlutterTimezone.getLocalTimezone();
       tz.setLocalLocation(tz.getLocation(info.identifier));
+      // 只有成功解析到本地时区才算就绪；否则保持未就绪以便下次 apply 重试。
+      // 若在此把 _timezoneReady 置真，早期通道未就绪等瞬时失败会让 tz.local
+      // 永久停在 UTC，导致提醒按 UTC 时刻触发（如 UTC+8 的 21:00 变成次日 05:00）。
+      _timezoneReady = true;
     } catch (_) {
-      // 拿不到本地时区时退回 UTC，仍可工作（时刻可能有偏差）。
+      // 拿不到本地时区时本次退回 UTC（仍可工作、时刻可能有偏差），但不置就绪，
+      // 下次 apply（开屏/回前台/改配置）会再试一次拿正确时区。
     }
-    _timezoneReady = true;
   }
 
   Future<bool> requestPermission() async {

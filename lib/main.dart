@@ -237,6 +237,14 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
       _controller.applyDueRecurring(DateTime.now());
       BackupCoordinator.maybeBackupOnOpen(_controller);
       pushWidgetData(_controller);
+      // 每次回前台都重排提醒：每日提醒底层是「触发时自排下一天」的精确闹钟链，
+      // 一旦某次因 Doze / force-stop / 重启 / 时区变化断掉，就再不会自愈。只在
+      // 冷启动重排会漏掉「常驻后台、只热恢复」的用户；apply 幂等（先 cancel 再排），
+      // 每次回前台对齐一次能把断掉的链重新排上。
+      _notifications.apply(
+        _controller.reminderSettings,
+        l10n: l10nForPreference(_controller.localePreference),
+      );
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
       // 切后台时把挂起写入刷盘（KV 偏好 + SQLite 账目），缩小「刚改完设置 /
