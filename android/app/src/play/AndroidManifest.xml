@@ -6,4 +6,10 @@
     <uses-permission
         android:name="android.permission.REQUEST_INSTALL_PACKAGES"
         tools:node="remove" />
+    <!-- Google Play 仅允许「闹钟/日历」类应用使用 USE_EXACT_ALARM，记账应用不符合，
+         故 Play 版移除。记账提醒改由 SCHEDULE_EXACT_ALARM（用户可授权的精确闹钟，Play
+         允许）驱动，未授权时代码自动回退 inexact；GitHub 版仍保留 USE_EXACT_ALARM。 -->
+    <uses-permission
+        android:name="android.permission.USE_EXACT_ALARM"
+        tools:node="remove" />
 </manifest>
