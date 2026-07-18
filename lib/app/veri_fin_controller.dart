@@ -261,6 +261,18 @@ String _categoryBudgetKey(String bookId, DateTime month, String categoryId) {
   return '$bookId:${_monthKey(month)}:$categoryId';
 }
 
+/// 「默认预算」的哨兵月段：默认月/分类预算存在预算表的 `bookId:default[:catId]`
+/// 键上。逐月键恒为 `yyyy-MM`（纯数字），故 `default` 与任何真实月份天然不冲突，
+/// 也无需改表结构或迁移；账本删除（`startsWith('bookId:')`）与分类删除/合并
+/// （`endsWith(':catId')`）的清理规则对默认键同样生效。
+const String _budgetDefaultMonthSegment = 'default';
+
+String _defaultMonthlyBudgetKey(String bookId) =>
+    '$bookId:$_budgetDefaultMonthSegment';
+
+String _defaultCategoryBudgetKey(String bookId, String categoryId) =>
+    '$bookId:$_budgetDefaultMonthSegment:$categoryId';
+
 /// 预算键按账本隔离,格式为 `bookId:yyyy-MM[:categoryId]`。
 /// 旧版本数据没有 bookId 前缀,加载/导入时归入默认账本。
 Map<String, double> _bookScopedBudgets(Map<String, double> raw) {

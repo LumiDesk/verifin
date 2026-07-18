@@ -1309,5 +1309,42 @@
   "aiErrServer": "The server returned an error",
   "aiErrBadResponse": "Could not parse the server response",
   "aiErrUpstream": "The server returned an error",
-  "aiErrUnknown": "Request failed"
+  "aiErrUnknown": "Request failed",
+  "budgetTitle": "Budget",
+  "budgetInheritChip": "Using default {amount}",
+  "@budgetInheritChip": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetOverrideChip": "Custom this month · tap to adjust",
+  "budgetSetChip": "Tap to set this month's budget",
+  "budgetSettingsSectionOverall": "Overall budget & cycle",
+  "budgetSettingsSectionCategory": "Default category budgets",
+  "defaultMonthlyBudgetTitle": "Default monthly budget",
+  "defaultMonthlyBudgetDesc": "Applied to every month; adjust individual months as needed",
+  "setDefaultMonthlyBudgetTitle": "Set default monthly budget",
+  "defaultCategoryBudgetTitle": "Default category budgets",
+  "defaultCategoryBudgetDesc": "Set once, applied every month; tap a category to set its default",
+  "setDefaultCategoryBudgetTitle": "Set default budget for {category}",
+  "@setDefaultCategoryBudgetTitle": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetOverrideSetAmount": "Set a custom amount for this month",
+  "budgetOverrideRestore": "Restore default (uses {amount})",
+  "@budgetOverrideRestore": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetOverrideClear": "Clear this month's custom amount",
+  "budgetCycleNotSet": "Not set"
 }

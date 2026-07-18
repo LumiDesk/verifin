@@ -65,10 +65,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
         ),
       );
     }
-    // 设本月预算（填了正数才设）。
+    // 设默认月预算（填了正数才设）：作为每月自动沿用的默认值，而非只设当月。
     final budget = double.tryParse(_budget.text.trim());
     if (budget != null && budget > 0) {
-      controller.setMonthlyBudget(DateTime.now(), budget);
+      controller.setDefaultMonthlyBudget(budget);
     }
     controller.completeOnboarding();
     if (mounted) {

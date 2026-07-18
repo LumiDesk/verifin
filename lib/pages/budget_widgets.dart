@@ -45,12 +45,10 @@ class _DailyBudgetCard extends StatelessWidget {
   const _DailyBudgetCard({
     required this.dailyBudget,
     required this.todayExpense,
-    required this.onEdit,
   });
 
   final double dailyBudget;
   final double todayExpense;
-  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -100,14 +98,6 @@ class _DailyBudgetCard extends StatelessWidget {
                       ),
                     ),
                   ],
-                ),
-              ),
-              InkResponse(
-                onTap: onEdit,
-                radius: 18,
-                child: Padding(
-                  padding: const EdgeInsets.all(3),
-                  child: Icon(Icons.edit_outlined, size: 16, color: veriRoyal),
                 ),
               ),
             ],
@@ -636,7 +626,7 @@ class _CategoryBudgetAlertCard extends StatelessWidget {
 class _CategoryBudgetRow extends StatelessWidget {
   const _CategoryBudgetRow({
     required this.snapshot,
-    required this.onTap,
+    this.onTap,
     this.depth = 0,
     this.childCount = 0,
     this.collapsed = false,
@@ -644,7 +634,9 @@ class _CategoryBudgetRow extends StatelessWidget {
   });
 
   final CategoryBudgetSnapshot snapshot;
-  final VoidCallback onTap;
+
+  /// 点击行的回调；null 表示只读（总览页只读，编辑默认预算在设置页）。
+  final VoidCallback? onTap;
 
   /// 分类层级深度（0 为顶级），用于左侧缩进。
   final int depth;
@@ -739,7 +731,9 @@ class _CategoryBudgetRow extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           snapshot.budget <= 0
-                              ? AppLocalizations.of(context).setLabel
+                              ? (onTap == null
+                                    ? '—'
+                                    : AppLocalizations.of(context).setLabel)
                               : formatAmount(snapshot.budget),
                           style: Theme.of(context).textTheme.labelLarge
                               ?.copyWith(
@@ -750,14 +744,16 @@ class _CategoryBudgetRow extends StatelessWidget {
                                 fontWeight: FontWeight.w800,
                               ),
                         ),
-                        const SizedBox(width: 2),
-                        Icon(
-                          Icons.chevron_right,
-                          size: 17,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.36),
-                        ),
+                        if (onTap != null) ...<Widget>[
+                          const SizedBox(width: 2),
+                          Icon(
+                            Icons.chevron_right,
+                            size: 17,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.36),
+                          ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -865,6 +861,67 @@ class _BudgetInsightCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 月预算来源状态 chip（总览页只读，点击进入单月覆盖弹窗）：
+/// 区分「本月单独设置」「沿用默认 ¥X」「未设 · 点此设置」三态。
+class _MonthBudgetStatusChip extends StatelessWidget {
+  const _MonthBudgetStatusChip({
+    required this.isOverride,
+    required this.defaultBudget,
+    required this.onTap,
+  });
+
+  final bool isOverride;
+  final double defaultBudget;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final (IconData icon, String label, Color color) = isOverride
+        ? (Icons.edit_calendar_outlined, l10n.budgetOverrideChip, veriRoyal)
+        : defaultBudget > 0
+        ? (
+            Icons.event_repeat_outlined,
+            l10n.budgetInheritChip(formatAmount(defaultBudget)),
+            theme.colorScheme.onSurface.withValues(alpha: 0.62),
+          )
+        : (Icons.add_circle_outline, l10n.budgetSetChip, veriRoyal);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(99),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(99),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(icon, size: 13, color: color),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

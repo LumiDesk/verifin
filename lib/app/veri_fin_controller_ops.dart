@@ -363,10 +363,33 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   DateTime budgetKeyMonthFor(DateTime date) =>
       budgetCycleKeyMonthFor(date, budgetCycleStartDay);
 
-  double monthlyBudget(DateTime month) {
-    return _monthlyBudgets['$_activeBookId:${_monthKey(month)}'] ?? 800;
+  /// 当前账本的「默认月预算」：设一次每月自动沿用（0 = 未设默认）。存于预算表的
+  /// 哨兵键 `bookId:default`，与逐月键 `bookId:yyyy-MM` 天然不冲突。
+  double get defaultMonthlyBudget =>
+      _monthlyBudgets[_defaultMonthlyBudgetKey(_activeBookId)] ?? 0;
+
+  void setDefaultMonthlyBudget(double amount) {
+    final key = _defaultMonthlyBudgetKey(_activeBookId);
+    if (amount <= 0) {
+      _monthlyBudgets.remove(key);
+    } else {
+      _monthlyBudgets[key] = amount;
+    }
+    _persistBudgets();
+    notifyListeners();
   }
 
+  /// 某键月的实际月预算：单月覆盖优先，否则沿用默认月预算，都没有则 0。
+  double monthlyBudget(DateTime month) =>
+      _monthlyBudgets['$_activeBookId:${_monthKey(month)}'] ??
+      defaultMonthlyBudget;
+
+  /// 该键月是否设了单独的覆盖值（用于区分「沿用默认」与「本月单独」）。
+  bool monthlyBudgetIsOverride(DateTime month) =>
+      _monthlyBudgets.containsKey('$_activeBookId:${_monthKey(month)}');
+
+  /// 设某键月的单月覆盖（amount 可为 0，表示「本月不设预算」；恢复默认沿用请用
+  /// [clearMonthlyBudgetOverride]）。
   void setMonthlyBudget(DateTime month, double amount) {
     _monthlyBudgets['$_activeBookId:${_monthKey(month)}'] = amount <= 0
         ? 0
@@ -375,15 +398,36 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
-  double categoryBudget(DateTime month, String categoryId) {
-    return _categoryBudgets[_categoryBudgetKey(
-          _activeBookId,
-          month,
-          categoryId,
-        )] ??
-        0;
+  /// 清除某键月的单月覆盖，回到沿用默认月预算。
+  void clearMonthlyBudgetOverride(DateTime month) {
+    if (_monthlyBudgets.remove('$_activeBookId:${_monthKey(month)}') != null) {
+      _persistBudgets();
+      notifyListeners();
+    }
   }
 
+  /// 当前账本某分类的「默认预算」：设一次每月自动沿用（0 = 未设）。
+  double defaultCategoryBudget(String categoryId) =>
+      _categoryBudgets[_defaultCategoryBudgetKey(_activeBookId, categoryId)] ??
+      0;
+
+  void setDefaultCategoryBudget(String categoryId, double amount) {
+    final key = _defaultCategoryBudgetKey(_activeBookId, categoryId);
+    if (amount <= 0) {
+      _categoryBudgets.remove(key);
+    } else {
+      _categoryBudgets[key] = amount;
+    }
+    _persistCategoryBudgets();
+    notifyListeners();
+  }
+
+  /// 某键月某分类的实际预算：单月覆盖优先，否则沿用分类默认，都没有则 0。
+  double categoryBudget(DateTime month, String categoryId) =>
+      _categoryBudgets[_categoryBudgetKey(_activeBookId, month, categoryId)] ??
+      defaultCategoryBudget(categoryId);
+
+  /// 设某键月某分类的单月覆盖（0 = 移除覆盖，回到沿用分类默认）。
   void setCategoryBudget(DateTime month, String categoryId, double amount) {
     final key = _categoryBudgetKey(_activeBookId, month, categoryId);
     if (amount <= 0) {

@@ -660,11 +660,14 @@
       }
     ],
     "monthlyBudgets": {
+      "default:default": 6000.0,
       "default:2026-05": 5200.0,
       "default:2026-06": 5600.0,
       "default:2026-07": 6200.0
     },
     "categoryBudgets": {
+      "default:default:dining": 1100.0,
+      "default:default:shopping": 850.0,
       "default:2026-07:dining": 1200.0,
       "default:2026-07:shopping": 900.0,
       "default:2026-07:transport": 350.0,

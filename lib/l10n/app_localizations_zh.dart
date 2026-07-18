@@ -3508,4 +3508,58 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get aiErrUnknown => '请求失败';
+
+  @override
+  String get budgetTitle => '预算';
+
+  @override
+  String budgetInheritChip(String amount) {
+    return '沿用默认 $amount';
+  }
+
+  @override
+  String get budgetOverrideChip => '本月单独设置 · 点此调整';
+
+  @override
+  String get budgetSetChip => '点此设置本月预算';
+
+  @override
+  String get budgetSettingsSectionOverall => '总预算与周期';
+
+  @override
+  String get budgetSettingsSectionCategory => '分类默认预算';
+
+  @override
+  String get defaultMonthlyBudgetTitle => '默认月预算';
+
+  @override
+  String get defaultMonthlyBudgetDesc => '每月自动沿用，可在各月单独调整';
+
+  @override
+  String get setDefaultMonthlyBudgetTitle => '设置默认月预算';
+
+  @override
+  String get defaultCategoryBudgetTitle => '默认分类预算';
+
+  @override
+  String get defaultCategoryBudgetDesc => '设一次每月自动沿用；点分类设置默认额度';
+
+  @override
+  String setDefaultCategoryBudgetTitle(String category) {
+    return '设置$category默认预算';
+  }
+
+  @override
+  String get budgetOverrideSetAmount => '单独设置本月额度';
+
+  @override
+  String budgetOverrideRestore(String amount) {
+    return '恢复默认（沿用 $amount）';
+  }
+
+  @override
+  String get budgetOverrideClear => '清除本月单独设置';
+
+  @override
+  String get budgetCycleNotSet => '未设置';
 }

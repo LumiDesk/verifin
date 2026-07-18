@@ -3592,4 +3592,60 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiErrUnknown => 'Request failed';
+
+  @override
+  String get budgetTitle => 'Budget';
+
+  @override
+  String budgetInheritChip(String amount) {
+    return 'Using default $amount';
+  }
+
+  @override
+  String get budgetOverrideChip => 'Custom this month · tap to adjust';
+
+  @override
+  String get budgetSetChip => 'Tap to set this month\'s budget';
+
+  @override
+  String get budgetSettingsSectionOverall => 'Overall budget & cycle';
+
+  @override
+  String get budgetSettingsSectionCategory => 'Default category budgets';
+
+  @override
+  String get defaultMonthlyBudgetTitle => 'Default monthly budget';
+
+  @override
+  String get defaultMonthlyBudgetDesc =>
+      'Applied to every month; adjust individual months as needed';
+
+  @override
+  String get setDefaultMonthlyBudgetTitle => 'Set default monthly budget';
+
+  @override
+  String get defaultCategoryBudgetTitle => 'Default category budgets';
+
+  @override
+  String get defaultCategoryBudgetDesc =>
+      'Set once, applied every month; tap a category to set its default';
+
+  @override
+  String setDefaultCategoryBudgetTitle(String category) {
+    return 'Set default budget for $category';
+  }
+
+  @override
+  String get budgetOverrideSetAmount => 'Set a custom amount for this month';
+
+  @override
+  String budgetOverrideRestore(String amount) {
+    return 'Restore default (uses $amount)';
+  }
+
+  @override
+  String get budgetOverrideClear => 'Clear this month\'s custom amount';
+
+  @override
+  String get budgetCycleNotSet => 'Not set';
 }

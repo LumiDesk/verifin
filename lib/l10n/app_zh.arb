@@ -2217,5 +2217,42 @@
   "aiErrServer": "服务器返回错误",
   "aiErrBadResponse": "无法解析服务器响应",
   "aiErrUpstream": "服务器返回错误",
-  "aiErrUnknown": "请求失败"
+  "aiErrUnknown": "请求失败",
+  "budgetTitle": "预算",
+  "budgetInheritChip": "沿用默认 {amount}",
+  "@budgetInheritChip": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetOverrideChip": "本月单独设置 · 点此调整",
+  "budgetSetChip": "点此设置本月预算",
+  "budgetSettingsSectionOverall": "总预算与周期",
+  "budgetSettingsSectionCategory": "分类默认预算",
+  "defaultMonthlyBudgetTitle": "默认月预算",
+  "defaultMonthlyBudgetDesc": "每月自动沿用，可在各月单独调整",
+  "setDefaultMonthlyBudgetTitle": "设置默认月预算",
+  "defaultCategoryBudgetTitle": "默认分类预算",
+  "defaultCategoryBudgetDesc": "设一次每月自动沿用；点分类设置默认额度",
+  "setDefaultCategoryBudgetTitle": "设置{category}默认预算",
+  "@setDefaultCategoryBudgetTitle": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetOverrideSetAmount": "单独设置本月额度",
+  "budgetOverrideRestore": "恢复默认（沿用 {amount}）",
+  "@budgetOverrideRestore": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetOverrideClear": "清除本月单独设置",
+  "budgetCycleNotSet": "未设置"
 }

@@ -136,6 +136,9 @@ List<CategoryBudgetSnapshot> computeCategoryBudgetSnapshots({
   required DateTime month,
   required List<LedgerEntry> monthEntries,
   List<LedgerEntry> previousMonthEntries = const <LedgerEntry>[],
+  // true 时快照的 budget 取「分类默认预算」（设置页编辑默认用）；否则取该键月的
+  // 实际预算（单月覆盖 ?? 默认，总览展示用）。
+  bool useDefaultBudget = false,
 }) {
   // 多级分类按层级聚合：每笔支出计入其所属分类**及所有上级分类**，
   // 这样父分类的预算会包含其子分类的支出。
@@ -170,7 +173,9 @@ List<CategoryBudgetSnapshot> computeCategoryBudgetSnapshots({
         (category) => CategoryBudgetSnapshot(
           category: category,
           spent: spentByCategory[category.id] ?? 0,
-          budget: controller.categoryBudget(month, category.id),
+          budget: useDefaultBudget
+              ? controller.defaultCategoryBudget(category.id)
+              : controller.categoryBudget(month, category.id),
           previousSpent: previousSpentByCategory[category.id] ?? 0,
         ),
       )

@@ -272,6 +272,11 @@ void main() {
       controller.categoryBudget(DateTime(2026, 7), 'dining'),
       greaterThan(0),
     );
+    // 默认预算（每月自动沿用）：样例带默认月预算与分类默认预算，导入后应读回。
+    expect(controller.defaultMonthlyBudget, 6000);
+    expect(controller.defaultCategoryBudget('dining'), 1100);
+    // 未设单月覆盖的月份沿用默认月预算。
+    expect(controller.monthlyBudget(DateTime(2026, 9)), 6000);
     expect(
       controller.isAssetSectionCollapsed(
         mode: AssetAccountViewMode.type,

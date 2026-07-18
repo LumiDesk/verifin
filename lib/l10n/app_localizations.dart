@@ -6463,6 +6463,102 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'请求失败'**
   String get aiErrUnknown;
+
+  /// No description provided for @budgetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'预算'**
+  String get budgetTitle;
+
+  /// No description provided for @budgetInheritChip.
+  ///
+  /// In zh, this message translates to:
+  /// **'沿用默认 {amount}'**
+  String budgetInheritChip(String amount);
+
+  /// No description provided for @budgetOverrideChip.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月单独设置 · 点此调整'**
+  String get budgetOverrideChip;
+
+  /// No description provided for @budgetSetChip.
+  ///
+  /// In zh, this message translates to:
+  /// **'点此设置本月预算'**
+  String get budgetSetChip;
+
+  /// No description provided for @budgetSettingsSectionOverall.
+  ///
+  /// In zh, this message translates to:
+  /// **'总预算与周期'**
+  String get budgetSettingsSectionOverall;
+
+  /// No description provided for @budgetSettingsSectionCategory.
+  ///
+  /// In zh, this message translates to:
+  /// **'分类默认预算'**
+  String get budgetSettingsSectionCategory;
+
+  /// No description provided for @defaultMonthlyBudgetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'默认月预算'**
+  String get defaultMonthlyBudgetTitle;
+
+  /// No description provided for @defaultMonthlyBudgetDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'每月自动沿用，可在各月单独调整'**
+  String get defaultMonthlyBudgetDesc;
+
+  /// No description provided for @setDefaultMonthlyBudgetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'设置默认月预算'**
+  String get setDefaultMonthlyBudgetTitle;
+
+  /// No description provided for @defaultCategoryBudgetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'默认分类预算'**
+  String get defaultCategoryBudgetTitle;
+
+  /// No description provided for @defaultCategoryBudgetDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'设一次每月自动沿用；点分类设置默认额度'**
+  String get defaultCategoryBudgetDesc;
+
+  /// No description provided for @setDefaultCategoryBudgetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'设置{category}默认预算'**
+  String setDefaultCategoryBudgetTitle(String category);
+
+  /// No description provided for @budgetOverrideSetAmount.
+  ///
+  /// In zh, this message translates to:
+  /// **'单独设置本月额度'**
+  String get budgetOverrideSetAmount;
+
+  /// No description provided for @budgetOverrideRestore.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复默认（沿用 {amount}）'**
+  String budgetOverrideRestore(String amount);
+
+  /// No description provided for @budgetOverrideClear.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除本月单独设置'**
+  String get budgetOverrideClear;
+
+  /// No description provided for @budgetCycleNotSet.
+  ///
+  /// In zh, this message translates to:
+  /// **'未设置'**
+  String get budgetCycleNotSet;
 }
 
 class _AppLocalizationsDelegate

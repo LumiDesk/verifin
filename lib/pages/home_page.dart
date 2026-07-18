@@ -144,7 +144,7 @@ class HomePage extends StatelessWidget {
               Navigator.of(context).push<void>(
                 MaterialPageRoute<void>(
                   builder: (context) =>
-                      BudgetSettingsPage(initialMonth: budgetKeyMonth),
+                      BudgetOverviewPage(initialMonth: budgetKeyMonth),
                 ),
               );
             },

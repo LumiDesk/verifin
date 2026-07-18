@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/chart_painters.dart';
+import 'package:verifin/app/common_widgets.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/app/veri_fin_scope.dart';
 import 'package:verifin/local_storage/local_storage.dart';
@@ -30,7 +31,7 @@ void main() {
     expect(find.text('收支统计'), findsOneWidget);
   });
 
-  testWidgets('edits monthly budget from the home budget card', (
+  testWidgets('sets default budget and category default from budget settings', (
     WidgetTester tester,
   ) async {
     await pumpApp(tester);
@@ -43,55 +44,44 @@ void main() {
     await tester.tap(find.byType(BudgetPanel));
     await tester.pumpAndSettle();
 
-    expect(find.text('预算设置'), findsOneWidget);
+    // 总览页标题为「预算」，只读；配置走右上角设置齿轮。
+    expect(find.text('预算'), findsWidgets);
     expect(find.text('本月支出'), findsAtLeastNWidgets(1));
-    expect(find.text('剩余日均'), findsOneWidget);
 
-    // 通过顶部“本月可用预算”旁的编辑图标设置本月预算（月度卡片在开屏即可见，
-    // 每日预算卡片的编辑图标在其后，.first 命中的仍是月度卡片）
-    await tester.tap(find.byIcon(Icons.edit_outlined).first);
+    // 进入预算设置页，设默认月预算 2400（每月自动沿用，无需逐月改）。
+    await tester.tap(find.byIcon(Icons.tune));
     await tester.pumpAndSettle();
-    expect(find.text('设置本月预算'), findsOneWidget);
-    // 月度预算默认回退为 800，数字键盘会带入该值；先清空再输入 2400。
-    await tester.tap(find.byKey(const Key('number_key_C')));
+    expect(find.text('预算设置'), findsOneWidget);
+    await tester.tap(find.text('默认月预算'));
+    await tester.pumpAndSettle();
+    expect(find.text('设置默认月预算'), findsOneWidget);
     for (final key in <String>['2', '4', '00']) {
       await tester.tap(find.byKey(Key('number_key_$key')));
     }
     await tester.tap(find.byKey(const Key('number_pad_ok')));
     await tester.pumpAndSettle();
 
-    // 趋势卡片位于每日预算卡片之后，滚动到可见再断言
-    await tester.scrollUntilVisible(
-      find.text('近 6 月趋势'),
-      200,
-      scrollable: firstVerticalScrollable(),
-    );
-    expect(find.text('近 6 月趋势'), findsOneWidget);
-
+    // 设餐饮默认预算 600。
     await tester.scrollUntilVisible(
       find.text('餐饮'),
       200,
       scrollable: firstVerticalScrollable(),
     );
-    expect(find.text('餐饮'), findsOneWidget);
-    await tester.ensureVisible(find.text('餐饮'));
-    await tester.pumpAndSettle();
     await tester.tap(find.text('餐饮'));
     await tester.pumpAndSettle();
-    expect(find.text('设置餐饮预算'), findsOneWidget);
+    expect(find.text('设置餐饮默认预算'), findsOneWidget);
     for (final key in <String>['6', '00']) {
       await tester.tap(find.byKey(Key('number_key_$key')));
     }
     await tester.tap(find.byKey(const Key('number_pad_ok')));
     await tester.pumpAndSettle();
-    expect(find.text('600'), findsOneWidget);
+    expect(find.text('600'), findsWidgets);
 
-    await tester.scrollUntilVisible(
-      find.text('预算设置'),
-      -300,
-      scrollable: firstVerticalScrollable(),
-    );
-    await tester.tap(find.byIcon(Icons.arrow_back).first);
+    // 返回总览再回主页：BudgetPanel 应显示沿用默认的「预算 2400」。
+    // （列表已滚动到分类行、顶部返回按钮已滚出视口，改用 Navigator.pop 返回。）
+    Navigator.of(tester.element(find.byType(BudgetSettingsPage))).pop();
+    await tester.pumpAndSettle();
+    Navigator.of(tester.element(find.byType(BudgetOverviewPage))).pop();
     await tester.pumpAndSettle();
 
     expect(find.byType(BudgetPanel), findsOneWidget);
@@ -121,21 +111,26 @@ void main() {
     tester.widget<BudgetPanel>(find.byType(BudgetPanel)).onTap();
     await tester.pumpAndSettle();
 
-    // 子分类默认展开可见。
+    // 分类树默认折叠：父分类「餐饮」可见，子分类「午餐」隐藏。
     await tester.scrollUntilVisible(
-      find.text('午餐'),
+      find.text('餐饮'),
       200,
       scrollable: firstVerticalScrollable(),
     );
-    expect(find.text('午餐'), findsOneWidget);
-
-    // 收起父分类后子分类隐藏，父分类仍在。
-    await tester.ensureVisible(find.byIcon(Icons.expand_more).first);
-    await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.expand_more).first);
-    await tester.pumpAndSettle();
-    expect(find.text('午餐'), findsNothing);
     expect(find.text('餐饮'), findsOneWidget);
+    expect(find.text('午餐'), findsNothing);
+
+    // 展开父分类后子分类进入组件树（展开后可能在视口外，用 skipOffstage 断言存在）。
+    // 分类卡内的 chevron_right 才是折叠开关（MonthSwitcher 的下一月箭头也用该图标）。
+    final toggle = find.descendant(
+      of: find.ancestor(of: find.text('餐饮'), matching: find.byType(VeriCard)),
+      matching: find.byIcon(Icons.chevron_right),
+    );
+    await tester.ensureVisible(toggle.first);
+    await tester.pumpAndSettle();
+    await tester.tap(toggle.first);
+    await tester.pumpAndSettle();
+    expect(find.text('午餐', skipOffstage: false), findsOneWidget);
   });
 
   testWidgets('shows category budget risk on home and budget page', (
@@ -185,7 +180,8 @@ void main() {
     tester.widget<BudgetPanel>(find.byType(BudgetPanel)).onTap();
     await tester.pumpAndSettle();
 
-    expect(find.text('预算设置'), findsOneWidget);
+    // 总览页标题为「预算」。
+    expect(find.text('预算'), findsWidgets);
     await tester.scrollUntilVisible(
       find.text('近 6 月趋势'),
       200,
@@ -321,7 +317,8 @@ void main() {
 
     controller.addLedgerBook('旅行账本');
 
-    expect(controller.monthlyBudget(month), 800);
+    // 新账本无单月覆盖也无默认月预算，回落 0（不再有硬编码 800）。
+    expect(controller.monthlyBudget(month), 0);
     expect(controller.categoryBudget(month, 'dining'), 0);
 
     controller.setMonthlyBudget(month, 1200);
@@ -330,6 +327,93 @@ void main() {
     expect(controller.monthlyBudget(month), 5000);
     expect(controller.categoryBudget(month, 'dining'), 600);
     controller.dispose();
+  });
+
+  group('默认月预算 + 单月覆盖（issue #21）', () {
+    test('无预算时回落 0；默认月预算每月自动沿用', () async {
+      final controller = await makeController();
+      final july = DateTime(2026, 7);
+      final august = DateTime(2026, 8);
+      // 不再有硬编码 800：未设默认、未设覆盖 → 0。
+      expect(controller.defaultMonthlyBudget, 0);
+      expect(controller.monthlyBudget(july), 0);
+
+      controller.setDefaultMonthlyBudget(2000);
+      // 默认每月自动沿用，任意月都是 2000，且不算「单月覆盖」。
+      expect(controller.monthlyBudget(july), 2000);
+      expect(controller.monthlyBudget(august), 2000);
+      expect(controller.monthlyBudgetIsOverride(july), isFalse);
+      controller.dispose();
+    });
+
+    test('单月覆盖优先于默认；清除覆盖回到沿用默认', () async {
+      final controller = await makeController();
+      final july = DateTime(2026, 7);
+      controller.setDefaultMonthlyBudget(2000);
+
+      controller.setMonthlyBudget(july, 5000);
+      expect(controller.monthlyBudget(july), 5000);
+      expect(controller.monthlyBudgetIsOverride(july), isTrue);
+      // 其它月仍沿用默认。
+      expect(controller.monthlyBudget(DateTime(2026, 8)), 2000);
+
+      controller.clearMonthlyBudgetOverride(july);
+      expect(controller.monthlyBudgetIsOverride(july), isFalse);
+      expect(controller.monthlyBudget(july), 2000);
+      controller.dispose();
+    });
+
+    test('默认月预算按账本隔离', () async {
+      final controller = await makeController();
+      controller.setDefaultMonthlyBudget(2000);
+
+      controller.addLedgerBook('旅行账本');
+      expect(controller.defaultMonthlyBudget, 0);
+      controller.setDefaultMonthlyBudget(500);
+
+      controller.switchLedgerBook('default');
+      expect(controller.defaultMonthlyBudget, 2000);
+      controller.dispose();
+    });
+
+    test('分类默认预算：沿用/覆盖/持久化 + 备份 roundtrip', () async {
+      final store = LocalKeyValueStore();
+      final controller = await makeController(store);
+      final july = DateTime(2026, 7);
+      controller.setDefaultCategoryBudget('dining', 800);
+      controller.setDefaultMonthlyBudget(3000);
+      // 分类默认每月沿用；单月覆盖优先。
+      expect(controller.categoryBudget(july, 'dining'), 800);
+      controller.setCategoryBudget(july, 'dining', 1200);
+      expect(controller.categoryBudget(july, 'dining'), 1200);
+      expect(controller.categoryBudget(DateTime(2026, 8), 'dining'), 800);
+      final json = controller.exportDataJson();
+      controller.dispose();
+
+      // 重启：默认预算随预算表持久化。
+      final restarted = await makeController(store);
+      expect(restarted.defaultMonthlyBudget, 3000);
+      expect(restarted.defaultCategoryBudget('dining'), 800);
+      restarted.dispose();
+
+      // 备份导入：默认预算进 JSON 备份。
+      final target = await makeController();
+      expect(target.defaultMonthlyBudget, 0);
+      target.importDataJson(json);
+      expect(target.defaultMonthlyBudget, 3000);
+      expect(target.defaultCategoryBudget('dining'), 800);
+      target.dispose();
+    });
+
+    test('初始化数据清除默认预算', () async {
+      final controller = await makeController();
+      controller.setDefaultMonthlyBudget(2000);
+      controller.setDefaultCategoryBudget('dining', 500);
+      controller.resetAllData();
+      expect(controller.defaultMonthlyBudget, 0);
+      expect(controller.defaultCategoryBudget('dining'), 0);
+      controller.dispose();
+    });
   });
 
   test('daily budget: set, clear, and isolate between books', () async {
@@ -450,6 +534,7 @@ void main() {
     testWidgets('预算页按周期取数并用「本期」文案', (WidgetTester tester) async {
       final controller = await makeController();
       controller.setBudgetCycleStartDay(22);
+      controller.setDefaultMonthlyBudget(800);
       final bookId = controller.activeBook.id;
       controller
         ..addEntry(
@@ -481,7 +566,7 @@ void main() {
         VeriFinScope(
           controller: controller,
           child: zhMaterialApp(
-            home: BudgetSettingsPage(initialMonth: DateTime(2026, 7)),
+            home: BudgetOverviewPage(initialMonth: DateTime(2026, 7)),
           ),
         ),
       );

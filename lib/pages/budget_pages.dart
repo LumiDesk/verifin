@@ -18,29 +18,47 @@ import 'sheets.dart';
 part 'budget_snapshots.dart';
 part 'budget_trend_chart.dart';
 part 'budget_widgets.dart';
+part 'budget_settings_page.dart';
 
-class BudgetSettingsPage extends StatefulWidget {
-  const BudgetSettingsPage({super.key, required this.initialMonth});
+/// 预算总览（只读）：查看某月/某周期的预算执行情况。所有「配置」动作（默认预算、
+/// 按日上限、周期起始日、分类默认预算）都在右上角齿轮进入的 [BudgetSettingsPage]，
+/// 单月覆盖走状态 chip / 历史列表的 [showMonthlyBudgetOverrideSheet]，本页不内联编辑。
+class BudgetOverviewPage extends StatefulWidget {
+  const BudgetOverviewPage({super.key, required this.initialMonth});
 
   final DateTime initialMonth;
 
   @override
-  State<BudgetSettingsPage> createState() => _BudgetSettingsPageState();
+  State<BudgetOverviewPage> createState() => _BudgetOverviewPageState();
 }
 
-class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
+class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
   late DateTime _month = DateTime(
     widget.initialMonth.year,
     widget.initialMonth.month,
   );
 
-  // 收起的父分类 id（默认全部展开，收起后隐藏其子树）。
+  // 收起的父分类 id（默认折叠：首次构建时把所有含子类的分类加入，只显示顶级行）。
   final Set<String> _collapsedCategories = <String>{};
+  bool _collapseInitialized = false;
+
+  void _initCollapse(VeriFinController controller) {
+    if (_collapseInitialized) {
+      return;
+    }
+    _collapseInitialized = true;
+    for (final category in controller.categoriesForType(EntryType.expense)) {
+      if (controller.childCategories(category.id).isNotEmpty) {
+        _collapsedCategories.add(category.id);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
     final l10n = AppLocalizations.of(context);
+    _initCollapse(controller);
     // 预算按周期取数：_month 是周期的「键月」（预算存储键），窗口由账本的
     // 周期起始日决定；起始日 = 1 时窗口即自然月，行为与旧版完全一致。
     final cyclic = controller.budgetCycleIsCustom;
@@ -110,9 +128,16 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
             padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
             children: <Widget>[
               VeriHeader(
-                title: AppLocalizations.of(context).budgetSettingsTitle,
+                title: AppLocalizations.of(context).budgetTitle,
                 subtitle: cycleLabel,
                 showBack: true,
+                actions: <Widget>[
+                  HeaderAction(
+                    icon: Icons.tune,
+                    tooltip: l10n.budgetSettingsTitle,
+                    onPressed: _openSettings,
+                  ),
+                ],
               ),
               const SizedBox(height: 10),
               VeriCard(
@@ -120,23 +145,10 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: MonthSwitcher(
-                            label: cycleLabel,
-                            onPrevious: () => _changeMonth(-1),
-                            onNext: () => _changeMonth(1),
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: l10n.budgetCycleStartDayTitle,
-                          onPressed: _editCycleStartDay,
-                          // 字形垂直居中，与左侧上下对称的箭头视觉对齐；
-                          // event_repeat 因底部循环箭头重心偏下会显得偏低。
-                          icon: const Icon(Icons.calendar_month_outlined),
-                        ),
-                      ],
+                    MonthSwitcher(
+                      label: cycleLabel,
+                      onPrevious: () => _changeMonth(-1),
+                      onNext: () => _changeMonth(1),
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -217,43 +229,21 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
                                     ?.copyWith(fontWeight: FontWeight.w800),
                               ),
                               const SizedBox(height: 5),
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: <Widget>[
-                                  Flexible(
-                                    child: Text(
-                                      remaining < 0
-                                          ? formatExpenseAmount(remaining.abs())
-                                          : formatAmount(remaining),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .displaySmall
-                                          ?.copyWith(
-                                            color: remaining < 0
-                                                ? veriExpense
-                                                : Theme.of(
-                                                    context,
-                                                  ).colorScheme.onSurface,
-                                            fontWeight: FontWeight.w900,
-                                          ),
+                              Text(
+                                remaining < 0
+                                    ? formatExpenseAmount(remaining.abs())
+                                    : formatAmount(remaining),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.displaySmall
+                                    ?.copyWith(
+                                      color: remaining < 0
+                                          ? veriExpense
+                                          : Theme.of(
+                                              context,
+                                            ).colorScheme.onSurface,
+                                      fontWeight: FontWeight.w900,
                                     ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  InkResponse(
-                                    onTap: _editMonthlyBudget,
-                                    radius: 18,
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(3),
-                                      child: Icon(
-                                        Icons.edit_outlined,
-                                        size: 16,
-                                        color: veriRoyal,
-                                      ),
-                                    ),
-                                  ),
-                                ],
                               ),
                               const SizedBox(height: 6),
                               Text(
@@ -272,6 +262,14 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
                                           .withValues(alpha: 0.52),
                                       fontWeight: FontWeight.w700,
                                     ),
+                              ),
+                              const SizedBox(height: 8),
+                              _MonthBudgetStatusChip(
+                                isOverride: controller.monthlyBudgetIsOverride(
+                                  _month,
+                                ),
+                                defaultBudget: controller.defaultMonthlyBudget,
+                                onTap: () => _openOverride(_month),
                               ),
                             ],
                           ),
@@ -330,12 +328,14 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
                   ],
                 ),
               ),
-              const SizedBox(height: 10),
-              _DailyBudgetCard(
-                dailyBudget: controller.dailyBudget(),
-                todayExpense: dayExpenseTotal(controller.entries, now),
-                onEdit: _editDailyBudget,
-              ),
+              // 按日预算卡仅在已设上限时展示（只读追踪）；设置入口在预算设置页。
+              if (controller.dailyBudget() > 0) ...<Widget>[
+                const SizedBox(height: 10),
+                _DailyBudgetCard(
+                  dailyBudget: controller.dailyBudget(),
+                  todayExpense: dayExpenseTotal(controller.entries, now),
+                ),
+              ],
               const SizedBox(height: 10),
               _BudgetInsightCard(
                 budget: budget,
@@ -438,35 +438,9 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
     });
   }
 
-  /// 选择预算周期起始日（1–28，账本级）。改起始日只是换周期口径，各键月已存
-  /// 的预算金额不动。
-  Future<void> _editCycleStartDay() async {
-    final controller = VeriFinScope.of(context);
-    final l10n = AppLocalizations.of(context);
-    final selected = await showOptionSheet<int>(
-      context: context,
-      title: l10n.budgetCycleStartDayTitle,
-      values: <int>[
-        for (
-          var day = budgetCycleStartDayMin;
-          day <= budgetCycleStartDayMax;
-          day++
-        )
-          day,
-      ],
-      selected: controller.budgetCycleStartDay,
-      labelOf: (day) => day == naturalMonthStartDay
-          ? l10n.budgetCycleNaturalMonth
-          : l10n.budgetCycleStartDayOption(day),
-    );
-    if (selected != null && mounted) {
-      setState(() => controller.setBudgetCycleStartDay(selected));
-    }
-  }
-
-  /// 递归渲染分类预算树：按分类的父子层级展开，父行显示已含子类的合计花销/预算，
-  /// 可折叠子树；点任意行给该分类设预算。顺序与分类管理页一致（按存储顺序），
-  /// 便于查找。[byId] 提供各分类的预算快照（父快照已聚合子类花销）。
+  /// 递归渲染分类预算树（**只读**）：按分类的父子层级展开，父行显示已含子类的合计
+  /// 花销/预算，可折叠子树。顺序与分类管理页一致（按存储顺序）。设置分类默认预算在
+  /// 预算设置页，本页仅展示执行情况。[byId] 提供各分类的预算快照（父快照已聚合子类花销）。
   List<Widget> _buildCategoryBudgetTree(
     VeriFinController controller,
     Map<String, CategoryBudgetSnapshot> byId,
@@ -496,7 +470,6 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
                     _collapsedCategories.add(category.id);
                   }
                 }),
-          onTap: () => _editCategoryBudget(category),
         ),
       );
       if (children.isNotEmpty && !collapsed) {
@@ -508,53 +481,16 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
     return rows;
   }
 
-  /// 预算金额输入统一走数字键盘（与记账一致，支持算式）；允许 0（清除该预算）。
-  /// 返回 null 表示取消，返回 >=0 的金额。
-  Future<double?> _promptBudgetAmount(String title, double current) {
-    return showNumberPadSheet(
-      context,
-      title: title,
-      initialAmount: current > 0 ? current : null,
-      allowZero: true,
+  /// 进入预算设置页（默认预算、按日上限、周期起始日、分类默认预算）。
+  void _openSettings() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (context) => const BudgetSettingsPage()),
     );
   }
 
-  Future<void> _editMonthlyBudget() async {
-    final controller = VeriFinScope.of(context);
-    final amount = await _promptBudgetAmount(
-      AppLocalizations.of(context).setMonthBudgetTitle,
-      controller.monthlyBudget(_month),
-    );
-    if (amount == null || !mounted) {
-      return;
-    }
-    setState(() {
-      controller.setMonthlyBudget(_month, amount);
-    });
-  }
-
-  Future<void> _editCategoryBudget(Category category) async {
-    final controller = VeriFinScope.of(context);
-    final amount = await _promptBudgetAmount(
-      AppLocalizations.of(context).setCategoryBudgetTitle(category.label),
-      controller.categoryBudget(_month, category.id),
-    );
-    if (amount == null || !mounted) {
-      return;
-    }
-    controller.setCategoryBudget(_month, category.id, amount);
-  }
-
-  Future<void> _editDailyBudget() async {
-    final controller = VeriFinScope.of(context);
-    final amount = await _promptBudgetAmount(
-      AppLocalizations.of(context).setDailyBudgetTitle,
-      controller.dailyBudget(),
-    );
-    if (amount == null || !mounted) {
-      return;
-    }
-    controller.setDailyBudget(amount);
+  /// 打开某月的「单月覆盖」弹窗：为该月单独设额度或恢复沿用默认。
+  void _openOverride(DateTime month) {
+    showMonthlyBudgetOverrideSheet(context, month);
   }
 
   void _openBudgetHistory() {
@@ -650,14 +586,9 @@ class BudgetHistoryPage extends StatelessWidget {
                     for (final item in months)
                       _BudgetMonthRow(
                         snapshot: item,
-                        onTap: () {
-                          Navigator.of(context).push<void>(
-                            MaterialPageRoute<void>(
-                              builder: (context) =>
-                                  BudgetSettingsPage(initialMonth: item.month),
-                            ),
-                          );
-                        },
+                        // 点某月 → 调整该月的单月覆盖（或恢复沿用默认）。
+                        onTap: () =>
+                            showMonthlyBudgetOverrideSheet(context, item.month),
                       ),
                   ],
                 ),
