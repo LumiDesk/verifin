@@ -1,5 +1,7 @@
 <div align="center">
 
+**English** · <a href="README.md">简体中文</a>
+
 <img src="assets/brand/verifin_icon_1024.png" width="112" alt="Veri Fin" />
 
 # Veri Fin
