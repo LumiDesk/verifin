@@ -1328,8 +1328,24 @@
       }
     }
   },
-  "budgetOverrideChip": "Custom this month · tap to adjust",
-  "budgetSetChip": "Tap to set this month's budget",
+  "budgetOverrideScopeMonth": "this month",
+  "budgetOverrideScopePeriod": "this period",
+  "budgetOverrideChip": "Custom for {scope} · tap to adjust",
+  "@budgetOverrideChip": {
+    "placeholders": {
+      "scope": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetSetChip": "Tap to set a budget for {scope}",
+  "@budgetSetChip": {
+    "placeholders": {
+      "scope": {
+        "type": "String"
+      }
+    }
+  },
   "budgetSettingsSectionOverall": "Overall budget & cycle",
   "budgetSettingsSectionCategory": "Default category budgets",
   "defaultMonthlyBudgetTitle": "Default monthly budget",
@@ -1345,7 +1361,33 @@
       }
     }
   },
-  "budgetOverrideSetAmount": "Set a custom amount for this month",
+  "budgetOverrideSheetTitle": "{subject} · {period}",
+  "@budgetOverrideSheetTitle": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      },
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetOverrideSetAmount": "Set a custom amount for {scope}",
+  "@budgetOverrideSetAmount": {
+    "placeholders": {
+      "scope": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetOverrideAdjustAmount": "Adjust the amount for {scope}",
+  "@budgetOverrideAdjustAmount": {
+    "placeholders": {
+      "scope": {
+        "type": "String"
+      }
+    }
+  },
   "budgetOverrideRestore": "Restore default (uses {amount})",
   "@budgetOverrideRestore": {
     "placeholders": {
@@ -1354,6 +1396,21 @@
       }
     }
   },
-  "budgetOverrideClear": "Clear this month's custom amount",
+  "budgetOverrideClear": "Clear the custom amount for {scope}",
+  "@budgetOverrideClear": {
+    "placeholders": {
+      "scope": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetOverrideAmountTitle": "Set budget for {scope}",
+  "@budgetOverrideAmountTitle": {
+    "placeholders": {
+      "scope": {
+        "type": "String"
+      }
+    }
+  },
   "budgetCycleNotSet": "Not set"
 }

@@ -3612,10 +3612,20 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get budgetOverrideChip => 'Custom this month · tap to adjust';
+  String get budgetOverrideScopeMonth => 'this month';
 
   @override
-  String get budgetSetChip => 'Tap to set this month\'s budget';
+  String get budgetOverrideScopePeriod => 'this period';
+
+  @override
+  String budgetOverrideChip(String scope) {
+    return 'Custom for $scope · tap to adjust';
+  }
+
+  @override
+  String budgetSetChip(String scope) {
+    return 'Tap to set a budget for $scope';
+  }
 
   @override
   String get budgetSettingsSectionOverall => 'Overall budget & cycle';
@@ -3646,7 +3656,19 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get budgetOverrideSetAmount => 'Set a custom amount for this month';
+  String budgetOverrideSheetTitle(String subject, String period) {
+    return '$subject · $period';
+  }
+
+  @override
+  String budgetOverrideSetAmount(String scope) {
+    return 'Set a custom amount for $scope';
+  }
+
+  @override
+  String budgetOverrideAdjustAmount(String scope) {
+    return 'Adjust the amount for $scope';
+  }
 
   @override
   String budgetOverrideRestore(String amount) {
@@ -3654,7 +3676,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get budgetOverrideClear => 'Clear this month\'s custom amount';
+  String budgetOverrideClear(String scope) {
+    return 'Clear the custom amount for $scope';
+  }
+
+  @override
+  String budgetOverrideAmountTitle(String scope) {
+    return 'Set budget for $scope';
+  }
 
   @override
   String get budgetCycleNotSet => 'Not set';

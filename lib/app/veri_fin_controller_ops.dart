@@ -427,6 +427,13 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       _categoryBudgets[_categoryBudgetKey(_activeBookId, month, categoryId)] ??
       defaultCategoryBudget(categoryId);
 
+  /// 该键月的分类是否设置了单独覆盖值。只检查当前账本的单期键，不把默认预算
+  /// 视为覆盖，供总览页区分「本期单独」与「沿用默认」。
+  bool categoryBudgetIsOverride(DateTime month, String categoryId) =>
+      _categoryBudgets.containsKey(
+        _categoryBudgetKey(_activeBookId, month, categoryId),
+      );
+
   /// 设某键月某分类的单月覆盖（0 = 移除覆盖，回到沿用分类默认）。
   void setCategoryBudget(DateTime month, String categoryId, double amount) {
     final key = _categoryBudgetKey(_activeBookId, month, categoryId);
@@ -437,6 +444,15 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     }
     _persistCategoryBudgets();
     notifyListeners();
+  }
+
+  /// 清除某键月的分类单期覆盖，恢复沿用分类默认预算；没有默认值时回落 0。
+  void clearCategoryBudgetOverride(DateTime month, String categoryId) {
+    final key = _categoryBudgetKey(_activeBookId, month, categoryId);
+    if (_categoryBudgets.remove(key) != null) {
+      _persistCategoryBudgets();
+      notifyListeners();
+    }
   }
 
   /// 当前账本的每日花销上限（0 表示未设置）。

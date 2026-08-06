@@ -144,6 +144,111 @@ Future<T?> showOptionSheet<T>({
   );
 }
 
+enum _BudgetOverrideAction { edit, clear }
+
+/// 总预算的单期覆盖入口。默认值在预算设置页管理；此处只修改或清除所选键月的
+/// 覆盖值。自然月显示「本月」，自定义预算周期显示「本期」。
+Future<void> showMonthlyBudgetOverrideSheet({
+  required BuildContext context,
+  required DateTime month,
+}) async {
+  final controller = VeriFinScope.of(context);
+  await _showBudgetOverrideSheet(
+    context: context,
+    month: month,
+    subject: AppLocalizations.of(context).budgetTitle,
+    isOverride: controller.monthlyBudgetIsOverride(month),
+    defaultBudget: controller.defaultMonthlyBudget,
+    currentBudget: controller.monthlyBudget(month),
+    setOverride: (amount) => controller.setMonthlyBudget(month, amount),
+    clearOverride: () => controller.clearMonthlyBudgetOverride(month),
+  );
+}
+
+/// 分类预算的单期覆盖入口。用于预算总览的分类行；分类默认预算仍由预算设置页
+/// 管理，清除覆盖后回落默认值（没有默认值时回落 0）。
+Future<void> showCategoryBudgetOverrideSheet({
+  required BuildContext context,
+  required DateTime month,
+  required Category category,
+}) async {
+  final controller = VeriFinScope.of(context);
+  await _showBudgetOverrideSheet(
+    context: context,
+    month: month,
+    subject: category.label,
+    isOverride: controller.categoryBudgetIsOverride(month, category.id),
+    defaultBudget: controller.defaultCategoryBudget(category.id),
+    currentBudget: controller.categoryBudget(month, category.id),
+    setOverride: (amount) =>
+        controller.setCategoryBudget(month, category.id, amount),
+    clearOverride: () =>
+        controller.clearCategoryBudgetOverride(month, category.id),
+  );
+}
+
+/// 总预算与分类预算共用的单期覆盖流程，统一动作菜单、周期文案和数字键盘。
+Future<void> _showBudgetOverrideSheet({
+  required BuildContext context,
+  required DateTime month,
+  required String subject,
+  required bool isOverride,
+  required double defaultBudget,
+  required double currentBudget,
+  required ValueChanged<double> setOverride,
+  required VoidCallback clearOverride,
+}) async {
+  final controller = VeriFinScope.of(context);
+  final l10n = AppLocalizations.of(context);
+  final customPeriod = controller.budgetCycleIsCustom;
+  final scope = customPeriod
+      ? l10n.budgetOverrideScopePeriod
+      : l10n.budgetOverrideScopeMonth;
+  final window = controller.budgetWindow(month);
+  final periodLabel = customPeriod
+      ? l10n.budgetCycleRange(window.start, window.end)
+      : l10n.yearMonth(month);
+  final actions = <_BudgetOverrideAction>[
+    _BudgetOverrideAction.edit,
+    if (isOverride) _BudgetOverrideAction.clear,
+  ];
+
+  final action = await showOptionSheet<_BudgetOverrideAction>(
+    context: context,
+    title: l10n.budgetOverrideSheetTitle(subject, periodLabel),
+    values: actions,
+    selected: _BudgetOverrideAction.edit,
+    showSelectedMarker: false,
+    labelOf: (value) => switch (value) {
+      _BudgetOverrideAction.edit =>
+        isOverride
+            ? l10n.budgetOverrideAdjustAmount(scope)
+            : l10n.budgetOverrideSetAmount(scope),
+      _BudgetOverrideAction.clear =>
+        defaultBudget > 0
+            ? l10n.budgetOverrideRestore(formatAmount(defaultBudget))
+            : l10n.budgetOverrideClear(scope),
+    },
+  );
+  if (!context.mounted || action == null) {
+    return;
+  }
+  if (action == _BudgetOverrideAction.clear) {
+    clearOverride();
+    return;
+  }
+
+  final amount = await showNumberPadSheet(
+    context,
+    title: l10n.budgetOverrideAmountTitle(scope),
+    initialAmount: currentBudget > 0 ? currentBudget : null,
+    allowZero: true,
+  );
+  if (amount != null && context.mounted) {
+    setOverride(amount);
+  }
+}
+
 /// 数字键盘弹窗:统一的金额输入入口(四则算式 + 结果预览)。触感偏好由内部从
 /// [VeriFinScope] 取,调用方不用手传。返回所输金额;取消返回 null。
 /// [allowNegative] 允许负数,[allowZero] 允许 0(如清除预算 / 手续费)。

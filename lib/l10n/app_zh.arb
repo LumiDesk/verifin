@@ -2236,8 +2236,24 @@
       }
     }
   },
-  "budgetOverrideChip": "本月单独设置 · 点此调整",
-  "budgetSetChip": "点此设置本月预算",
+  "budgetOverrideScopeMonth": "本月",
+  "budgetOverrideScopePeriod": "本期",
+  "budgetOverrideChip": "{scope}单独设置 · 点此调整",
+  "@budgetOverrideChip": {
+    "placeholders": {
+      "scope": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetSetChip": "点此设置{scope}预算",
+  "@budgetSetChip": {
+    "placeholders": {
+      "scope": {
+        "type": "String"
+      }
+    }
+  },
   "budgetSettingsSectionOverall": "总预算与周期",
   "budgetSettingsSectionCategory": "分类默认预算",
   "defaultMonthlyBudgetTitle": "默认月预算",
@@ -2253,7 +2269,33 @@
       }
     }
   },
-  "budgetOverrideSetAmount": "单独设置本月额度",
+  "budgetOverrideSheetTitle": "{subject} · {period}",
+  "@budgetOverrideSheetTitle": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      },
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetOverrideSetAmount": "单独设置{scope}额度",
+  "@budgetOverrideSetAmount": {
+    "placeholders": {
+      "scope": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetOverrideAdjustAmount": "调整{scope}额度",
+  "@budgetOverrideAdjustAmount": {
+    "placeholders": {
+      "scope": {
+        "type": "String"
+      }
+    }
+  },
   "budgetOverrideRestore": "恢复默认（沿用 {amount}）",
   "@budgetOverrideRestore": {
     "placeholders": {
@@ -2262,6 +2304,21 @@
       }
     }
   },
-  "budgetOverrideClear": "清除本月单独设置",
+  "budgetOverrideClear": "清除{scope}单独设置",
+  "@budgetOverrideClear": {
+    "placeholders": {
+      "scope": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetOverrideAmountTitle": "设置{scope}预算",
+  "@budgetOverrideAmountTitle": {
+    "placeholders": {
+      "scope": {
+        "type": "String"
+      }
+    }
+  },
   "budgetCycleNotSet": "未设置"
 }

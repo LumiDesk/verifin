@@ -2,7 +2,7 @@ part of 'budget_pages.dart';
 
 /// 预算设置页（真·设置）：集中配置**默认预算**与周期口径——
 /// 默认月预算（每月自动沿用）、按日预算上限、预算周期起始日，以及**分类默认预算**树。
-/// 总览页只读，单月的临时调整走 [showMonthlyBudgetOverrideSheet]。
+/// 单期临时调整由总览页对应的总预算状态 chip / 分类行进入。
 class BudgetSettingsPage extends StatefulWidget {
   const BudgetSettingsPage({super.key});
 
@@ -282,74 +282,4 @@ Widget _sectionLabel(BuildContext context, String text) {
       ),
     ),
   );
-}
-
-/// 单月覆盖弹窗：为某键月单独设一个不同于默认的预算，或清除覆盖回到沿用默认。
-/// 总览页状态 chip 与历史页月份行都从这里进入。
-Future<void> showMonthlyBudgetOverrideSheet(
-  BuildContext context,
-  DateTime month,
-) async {
-  final controller = VeriFinScope.of(context);
-  final l10n = AppLocalizations.of(context);
-  final isOverride = controller.monthlyBudgetIsOverride(month);
-  final defaultBudget = controller.defaultMonthlyBudget;
-
-  final action = await showModalBottomSheet<String>(
-    context: context,
-    showDragHandle: true,
-    backgroundColor: Theme.of(context).colorScheme.surface,
-    builder: (sheetContext) {
-      return SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text(
-                l10n.monthBudgetTitle(month),
-                style: Theme.of(
-                  sheetContext,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.edit_calendar_outlined),
-              title: Text(l10n.budgetOverrideSetAmount),
-              onTap: () => Navigator.of(sheetContext).pop('set'),
-            ),
-            if (isOverride)
-              ListTile(
-                leading: const Icon(Icons.event_repeat_outlined),
-                title: Text(
-                  defaultBudget > 0
-                      ? l10n.budgetOverrideRestore(formatAmount(defaultBudget))
-                      : l10n.budgetOverrideClear,
-                ),
-                onTap: () => Navigator.of(sheetContext).pop('clear'),
-              ),
-            const SizedBox(height: 4),
-          ],
-        ),
-      );
-    },
-  );
-
-  if (action == 'clear') {
-    controller.clearMonthlyBudgetOverride(month);
-    return;
-  }
-  if (action == 'set' && context.mounted) {
-    final current = controller.monthlyBudget(month);
-    final amount = await showNumberPadSheet(
-      context,
-      title: l10n.setMonthBudgetTitle,
-      initialAmount: current > 0 ? current : null,
-      allowZero: true,
-    );
-    if (amount != null) {
-      controller.setMonthlyBudget(month, amount);
-    }
-  }
 }

@@ -131,6 +131,101 @@ void main() {
     await tester.tap(toggle.first);
     await tester.pumpAndSettle();
     expect(find.text('午餐', skipOffstage: false), findsOneWidget);
+    // 折叠按钮是独立手势，不应冒泡打开父分类的单期预算弹窗。
+    expect(find.textContaining('餐饮 ·'), findsNothing);
+  });
+
+  testWidgets('issue 28 legacy category override can be edited and cleared', (
+    WidgetTester tester,
+  ) async {
+    final controller = await makeController();
+    final july = DateTime(2026, 7);
+    // 等价于 Issue #28 旧备份中的 bookId:2026-07:categoryId 单期键。
+    controller
+      ..setCategoryBudget(july, 'dining', 800)
+      ..setCategoryBudget(july, 'entertainment', 250);
+
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(home: BudgetOverviewPage(initialMonth: july)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('餐饮'),
+      250,
+      scrollable: firstVerticalScrollable(),
+    );
+    await tester.ensureVisible(find.text('餐饮'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('餐饮'));
+    await tester.pumpAndSettle();
+    expect(find.text('餐饮 · 2026年7月'), findsOneWidget);
+    expect(find.text('调整本月额度'), findsOneWidget);
+    expect(find.text('清除本月单独设置'), findsOneWidget);
+
+    await tester.tap(find.text('调整本月额度'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('number_key_C')));
+    for (final key in <String>['9', '00']) {
+      await tester.tap(find.byKey(Key('number_key_$key')));
+    }
+    await tester.tap(find.byKey(const Key('number_pad_ok')));
+    await tester.pumpAndSettle();
+    expect(controller.categoryBudget(july, 'dining'), 900);
+    expect(controller.defaultCategoryBudget('dining'), 0);
+
+    await tester.ensureVisible(find.text('餐饮'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('餐饮'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('清除本月单独设置'));
+    await tester.pumpAndSettle();
+    expect(controller.categoryBudgetIsOverride(july, 'dining'), isFalse);
+    expect(controller.categoryBudget(july, 'dining'), 0);
+    // 清除餐饮不能误伤同月其它分类。
+    expect(controller.categoryBudget(july, 'entertainment'), 250);
+    controller.dispose();
+  });
+
+  testWidgets('category override restores default and uses period wording', (
+    WidgetTester tester,
+  ) async {
+    final controller = await makeController();
+    final july = DateTime(2026, 7);
+    controller
+      ..setBudgetCycleStartDay(22)
+      ..setDefaultCategoryBudget('dining', 600)
+      ..setCategoryBudget(july, 'dining', 800);
+
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(home: BudgetOverviewPage(initialMonth: july)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('餐饮'),
+      250,
+      scrollable: firstVerticalScrollable(),
+    );
+    await tester.ensureVisible(find.text('餐饮'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('餐饮'));
+    await tester.pumpAndSettle();
+    expect(find.text('餐饮 · 7月22日 至 8月21日'), findsOneWidget);
+    expect(find.text('调整本期额度'), findsOneWidget);
+    expect(find.text('恢复默认（沿用 600）'), findsOneWidget);
+
+    await tester.tap(find.text('恢复默认（沿用 600）'));
+    await tester.pumpAndSettle();
+    expect(controller.categoryBudgetIsOverride(july, 'dining'), isFalse);
+    expect(controller.categoryBudget(july, 'dining'), 600);
+    controller.dispose();
   });
 
   testWidgets('shows category budget risk on home and budget page', (
@@ -384,25 +479,79 @@ void main() {
       controller.setDefaultMonthlyBudget(3000);
       // 分类默认每月沿用；单月覆盖优先。
       expect(controller.categoryBudget(july, 'dining'), 800);
+      expect(controller.categoryBudgetIsOverride(july, 'dining'), isFalse);
       controller.setCategoryBudget(july, 'dining', 1200);
       expect(controller.categoryBudget(july, 'dining'), 1200);
+      expect(controller.categoryBudgetIsOverride(july, 'dining'), isTrue);
       expect(controller.categoryBudget(DateTime(2026, 8), 'dining'), 800);
       final json = controller.exportDataJson();
+      await controller.waitForPendingWrites();
       controller.dispose();
 
-      // 重启：默认预算随预算表持久化。
+      // 重启：默认预算与单期覆盖都随预算表持久化。
       final restarted = await makeController(store);
       expect(restarted.defaultMonthlyBudget, 3000);
       expect(restarted.defaultCategoryBudget('dining'), 800);
+      expect(restarted.categoryBudgetIsOverride(july, 'dining'), isTrue);
+      expect(restarted.categoryBudget(july, 'dining'), 1200);
       restarted.dispose();
 
-      // 备份导入：默认预算进 JSON 备份。
+      // 备份导入：默认预算与单期覆盖都进 JSON 备份。
       final target = await makeController();
       expect(target.defaultMonthlyBudget, 0);
       target.importDataJson(json);
       expect(target.defaultMonthlyBudget, 3000);
       expect(target.defaultCategoryBudget('dining'), 800);
+      expect(target.categoryBudgetIsOverride(july, 'dining'), isTrue);
+      expect(target.categoryBudget(july, 'dining'), 1200);
       target.dispose();
+    });
+
+    test('分类单期覆盖可清除并回落默认，且修改默认不覆盖单期值', () async {
+      final controller = await makeController();
+      final july = DateTime(2026, 7);
+      controller.setDefaultCategoryBudget('dining', 800);
+      controller.setCategoryBudget(july, 'dining', 1200);
+
+      controller.setDefaultCategoryBudget('dining', 600);
+      expect(controller.categoryBudgetIsOverride(july, 'dining'), isTrue);
+      expect(controller.categoryBudget(july, 'dining'), 1200);
+      expect(controller.categoryBudget(DateTime(2026, 8), 'dining'), 600);
+
+      controller.clearCategoryBudgetOverride(july, 'dining');
+      expect(controller.categoryBudgetIsOverride(july, 'dining'), isFalse);
+      expect(controller.categoryBudget(july, 'dining'), 600);
+
+      controller.setDefaultCategoryBudget('dining', 0);
+      expect(controller.categoryBudget(july, 'dining'), 0);
+      // 对不存在的覆盖重复清除是幂等操作。
+      controller.clearCategoryBudgetOverride(july, 'dining');
+      expect(controller.categoryBudgetIsOverride(july, 'dining'), isFalse);
+      controller.dispose();
+    });
+
+    test('分类单期覆盖按账本隔离', () async {
+      final controller = await makeController();
+      final july = DateTime(2026, 7);
+      controller.setCategoryBudget(july, 'dining', 800);
+
+      controller.addLedgerBook('旅行账本');
+      expect(controller.categoryBudgetIsOverride(july, 'dining'), isFalse);
+      expect(controller.categoryBudget(july, 'dining'), 0);
+      controller.setCategoryBudget(july, 'dining', 250);
+
+      controller.switchLedgerBook('default');
+      expect(controller.categoryBudgetIsOverride(july, 'dining'), isTrue);
+      expect(controller.categoryBudget(july, 'dining'), 800);
+      controller.clearCategoryBudgetOverride(july, 'dining');
+      expect(controller.categoryBudget(july, 'dining'), 0);
+
+      controller.switchLedgerBook(
+        controller.ledgerBooks.firstWhere((book) => book.name == '旅行账本').id,
+      );
+      expect(controller.categoryBudgetIsOverride(july, 'dining'), isTrue);
+      expect(controller.categoryBudget(july, 'dining'), 250);
+      controller.dispose();
     });
 
     test('初始化数据清除默认预算', () async {

@@ -635,7 +635,8 @@ class _CategoryBudgetRow extends StatelessWidget {
 
   final CategoryBudgetSnapshot snapshot;
 
-  /// 点击行的回调；null 表示只读（总览页只读，编辑默认预算在设置页）。
+  /// 点击行的回调；总览页用于编辑单期覆盖，设置页用于编辑默认预算。
+  /// null 仍可供其它纯展示场景使用。
   final VoidCallback? onTap;
 
   /// 分类层级深度（0 为顶级），用于左侧缩进。
@@ -872,26 +873,35 @@ class _MonthBudgetStatusChip extends StatelessWidget {
   const _MonthBudgetStatusChip({
     required this.isOverride,
     required this.defaultBudget,
+    required this.customPeriod,
     required this.onTap,
   });
 
   final bool isOverride;
   final double defaultBudget;
+  final bool customPeriod;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    final scope = customPeriod
+        ? l10n.budgetOverrideScopePeriod
+        : l10n.budgetOverrideScopeMonth;
     final (IconData icon, String label, Color color) = isOverride
-        ? (Icons.edit_calendar_outlined, l10n.budgetOverrideChip, veriRoyal)
+        ? (
+            Icons.edit_calendar_outlined,
+            l10n.budgetOverrideChip(scope),
+            veriRoyal,
+          )
         : defaultBudget > 0
         ? (
             Icons.event_repeat_outlined,
             l10n.budgetInheritChip(formatAmount(defaultBudget)),
             theme.colorScheme.onSurface.withValues(alpha: 0.62),
           )
-        : (Icons.add_circle_outline, l10n.budgetSetChip, veriRoyal);
+        : (Icons.add_circle_outline, l10n.budgetSetChip(scope), veriRoyal);
     return Material(
       color: Colors.transparent,
       child: InkWell(

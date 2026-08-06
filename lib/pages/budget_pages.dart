@@ -20,9 +20,9 @@ part 'budget_trend_chart.dart';
 part 'budget_widgets.dart';
 part 'budget_settings_page.dart';
 
-/// 预算总览（只读）：查看某月/某周期的预算执行情况。所有「配置」动作（默认预算、
-/// 按日上限、周期起始日、分类默认预算）都在右上角齿轮进入的 [BudgetSettingsPage]，
-/// 单月覆盖走状态 chip / 历史列表的 [showMonthlyBudgetOverrideSheet]，本页不内联编辑。
+/// 预算总览：查看某月/某周期的预算执行情况。默认预算、按日上限、周期起始日和
+/// 分类默认预算在右上角齿轮进入的 [BudgetSettingsPage]；总预算与分类预算的单期
+/// 覆盖均从本页对应状态 chip / 分类行进入，不在页面内联输入。
 class BudgetOverviewPage extends StatefulWidget {
   const BudgetOverviewPage({super.key, required this.initialMonth});
 
@@ -269,6 +269,7 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
                                   _month,
                                 ),
                                 defaultBudget: controller.defaultMonthlyBudget,
+                                customPeriod: cyclic,
                                 onTap: () => _openOverride(_month),
                               ),
                             ],
@@ -438,9 +439,9 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
     });
   }
 
-  /// 递归渲染分类预算树（**只读**）：按分类的父子层级展开，父行显示已含子类的合计
-  /// 花销/预算，可折叠子树。顺序与分类管理页一致（按存储顺序）。设置分类默认预算在
-  /// 预算设置页，本页仅展示执行情况。[byId] 提供各分类的预算快照（父快照已聚合子类花销）。
+  /// 递归渲染分类预算树：按分类的父子层级展开，父行显示已含子类的合计
+  /// 花销/预算，可折叠子树。点行主体管理所选周期的单期覆盖；分类默认预算仍在
+  /// 预算设置页维护。[byId] 提供各分类的预算快照（父快照已聚合子类花销）。
   List<Widget> _buildCategoryBudgetTree(
     VeriFinController controller,
     Map<String, CategoryBudgetSnapshot> byId,
@@ -470,6 +471,11 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
                     _collapsedCategories.add(category.id);
                   }
                 }),
+          onTap: () => showCategoryBudgetOverrideSheet(
+            context: context,
+            month: _month,
+            category: category,
+          ),
         ),
       );
       if (children.isNotEmpty && !collapsed) {
@@ -490,7 +496,7 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
 
   /// 打开某月的「单月覆盖」弹窗：为该月单独设额度或恢复沿用默认。
   void _openOverride(DateTime month) {
-    showMonthlyBudgetOverrideSheet(context, month);
+    showMonthlyBudgetOverrideSheet(context: context, month: month);
   }
 
   void _openBudgetHistory() {
@@ -587,8 +593,10 @@ class BudgetHistoryPage extends StatelessWidget {
                       _BudgetMonthRow(
                         snapshot: item,
                         // 点某月 → 调整该月的单月覆盖（或恢复沿用默认）。
-                        onTap: () =>
-                            showMonthlyBudgetOverrideSheet(context, item.month),
+                        onTap: () => showMonthlyBudgetOverrideSheet(
+                          context: context,
+                          month: item.month,
+                        ),
                       ),
                   ],
                 ),

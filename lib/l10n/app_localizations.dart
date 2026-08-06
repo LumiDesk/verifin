@@ -6494,17 +6494,29 @@ abstract class AppLocalizations {
   /// **'沿用默认 {amount}'**
   String budgetInheritChip(String amount);
 
+  /// No description provided for @budgetOverrideScopeMonth.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月'**
+  String get budgetOverrideScopeMonth;
+
+  /// No description provided for @budgetOverrideScopePeriod.
+  ///
+  /// In zh, this message translates to:
+  /// **'本期'**
+  String get budgetOverrideScopePeriod;
+
   /// No description provided for @budgetOverrideChip.
   ///
   /// In zh, this message translates to:
-  /// **'本月单独设置 · 点此调整'**
-  String get budgetOverrideChip;
+  /// **'{scope}单独设置 · 点此调整'**
+  String budgetOverrideChip(String scope);
 
   /// No description provided for @budgetSetChip.
   ///
   /// In zh, this message translates to:
-  /// **'点此设置本月预算'**
-  String get budgetSetChip;
+  /// **'点此设置{scope}预算'**
+  String budgetSetChip(String scope);
 
   /// No description provided for @budgetSettingsSectionOverall.
   ///
@@ -6554,11 +6566,23 @@ abstract class AppLocalizations {
   /// **'设置{category}默认预算'**
   String setDefaultCategoryBudgetTitle(String category);
 
+  /// No description provided for @budgetOverrideSheetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'{subject} · {period}'**
+  String budgetOverrideSheetTitle(String subject, String period);
+
   /// No description provided for @budgetOverrideSetAmount.
   ///
   /// In zh, this message translates to:
-  /// **'单独设置本月额度'**
-  String get budgetOverrideSetAmount;
+  /// **'单独设置{scope}额度'**
+  String budgetOverrideSetAmount(String scope);
+
+  /// No description provided for @budgetOverrideAdjustAmount.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整{scope}额度'**
+  String budgetOverrideAdjustAmount(String scope);
 
   /// No description provided for @budgetOverrideRestore.
   ///
@@ -6569,8 +6593,14 @@ abstract class AppLocalizations {
   /// No description provided for @budgetOverrideClear.
   ///
   /// In zh, this message translates to:
-  /// **'清除本月单独设置'**
-  String get budgetOverrideClear;
+  /// **'清除{scope}单独设置'**
+  String budgetOverrideClear(String scope);
+
+  /// No description provided for @budgetOverrideAmountTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'设置{scope}预算'**
+  String budgetOverrideAmountTitle(String scope);
 
   /// No description provided for @budgetCycleNotSet.
   ///

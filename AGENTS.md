@@ -17,6 +17,7 @@
 - `docs/dev/tech-decisions.md`：数据口径、备份范围和关键技术取舍；个别历史背景可能已被新实现取代，仍需与代码和测试核对。
 - `docs/dev/known-limitations.md`：已接受技术债及触发整改的阈值。
 - `docs/dev/ai-tools.md`：AI 账目查询工具的注册和维护约定。
+- `docs/dev/category-budget-override-design.md`：分类默认预算与单期覆盖的职责、Issue #28 兼容方案和验收范围。
 - `docs/dev/refund-design.md`、`docs/dev/auto-capture-plan.md`、`docs/dev/i18n-verification.md`、`docs/automation.md`：对应领域的设计与验收资料。`refund-design.md` 含历史方案，退款当前行为以源码、测试和 `docs/dev/known-limitations.md` 为准。
 - `README.md`、`docs/product.md`、`docs/acceptance-checklist.md`：用于理解产品和验收范围；其中少量历史描述可能落后，必须与当前实现交叉核对。
 

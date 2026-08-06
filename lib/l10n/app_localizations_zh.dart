@@ -3527,10 +3527,20 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get budgetOverrideChip => '本月单独设置 · 点此调整';
+  String get budgetOverrideScopeMonth => '本月';
 
   @override
-  String get budgetSetChip => '点此设置本月预算';
+  String get budgetOverrideScopePeriod => '本期';
+
+  @override
+  String budgetOverrideChip(String scope) {
+    return '$scope单独设置 · 点此调整';
+  }
+
+  @override
+  String budgetSetChip(String scope) {
+    return '点此设置$scope预算';
+  }
 
   @override
   String get budgetSettingsSectionOverall => '总预算与周期';
@@ -3559,7 +3569,19 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get budgetOverrideSetAmount => '单独设置本月额度';
+  String budgetOverrideSheetTitle(String subject, String period) {
+    return '$subject · $period';
+  }
+
+  @override
+  String budgetOverrideSetAmount(String scope) {
+    return '单独设置$scope额度';
+  }
+
+  @override
+  String budgetOverrideAdjustAmount(String scope) {
+    return '调整$scope额度';
+  }
 
   @override
   String budgetOverrideRestore(String amount) {
@@ -3567,7 +3589,14 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get budgetOverrideClear => '清除本月单独设置';
+  String budgetOverrideClear(String scope) {
+    return '清除$scope单独设置';
+  }
+
+  @override
+  String budgetOverrideAmountTitle(String scope) {
+    return '设置$scope预算';
+  }
 
   @override
   String get budgetCycleNotSet => '未设置';
