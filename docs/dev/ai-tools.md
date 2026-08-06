@@ -30,7 +30,7 @@
 
 ## 结果渲染类型（`AiResultDisplay`）
 
-| 类型 | 用途 | 聊天页渲染（落地顺序第 3 步实现） |
+| 类型 | 用途 | 聊天页当前渲染 |
 |------|------|------|
 | `AiStatDisplay` | 一组指标（收支汇总等） | 统计卡 |
 | `AiRankingDisplay` | 排行 / 占比（分类、标签） | 柱状图 `InteractiveBarChart` + 明细 |
@@ -38,7 +38,7 @@
 | `AiTransactionsDisplay` | 一组具体交易（`entryIds`） | **可点击**交易列表 `TransactionListCard`，点击进详情页 |
 | `AiTableDisplay` | 模型自定义多列数据 | 表格 |
 
-> `display` 里的 `title` 目前是中文默认文案；国际化（zh/en）随聊天页 UI 的 i18n 一并处理（落地顺序第 5 步）。
+> `display` 里的 `title` 目前仍是纯函数产生的中文默认文案；这是当前已知的 i18n 缺口，后续本地化时需保持工具层无 `BuildContext`。
 
 ## 工具清单（当前已实现）
 
@@ -68,5 +68,5 @@
 ## 变更记录
 
 - 初版：建立工具协议 + 注册表 + 通用交易筛选纯函数，首批工具 `summary` / `categoryRanking` / `tagRanking` / `queryTransactions` / `largestTransactions`。
-- 接入对话主循环与 UI：流式客户端 `aiChatStream`、对话引擎 `ai_chat_engine.dart`、聊天页 `ai_chat_page.dart` + 结果渲染 `ai_result_view.dart`（图表/列表/统计卡/表格），看板页头「问 AI」入口；聊天历史落 KV `verifin.ai_chat.v1`（仅文本、设备本地、不进备份、初始化保留）。
+- 接入对话主循环与 UI：流式客户端 `aiChatStream`、对话引擎 `ai_chat_engine.dart`、聊天页 `ai_chat_page.dart` + 结果渲染 `ai_result_view.dart`（图表/列表/统计卡/表格），看板页头「问 AI」入口；聊天历史落 KV `verifin.ai_chat.v1`（文本与序列化结果卡片、设备本地、不进备份、初始化保留）。
 - UI 打磨 + 结果卡片可持久化：`AiResultDisplay` 增加 `toJson`/`aiResultDisplayFromJson`，聊天历史每条可带 `displays`（序列化的结果卡片），**重开时连同图表一并还原**（交易列表仍只存 id、按当前数据实时解析）；聊天页改用通用 `VeriHeader`、输入栏/发送按钮/间距/字号/图表纵轴/表格样式全面优化；AI 设置页加「清空配置」。

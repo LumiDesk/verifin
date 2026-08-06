@@ -6,7 +6,7 @@
 
 **完全免费 · 数据自主 · 本地优先的 Android 记账应用**
 
-你的每一笔账都只保存在你自己的手机里——没有服务器、没有账号、没有广告、不收集任何数据。
+你的权威账本保存在自己的手机里——没有账号、没有自有服务器、没有广告，也不做统计遥测；只有你主动启用导出、WebDAV 备份或自配 AI 时，相关数据才会发送到你选择的目标。
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.x-0175C2?logo=dart&logoColor=white)](https://dart.dev)
@@ -67,14 +67,14 @@
 - 备份体系：手动 / 自动备份到本地目录（SAF）、**AES-GCM 加密**、**WebDAV 云备份**、zip 打包附件；
 - **账单导入**：平台优先（先选来源再选文件）导入**支付宝**（CSV）、**微信**（xlsx）、**薄荷记账**（CSV）、**一木记账**（.xls，账单与转账还款两个入口；账单还原一级 → 二级分类层级、导入逗号分隔的多标签与备注）、**钱迹**（完整明细 CSV，覆盖支出/收入/转账/还款/退款/报销：退款自动冲抵原支出；债务/借贷类记录不导入——本应用无债务功能）、**Tally 记账**（备份 zip，无损保留精确时间与收支/转账、二级分类，并一并导入各账户当前余额与类型、含无流水的账户）账单，以及本应用 **CSV 模板**（第三方软件与 CSV 模板在选择器里分组展示；CSV 模板入口严格校验表头只允许模板列，各第三方软件各走独立入口、不再混用同一套表头识别）；自动跳过还款、理财等「不计收支/中性交易」，各平台附「如何导出账单」引导；导入预览页可对待新建的账户 / 分类 / 标签逐个改名或映射到现有条目——微信账单的「交易类型」（商户消费/微信红包等）会作为分类候选进入映射区，任何来源缺失分类的交易统一归入「未分类」（映射区可一键改到具体分类，不再产生「已删除的分类」）；
 - **应用锁**：6 位 PIN / 3×3 图案 + 生物解锁（密钥仅加盐哈希存本机，不保存任何生物特征数据）；启用后应用内容不可截屏、并从「最近任务」缩略图隐藏；
-- **备份范围**：备份包含全部账目数据与个人资料、主题/视图/面板/首页概览卡配置、默认账户、金额小数位、FAB 行为等展示偏好；**不包含**机密凭证（应用锁、备份口令、WebDAV 与 AI 密钥）和设备本地设置（语言、记账提醒、备份目录）——换机后这些需重设（完整清单见 [`docs/dev/tech-decisions.md`](docs/dev/tech-decisions.md)）；
-- 无账号、无服务器、无第三方 SDK；隐私政策与用户协议应用内可查。
+- **备份范围**：备份包含全部账目数据与个人资料、主题/视图/面板/首页概览卡配置、默认账户、预算周期、自动识别开关、金额小数位、FAB 行为等偏好；**不包含**机密凭证（应用锁、备份口令、WebDAV 与 AI 密钥）和设备本地设置（语言、记账提醒、备份目录）——换机后这些需重设（完整清单见 [`docs/dev/tech-decisions.md`](docs/dev/tech-decisions.md)）；
+- 无账号、无自有服务器、无广告或统计遥测 SDK；隐私政策与用户协议应用内可查。
 
 ### 🌍 体验
 
 - **中英双语**：跟随系统 / 简体中文 / English，即时切换；
 - 浅色 / 深色 / 跟随系统主题，紧凑型移动端工具风格；
-- Android **桌面小组件**（今日支出 + 记一笔）、下拉快捷开关「快速记账」、每日**记账提醒**通知；
+- Android **桌面小组件**（今日支出、预算、资产总额）、下拉快捷开关「快速记账」、每日**记账提醒**通知；
 - 新用户引导：建首个账户、设本月预算，几步上手。
 
 > 完整功能断言清单见 [`docs/acceptance-checklist.md`](docs/acceptance-checklist.md)。
@@ -91,8 +91,8 @@
 | 云备份 | `dart:io HttpClient` 手写 WebDAV 客户端（PUT / GET / PROPFIND / MKCOL） |
 | 图表 | 全部 `CustomPainter` 自绘（趋势 / 柱状 / 环形，带命中测试与数据气泡） |
 | 平台能力 | `local_auth`（生物解锁）、`flutter_local_notifications`（提醒）、`image_picker`（附件）、原生 `AppWidgetProvider`（桌面小组件）、MethodChannel 桥（SAF / 磁贴 / 更新检查） |
-| 测试 | 322 例 widget / 单元测试（内存仓储）+ ffi 真实 SQLite 数据层测试 |
-| CI / 发布 | GitHub Actions：推 `vX.Y.Z` 标签 → analyze + test + release APK/AAB + GitHub Release |
+| 测试 | 按领域拆分的 widget / 单元测试（内存仓储）+ ffi 真实 SQLite、迁移矩阵、模型往返与仓储契约测试 |
+| CI / 发布 | GitHub Actions：PR / `main` 执行 format + analyze + test；推 `vX.Y.Z` 标签构建 release APK/AAB 并创建 GitHub Release |
 
 ## 🚀 快速开始
 
@@ -104,7 +104,7 @@
 git clone git@github.com:LumiDesk/verifin.git
 cd verifin
 flutter pub get                      # 安装依赖（自动生成 l10n）
-flutter run -d <android-device-id>   # Android 模拟器或真机预览
+flutter run -d <android-device-id> --flavor github  # Android 模拟器或真机预览
 flutter analyze && flutter test      # 静态检查 + 全部测试
 ```
 
@@ -112,9 +112,10 @@ Android 包名 `top.talyra42.verifin`。本地不构建交付 APK——正式安
 
 ## 📦 构建与发布
 
+- 质量 CI（`.github/workflows/ci.yml`）在每个 PR 和每次 push 到 `main` 时执行格式检查、静态分析与全量测试。
 - CI（`.github/workflows/flutter.yml`）只在推送 `vX.Y.Z` 标签时触发：analyze → test → `flutter build apk --release --target-platform android-arm64 --flavor github` + `flutter build appbundle --release --flavor play --dart-define=SELF_UPDATE=false` → 创建 GitHub Release（APK 命名 `verifin-vX.Y.Z-arm64-短提交号.apk`，AAB 命名 `verifin-vX.Y.Z-短提交号.aab`）。自建分发的**安装包只出 arm64-v8a 单架构 APK**（覆盖 2019 年后绝大多数机型、比 universal 约减半；极老 32 位设备装不了）；AAB 含全部 ABI，供 Google Play 上架用（由 Play 按设备分发）。release 开启 R8 代码/资源裁剪，反射依赖点由 `android/app/proguard-rules.pro` 的 keep 规则保护。
 - **分发渠道 flavor（`github` / `play`）**：应用内自更新（下载 GitHub Release 安装包自动更新）只用于 GitHub 自分发的 `github` flavor；Google Play 政策禁止应用自下载 APK 更新，故 `play` flavor 移除 `REQUEST_INSTALL_PACKAGES` 权限并隐藏「检查更新」入口。**本地 Android 构建/运行需带 `--flavor github`。**
-- 发版一条命令：
+- 发版前先提升并提交 `CHANGELOG.md` 的 `Unreleased`，确认位于 `main` 且工作树完全干净；随后运行版本发布脚本：
 
   ```bash
   scripts/publish.sh patch   # macOS/Linux；也支持 minor / major / 显式版本号
@@ -131,7 +132,7 @@ Android 包名 `top.talyra42.verifin`。本地不构建交付 APK——正式安
 
 ```text
 lib/
-├── main.dart            # 应用入口与根组件
+├── main.dart            # 应用入口、根组件与生命周期编排
 ├── pages/               # 页面模块（首页 / 资产 / 看板 / 我的 / 交易 / 预算…）
 ├── app/                 # 模型、Controller、主题、图表、备份子系统、通用组件
 ├── l10n/                # ARB 文案（zh 模板 + en）与生成的 AppLocalizations

@@ -10,7 +10,7 @@
 
 ```bash
 flutter pub get                     # 安装依赖（同时生成 l10n）
-flutter run -d <android-device-id>  # 本地预览
+flutter run -d <android-device-id> --flavor github  # 本地预览
 flutter analyze                     # 静态检查
 flutter test                        # 全部测试
 dart format .                       # 提交前格式化
@@ -44,10 +44,10 @@ dart format .                       # 提交前格式化
 ## Pull Request
 
 - 说明变更内容、动机、测试结果；关联 issue（如有）；UI 变更附截图或录屏。
-- PR 会触发 CI（格式 + analyze + test），需全绿。
+- PR 与 push 到 `main` 会触发质量 CI（格式 + analyze + test），需全绿；发布构建仍只由 `vX.Y.Z` 标签触发。
 
 ## 发版（仅维护者）
 
 - 发版必须经明确同意；打 `vX.Y.Z` 标签会触发 CI 构建并发预发布，不可逆。
-- 流程：先把 `CHANGELOG.md` 的 `## [Unreleased]` 改名为版本号加日期、其上新开空 `Unreleased`，提交后跑 `scripts/publish.sh <patch|minor|major>`（Windows 用 `scripts/publish.ps1`）。
+- 流程：先把 `CHANGELOG.md` 的 `## [Unreleased]` 改名为版本号加日期、其上新开空 `Unreleased` 并提交；确认当前分支为 `main`、工作树完全干净后，运行 `scripts/publish.sh patch`（参数也可为 `minor`、`major` 或显式版本号；Windows 用 `./scripts/publish.ps1 patch`）。
 - CI 默认发**预发布**（不标 Latest）；真机验收通过后在 GitHub 手动提升为正式版。
