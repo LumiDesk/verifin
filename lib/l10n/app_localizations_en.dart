@@ -1999,6 +1999,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recurringDeleteTooltip => 'Delete rule';
 
   @override
+  String get recurringDeleteTitle => 'Delete this recurring rule?';
+
+  @override
+  String get recurringDeleteMessage =>
+      'This rule cannot be restored once deleted.';
+
+  @override
   String get tapToFill => 'Tap to set';
 
   @override

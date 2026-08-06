@@ -790,6 +790,10 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
 
   Future<void> _saveAndExit() async {
     if (await _save() && mounted) {
+      setState(() {
+        _initialAccount = _draftAccount;
+        _initialDefault = _draftDefault;
+      });
       Navigator.of(context).pop();
     }
   }

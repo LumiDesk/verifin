@@ -132,6 +132,56 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
+  /// Persists one recurring-rule editor draft before publishing it in memory.
+  Future<bool> saveRecurringRuleDraft(
+    RecurringRule rule, {
+    required bool isNew,
+  }) async {
+    final next = List<RecurringRule>.of(_recurringRules);
+    if (isNew) {
+      next.add(rule);
+    } else {
+      final index = next.indexWhere((item) => item.id == rule.id);
+      if (index == -1) {
+        return false;
+      }
+      next[index] = rule;
+    }
+    try {
+      await _repository.saveRecurringRules(next);
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _recurringRules
+      ..clear()
+      ..addAll(next);
+    notifyListeners();
+    return true;
+  }
+
+  /// Persists the active switches edited on the recurring-rule list as a batch.
+  Future<bool> saveRecurringActiveDraft(Map<String, bool> activeById) async {
+    final next = _recurringRules
+        .map(
+          (rule) => activeById.containsKey(rule.id)
+              ? rule.copyWith(active: activeById[rule.id])
+              : rule,
+        )
+        .toList();
+    try {
+      await _repository.saveRecurringRules(next);
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _recurringRules
+      ..clear()
+      ..addAll(next);
+    notifyListeners();
+    return true;
+  }
+
   /// 补记所有到期的周期交易（打开应用 / 回前台时调用）。为每条到期规则按其
   /// 频率补齐从 `nextRunDate` 到 [now] 的交易，并推进规则的 `nextRunDate`。
   /// 返回新补记的交易数量。处理所有账本的规则（不限当前账本）。

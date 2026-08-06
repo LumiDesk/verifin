@@ -328,6 +328,14 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
 
   Future<void> _saveAndExit() async {
     if (await _save() && mounted) {
+      setState(() {
+        _initialDefaultBudget = _draftDefaultBudget;
+        _initialDailyBudget = _draftDailyBudget;
+        _initialStartDay = _draftStartDay;
+        _initialCategoryBudgets
+          ..clear()
+          ..addAll(_draftCategoryBudgets);
+      });
       Navigator.of(context).pop();
     }
   }

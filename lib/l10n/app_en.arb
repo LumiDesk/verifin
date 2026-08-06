@@ -691,6 +691,8 @@
   "recurringNewTitle": "New recurring rule",
   "recurringEditTitle": "Edit recurring rule",
   "recurringDeleteTooltip": "Delete rule",
+  "recurringDeleteTitle": "Delete this recurring rule?",
+  "recurringDeleteMessage": "This rule cannot be restored once deleted.",
   "tapToFill": "Tap to set",
   "addAccountFirst": "Add an account first",
   "frequencyLabel": "Frequency",

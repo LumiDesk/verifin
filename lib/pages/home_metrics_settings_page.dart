@@ -303,6 +303,7 @@ class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
 
   Future<void> _saveAndExit() async {
     if (await _save() && mounted) {
+      setState(() => _initialConfig = _draftConfig);
       Navigator.of(context).pop();
     }
   }

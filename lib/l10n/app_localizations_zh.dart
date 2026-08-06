@@ -1964,6 +1964,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recurringDeleteTooltip => '删除规则';
 
   @override
+  String get recurringDeleteTitle => '删除这条周期规则？';
+
+  @override
+  String get recurringDeleteMessage => '删除后无法恢复这条规则。';
+
+  @override
   String get tapToFill => '点击填写';
 
   @override

@@ -146,6 +146,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
 
   Future<void> _saveAndExit() async {
     if (await _save() && mounted) {
+      setState(() => _initialSettings = _draftSettings);
       Navigator.of(context).pop();
     }
   }

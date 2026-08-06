@@ -3632,6 +3632,18 @@ abstract class AppLocalizations {
   /// **'删除规则'**
   String get recurringDeleteTooltip;
 
+  /// No description provided for @recurringDeleteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除这条周期规则？'**
+  String get recurringDeleteTitle;
+
+  /// No description provided for @recurringDeleteMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除后无法恢复这条规则。'**
+  String get recurringDeleteMessage;
+
   /// No description provided for @tapToFill.
   ///
   /// In zh, this message translates to:

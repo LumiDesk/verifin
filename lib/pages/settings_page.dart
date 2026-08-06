@@ -382,6 +382,15 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _saveAndExit() async {
     if (await _save() && mounted) {
+      setState(() {
+        _initialTheme = _theme;
+        _initialLocale = _locale;
+        _initialHaptics = _haptics;
+        _initialTwoDecimals = _twoDecimals;
+        _initialFabAction = _fabAction;
+        _initialDefaultAccountId = _defaultAccountId;
+        _initialAutoSuggest = _autoSuggest;
+      });
       Navigator.of(context).pop();
     }
   }

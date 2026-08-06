@@ -1332,6 +1332,8 @@
   "recurringNewTitle": "新增周期规则",
   "recurringEditTitle": "编辑周期规则",
   "recurringDeleteTooltip": "删除规则",
+  "recurringDeleteTitle": "删除这条周期规则？",
+  "recurringDeleteMessage": "删除后无法恢复这条规则。",
   "tapToFill": "点击填写",
   "addAccountFirst": "请先添加账户",
   "frequencyLabel": "频率",

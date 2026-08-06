@@ -56,6 +56,8 @@ void main() {
     await tester.tap(find.byTooltip('保存'));
     await tester.pumpAndSettle();
     expect(controller.themePreference, ThemePreference.dark);
+    expect(find.byTooltip('保存'), findsNothing);
+    expect(find.text('未保存的修改'), findsNothing);
   });
 
   testWidgets('changes language preference and persists across restart', (

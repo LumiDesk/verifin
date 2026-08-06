@@ -20,6 +20,7 @@ class _AddAccountPageState extends State<AddAccountPage> {
   bool _iconManuallySelected = false;
   // 「后四位跟随完整卡号」开关，新账户默认打开。
   bool _cardLast4Follows = true;
+  bool _saved = false;
 
   @override
   void initState() {
@@ -252,20 +253,22 @@ class _AddAccountPageState extends State<AddAccountPage> {
     final parsedBalance = double.tryParse(balanceText);
     final balanceChanged =
         balanceText.isNotEmpty && (parsedBalance == null || parsedBalance != 0);
-    return _nameController.text.trim().isNotEmpty ||
-        balanceChanged ||
-        _type != AccountType.onlinePayment ||
-        _iconCode != 'wallet' ||
-        _groupId != 'ungrouped' ||
-        _noteController.text.trim().isNotEmpty ||
-        (_type.supportsCardLast4 &&
-            (_cardNumberController.text.trim().isNotEmpty ||
-                cardLast4Of(_cardLast4Controller.text).isNotEmpty ||
-                !_cardLast4Follows));
+    return !_saved &&
+        (_nameController.text.trim().isNotEmpty ||
+            balanceChanged ||
+            _type != AccountType.onlinePayment ||
+            _iconCode != 'wallet' ||
+            _groupId != 'ungrouped' ||
+            _noteController.text.trim().isNotEmpty ||
+            (_type.supportsCardLast4 &&
+                (_cardNumberController.text.trim().isNotEmpty ||
+                    cardLast4Of(_cardLast4Controller.text).isNotEmpty ||
+                    !_cardLast4Follows)));
   }
 
   Future<void> _saveAndExit() async {
     if (await _save() && mounted) {
+      setState(() => _saved = true);
       Navigator.of(context).pop();
     }
   }

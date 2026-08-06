@@ -251,6 +251,9 @@ class _PanelSettingsPageState extends State<PanelSettingsPage> {
 
   Future<void> _saveAndExit() async {
     if (await _save() && mounted) {
+      setState(() {
+        _initialPanels = List<PagePanelSetting>.of(_draftPanels);
+      });
       Navigator.of(context).pop();
     }
   }

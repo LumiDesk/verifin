@@ -710,6 +710,12 @@ class _DataManagementPageState extends State<DataManagementPage> {
 
   Future<void> _saveAndExit() async {
     if (await _save() && mounted) {
+      setState(() {
+        _initialFrequency = _draftFrequency;
+        _initialIntervalHours = _draftIntervalHours;
+        _initialRetention = _draftRetention;
+        _initialWebdavAutoUpload = _draftWebdavAutoUpload;
+      });
       Navigator.of(context).pop();
     }
   }

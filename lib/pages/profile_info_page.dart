@@ -243,6 +243,9 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
 
   Future<void> _saveAndExit() async {
     if (await _save() && mounted) {
+      setState(() {
+        _initialProfile = _draftProfile(useNicknameFallback: true);
+      });
       Navigator.of(context).pop();
     }
   }
