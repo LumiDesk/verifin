@@ -2198,6 +2198,24 @@ abstract class AppLocalizations {
   /// **'保存'**
   String get commonSave;
 
+  /// No description provided for @unsavedChangesTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存修改？'**
+  String get unsavedChangesTitle;
+
+  /// No description provided for @unsavedChangesMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'此页面有尚未保存的修改。'**
+  String get unsavedChangesMessage;
+
+  /// No description provided for @discardChanges.
+  ///
+  /// In zh, this message translates to:
+  /// **'不保存'**
+  String get discardChanges;
+
   /// No description provided for @amountEditTitle.
   ///
   /// In zh, this message translates to:

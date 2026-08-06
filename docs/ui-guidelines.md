@@ -38,6 +38,12 @@ SafeArea(child: VeriPage(child: Column(children: [
 
 参照实现：`report_analysis_page.dart`、`ai_settings_page.dart`（ListView 版）；`ai_chat_page.dart`（Column + 固定页脚版）。
 
+### 编辑页保存与返回
+
+普通全屏编辑页在 `VeriHeader` 右侧使用 `SaveHeaderAction`，统一显示软碟语义的 `Icons.save_outlined` 和“保存”tooltip；不要用对勾同时表达保存、完成和确认。草稿未修改或校验未通过时保存按钮禁用，字段编辑期间不得直接写 Controller、SQLite 或 KV。
+
+全屏编辑页使用 `UnsavedChangesGuard` 统一处理 Header 返回、Android 系统返回和预测性返回。草稿无变化时直接退出；有变化时显示“保存 / 不保存 / 取消”：保存成功后退出，不保存丢弃草稿后退出，取消继续编辑。持久化失败必须留在原页并保留草稿。Sheet/Dialog 若属于父编辑页，只能更新父页草稿；独立编辑 Sheet/Dialog 的自身保存按钮可作为最终提交动作。
+
 ## 卡片标题
 首页和功能卡片标题统一使用 `titleMedium` 加 `FontWeight.w800`，与“日历”卡片标题保持一致。不要为单个卡片手写更大的标题字号；需要右侧入口时使用统一的标题行组件或同等字号的 `Row`。
 

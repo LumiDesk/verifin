@@ -145,7 +145,7 @@ class VeriHeader extends StatelessWidget {
           if (showBack) ...<Widget>[
             IconButton(
               tooltip: AppLocalizations.of(context).commonBack,
-              onPressed: onBack ?? () => Navigator.of(context).pop(),
+              onPressed: onBack ?? () => Navigator.of(context).maybePop(),
               icon: const Icon(Icons.arrow_back),
             ),
             const SizedBox(width: 2),
@@ -207,13 +207,32 @@ class HeaderAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = destructive
+    final baseColor = destructive
         ? veriExpense
         : Theme.of(context).colorScheme.onSurface;
+    final color = baseColor.withValues(alpha: onPressed == null ? 0.32 : 0.82);
     return IconButton(
       tooltip: tooltip,
       onPressed: onPressed,
-      icon: Icon(icon, color: color.withValues(alpha: 0.82)),
+      icon: Icon(icon, color: color),
+    );
+  }
+}
+
+/// 全屏编辑页统一的保存动作。
+///
+/// 固定使用软碟语义图标，避免各页面把“保存”混用成对勾或“完成”。
+class SaveHeaderAction extends StatelessWidget {
+  const SaveHeaderAction({super.key, required this.onPressed});
+
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return HeaderAction(
+      icon: Icons.save_outlined,
+      tooltip: AppLocalizations.of(context).commonSave,
+      onPressed: onPressed,
     );
   }
 }

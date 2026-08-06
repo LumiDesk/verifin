@@ -1123,6 +1123,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonSave => '保存';
 
   @override
+  String get unsavedChangesTitle => '保存修改？';
+
+  @override
+  String get unsavedChangesMessage => '此页面有尚未保存的修改。';
+
+  @override
+  String get discardChanges => '不保存';
+
+  @override
   String get amountEditTitle => '修改金额';
 
   @override

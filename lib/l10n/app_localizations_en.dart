@@ -1143,6 +1143,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonSave => 'Save';
 
   @override
+  String get unsavedChangesTitle => 'Save changes?';
+
+  @override
+  String get unsavedChangesMessage => 'This page has unsaved changes.';
+
+  @override
+  String get discardChanges => 'Don\'t save';
+
+  @override
   String get amountEditTitle => 'Edit amount';
 
   @override
