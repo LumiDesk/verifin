@@ -92,6 +92,9 @@ mixin _ControllerState on ChangeNotifier {
   /// 语言偏好通知器：驱动 `MaterialApp.locale` 即时切换。
   late final ValueNotifier<LocalePreference> localePreferenceListenable;
 
+  /// AI 能力缓存只驱动设置页和 Agent 协议选择，不触发全应用重建。
+  late final ValueNotifier<AiCapabilityProfile?> aiCapabilityListenable;
+
   ThemePreference _themePreference = ThemePreference.system;
   LocalePreference _localePreference = LocalePreference.system;
   UserProfile _profile = defaultUserProfile;
@@ -111,6 +114,7 @@ mixin _ControllerState on ChangeNotifier {
   bool _amountForceTwoDecimals = false;
   bool _autoSuggestEnabled = true;
   AiSettings _aiSettings = const AiSettings();
+  AiCapabilityProfile? _aiCapabilityProfile;
 
   /// AI 对话查询的聊天记录：每条 `{role, content, displays?}`——助手消息可带序列化的
   /// 结果卡片（`displays` 为 [AiResultDisplay] 的 JSON），重开时连同图表一起还原。
@@ -201,6 +205,13 @@ mixin _ControllerState on ChangeNotifier {
     // 默认开启：老用户升级后行为不变，只有显式关过才为 false。
     _autoSuggestEnabled = _store.read(_autoSuggestKey) != 'false';
     _aiSettings = AiSettings.decode(_store.read(_aiSettingsKey));
+    _aiCapabilityProfile = AiCapabilityProfile.decode(
+      _store.read(_aiCapabilitiesKey),
+    );
+    if (_aiCapabilityProfile?.matches(_aiSettings) == false) {
+      _aiCapabilityProfile = null;
+      _store.delete(_aiCapabilitiesKey);
+    }
     _aiChatHistory = _decodeChatHistory(_store.read(_aiChatHistoryKey));
     _homeTrendConfig = HomeTrendConfig.decode(_store.read(_homeTrendKey));
   }

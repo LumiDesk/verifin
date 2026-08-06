@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' hide Category;
 
 import '../data/ledger_repository.dart';
 import '../local_storage/local_storage.dart';
+import 'ai/ai_capabilities.dart';
 import 'ai/ai_settings.dart';
 import 'app_lock.dart';
 import 'backup/backup_settings.dart';
@@ -75,6 +76,7 @@ const String _budgetCycleKey = 'verifin.budget_cycle.v1';
 const String _amountFormatKey = 'verifin.amount_format.v1';
 const String _autoSuggestKey = 'verifin.auto_suggest.v1';
 const String _aiSettingsKey = 'verifin.ai.v1';
+const String _aiCapabilitiesKey = 'verifin.ai_capabilities.v1';
 const String _aiChatHistoryKey = 'verifin.ai_chat.v1';
 const String _homeTrendKey = 'verifin.home_metrics.v1';
 const String _onboardingKey = 'verifin.onboarding.v1';
@@ -118,6 +120,9 @@ class VeriFinController extends ChangeNotifier
     localePreferenceListenable = ValueNotifier<LocalePreference>(
       _localePreference,
     );
+    aiCapabilityListenable = ValueNotifier<AiCapabilityProfile?>(
+      _aiCapabilityProfile,
+    );
   }
 
   /// 唯一的构造入口：同步载入偏好类 KV 数据后，从 SQLite 载入账目类数据
@@ -154,6 +159,7 @@ class VeriFinController extends ChangeNotifier
   void dispose() {
     themePreferenceListenable.dispose();
     localePreferenceListenable.dispose();
+    aiCapabilityListenable.dispose();
     super.dispose();
   }
 }

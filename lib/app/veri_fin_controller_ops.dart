@@ -613,6 +613,10 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       return;
     }
     _aiSettings = settings;
+    if (_aiCapabilityProfile?.matches(settings) == false ||
+        !settings.isConfigured) {
+      setAiCapabilityProfile(null);
+    }
     if (settings.isConfigured ||
         settings.baseUrl.isNotEmpty ||
         settings.apiKey.isNotEmpty ||
@@ -622,6 +626,20 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       _store.delete(_aiSettingsKey);
     }
     notifyListeners();
+  }
+
+  AiCapabilityProfile? get aiCapabilityProfile => _aiCapabilityProfile;
+
+  /// 保存不含密钥的 AI 能力缓存；仅更新窄粒度 notifier。
+  void setAiCapabilityProfile(AiCapabilityProfile? profile) {
+    if (_aiCapabilityProfile == profile) return;
+    _aiCapabilityProfile = profile;
+    if (profile == null) {
+      _store.delete(_aiCapabilitiesKey);
+    } else {
+      _store.write(_aiCapabilitiesKey, profile.encode());
+    }
+    aiCapabilityListenable.value = profile;
   }
 
   /// AI 对话查询的聊天记录（每条 `{role, content, displays?}`，助手消息可带序列化的

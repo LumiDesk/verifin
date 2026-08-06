@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/ai/ai_capabilities.dart';
 import '../app/ai/ai_client.dart';
 import '../app/ai/ai_settings.dart';
 import '../app/app_theme.dart';
@@ -25,6 +26,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
   bool _obscureKey = true;
   bool _testing = false;
   AiToolCallMode _toolCallMode = AiToolCallMode.auto;
+  AiCapabilityProfile? _detectedProfile;
   String? _statusText;
   bool _statusIsError = false;
 
@@ -37,6 +39,11 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       _apiKeyController.text = settings.apiKey;
       _modelController.text = settings.model;
       _toolCallMode = settings.toolCallMode;
+      final cached = VeriFinScope.of(context).aiCapabilityProfile;
+      if (cached?.matches(settings) == true) {
+        _detectedProfile = cached;
+        _statusText = _capabilityStatus(cached!, settings);
+      }
       _seeded = true;
     }
   }
@@ -70,6 +77,10 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     if (!await confirmCleartextIfRisky(context, settings.baseUrl)) return;
     if (!mounted) return;
     VeriFinScope.of(context).setAiSettings(settings);
+    final detected = _detectedProfile;
+    if (detected?.matches(settings) == true) {
+      VeriFinScope.of(context).setAiCapabilityProfile(detected);
+    }
     FocusScope.of(context).unfocus();
     ScaffoldMessenger.of(
       context,
@@ -96,6 +107,8 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     _baseUrlController.clear();
     _apiKeyController.clear();
     _modelController.clear();
+    _toolCallMode = AiToolCallMode.auto;
+    _detectedProfile = null;
     FocusScope.of(context).unfocus();
     setState(() {
       _statusIsError = false;
@@ -106,7 +119,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     ).showSnackBar(SnackBar(content: Text(l10n.aiConfigCleared)));
   }
 
-  Future<void> _testConnection() async {
+  Future<void> _detectCapabilities() async {
     final l10n = AppLocalizations.of(context);
     final settings = _current();
     if (!settings.isConfigured) {
@@ -116,28 +129,34 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       });
       return;
     }
+    if (!await confirmCleartextIfRisky(context, settings.baseUrl)) return;
+    if (!mounted) return;
     setState(() {
       _testing = true;
       _statusIsError = false;
-      _statusText = l10n.testingConnection;
+      _statusText = l10n.aiDetectingCapabilities;
     });
     try {
-      await aiChatComplete(
-        settings: settings,
-        systemPrompt: 'You are a health check. Reply with the single word OK.',
-        userPrompt: 'ping',
-      );
+      final profile = await detectAiCapabilities(settings: settings);
       if (!mounted) {
         return;
       }
+      final scope = VeriFinScope.of(context);
+      if (profile.matches(scope.aiSettings)) {
+        scope.setAiCapabilityProfile(profile);
+      }
       setState(() {
+        _detectedProfile = profile;
         _statusIsError = false;
-        _statusText = l10n.connectionOk;
+        _statusText = _capabilityStatus(profile, settings);
       });
     } on AiException catch (error) {
       if (!mounted) {
         return;
       }
+      VeriFinScope.of(
+        context,
+      ).logger?.error('AI 能力检测失败', source: 'ai', error: error);
       setState(() {
         _statusIsError = true;
         _statusText = l10n.connectionFailed(aiErrorMessage(l10n, error));
@@ -146,15 +165,81 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       if (!mounted) {
         return;
       }
+      VeriFinScope.of(
+        context,
+      ).logger?.error('AI 能力检测失败', source: 'ai', error: error);
       setState(() {
         _statusIsError = true;
-        _statusText = l10n.connectionFailed('$error');
+        _statusText = l10n.connectionFailed(l10n.aiErrUnknown);
       });
     } finally {
       if (mounted) {
         setState(() => _testing = false);
       }
     }
+  }
+
+  Future<void> _selectToolCallMode() async {
+    final selected = await showOptionSheet<AiToolCallMode>(
+      context: context,
+      title: AppLocalizations.of(context).aiToolModeTitle,
+      values: AiToolCallMode.values,
+      selected: _toolCallMode,
+      labelOf: _toolModeLabel,
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      _toolCallMode = selected;
+      final profile = _detectedProfile;
+      if (profile != null) {
+        _statusText = _capabilityStatus(profile, _current());
+      }
+    });
+  }
+
+  String _toolModeLabel(AiToolCallMode mode) {
+    final l10n = AppLocalizations.of(context);
+    return switch (mode) {
+      AiToolCallMode.auto => l10n.aiToolModeAuto,
+      AiToolCallMode.native => l10n.aiToolModeNative,
+      AiToolCallMode.prompt => l10n.aiToolModePrompt,
+    };
+  }
+
+  String _toolModeHint(AiToolCallMode mode) {
+    final l10n = AppLocalizations.of(context);
+    return switch (mode) {
+      AiToolCallMode.auto => l10n.aiToolModeAutoHint,
+      AiToolCallMode.native => l10n.aiToolModeNativeHint,
+      AiToolCallMode.prompt => l10n.aiToolModePromptHint,
+    };
+  }
+
+  String _capabilityStatus(AiCapabilityProfile profile, AiSettings settings) {
+    final l10n = AppLocalizations.of(context);
+    final capability =
+        profile.nativeToolCalls == AiNativeToolCapability.supported
+        ? l10n.aiNativeToolsSupported
+        : l10n.aiNativeToolsUnsupported;
+    final effectiveMode = profile.effectiveMode(settings);
+    final protocol = switch (effectiveMode) {
+      AiToolCallMode.native => l10n.aiActualProtocolNative,
+      AiToolCallMode.prompt => l10n.aiActualProtocolPrompt,
+      AiToolCallMode.auto => l10n.aiActualProtocolAuto,
+    };
+    return '${l10n.aiConnectionReady}\n'
+        '${l10n.aiStreamingReady}\n'
+        '$capability\n'
+        '$protocol';
+  }
+
+  void _invalidateDetectedCapability() {
+    if (_detectedProfile == null && _statusText == null) return;
+    setState(() {
+      _detectedProfile = null;
+      _statusText = null;
+      _statusIsError = false;
+    });
   }
 
   @override
@@ -204,6 +289,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                   children: <Widget>[
                     TextField(
                       controller: _baseUrlController,
+                      onChanged: (_) => _invalidateDetectedCapability(),
                       keyboardType: TextInputType.url,
                       autocorrect: false,
                       decoration: InputDecoration(
@@ -233,10 +319,32 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                     const SizedBox(height: 10),
                     TextField(
                       controller: _modelController,
+                      onChanged: (_) => _invalidateDetectedCapability(),
                       autocorrect: false,
                       decoration: InputDecoration(
                         labelText: l10n.aiModelLabel,
                         hintText: l10n.aiModelHint,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Material(
+                      color: Colors.transparent,
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(l10n.aiToolModeTitle),
+                        subtitle: Text(
+                          '${_toolModeLabel(_toolCallMode)} · '
+                          '${_toolModeHint(_toolCallMode)}',
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: _testing ? null : _selectToolCallMode,
+                      ),
+                    ),
+                    Text(
+                      l10n.aiCapabilityProbeNotice,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: muted,
+                        height: 1.4,
                       ),
                     ),
                     if (_statusText != null) ...<Widget>[
@@ -256,7 +364,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                       children: <Widget>[
                         Expanded(
                           child: OutlinedButton.icon(
-                            onPressed: _testing ? null : _testConnection,
+                            onPressed: _testing ? null : _detectCapabilities,
                             style: OutlinedButton.styleFrom(
                               minimumSize: const Size(44, 44),
                               padding: const EdgeInsets.symmetric(
@@ -278,7 +386,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                                     ),
                                   )
                                 : const Icon(Icons.wifi_tethering, size: 18),
-                            label: Text(l10n.testConnection),
+                            label: Text(l10n.aiDetectCapabilities),
                           ),
                         ),
                         const SizedBox(width: 10),

@@ -2744,7 +2744,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get aiSettingsTitle => 'AI 记账设置';
+  String get aiSettingsTitle => 'AI 设置';
 
   @override
   String get aiConfigured => '已配置';
@@ -2753,7 +2753,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiNotConfigured => '未配置';
 
   @override
-  String get aiChatTitle => 'AI 助手';
+  String get aiChatTitle => 'AI 财务助理';
 
   @override
   String get aiChatClearHistory => '清空聊天记录';
@@ -2832,7 +2832,59 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiSettingsSaved => '保存成功';
 
   @override
-  String get aiPrivacyNotice => 'AI 记账会把你输入的文字发送到你配置的第三方服务进行解析，请勿输入敏感信息。';
+  String get aiToolModeTitle => '工具调用协议';
+
+  @override
+  String get aiToolModeAuto => '自动（推荐）';
+
+  @override
+  String get aiToolModeNative => '原生 Tool Calls';
+
+  @override
+  String get aiToolModePrompt => '兼容模式';
+
+  @override
+  String get aiToolModeAutoHint => '优先使用原生协议，不支持时自动兼容';
+
+  @override
+  String get aiToolModeNativeHint => '强制使用结构化 Tool Calls';
+
+  @override
+  String get aiToolModePromptHint => '用于不支持原生工具调用的模型或中转服务';
+
+  @override
+  String get aiDetectCapabilities => '检测能力';
+
+  @override
+  String get aiDetectingCapabilities => '正在检测连接、流式输出与 Tool Calls…';
+
+  @override
+  String get aiConnectionReady => '连接正常';
+
+  @override
+  String get aiStreamingReady => '流式输出正常';
+
+  @override
+  String get aiNativeToolsSupported => '原生 Tool Calls：支持';
+
+  @override
+  String get aiNativeToolsUnsupported => '原生 Tool Calls：不支持，将使用兼容模式';
+
+  @override
+  String get aiActualProtocolNative => '实际协议：原生 Tool Calls';
+
+  @override
+  String get aiActualProtocolPrompt => '实际协议：兼容模式';
+
+  @override
+  String get aiActualProtocolAuto => '实际协议：自动检测';
+
+  @override
+  String get aiCapabilityProbeNotice => '能力检测会发起少量测试请求，但不会发送任何账目数据。';
+
+  @override
+  String get aiPrivacyNotice =>
+      'AI 功能会把你输入的文字，以及回答问题所需的只读账目查询摘要发送到你配置的第三方服务；配置和完整账目仍只存本机。';
 
   @override
   String get aiEntryTitle => 'AI 记账';

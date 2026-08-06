@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:verifin/app/ai/ai_capabilities.dart';
 import 'package:verifin/app/ai/ai_settings.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/app/veri_fin_scope.dart';
@@ -162,5 +163,40 @@ void main() {
       expect(restarted.aiSettings.isConfigured, isFalse);
       restarted.dispose();
     });
+
+    test(
+      'capability cache persists and invalidates with endpoint identity',
+      () async {
+        final store = LocalKeyValueStore();
+        final controller = await makeController(store);
+        const settings = AiSettings(
+          baseUrl: 'https://x/v1',
+          apiKey: 'k',
+          model: 'm',
+        );
+        controller.setAiSettings(settings);
+        controller.setAiCapabilityProfile(
+          AiCapabilityProfile.forSettings(
+            settings: settings,
+            nativeToolCalls: AiNativeToolCapability.supported,
+            checkedAt: DateTime.utc(2026, 8, 6),
+          ),
+        );
+        controller.dispose();
+
+        final restarted = await makeController(store);
+        expect(
+          restarted.aiCapabilityProfile?.nativeToolCalls,
+          AiNativeToolCapability.supported,
+        );
+        restarted.setAiSettings(
+          settings.copyWith(toolCallMode: AiToolCallMode.prompt),
+        );
+        expect(restarted.aiCapabilityProfile, isNotNull);
+        restarted.setAiSettings(settings.copyWith(model: 'other'));
+        expect(restarted.aiCapabilityProfile, isNull);
+        restarted.dispose();
+      },
+    );
   });
 }

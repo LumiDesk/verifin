@@ -31,7 +31,7 @@ class AiException implements Exception {
   String toString() => detail == null ? code.name : '${code.name}: $detail';
 }
 
-/// 把 [AiException] 映射为本地化文案（含 detail 补充）。
+/// 把 [AiException] 映射为本地化文案。上游原文只进本地日志，不直接展示给用户。
 String aiErrorMessage(AppLocalizations l10n, AiException error) {
   final base = switch (error.code) {
     AiErrorCode.notConfigured => l10n.aiErrNotConfigured,
@@ -50,6 +50,5 @@ String aiErrorMessage(AppLocalizations l10n, AiException error) {
     AiErrorCode.upstream => l10n.aiErrUpstream,
     AiErrorCode.unknown => l10n.aiErrUnknown,
   };
-  final detail = error.detail;
-  return (detail == null || detail.isEmpty) ? base : '$base（$detail）';
+  return base;
 }

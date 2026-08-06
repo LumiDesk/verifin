@@ -2790,7 +2790,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get aiSettingsTitle => 'AI entry settings';
+  String get aiSettingsTitle => 'AI settings';
 
   @override
   String get aiConfigured => 'Configured';
@@ -2799,7 +2799,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiNotConfigured => 'Not set';
 
   @override
-  String get aiChatTitle => 'AI Assistant';
+  String get aiChatTitle => 'AI Finance Assistant';
 
   @override
   String get aiChatClearHistory => 'Clear chat history';
@@ -2885,8 +2885,64 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiSettingsSaved => 'Saved';
 
   @override
+  String get aiToolModeTitle => 'Tool calling protocol';
+
+  @override
+  String get aiToolModeAuto => 'Auto (recommended)';
+
+  @override
+  String get aiToolModeNative => 'Native Tool Calls';
+
+  @override
+  String get aiToolModePrompt => 'Compatibility mode';
+
+  @override
+  String get aiToolModeAutoHint =>
+      'Prefer native tools and fall back when unsupported';
+
+  @override
+  String get aiToolModeNativeHint => 'Always use structured Tool Calls';
+
+  @override
+  String get aiToolModePromptHint =>
+      'For models or gateways without native tool support';
+
+  @override
+  String get aiDetectCapabilities => 'Detect capabilities';
+
+  @override
+  String get aiDetectingCapabilities =>
+      'Checking connection, streaming, and Tool Calls…';
+
+  @override
+  String get aiConnectionReady => 'Connection successful';
+
+  @override
+  String get aiStreamingReady => 'Streaming successful';
+
+  @override
+  String get aiNativeToolsSupported => 'Native Tool Calls: supported';
+
+  @override
+  String get aiNativeToolsUnsupported =>
+      'Native Tool Calls: unsupported; compatibility mode will be used';
+
+  @override
+  String get aiActualProtocolNative => 'Active protocol: native Tool Calls';
+
+  @override
+  String get aiActualProtocolPrompt => 'Active protocol: compatibility mode';
+
+  @override
+  String get aiActualProtocolAuto => 'Active protocol: automatic detection';
+
+  @override
+  String get aiCapabilityProbeNotice =>
+      'Capability detection sends a few small test requests without any financial data.';
+
+  @override
   String get aiPrivacyNotice =>
-      'AI entry sends the text you type to the third-party service you configured for parsing. Do not enter sensitive information.';
+      'AI features send your text and the read-only financial summaries needed to answer your questions to your configured third-party service. The configuration and full ledger remain on this device.';
 
   @override
   String get aiEntryTitle => 'AI entry';

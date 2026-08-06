@@ -5063,7 +5063,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiSettingsTitle.
   ///
   /// In zh, this message translates to:
-  /// **'AI 记账设置'**
+  /// **'AI 设置'**
   String get aiSettingsTitle;
 
   /// No description provided for @aiConfigured.
@@ -5081,7 +5081,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiChatTitle.
   ///
   /// In zh, this message translates to:
-  /// **'AI 助手'**
+  /// **'AI 财务助理'**
   String get aiChatTitle;
 
   /// No description provided for @aiChatClearHistory.
@@ -5234,10 +5234,112 @@ abstract class AppLocalizations {
   /// **'保存成功'**
   String get aiSettingsSaved;
 
+  /// No description provided for @aiToolModeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'工具调用协议'**
+  String get aiToolModeTitle;
+
+  /// No description provided for @aiToolModeAuto.
+  ///
+  /// In zh, this message translates to:
+  /// **'自动（推荐）'**
+  String get aiToolModeAuto;
+
+  /// No description provided for @aiToolModeNative.
+  ///
+  /// In zh, this message translates to:
+  /// **'原生 Tool Calls'**
+  String get aiToolModeNative;
+
+  /// No description provided for @aiToolModePrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'兼容模式'**
+  String get aiToolModePrompt;
+
+  /// No description provided for @aiToolModeAutoHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'优先使用原生协议，不支持时自动兼容'**
+  String get aiToolModeAutoHint;
+
+  /// No description provided for @aiToolModeNativeHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'强制使用结构化 Tool Calls'**
+  String get aiToolModeNativeHint;
+
+  /// No description provided for @aiToolModePromptHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'用于不支持原生工具调用的模型或中转服务'**
+  String get aiToolModePromptHint;
+
+  /// No description provided for @aiDetectCapabilities.
+  ///
+  /// In zh, this message translates to:
+  /// **'检测能力'**
+  String get aiDetectCapabilities;
+
+  /// No description provided for @aiDetectingCapabilities.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在检测连接、流式输出与 Tool Calls…'**
+  String get aiDetectingCapabilities;
+
+  /// No description provided for @aiConnectionReady.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接正常'**
+  String get aiConnectionReady;
+
+  /// No description provided for @aiStreamingReady.
+  ///
+  /// In zh, this message translates to:
+  /// **'流式输出正常'**
+  String get aiStreamingReady;
+
+  /// No description provided for @aiNativeToolsSupported.
+  ///
+  /// In zh, this message translates to:
+  /// **'原生 Tool Calls：支持'**
+  String get aiNativeToolsSupported;
+
+  /// No description provided for @aiNativeToolsUnsupported.
+  ///
+  /// In zh, this message translates to:
+  /// **'原生 Tool Calls：不支持，将使用兼容模式'**
+  String get aiNativeToolsUnsupported;
+
+  /// No description provided for @aiActualProtocolNative.
+  ///
+  /// In zh, this message translates to:
+  /// **'实际协议：原生 Tool Calls'**
+  String get aiActualProtocolNative;
+
+  /// No description provided for @aiActualProtocolPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'实际协议：兼容模式'**
+  String get aiActualProtocolPrompt;
+
+  /// No description provided for @aiActualProtocolAuto.
+  ///
+  /// In zh, this message translates to:
+  /// **'实际协议：自动检测'**
+  String get aiActualProtocolAuto;
+
+  /// No description provided for @aiCapabilityProbeNotice.
+  ///
+  /// In zh, this message translates to:
+  /// **'能力检测会发起少量测试请求，但不会发送任何账目数据。'**
+  String get aiCapabilityProbeNotice;
+
   /// No description provided for @aiPrivacyNotice.
   ///
   /// In zh, this message translates to:
-  /// **'AI 记账会把你输入的文字发送到你配置的第三方服务进行解析，请勿输入敏感信息。'**
+  /// **'AI 功能会把你输入的文字，以及回答问题所需的只读账目查询摘要发送到你配置的第三方服务；配置和完整账目仍只存本机。'**
   String get aiPrivacyNotice;
 
   /// No description provided for @aiEntryTitle.
