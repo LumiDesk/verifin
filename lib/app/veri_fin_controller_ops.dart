@@ -879,6 +879,36 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
+  /// Persists the AI connection editor draft before publishing it in memory.
+  Future<bool> saveAiSettingsDraft(
+    AiSettings settings, {
+    AiCapabilityProfile? detectedProfile,
+  }) async {
+    try {
+      if (settings.isConfigured ||
+          settings.baseUrl.isNotEmpty ||
+          settings.apiKey.isNotEmpty ||
+          settings.model.isNotEmpty) {
+        await _store.writeAndFlush(_aiSettingsKey, settings.encode());
+      } else {
+        await _store.deleteAndFlush(_aiSettingsKey);
+      }
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+
+    _aiSettings = settings;
+    final nextProfile = detectedProfile?.matches(settings) == true
+        ? detectedProfile
+        : _aiCapabilityProfile?.matches(settings) == true
+        ? _aiCapabilityProfile
+        : null;
+    setAiCapabilityProfile(nextProfile);
+    notifyListeners();
+    return true;
+  }
+
   AiCapabilityProfile? get aiCapabilityProfile => _aiCapabilityProfile;
 
   /// 保存不含密钥的 AI 能力缓存；仅更新窄粒度 notifier。
@@ -1210,6 +1240,109 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _persistEntries();
     notifyListeners();
     onEntryAdded?.call();
+  }
+
+  /// Atomically persists an entry together with its refunds and attachments.
+  ///
+  /// [entry.refundedAmount] is ignored and derived again from the settled
+  /// refunds, preventing an editor's stale entry snapshot from overwriting the
+  /// controller-managed cache.
+  Future<bool> saveEntryAggregateDraft({
+    required LedgerEntry entry,
+    required bool isNew,
+    List<LedgerEntry> refunds = const <LedgerEntry>[],
+    List<Attachment> attachments = const <Attachment>[],
+  }) async {
+    final currentIndex = _entries.indexWhere((item) => item.id == entry.id);
+    if ((isNew && currentIndex != -1) || (!isNew && currentIndex == -1)) {
+      return false;
+    }
+    if (!isNew && _entries[currentIndex].bookId != entry.bookId) {
+      return false;
+    }
+    if (refunds.any(
+          (refund) =>
+              refund.type != EntryType.refund ||
+              refund.refundOf != entry.id ||
+              refund.bookId != entry.bookId ||
+              refund.amount <= 0,
+        ) ||
+        attachments.any((attachment) => attachment.entryId != entry.id)) {
+      return false;
+    }
+    final refundTotal = refunds.fold<double>(
+      0,
+      (total, refund) => total + refund.amount,
+    );
+    if (entry.type != EntryType.expense && refunds.isNotEmpty ||
+        refundTotal > entry.amount + 0.0001) {
+      return false;
+    }
+
+    final existingEntryIds = _entries.map((item) => item.id).toSet();
+    final hasNewEntry =
+        isNew || refunds.any((refund) => !existingEntryIds.contains(refund.id));
+    final nextEntries = <LedgerEntry>[];
+    for (final current in _entries) {
+      if (current.id == entry.id) {
+        nextEntries.add(entry.copyWith(refundedAmount: 0));
+      } else if (current.type == EntryType.refund &&
+          current.refundOf == entry.id) {
+        continue;
+      } else {
+        nextEntries.add(current);
+      }
+    }
+    if (isNew) {
+      nextEntries.add(entry.copyWith(refundedAmount: 0));
+    }
+    nextEntries.addAll(refunds);
+
+    final settledByExpense = <String, double>{};
+    for (final current in nextEntries) {
+      if (current.isSettledRefund && current.refundOf != null) {
+        settledByExpense[current.refundOf!] =
+            (settledByExpense[current.refundOf!] ?? 0) + current.amount;
+      }
+    }
+    for (var i = 0; i < nextEntries.length; i++) {
+      final current = nextEntries[i];
+      if (current.type != EntryType.expense) {
+        continue;
+      }
+      final refundedAmount = (settledByExpense[current.id] ?? 0)
+          .clamp(0.0, current.amount)
+          .toDouble();
+      nextEntries[i] = current.copyWith(refundedAmount: refundedAmount);
+    }
+    nextEntries.sort(_compareEntriesLatestFirst);
+
+    final nextAttachments = <Attachment>[
+      for (final attachment in _attachments)
+        if (attachment.entryId != entry.id) attachment,
+      ...attachments,
+    ];
+    try {
+      await _repository.saveEntryAggregate(
+        entries: nextEntries,
+        attachments: nextAttachments,
+      );
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+
+    _entries
+      ..clear()
+      ..addAll(nextEntries);
+    _attachments
+      ..clear()
+      ..addAll(nextAttachments);
+    notifyListeners();
+    if (hasNewEntry) {
+      onEntryAdded?.call();
+    }
+    return true;
   }
 
   /// 解析 CSV 文本并把交易导入当前账本；匹配不到的账户/分类按名称新建。

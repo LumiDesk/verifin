@@ -11,6 +11,7 @@ class BudgetSettingsPage extends StatefulWidget {
 }
 
 class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
+  final EditorExitController _exitController = EditorExitController();
   // 收起的父分类 id（默认折叠：首次构建时把所有含子类的分类加入）。
   final Set<String> _collapsedCategories = <String>{};
   bool _collapseInitialized = false;
@@ -90,6 +91,7 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
     return UnsavedChangesGuard(
       isDirty: _isDirty,
       onSave: _save,
+      exitController: _exitController,
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -336,7 +338,7 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
           ..clear()
           ..addAll(_draftCategoryBudgets);
       });
-      Navigator.of(context).pop();
+      _exitController.exit();
     }
   }
 

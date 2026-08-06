@@ -12,7 +12,7 @@ import 'support/test_harness.dart';
 void main() {
   useTestDatabases();
 
-  testWidgets('支出详情：添加退款后显示退款、净额归零', (WidgetTester tester) async {
+  testWidgets('支出详情：退款先留在草稿，保存交易后原子落库并可重载', (WidgetTester tester) async {
     final store = LocalKeyValueStore();
     final controller = await makeController(store);
     final bookId = controller.activeBook.id;
@@ -67,6 +67,14 @@ void main() {
     await tester.tap(find.text('保存'));
     await tester.pumpAndSettle();
 
+    // 退款弹窗只更新交易页草稿，尚未触碰 Controller 或持久化层。
+    expect(controller.refundsForEntry('e1'), isEmpty);
+    expect(controller.entries.firstWhere((e) => e.id == 'e1').netAmount, 100);
+
+    // 右上角保存把原交易与退款作为一个聚合一次性提交。
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+
     // 生成一条已到账退款、净额归零、原账户余额 = 1000 − 100 + 100 = 1000。
     final refunds = controller.refundsForEntry('e1');
     expect(refunds.length, 1);
@@ -75,6 +83,14 @@ void main() {
     expect(controller.entries.firstWhere((e) => e.id == 'e1').netAmount, 0);
     final cash = controller.accounts.firstWhere((a) => a.id == 'cash');
     expect(controller.accountBalance(cash), 1000);
+
+    // 模拟进程重启，确保不是只改了内存状态。
+    await tester.pumpWidget(const SizedBox.shrink());
+    controller.dispose();
+    final reloaded = await makeController(store);
+    expect(reloaded.refundsForEntry('e1').single.amount, 100);
+    expect(reloaded.entries.firstWhere((e) => e.id == 'e1').netAmount, 0);
+    reloaded.dispose();
   });
 
   testWidgets('退款不在普通类型选择器里出现', (WidgetTester tester) async {

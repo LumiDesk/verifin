@@ -24,6 +24,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  final EditorExitController _exitController = EditorExitController();
   late ThemePreference _initialTheme;
   late ThemePreference _theme;
   late LocalePreference _initialLocale;
@@ -64,6 +65,7 @@ class _SettingsPageState extends State<SettingsPage> {
     return UnsavedChangesGuard(
       isDirty: _isDirty,
       onSave: _save,
+      exitController: _exitController,
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -391,7 +393,7 @@ class _SettingsPageState extends State<SettingsPage> {
         _initialDefaultAccountId = _defaultAccountId;
         _initialAutoSuggest = _autoSuggest;
       });
-      Navigator.of(context).pop();
+      _exitController.exit();
     }
   }
 

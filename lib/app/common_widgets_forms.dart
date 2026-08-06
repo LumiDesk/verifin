@@ -362,6 +362,16 @@ Future<bool> showConfirmDialog(
 /// 编辑页存在未保存修改时，用户对退出请求作出的决定。
 enum EditorExitDecision { save, discard, cancel }
 
+/// Lets an editor's explicit save action request the same guarded exit path
+/// used by back navigation, without relying on a rebuild to clear dirty first.
+class EditorExitController {
+  void Function(Object? Function()? resultBuilder)? _exit;
+
+  void exit({Object? Function()? result}) {
+    _exit?.call(result);
+  }
+}
+
 /// 统一的未保存修改对话框。
 ///
 /// 点击遮罩或系统返回等价于 [EditorExitDecision.cancel]，不会隐式丢弃草稿。
@@ -408,11 +418,15 @@ class UnsavedChangesGuard extends StatefulWidget {
     required this.onSave,
     required this.child,
     this.onDiscard,
+    this.popResult,
+    this.exitController,
   });
 
   final bool isDirty;
   final Future<bool> Function() onSave;
   final VoidCallback? onDiscard;
+  final Object? Function()? popResult;
+  final EditorExitController? exitController;
   final Widget child;
 
   @override
@@ -422,6 +436,31 @@ class UnsavedChangesGuard extends StatefulWidget {
 class _UnsavedChangesGuardState extends State<UnsavedChangesGuard> {
   bool _handlingPop = false;
   bool _allowNextPop = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.exitController?._exit = _exitPage;
+  }
+
+  @override
+  void didUpdateWidget(UnsavedChangesGuard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.exitController != widget.exitController) {
+      if (oldWidget.exitController?._exit == _exitPage) {
+        oldWidget.exitController?._exit = null;
+      }
+      widget.exitController?._exit = _exitPage;
+    }
+  }
+
+  @override
+  void dispose() {
+    if (widget.exitController?._exit == _exitPage) {
+      widget.exitController?._exit = null;
+    }
+    super.dispose();
+  }
 
   Future<void> _handleBlockedPop() async {
     if (_handlingPop) {
@@ -436,12 +475,12 @@ class _UnsavedChangesGuardState extends State<UnsavedChangesGuard> {
       switch (decision) {
         case EditorExitDecision.save:
           if (await widget.onSave() && mounted) {
-            _exitPage();
+            _exitPage(null);
           }
           break;
         case EditorExitDecision.discard:
           widget.onDiscard?.call();
-          _exitPage();
+          _exitPage(null);
           break;
         case EditorExitDecision.cancel:
           break;
@@ -453,12 +492,13 @@ class _UnsavedChangesGuardState extends State<UnsavedChangesGuard> {
     }
   }
 
-  void _exitPage() {
+  void _exitPage(Object? Function()? resultBuilder) {
     final navigator = Navigator.of(context);
+    final result = (resultBuilder ?? widget.popResult)?.call();
     setState(() => _allowNextPop = true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        navigator.maybePop();
+        navigator.maybePop(result);
       }
     });
   }

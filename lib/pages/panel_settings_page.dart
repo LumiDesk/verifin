@@ -71,6 +71,7 @@ class PanelSettingsPage extends StatefulWidget {
 }
 
 class _PanelSettingsPageState extends State<PanelSettingsPage> {
+  final EditorExitController _exitController = EditorExitController();
   bool _sorting = false;
   late List<PagePanelSetting> _initialPanels;
   late List<PagePanelSetting> _draftPanels;
@@ -100,6 +101,7 @@ class _PanelSettingsPageState extends State<PanelSettingsPage> {
     return UnsavedChangesGuard(
       isDirty: _isDirty,
       onSave: _save,
+      exitController: _exitController,
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -254,7 +256,7 @@ class _PanelSettingsPageState extends State<PanelSettingsPage> {
       setState(() {
         _initialPanels = List<PagePanelSetting>.of(_draftPanels);
       });
-      Navigator.of(context).pop();
+      _exitController.exit();
     }
   }
 

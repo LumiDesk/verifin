@@ -80,6 +80,15 @@ class InMemoryLedgerRepository implements LedgerRepository {
   }
 
   @override
+  Future<void> saveEntryAggregate({
+    required List<LedgerEntry> entries,
+    required List<Attachment> attachments,
+  }) async {
+    _entries = List<LedgerEntry>.of(entries);
+    _attachments = List<Attachment>.of(attachments);
+  }
+
+  @override
   Future<List<RecurringRule>> loadRecurringRules() async =>
       List<RecurringRule>.of(_recurringRules);
 

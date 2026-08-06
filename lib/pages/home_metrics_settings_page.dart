@@ -19,6 +19,7 @@ class HomeMetricsSettingsPage extends StatefulWidget {
 }
 
 class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
+  final EditorExitController _exitController = EditorExitController();
   final TextEditingController _titleController = TextEditingController();
   bool _titleInitialized = false;
   late HomeTrendConfig _initialConfig;
@@ -199,6 +200,7 @@ class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
     return UnsavedChangesGuard(
       isDirty: _isDirty,
       onSave: _save,
+      exitController: _exitController,
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -304,7 +306,7 @@ class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
   Future<void> _saveAndExit() async {
     if (await _save() && mounted) {
       setState(() => _initialConfig = _draftConfig);
-      Navigator.of(context).pop();
+      _exitController.exit();
     }
   }
 

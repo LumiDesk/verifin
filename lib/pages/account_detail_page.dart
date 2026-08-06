@@ -36,6 +36,7 @@ class AccountDetailPage extends StatefulWidget {
 }
 
 class _AccountDetailPageState extends State<AccountDetailPage> {
+  final EditorExitController _exitController = EditorExitController();
   bool _monthlyTrend = false;
   late Account _initialAccount;
   late Account _draftAccount;
@@ -86,6 +87,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
     return UnsavedChangesGuard(
       isDirty: _isDirty,
       onSave: _save,
+      exitController: _exitController,
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -794,7 +796,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
         _initialAccount = _draftAccount;
         _initialDefault = _draftDefault;
       });
-      Navigator.of(context).pop();
+      _exitController.exit();
     }
   }
 

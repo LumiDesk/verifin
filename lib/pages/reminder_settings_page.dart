@@ -15,6 +15,7 @@ class ReminderSettingsPage extends StatefulWidget {
 }
 
 class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
+  final EditorExitController _exitController = EditorExitController();
   final NotificationScheduler _scheduler = NotificationScheduler();
   late ReminderSettings _initialSettings;
   late ReminderSettings _draftSettings;
@@ -60,6 +61,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
     return UnsavedChangesGuard(
       isDirty: _isDirty,
       onSave: _save,
+      exitController: _exitController,
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -147,7 +149,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
   Future<void> _saveAndExit() async {
     if (await _save() && mounted) {
       setState(() => _initialSettings = _draftSettings);
-      Navigator.of(context).pop();
+      _exitController.exit();
     }
   }
 

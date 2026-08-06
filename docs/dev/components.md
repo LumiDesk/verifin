@@ -104,7 +104,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 |---|---|---|---|
 | `showConfirmDialog` | Dialog 函数 | `common_widgets.dart` | **统一确认框**；`destructive` 红色；返回 `bool`（取消/点外=false）。**禁止内联两按钮 `AlertDialog`** |
 | `showUnsavedChangesDialog` / `EditorExitDecision` | Dialog 函数 / 枚举 | `common_widgets.dart` | 未保存修改的“保存 / 不保存 / 取消”三操作对话框；点遮罩或系统返回视为取消 |
-| `UnsavedChangesGuard` | Widget | `common_widgets.dart` | 统一拦截编辑页 Header、系统与预测性返回；仅 `onSave` 成功后放行，未修改时不拦截 |
+| `UnsavedChangesGuard` / `EditorExitController` | Widget / Controller | `common_widgets.dart` | 统一拦截编辑页 Header、系统与预测性返回；仅 `onSave` 成功后放行，未修改时不拦截；显式保存成功后用 `EditorExitController.exit()` 走同一受控退出路径，避免同帧旧 dirty 状态拦截程序化返回 |
 | `showTextInputDialog` | Dialog 函数 | `sheets.dart` | **统一文本输入**；`allowEmpty`、`keyboardType`；返回 trim 后 `String?` |
 | `showOptionSheet<T>` | Sheet 函数 | `sheets.dart` | 通用单选底部弹窗（枚举/简单值）；`labelOf`、`showSelectedMarker`；返回 `T?` |
 | `showMonthlyBudgetOverrideSheet` / `showCategoryBudgetOverrideSheet` | Sheet 函数 | `sheets.dart` | 总预算 / 分类预算的单期覆盖管理；按自然月/自定义周期显示“本月/本期”，可设置或调整所选期额度，有覆盖时可清除并恢复默认；内部复用 `showOptionSheet` + `showNumberPadSheet`，调用方只传 `context:`、键月与可选分类 |

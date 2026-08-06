@@ -107,13 +107,7 @@ class _PendingRefundRow extends StatelessWidget {
     );
 
     return InkWell(
-      onTap: expense == null
-          ? null
-          : () => showRefundSheet(
-              context,
-              expenseId: expense.id,
-              existing: refund,
-            ),
+      onTap: expense == null ? null : () => _editRefund(context, expense),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
         child: Row(
@@ -152,5 +146,23 @@ class _PendingRefundRow extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _editRefund(BuildContext context, LedgerEntry expense) async {
+    final controller = VeriFinScope.of(context);
+    final result = await showRefundSheet(
+      context: context,
+      expense: expense,
+      refunds: controller.refundsForEntry(expense.id),
+      existing: refund,
+    );
+    if (result == null || !context.mounted) {
+      return;
+    }
+    if (result.deleted) {
+      controller.deleteRefund(refund.id);
+    } else {
+      controller.updateRefund(result.refund!);
+    }
   }
 }

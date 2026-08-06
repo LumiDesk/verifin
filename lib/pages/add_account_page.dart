@@ -21,6 +21,7 @@ class _AddAccountPageState extends State<AddAccountPage> {
   // 「后四位跟随完整卡号」开关，新账户默认打开。
   bool _cardLast4Follows = true;
   bool _saved = false;
+  final EditorExitController _exitController = EditorExitController();
 
   @override
   void initState() {
@@ -55,6 +56,7 @@ class _AddAccountPageState extends State<AddAccountPage> {
     return UnsavedChangesGuard(
       isDirty: _isDirty,
       onSave: _save,
+      exitController: _exitController,
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -269,7 +271,7 @@ class _AddAccountPageState extends State<AddAccountPage> {
   Future<void> _saveAndExit() async {
     if (await _save() && mounted) {
       setState(() => _saved = true);
-      Navigator.of(context).pop();
+      _exitController.exit();
     }
   }
 

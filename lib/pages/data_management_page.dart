@@ -30,6 +30,7 @@ class DataManagementPage extends StatefulWidget {
 }
 
 class _DataManagementPageState extends State<DataManagementPage> {
+  final EditorExitController _exitController = EditorExitController();
   late BackupFrequency _initialFrequency;
   late BackupFrequency _draftFrequency;
   late int _initialIntervalHours;
@@ -63,6 +64,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
     return UnsavedChangesGuard(
       isDirty: _isDirty,
       onSave: _save,
+      exitController: _exitController,
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -716,7 +718,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
         _initialRetention = _draftRetention;
         _initialWebdavAutoUpload = _draftWebdavAutoUpload;
       });
-      Navigator.of(context).pop();
+      _exitController.exit();
     }
   }
 

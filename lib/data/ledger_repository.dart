@@ -61,6 +61,12 @@ abstract interface class LedgerRepository {
   Future<List<Attachment>> loadAttachments();
   Future<void> saveAttachments(List<Attachment> attachments);
 
+  /// Replaces entries and attachments in one transaction.
+  Future<void> saveEntryAggregate({
+    required List<LedgerEntry> entries,
+    required List<Attachment> attachments,
+  });
+
   Future<List<RecurringRule>> loadRecurringRules();
   Future<void> saveRecurringRules(List<RecurringRule> rules);
 
@@ -208,6 +214,22 @@ class SqliteLedgerRepository implements LedgerRepository {
   @override
   Future<void> saveAttachments(List<Attachment> attachments) async {
     await _replaceAll('attachments', _indexed(attachments, _attachmentToRow));
+  }
+
+  @override
+  Future<void> saveEntryAggregate({
+    required List<LedgerEntry> entries,
+    required List<Attachment> attachments,
+  }) async {
+    await _db.transaction((txn) async {
+      await _replaceInTxn(txn, 'entries', entries.map(_entryToRow));
+      await _replaceInTxn(
+        txn,
+        'attachments',
+        _indexed(attachments, _attachmentToRow),
+      );
+    });
+    _seedSnapshot('entries', entries.map(_entryToRow));
   }
 
   // ---- 周期记账规则 ----

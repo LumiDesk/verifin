@@ -100,6 +100,20 @@ void main() {
     expect(find.text('编辑页'), findsOneWidget);
   });
 
+  testWidgets('显式保存可在同一帧穿过旧的 dirty 状态退出', (tester) async {
+    await tester.pumpWidget(
+      zhMaterialApp(home: _Launcher(page: const _ProgrammaticGuardPage())),
+    );
+
+    await tester.tap(find.text('打开'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('首页'), findsOneWidget);
+    expect(find.text('保存修改？'), findsNothing);
+  });
+
   testWidgets('保存动作统一使用软碟图标且禁用态可用', (tester) async {
     await tester.pumpWidget(
       zhMaterialApp(
@@ -150,6 +164,37 @@ class _GuardPage extends StatelessWidget {
       onSave: onSave ?? () async => true,
       child: Scaffold(
         body: SafeArea(child: VeriHeader(title: '编辑页', showBack: true)),
+      ),
+    );
+  }
+}
+
+class _ProgrammaticGuardPage extends StatefulWidget {
+  const _ProgrammaticGuardPage();
+
+  @override
+  State<_ProgrammaticGuardPage> createState() => _ProgrammaticGuardPageState();
+}
+
+class _ProgrammaticGuardPageState extends State<_ProgrammaticGuardPage> {
+  final EditorExitController _exitController = EditorExitController();
+
+  @override
+  Widget build(BuildContext context) {
+    return UnsavedChangesGuard(
+      isDirty: true,
+      onSave: () async => true,
+      exitController: _exitController,
+      child: Scaffold(
+        body: SafeArea(
+          child: VeriHeader(
+            title: '编辑页',
+            showBack: true,
+            actions: <Widget>[
+              SaveHeaderAction(onPressed: _exitController.exit),
+            ],
+          ),
+        ),
       ),
     );
   }

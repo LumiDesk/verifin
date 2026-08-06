@@ -17,6 +17,7 @@ class ProfileInfoPage extends StatefulWidget {
 }
 
 class _ProfileInfoPageState extends State<ProfileInfoPage> {
+  final EditorExitController _exitController = EditorExitController();
   late TextEditingController _nicknameController;
   late TextEditingController _bioController;
   late TextEditingController _cityController;
@@ -69,6 +70,7 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
     return UnsavedChangesGuard(
       isDirty: _isDirty,
       onSave: _save,
+      exitController: _exitController,
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -246,7 +248,7 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
       setState(() {
         _initialProfile = _draftProfile(useNicknameFallback: true);
       });
-      Navigator.of(context).pop();
+      _exitController.exit();
     }
   }
 

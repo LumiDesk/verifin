@@ -16,6 +16,7 @@ class RecurringRulesPage extends StatefulWidget {
 }
 
 class _RecurringRulesPageState extends State<RecurringRulesPage> {
+  final EditorExitController _exitController = EditorExitController();
   final Map<String, bool> _initialActive = <String, bool>{};
   final Map<String, bool> _draftActive = <String, bool>{};
   bool _initialized = false;
@@ -39,6 +40,7 @@ class _RecurringRulesPageState extends State<RecurringRulesPage> {
     return UnsavedChangesGuard(
       isDirty: _isDirty,
       onSave: _save,
+      exitController: _exitController,
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -143,7 +145,7 @@ class _RecurringRulesPageState extends State<RecurringRulesPage> {
           ..clear()
           ..addAll(_draftActive);
       });
-      Navigator.of(context).pop();
+      _exitController.exit();
     }
   }
 
@@ -239,6 +241,7 @@ class RecurringRuleEditPage extends StatefulWidget {
 }
 
 class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
+  final EditorExitController _exitController = EditorExitController();
   late EntryType _type;
   late double _amount;
   late String _categoryId;
@@ -298,6 +301,7 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
     return UnsavedChangesGuard(
       isDirty: _isDirty,
       onSave: _save,
+      exitController: _exitController,
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -562,7 +566,7 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
   Future<void> _saveAndExit() async {
     if (await _save() && mounted) {
       setState(() => _initialDraft = _draftSnapshot);
-      Navigator.of(context).pop();
+      _exitController.exit();
     }
   }
 

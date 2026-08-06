@@ -74,8 +74,8 @@ void main() {
     expect(find.textContaining('500'), findsWidgets);
     expect(find.textContaining('测试储蓄卡'), findsOneWidget);
 
-    // 点击确认（页头对勾）。
-    await tester.tap(find.byIcon(Icons.check));
+    // 点击右上角保存。
+    await tester.tap(find.byTooltip('保存'));
     await tester.pumpAndSettle();
 
     // 欠款被抵消，储蓄卡扣款。
@@ -144,7 +144,7 @@ void main() {
     await tester.tap(find.widgetWithText(ListTile, '无账户（代还）'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.check));
+    await tester.tap(find.byTooltip('保存'));
     await tester.pumpAndSettle();
 
     // 欠款被抵消，且没有从任何账户扣款（转账 accountId 为空）。

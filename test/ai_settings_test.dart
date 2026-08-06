@@ -40,6 +40,31 @@ void main() {
     restarted.dispose();
   });
 
+  testWidgets('AI 配置只在右上角保存后提交', (tester) async {
+    final controller = await makeController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(home: const AiSettingsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'https://example.com/v1');
+    await tester.enterText(fields.at(1), 'secret');
+    await tester.enterText(fields.at(2), 'model');
+    await tester.pump();
+    expect(controller.aiSettings.isConfigured, isFalse);
+
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+    expect(controller.aiSettings.baseUrl, 'https://example.com/v1');
+    expect(controller.aiSettings.apiKey, 'secret');
+    expect(controller.aiSettings.model, 'model');
+  });
+
   group('AiSettings', () {
     test('isConfigured requires all three fields', () {
       expect(const AiSettings().isConfigured, isFalse);
