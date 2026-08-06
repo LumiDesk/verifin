@@ -1,5 +1,9 @@
 # AI 对话查询 · 工具登记与维护
 
+> 当前实现仍使用本文所述的提示词工具协议。原生 Tool Calls、双协议 Agent 引擎、工具步骤
+> 展示与 Issue #32 可靠性整改的待实现方案见
+> [ai-agent-design.md](ai-agent-design.md)；在对应代码落地前，本文仍是当前行为的事实来源。
+
 「和 AI 对话查询账目」功能里，AI 通过调用一组**只读工具**来查询本地账目数据，再把结果以图表 / 列表 / 卡片 + Markdown 文字呈现给用户。本文件是**工具注册表的活文档**：新增工具、修改工具、修复工具问题都必须同步更新此处。
 
 - 协议与注册表：[lib/app/ai/ai_query_tool.dart](../../lib/app/ai/ai_query_tool.dart)
