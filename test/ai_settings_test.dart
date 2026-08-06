@@ -82,6 +82,7 @@ void main() {
         baseUrl: 'https://x/v1',
         apiKey: 'secret',
         model: 'gpt-4o-mini',
+        toolCallMode: AiToolCallMode.native,
       );
       final decoded = AiSettings.decode(settings.encode());
       expect(decoded, settings);
@@ -90,6 +91,23 @@ void main() {
     test('decode handles null and garbage', () {
       expect(AiSettings.decode(null), const AiSettings());
       expect(AiSettings.decode('not json'), const AiSettings());
+    });
+
+    test('old and unknown tool call modes safely default to auto', () {
+      final oldSettings = AiSettings.decode(
+        '{"baseUrl":"https://x/v1","apiKey":"k","model":"m"}',
+      );
+      final unknownMode = AiSettings.decode(
+        '{"baseUrl":"https://x/v1","apiKey":"k","model":"m",'
+        '"toolCallMode":"future"}',
+      );
+
+      expect(oldSettings.toolCallMode, AiToolCallMode.auto);
+      expect(unknownMode.toolCallMode, AiToolCallMode.auto);
+      expect(
+        oldSettings.copyWith(toolCallMode: AiToolCallMode.prompt).toolCallMode,
+        AiToolCallMode.prompt,
+      );
     });
   });
 

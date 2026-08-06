@@ -24,6 +24,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
   bool _seeded = false;
   bool _obscureKey = true;
   bool _testing = false;
+  AiToolCallMode _toolCallMode = AiToolCallMode.auto;
   String? _statusText;
   bool _statusIsError = false;
 
@@ -35,6 +36,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       _baseUrlController.text = settings.baseUrl;
       _apiKeyController.text = settings.apiKey;
       _modelController.text = settings.model;
+      _toolCallMode = settings.toolCallMode;
       _seeded = true;
     }
   }
@@ -51,6 +53,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     baseUrl: _baseUrlController.text.trim(),
     apiKey: _apiKeyController.text.trim(),
     model: _modelController.text.trim(),
+    toolCallMode: _toolCallMode,
   );
 
   Future<void> _save() async {

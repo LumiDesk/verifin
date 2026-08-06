@@ -54,7 +54,36 @@ void main() {
     for (final t in tools) {
       expect(t.name.trim(), isNotEmpty);
       expect(t.description.trim(), isNotEmpty);
+      expect(t.schema.promptDescription, isNotEmpty);
     }
+  });
+
+  test('typed schema generates native definitions and validates arguments', () {
+    final tool = _tool('queryTransactions');
+    final definition = tool.toNativeDefinition();
+    final function = definition['function']! as Map<String, Object?>;
+    final parameters = function['parameters']! as Map<String, Object?>;
+    final properties = parameters['properties']! as Map<String, Object?>;
+
+    expect(definition['type'], 'function');
+    expect(function['name'], 'queryTransactions');
+    expect(parameters['type'], 'object');
+    expect(parameters['additionalProperties'], isFalse);
+    expect(properties.keys, containsAll(<String>['range', 'start', 'end']));
+    expect(
+      tool.schema.validate(<String, Object?>{
+        'range': 'thisMonth',
+        'limit': 20,
+      }),
+      isEmpty,
+    );
+    expect(
+      tool.schema.validate(<String, Object?>{
+        'range': 'not-a-range',
+        'unknown': true,
+      }),
+      hasLength(2),
+    );
   });
 
   test('summary 汇总当月收支净额', () {

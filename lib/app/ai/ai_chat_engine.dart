@@ -202,9 +202,7 @@ class AiChatEngine {
         '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
     final toolLines = tools
         .map((t) {
-          final args = t.argsSchema.entries
-              .map((e) => '${e.key}（${e.value}）')
-              .join('，');
+          final args = t.schema.promptDescription;
           return '- ${t.name}：${t.description}${args.isEmpty ? '' : ' 参数：$args'}';
         })
         .join('\n');

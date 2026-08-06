@@ -11,6 +11,7 @@
 import '../models.dart';
 import '../ledger_math.dart';
 import '../report_analysis.dart';
+import 'ai_tool_schema.dart';
 import 'ledger_query.dart';
 
 /// 工具执行的只读数据快照。均为「当前活动账本」范围（分类 / 标签为全局），由上层从
@@ -272,14 +273,26 @@ class AiTableDisplay extends AiResultDisplay {
 
 /// 工具契约。实现类应无状态、纯函数式。
 abstract class AiQueryTool {
+  const AiQueryTool();
+
   /// 工具名（模型用它指定调用，全局唯一，小驼峰）。
   String get name;
 
   /// 给模型看的说明：这个工具查什么、何时用。
   String get description;
 
-  /// 给模型看的参数说明：`{参数名: 说明}`。序列化进提示词。
-  Map<String, String> get argsSchema;
+  /// 参数定义的单一真源，同时生成原生 JSON Schema 与兼容协议提示词。
+  AiToolSchema get schema;
+
+  /// OpenAI-compatible `tools` 中的一项函数定义。
+  Map<String, Object?> toNativeDefinition() => <String, Object?>{
+    'type': 'function',
+    'function': <String, Object?>{
+      'name': name,
+      'description': description,
+      'parameters': schema.toJsonSchema(),
+    },
+  };
 
   /// 执行工具。[args] 为模型给的参数（已 JSON 解码）。实现须对缺省 / 非法参数**优雅降级**，
   /// 不抛异常。
@@ -338,6 +351,35 @@ EntryType _type(
 const String rangePresetsHelp =
     "range 预设：thisMonth/lastMonth/thisYear/lastYear/last7Days/last30Days/"
     "last3Months/last6Months/last12Months/all；或用 start+end（YYYY-MM-DD）指定。";
+
+const List<Object> _rangePresets = <Object>[
+  'thisMonth',
+  'lastMonth',
+  'thisYear',
+  'lastYear',
+  'last7Days',
+  'last30Days',
+  'last3Months',
+  'last6Months',
+  'last12Months',
+  'all',
+];
+
+const Map<String, AiToolParameter> _rangeParameters = <String, AiToolParameter>{
+  'range': AiToolParameter(
+    type: AiToolParameterType.string,
+    description: rangePresetsHelp,
+    enumValues: _rangePresets,
+  ),
+  'start': AiToolParameter(
+    type: AiToolParameterType.string,
+    description: '自定义开始日期，格式 YYYY-MM-DD；需与 end 同时提供。',
+  ),
+  'end': AiToolParameter(
+    type: AiToolParameterType.string,
+    description: '自定义结束日期，格式 YYYY-MM-DD；需与 start 同时提供。',
+  ),
+};
 
 /// 解析时间窗：优先 start+end 显式区间，否则按 range 预设，缺省返回 [fallback]。
 /// 返回 null 表示「不限时间」（range=all）。
@@ -404,7 +446,7 @@ String _typeLabel(EntryType type) => switch (type) {
 // ─────────────────────────── 工具实现 ───────────────────────────
 
 /// 收支汇总：某时间窗内的收入 / 支出 / 净额与笔数。
-class SummaryTool implements AiQueryTool {
+class SummaryTool extends AiQueryTool {
   const SummaryTool();
 
   @override
@@ -414,9 +456,9 @@ class SummaryTool implements AiQueryTool {
   String get description => '统计某时间段内的总收入、总支出、净额与笔数。';
 
   @override
-  Map<String, String> get argsSchema => <String, String>{
-    'range': rangePresetsHelp,
-  };
+  AiToolSchema get schema => const AiToolSchema(
+    properties: <String, AiToolParameter>{..._rangeParameters},
+  );
 
   @override
   AiToolResult run(AiToolContext ctx, Map<String, Object?> args) {
@@ -441,7 +483,7 @@ class SummaryTool implements AiQueryTool {
 }
 
 /// 分类排行：某时间窗、某类型（支出 / 收入）按顶级分类聚合，降序。
-class CategoryRankingTool implements AiQueryTool {
+class CategoryRankingTool extends AiQueryTool {
   const CategoryRankingTool();
 
   @override
@@ -451,11 +493,21 @@ class CategoryRankingTool implements AiQueryTool {
   String get description => '按分类统计某时间段某类型（支出/收入）的金额排行与占比。';
 
   @override
-  Map<String, String> get argsSchema => <String, String>{
-    'type': "expense 或 income，默认 expense",
-    'range': rangePresetsHelp,
-    'limit': "取前 N 名，缺省取全部",
-  };
+  AiToolSchema get schema => const AiToolSchema(
+    properties: <String, AiToolParameter>{
+      'type': AiToolParameter(
+        type: AiToolParameterType.string,
+        description: '交易类型，默认 expense。',
+        enumValues: <Object>['expense', 'income'],
+      ),
+      ..._rangeParameters,
+      'limit': AiToolParameter(
+        type: AiToolParameterType.integer,
+        description: '取前 N 名，缺省取全部。',
+        minimum: 1,
+      ),
+    },
+  );
 
   @override
   AiToolResult run(AiToolContext ctx, Map<String, Object?> args) {
@@ -501,7 +553,7 @@ class CategoryRankingTool implements AiQueryTool {
 }
 
 /// 标签排行：某时间窗、某类型按标签聚合（一笔计入其每个标签），降序。
-class TagRankingTool implements AiQueryTool {
+class TagRankingTool extends AiQueryTool {
   const TagRankingTool();
 
   @override
@@ -511,11 +563,21 @@ class TagRankingTool implements AiQueryTool {
   String get description => '按标签统计某时间段某类型（支出/收入）的金额排行与占比（一笔计入其每个标签）。';
 
   @override
-  Map<String, String> get argsSchema => <String, String>{
-    'type': "expense 或 income，默认 expense",
-    'range': rangePresetsHelp,
-    'limit': "取前 N 名，缺省取全部",
-  };
+  AiToolSchema get schema => const AiToolSchema(
+    properties: <String, AiToolParameter>{
+      'type': AiToolParameter(
+        type: AiToolParameterType.string,
+        description: '交易类型，默认 expense。',
+        enumValues: <Object>['expense', 'income'],
+      ),
+      ..._rangeParameters,
+      'limit': AiToolParameter(
+        type: AiToolParameterType.integer,
+        description: '取前 N 名，缺省取全部。',
+        minimum: 1,
+      ),
+    },
+  );
 
   @override
   AiToolResult run(AiToolContext ctx, Map<String, Object?> args) {
@@ -557,7 +619,7 @@ class TagRankingTool implements AiQueryTool {
 }
 
 /// 交易筛选：按类型 / 时间 / 金额区间 / 关键词等条件查具体交易，返回可点击列表。
-class QueryTransactionsTool implements AiQueryTool {
+class QueryTransactionsTool extends AiQueryTool {
   const QueryTransactionsTool();
 
   @override
@@ -567,15 +629,39 @@ class QueryTransactionsTool implements AiQueryTool {
   String get description => '按条件筛选具体交易并列出（可点击查看）。用于「最近某类花费」「含某关键词的交易」等。';
 
   @override
-  Map<String, String> get argsSchema => <String, String>{
-    'type': "expense/income/transfer，缺省不限",
-    'range': rangePresetsHelp,
-    'minAmount': "净额下限",
-    'maxAmount': "净额上限",
-    'keyword': "备注关键词（模糊匹配）",
-    'sortBy': "date 或 amount，默认 date",
-    'limit': "最多返回条数，默认 20",
-  };
+  AiToolSchema get schema => const AiToolSchema(
+    properties: <String, AiToolParameter>{
+      'type': AiToolParameter(
+        type: AiToolParameterType.string,
+        description: '交易类型，缺省不限。',
+        enumValues: <Object>['expense', 'income', 'transfer'],
+      ),
+      ..._rangeParameters,
+      'minAmount': AiToolParameter(
+        type: AiToolParameterType.number,
+        description: '净额下限。',
+      ),
+      'maxAmount': AiToolParameter(
+        type: AiToolParameterType.number,
+        description: '净额上限。',
+      ),
+      'keyword': AiToolParameter(
+        type: AiToolParameterType.string,
+        description: '备注关键词，使用模糊匹配。',
+      ),
+      'sortBy': AiToolParameter(
+        type: AiToolParameterType.string,
+        description: '排序字段，默认 date。',
+        enumValues: <Object>['date', 'amount'],
+      ),
+      'limit': AiToolParameter(
+        type: AiToolParameterType.integer,
+        description: '最多返回条数，默认 20。',
+        minimum: 1,
+        maximum: 100,
+      ),
+    },
+  );
 
   @override
   AiToolResult run(AiToolContext ctx, Map<String, Object?> args) {
@@ -626,7 +712,7 @@ class QueryTransactionsTool implements AiQueryTool {
 }
 
 /// 极值：某时间窗某类型的最大 / 最小若干笔单笔交易。
-class LargestTransactionsTool implements AiQueryTool {
+class LargestTransactionsTool extends AiQueryTool {
   const LargestTransactionsTool();
 
   @override
@@ -636,12 +722,26 @@ class LargestTransactionsTool implements AiQueryTool {
   String get description => '找出某时间段某类型（支出/收入）金额最大（或最小）的若干笔单笔交易。';
 
   @override
-  Map<String, String> get argsSchema => <String, String>{
-    'type': "expense 或 income，默认 expense",
-    'range': rangePresetsHelp,
-    'limit': "取前 N 笔，默认 5",
-    'ascending': "true 则取最小的若干笔，默认 false（最大）",
-  };
+  AiToolSchema get schema => const AiToolSchema(
+    properties: <String, AiToolParameter>{
+      'type': AiToolParameter(
+        type: AiToolParameterType.string,
+        description: '交易类型，默认 expense。',
+        enumValues: <Object>['expense', 'income'],
+      ),
+      ..._rangeParameters,
+      'limit': AiToolParameter(
+        type: AiToolParameterType.integer,
+        description: '取前 N 笔，默认 5。',
+        minimum: 1,
+        maximum: 50,
+      ),
+      'ascending': AiToolParameter(
+        type: AiToolParameterType.boolean,
+        description: 'true 表示取最小的若干笔，默认 false（最大）。',
+      ),
+    },
+  );
 
   @override
   AiToolResult run(AiToolContext ctx, Map<String, Object?> args) {
