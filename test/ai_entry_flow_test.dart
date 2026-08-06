@@ -19,7 +19,7 @@ void main() {
     expect(find.text('记一笔按钮'), findsOneWidget);
     // 默认手动记账。
     expect(find.text('手动记账'), findsOneWidget);
-    expect(find.text('AI 记账设置'), findsOneWidget);
+    expect(find.text('AI 设置'), findsOneWidget);
     expect(find.text('未配置'), findsOneWidget);
   });
 
@@ -59,6 +59,6 @@ void main() {
     await tester.tap(find.text('去设置'));
     await tester.pumpAndSettle();
     expect(find.text('API Key'), findsOneWidget);
-    expect(find.text('测试连接'), findsOneWidget);
+    expect(find.text('检测能力'), findsOneWidget);
   });
 }

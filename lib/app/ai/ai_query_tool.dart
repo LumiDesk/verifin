@@ -347,7 +347,7 @@ EntryType _type(
   }
 }
 
-/// 合法的相对时间窗预设（供 argsSchema 展示给模型）。
+/// 合法的相对时间窗预设（供强类型 schema 展示给模型）。
 const String rangePresetsHelp =
     "range 预设：thisMonth/lastMonth/thisYear/lastYear/last7Days/last30Days/"
     "last3Months/last6Months/last12Months/all；或用 start+end（YYYY-MM-DD）指定。";

@@ -5567,7 +5567,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiEntryNotConfiguredBody.
   ///
   /// In zh, this message translates to:
-  /// **'请先在「我的 → AI 记账设置」中填写请求地址、API Key 与模型。'**
+  /// **'请先在「我的 → 设置 → AI 设置」中填写请求地址、API Key 与模型。'**
   String get aiEntryNotConfiguredBody;
 
   /// No description provided for @aiEntryGoToSettings.

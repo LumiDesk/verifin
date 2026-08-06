@@ -3069,7 +3069,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiEntryNotConfiguredBody =>
-      'Please set the request URL, API key and model in Profile → AI entry settings first.';
+      'Please set the request URL, API key and model in Profile → Settings → AI Settings first.';
 
   @override
   String get aiEntryGoToSettings => 'Go to settings';

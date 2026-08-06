@@ -1,10 +1,14 @@
 # Issue #32 · AI 财务 Agent 与原生 Tool Calls 设计方案
 
-> 状态：**方案已确认，实施中**
+> 状态：**已实现，自动化验证通过，待 Android 真机端点验收**
 >
 > 对应 Issue：[#32「关于 AI 助手的问题」](https://github.com/LumiDesk/verifin/issues/32)
 >
 > 调研基线：`main` @ `cd3bf33`，应用版本 `1.11.6+90`，日期 `2026-08-06`
+
+> 说明：本文的现状分析与代码引用记录的是上述调研基线，用于保留 Issue #32 的问题证据和
+> 设计推导，不代表改造后的当前实现。当前架构与维护约定见 [ai-tools.md](ai-tools.md)、
+> [tech-decisions.md](tech-decisions.md) 和源码。
 
 ## 1. 结论速览
 

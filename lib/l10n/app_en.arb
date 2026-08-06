@@ -1062,7 +1062,7 @@
   "aiEntryParsing": "Parsing…",
   "aiEntryEmptyInput": "Please enter a description first",
   "aiEntryNotConfiguredTitle": "AI not configured",
-  "aiEntryNotConfiguredBody": "Please set the request URL, API key and model in Profile → AI entry settings first.",
+  "aiEntryNotConfiguredBody": "Please set the request URL, API key and model in Profile → Settings → AI Settings first.",
   "aiEntryGoToSettings": "Go to settings",
   "aiEntryReviewHint": "Parsed into a draft by AI — review or edit, then save",
   "aiEntryNoResult": "AI returned no recognizable result — try rephrasing",

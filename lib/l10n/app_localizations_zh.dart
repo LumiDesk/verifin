@@ -3007,7 +3007,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get aiEntryNotConfiguredBody =>
-      '请先在「我的 → AI 记账设置」中填写请求地址、API Key 与模型。';
+      '请先在「我的 → 设置 → AI 设置」中填写请求地址、API Key 与模型。';
 
   @override
   String get aiEntryGoToSettings => '去设置';
