@@ -1387,7 +1387,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
     if (secondConfirmed) {
       controller.resetAllData();
       if (context.mounted) {
-        Navigator.of(context).pop();
+        _exitController.exit();
       }
     }
   }

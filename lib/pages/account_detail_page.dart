@@ -505,11 +505,16 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                         ? AppLocalizations.of(context).deletableLabel
                         : AppLocalizations.of(context).hasEntriesLabel,
                     trailingIcon: Icons.chevron_right,
-                    onTap: () => confirmDeleteAccount(
-                      context,
-                      persistedAccount,
-                      entries,
-                    ),
+                    onTap: () async {
+                      final completed = await confirmDeleteAccount(
+                        context,
+                        persistedAccount,
+                        entries,
+                      );
+                      if (completed && mounted) {
+                        _exitController.exit();
+                      }
+                    },
                   ),
                 ),
               ],

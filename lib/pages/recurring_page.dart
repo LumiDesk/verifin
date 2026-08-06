@@ -621,6 +621,6 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
       return;
     }
     VeriFinScope.of(context).deleteRecurringRule(widget.rule!.id);
-    Navigator.of(context).pop();
+    _exitController.exit();
   }
 }

@@ -257,4 +257,67 @@ void main() {
       3000,
     );
   });
+
+  testWidgets('编辑后删除账户会直接退出，不再触发未保存提示', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(460, 2600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final controller = await makeController();
+    addTearDown(controller.dispose);
+    final card = Account(
+      id: 'delete-after-edit',
+      bookId: controller.activeBook.id,
+      name: '待删除信用卡',
+      type: AccountType.creditCard,
+      groupId: null,
+      initialBalance: 0,
+      iconCode: 'credit',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+    );
+    controller.addAccount(card);
+
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(
+          theme: buildVeriFinTheme(Brightness.light),
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: FilledButton(
+                key: const Key('open_account_editor'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => AccountDetailPage(account: card),
+                  ),
+                ),
+                child: const Text('打开'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('open_account_editor')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('类型'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('现金'));
+    await tester.pumpAndSettle();
+    expect(
+      controller.accounts.firstWhere((a) => a.id == card.id).type,
+      AccountType.creditCard,
+    );
+
+    await tester.ensureVisible(find.text('删除账户'));
+    await tester.tap(find.text('删除账户'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '删除'));
+    await tester.pumpAndSettle();
+
+    expect(controller.accounts.where((a) => a.id == card.id), isEmpty);
+    expect(find.byKey(const Key('open_account_editor')), findsOneWidget);
+    expect(find.text('保存修改？'), findsNothing);
+  });
 }
