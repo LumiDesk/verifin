@@ -72,101 +72,128 @@ class PanelSettingsPage extends StatefulWidget {
 
 class _PanelSettingsPageState extends State<PanelSettingsPage> {
   bool _sorting = false;
+  late List<PagePanelSetting> _initialPanels;
+  late List<PagePanelSetting> _draftPanels;
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) {
+      return;
+    }
+    final panels = VeriFinScope.of(context).panelSettings(widget.kind);
+    _initialPanels = List<PagePanelSetting>.of(panels);
+    _draftPanels = List<PagePanelSetting>.of(panels);
+    _initialized = true;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final controller = VeriFinScope.of(context);
     final l10n = AppLocalizations.of(context);
     final kind = widget.kind;
-    final panels = controller.panelSettings(kind);
+    final panels = _draftPanels;
     final specById = <String, PagePanelSpec>{
       for (final spec in kind.specs) spec.id: spec,
     };
 
-    return Scaffold(
-      body: SafeArea(
-        child: VeriPage(
-          child: Column(
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-                child: VeriHeader(
-                  title: l10n.panelPageTitle(kind.label(l10n)),
-                  subtitle: _sorting
-                      ? l10n.panelSortHint
-                      : l10n.panelToggleHint,
-                  showBack: true,
-                  actions: <Widget>[
-                    if (!_sorting)
+    return UnsavedChangesGuard(
+      isDirty: _isDirty,
+      onSave: _save,
+      child: Scaffold(
+        body: SafeArea(
+          child: VeriPage(
+            child: Column(
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+                  child: VeriHeader(
+                    title: l10n.panelPageTitle(kind.label(l10n)),
+                    subtitle: _sorting
+                        ? l10n.panelSortHint
+                        : l10n.panelToggleHint,
+                    showBack: true,
+                    actions: <Widget>[
+                      if (!_sorting)
+                        HeaderAction(
+                          key: const Key('panel_reset'),
+                          icon: Icons.restart_alt,
+                          tooltip: l10n.panelResetConfirm,
+                          onPressed: _confirmReset,
+                        ),
                       HeaderAction(
-                        key: const Key('panel_reset'),
-                        icon: Icons.restart_alt,
-                        tooltip: l10n.panelResetConfirm,
-                        onPressed: () => _confirmReset(context),
+                        key: const Key('panel_sort_toggle'),
+                        icon: _sorting ? Icons.check : Icons.swap_vert,
+                        tooltip: _sorting
+                            ? l10n.panelSortDone
+                            : l10n.panelSortStart,
+                        onPressed: () => setState(() => _sorting = !_sorting),
                       ),
-                    HeaderAction(
-                      key: const Key('panel_sort_toggle'),
-                      icon: _sorting ? Icons.check : Icons.swap_vert,
-                      tooltip: _sorting
-                          ? l10n.panelSortDone
-                          : l10n.panelSortStart,
-                      onPressed: () => setState(() => _sorting = !_sorting),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: ReorderableListView.builder(
-                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 28),
-                  buildDefaultDragHandles: false,
-                  proxyDecorator: (child, _, _) => Material(
-                    color: Colors.transparent,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(veriRadiusMd),
-                        boxShadow: <BoxShadow>[
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.14),
-                            blurRadius: 18,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
+                      SaveHeaderAction(
+                        onPressed: _isDirty ? _saveAndExit : null,
                       ),
-                      child: child,
-                    ),
+                    ],
                   ),
-                  onReorderStart: (_) => _triggerSelectionHaptic(),
-                  onReorderEnd: (_) => _triggerSelectionHaptic(),
-                  onReorderItem: (oldIndex, newIndex) {
-                    _triggerSelectionHaptic();
-                    controller.reorderPanels(kind, oldIndex, newIndex);
-                  },
-                  itemCount: panels.length,
-                  itemBuilder: (context, index) {
-                    final panel = panels[index];
-                    final spec = specById[panel.id];
-                    return Padding(
-                      key: ValueKey<String>('panel_${kind.name}_${panel.id}'),
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _PanelRow(
-                        spec: spec ?? PagePanelSpec(id: panel.id),
-                        enabled: panel.enabled,
-                        sorting: _sorting,
-                        index: index,
-                        onChanged: (value) => _togglePanel(panel.id, value),
-                      ),
-                    );
-                  },
                 ),
-              ),
-            ],
+                Expanded(
+                  child: ReorderableListView.builder(
+                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 28),
+                    buildDefaultDragHandles: false,
+                    proxyDecorator: (child, _, _) => Material(
+                      color: Colors.transparent,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(veriRadiusMd),
+                          boxShadow: <BoxShadow>[
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.14),
+                              blurRadius: 18,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: child,
+                      ),
+                    ),
+                    onReorderStart: (_) => _triggerSelectionHaptic(),
+                    onReorderEnd: (_) => _triggerSelectionHaptic(),
+                    onReorderItem: (oldIndex, newIndex) {
+                      _triggerSelectionHaptic();
+                      setState(() {
+                        final moved = _draftPanels.removeAt(oldIndex);
+                        _draftPanels.insert(
+                          newIndex.clamp(0, _draftPanels.length),
+                          moved,
+                        );
+                      });
+                    },
+                    itemCount: panels.length,
+                    itemBuilder: (context, index) {
+                      final panel = panels[index];
+                      final spec = specById[panel.id];
+                      return Padding(
+                        key: ValueKey<String>('panel_${kind.name}_${panel.id}'),
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: _PanelRow(
+                          spec: spec ?? PagePanelSpec(id: panel.id),
+                          enabled: panel.enabled,
+                          sorting: _sorting,
+                          index: index,
+                          onChanged: (value) => _togglePanel(panel.id, value),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Future<void> _confirmReset(BuildContext context) async {
+  Future<void> _confirmReset() async {
     final l10n = AppLocalizations.of(context);
     final confirmed = await showConfirmDialog(
       context,
@@ -174,21 +201,32 @@ class _PanelSettingsPageState extends State<PanelSettingsPage> {
       message: l10n.panelResetMessage,
       confirmLabel: l10n.panelResetConfirm,
     );
-    if (confirmed && context.mounted) {
-      VeriFinScope.of(context).resetPanels(widget.kind);
+    if (confirmed && mounted) {
+      setState(() {
+        _draftPanels = widget.kind.specs
+            .map((spec) => PagePanelSetting(id: spec.id, enabled: true))
+            .toList();
+      });
     }
   }
 
   void _togglePanel(String panelId, bool enabled) {
-    final controller = VeriFinScope.of(context);
-    if (!controller.setPanelEnabled(widget.kind, panelId, enabled)) {
+    final index = _draftPanels.indexWhere((panel) => panel.id == panelId);
+    if (index == -1) {
+      return;
+    }
+    if (!enabled && _draftPanels.where((panel) => panel.enabled).length <= 1) {
       final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(l10n.panelKeepOneMessage(widget.kind.label(l10n))),
         ),
       );
+      return;
     }
+    setState(() {
+      _draftPanels[index] = _draftPanels[index].copyWith(enabled: enabled);
+    });
   }
 
   void _triggerSelectionHaptic() {
@@ -196,6 +234,30 @@ class _PanelSettingsPageState extends State<PanelSettingsPage> {
       HapticFeedback.selectionClick();
     }
   }
+
+  bool get _isDirty {
+    if (_draftPanels.length != _initialPanels.length) {
+      return true;
+    }
+    for (var i = 0; i < _draftPanels.length; i++) {
+      final current = _draftPanels[i];
+      final initial = _initialPanels[i];
+      if (current.id != initial.id || current.enabled != initial.enabled) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Future<void> _saveAndExit() async {
+    if (await _save() && mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  Future<bool> _save() => VeriFinScope.of(
+    context,
+  ).savePanelSettingsDraft(widget.kind, _draftPanels);
 }
 
 class _PanelRow extends StatelessWidget {

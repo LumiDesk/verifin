@@ -9,7 +9,7 @@ import '../l10n/app_localizations.dart';
 import 'home_page.dart';
 
 /// 首页走势卡片自定义页：点击每个槽位在底部弹窗里挑选要展示的数据 / 曲线序列，
-/// 顶部实时预览。改动即时保存到 controller（设备本地偏好）。右上角可恢复默认。
+/// 顶部实时预览。改动先进入页面草稿，点击保存后写入设备本地偏好。
 class HomeMetricsSettingsPage extends StatefulWidget {
   const HomeMetricsSettingsPage({super.key});
 
@@ -21,31 +21,46 @@ class HomeMetricsSettingsPage extends StatefulWidget {
 class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
   final TextEditingController _titleController = TextEditingController();
   bool _titleInitialized = false;
+  late HomeTrendConfig _initialConfig;
+  late HomeTrendConfig _draftConfig;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_titleInitialized) {
       _titleInitialized = true;
-      _titleController.text = VeriFinScope.of(context).homeTrendConfig.title;
+      final config = VeriFinScope.of(context).homeTrendConfig;
+      _initialConfig = _draftConfig = config;
+      _titleController.text = config.title;
+      _titleController.addListener(_handleTitleChanged);
     }
   }
 
   @override
   void dispose() {
+    _titleController.removeListener(_handleTitleChanged);
     _titleController.dispose();
     super.dispose();
   }
 
-  HomeTrendConfig get _config => VeriFinScope.of(context).homeTrendConfig;
+  HomeTrendConfig get _config => _draftConfig;
 
   void _update(HomeTrendConfig config) {
-    VeriFinScope.of(context).setHomeTrendConfig(config);
+    setState(() => _draftConfig = config);
+  }
+
+  void _handleTitleChanged() {
+    if (mounted && _draftConfig.title != _titleController.text) {
+      setState(
+        () =>
+            _draftConfig = _draftConfig.copyWith(title: _titleController.text),
+      );
+    }
   }
 
   Future<void> _pickSlotMetric(int slot) async {
     final selected = await _showMetricPicker(_config.slotMetric(slot));
-    if (selected != null) {
+    if (selected != null && mounted) {
       _update(_config.withSlot(slot, selected));
     }
   }
@@ -80,7 +95,7 @@ class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
         ),
       ),
     );
-    if (selected != null) {
+    if (selected != null && mounted) {
       _update(_config.copyWith(series: selected));
     }
   }
@@ -154,7 +169,7 @@ class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
       confirmLabel: l10n.trendResetConfirm,
     );
     if (confirmed && mounted) {
-      VeriFinScope.of(context).resetHomeTrendConfig();
+      setState(() => _draftConfig = HomeTrendConfig.defaults);
       _titleController.text = '';
     }
   }
@@ -163,7 +178,7 @@ class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final controller = VeriFinScope.of(context);
-    final config = controller.homeTrendConfig;
+    final config = _draftConfig;
     final now = DateTime.now();
     final window = cumulativeWeekWindowFor(now);
     final monthEntries = controller.entries
@@ -181,104 +196,119 @@ class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
       now: now,
     );
 
-    return Scaffold(
-      body: SafeArea(
-        child: VeriPage(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
-            children: <Widget>[
-              VeriHeader(
-                title: l10n.trendCustomizeTitle,
-                showBack: true,
-                actions: <Widget>[
-                  HeaderAction(
-                    key: const Key('trend_reset'),
-                    icon: Icons.restart_alt,
-                    tooltip: l10n.trendResetConfirm,
-                    onPressed: _confirmReset,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              // 实时预览（点击无效，仅展示）。
-              HomeTrendPanel(
-                window: window,
-                config: config,
-                metricContext: metricContext,
-                chartValues: trendSeriesValues(
-                  config.series,
-                  trendEntries,
-                  window,
-                ),
-                onTap: () {},
-              ),
-              const SizedBox(height: 16),
-              // 卡片标题：紧跟预览，最先设置。
-              VeriCard(
-                child: TextField(
-                  controller: _titleController,
-                  maxLength: 12,
-                  decoration: InputDecoration(
-                    labelText: l10n.trendCustomizeTitleField,
-                    hintText: l10n.trendCustomizeTitleHint,
-                    prefixIcon: const Icon(Icons.title),
-                    border: InputBorder.none,
-                  ),
-                  onChanged: (value) => _update(config.copyWith(title: value)),
-                ),
-              ),
-              const SizedBox(height: 16),
-              SectionTitle(title: l10n.trendCustomizeDisplayData),
-              const SizedBox(height: 8),
-              VeriCard(
-                child: Column(
-                  children: <Widget>[
-                    _SlotField(
-                      label: l10n.trendSlotBig,
-                      value: homeMetricLabel(l10n, config.big),
-                      onTap: () => _pickSlotMetric(0),
+    return UnsavedChangesGuard(
+      isDirty: _isDirty,
+      onSave: _save,
+      child: Scaffold(
+        body: SafeArea(
+          child: VeriPage(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
+              children: <Widget>[
+                VeriHeader(
+                  title: l10n.trendCustomizeTitle,
+                  showBack: true,
+                  actions: <Widget>[
+                    HeaderAction(
+                      key: const Key('trend_reset'),
+                      icon: Icons.restart_alt,
+                      tooltip: l10n.trendResetConfirm,
+                      onPressed: _confirmReset,
                     ),
-                    _SlotField(
-                      label: l10n.trendSlotPill,
-                      value: homeMetricLabel(l10n, config.pill),
-                      onTap: () => _pickSlotMetric(1),
-                    ),
-                    _SlotField(
-                      label: l10n.trendSlotCard1,
-                      value: homeMetricLabel(l10n, config.card1),
-                      onTap: () => _pickSlotMetric(2),
-                    ),
-                    _SlotField(
-                      label: l10n.trendSlotCard2,
-                      value: homeMetricLabel(l10n, config.card2),
-                      onTap: () => _pickSlotMetric(3),
-                    ),
-                    _SlotField(
-                      label: l10n.trendSlotCard3,
-                      value: homeMetricLabel(l10n, config.card3),
-                      onTap: () => _pickSlotMetric(4),
-                      last: true,
-                    ),
+                    SaveHeaderAction(onPressed: _isDirty ? _saveAndExit : null),
                   ],
                 ),
-              ),
-              const SizedBox(height: 16),
-              SectionTitle(title: l10n.trendCustomizeChart),
-              const SizedBox(height: 8),
-              VeriCard(
-                child: _SlotField(
-                  label: l10n.trendSlotChart,
-                  value: homeTrendSeriesLabel(l10n, config.series),
-                  onTap: _pickSeries,
-                  last: true,
+                const SizedBox(height: 8),
+                // 实时预览（点击无效，仅展示）。
+                HomeTrendPanel(
+                  window: window,
+                  config: config,
+                  metricContext: metricContext,
+                  chartValues: trendSeriesValues(
+                    config.series,
+                    trendEntries,
+                    window,
+                  ),
+                  onTap: () {},
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                // 卡片标题：紧跟预览，最先设置。
+                VeriCard(
+                  child: TextField(
+                    controller: _titleController,
+                    maxLength: 12,
+                    decoration: InputDecoration(
+                      labelText: l10n.trendCustomizeTitleField,
+                      hintText: l10n.trendCustomizeTitleHint,
+                      prefixIcon: const Icon(Icons.title),
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SectionTitle(title: l10n.trendCustomizeDisplayData),
+                const SizedBox(height: 8),
+                VeriCard(
+                  child: Column(
+                    children: <Widget>[
+                      _SlotField(
+                        label: l10n.trendSlotBig,
+                        value: homeMetricLabel(l10n, config.big),
+                        onTap: () => _pickSlotMetric(0),
+                      ),
+                      _SlotField(
+                        label: l10n.trendSlotPill,
+                        value: homeMetricLabel(l10n, config.pill),
+                        onTap: () => _pickSlotMetric(1),
+                      ),
+                      _SlotField(
+                        label: l10n.trendSlotCard1,
+                        value: homeMetricLabel(l10n, config.card1),
+                        onTap: () => _pickSlotMetric(2),
+                      ),
+                      _SlotField(
+                        label: l10n.trendSlotCard2,
+                        value: homeMetricLabel(l10n, config.card2),
+                        onTap: () => _pickSlotMetric(3),
+                      ),
+                      _SlotField(
+                        label: l10n.trendSlotCard3,
+                        value: homeMetricLabel(l10n, config.card3),
+                        onTap: () => _pickSlotMetric(4),
+                        last: true,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SectionTitle(title: l10n.trendCustomizeChart),
+                const SizedBox(height: 8),
+                VeriCard(
+                  child: _SlotField(
+                    label: l10n.trendSlotChart,
+                    value: homeTrendSeriesLabel(l10n, config.series),
+                    onTap: _pickSeries,
+                    last: true,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+
+  bool get _isDirty => _draftConfig != _initialConfig;
+
+  Future<void> _saveAndExit() async {
+    if (await _save() && mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  Future<bool> _save() =>
+      VeriFinScope.of(context).saveHomeTrendConfigDraft(_draftConfig);
 }
 
 class _SlotField extends StatelessWidget {

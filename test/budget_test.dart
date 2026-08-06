@@ -34,7 +34,7 @@ void main() {
   testWidgets('sets default budget and category default from budget settings', (
     WidgetTester tester,
   ) async {
-    await pumpApp(tester);
+    final controller = await pumpApp(tester);
 
     await tester.scrollUntilVisible(
       find.byType(BudgetPanel),
@@ -77,10 +77,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('600'), findsWidgets);
 
-    // 返回总览再回主页：BudgetPanel 应显示沿用默认的「预算 2400」。
-    // （列表已滚动到分类行、顶部返回按钮已滚出视口，改用 Navigator.pop 返回。）
-    Navigator.of(tester.element(find.byType(BudgetSettingsPage))).pop();
+    // 保存前只更新设置页草稿。
+    expect(controller.defaultMonthlyBudget, 0);
+    expect(controller.defaultCategoryBudget('dining'), 0);
+    await tester.fling(firstVerticalScrollable(), const Offset(0, 1600), 1000);
     await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+    expect(controller.defaultMonthlyBudget, 2400);
+    expect(controller.defaultCategoryBudget('dining'), 600);
+
+    // 返回总览再回主页：BudgetPanel 应显示沿用默认的「预算 2400」。
     Navigator.of(tester.element(find.byType(BudgetOverviewPage))).pop();
     await tester.pumpAndSettle();
 

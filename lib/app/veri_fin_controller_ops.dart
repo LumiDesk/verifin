@@ -295,6 +295,33 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     setWebdavConfig(_webdavConfig.copyWith(autoUpload: enabled));
   }
 
+  Future<bool> saveDataManagementPreferencesDraft({
+    required BackupFrequency frequency,
+    required int intervalHours,
+    required int retention,
+    required bool webdavAutoUpload,
+  }) async {
+    final nextBackup = _backupSettings.copyWith(
+      frequency: frequency,
+      intervalHours: intervalHours < 1 ? 1 : intervalHours,
+      retention: retention < 1 ? 1 : retention,
+    );
+    final nextWebdav = _webdavConfig.copyWith(autoUpload: webdavAutoUpload);
+    try {
+      await _store.writeAndFlush(_backupSettingsKey, nextBackup.encode());
+      if (nextWebdav.isConfigured) {
+        await _store.writeAndFlush(_webdavKey, nextWebdav.encode());
+      }
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _backupSettings = nextBackup;
+    _webdavConfig = nextWebdav;
+    notifyListeners();
+    return true;
+  }
+
   void clearWebdavConfig() {
     _webdavConfig = const WebdavConfig();
     _store.delete(_webdavKey);
@@ -508,6 +535,19 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     onReminderChanged?.call(settings);
   }
 
+  Future<bool> saveReminderSettingsDraft(ReminderSettings settings) async {
+    try {
+      await _store.writeAndFlush(_reminderKey, settings.encode());
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _reminderSettings = settings;
+    notifyListeners();
+    onReminderChanged?.call(settings);
+    return true;
+  }
+
   void setHapticsEnabled(bool enabled) {
     if (_hapticsEnabled == enabled) {
       return;
@@ -541,6 +581,92 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _homeTrendConfig = HomeTrendConfig.defaults;
     _store.delete(_homeTrendKey);
     notifyListeners();
+  }
+
+  Future<bool> saveBudgetSettingsDraft({
+    required double defaultMonthlyBudget,
+    required double dailyBudget,
+    required int cycleStartDay,
+    required Map<String, double> defaultCategoryBudgets,
+  }) async {
+    final nextMonthly = Map<String, double>.of(_monthlyBudgets);
+    final monthlyKey = _defaultMonthlyBudgetKey(_activeBookId);
+    if (defaultMonthlyBudget <= 0) {
+      nextMonthly.remove(monthlyKey);
+    } else {
+      nextMonthly[monthlyKey] = defaultMonthlyBudget;
+    }
+
+    final nextCategories = Map<String, double>.of(_categoryBudgets)
+      ..removeWhere(
+        (key, _) =>
+            key.startsWith('$_activeBookId:$_budgetDefaultMonthSegment:'),
+      );
+    for (final entry in defaultCategoryBudgets.entries) {
+      if (entry.value > 0) {
+        nextCategories[_defaultCategoryBudgetKey(_activeBookId, entry.key)] =
+            entry.value;
+      }
+    }
+
+    final nextDaily = Map<String, double>.of(_dailyBudgets);
+    if (dailyBudget <= 0) {
+      nextDaily.remove(_activeBookId);
+    } else {
+      nextDaily[_activeBookId] = dailyBudget;
+    }
+
+    final clampedStartDay = clampBudgetCycleStartDay(cycleStartDay);
+    final nextCycleDays = Map<String, int>.of(_budgetCycleStartDays);
+    if (clampedStartDay == naturalMonthStartDay) {
+      nextCycleDays.remove(_activeBookId);
+    } else {
+      nextCycleDays[_activeBookId] = clampedStartDay;
+    }
+    final previousCycleJson = jsonEncode(_budgetCycleStartDays);
+    try {
+      await _store.writeAndFlush(_budgetCycleKey, jsonEncode(nextCycleDays));
+      await _repository.saveBudgetSettings(
+        monthlyBudgets: nextMonthly,
+        categoryBudgets: nextCategories,
+        dailyBudgets: nextDaily,
+      );
+    } catch (error, stackTrace) {
+      try {
+        await _store.writeAndFlush(_budgetCycleKey, previousCycleJson);
+      } catch (_) {
+        // 原错误已上报；回滚偏好也失败时保留同一条用户提示，避免重复噪音。
+      }
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+
+    _monthlyBudgets
+      ..clear()
+      ..addAll(nextMonthly);
+    _categoryBudgets
+      ..clear()
+      ..addAll(nextCategories);
+    _dailyBudgets
+      ..clear()
+      ..addAll(nextDaily);
+    _budgetCycleStartDays
+      ..clear()
+      ..addAll(nextCycleDays);
+    notifyListeners();
+    return true;
+  }
+
+  Future<bool> saveHomeTrendConfigDraft(HomeTrendConfig config) async {
+    try {
+      await _store.writeAndFlush(_homeTrendKey, config.encode());
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _homeTrendConfig = config;
+    notifyListeners();
+    return true;
   }
 
   /// 当前账本的默认付款账户 id；未设置、或该账户已删除/隐藏时返回 null。设备本地
@@ -623,6 +749,60 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _autoSuggestEnabled = value;
     _store.write(_autoSuggestKey, value.toString());
     notifyListeners();
+  }
+
+  /// 主设置页一次性提交显示与记账偏好；所有 KV 写入完成后才更新 Controller。
+  Future<bool> saveAppPreferencesDraft({
+    required ThemePreference themePreference,
+    required LocalePreference localePreference,
+    required bool hapticsEnabled,
+    required bool amountForceTwoDecimals,
+    required FabActionMode fabActionMode,
+    required String? defaultAccountId,
+    required bool autoSuggestEnabled,
+  }) async {
+    final nextDefaultAccounts = Map<String, String>.of(_defaultAccountIds);
+    if (defaultAccountId == null || defaultAccountId.isEmpty) {
+      nextDefaultAccounts.remove(_activeBookId);
+    } else {
+      nextDefaultAccounts[_activeBookId] = defaultAccountId;
+    }
+    try {
+      await _store.writeAndFlush(_themeKey, themePreference.name);
+      await _store.writeAndFlush(_localeKey, localePreference.name);
+      await _store.writeAndFlush(_hapticsKey, hapticsEnabled.toString());
+      await _store.writeAndFlush(
+        _amountFormatKey,
+        amountForceTwoDecimals.toString(),
+      );
+      await _store.writeAndFlush(_fabActionKey, fabActionMode.name);
+      await _store.writeAndFlush(
+        _defaultAccountKey,
+        jsonEncode(nextDefaultAccounts),
+      );
+      await _store.writeAndFlush(
+        _autoSuggestKey,
+        autoSuggestEnabled.toString(),
+      );
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+
+    _themePreference = themePreference;
+    _localePreference = localePreference;
+    _hapticsEnabled = hapticsEnabled;
+    _amountForceTwoDecimals = amountForceTwoDecimals;
+    amount_format.amountForceTwoDecimals = amountForceTwoDecimals;
+    _fabActionMode = fabActionMode;
+    _defaultAccountIds
+      ..clear()
+      ..addAll(nextDefaultAccounts);
+    _autoSuggestEnabled = autoSuggestEnabled;
+    themePreferenceListenable.value = themePreference;
+    localePreferenceListenable.value = localePreference;
+    notifyListeners();
+    return true;
   }
 
   /// AI 对话记账的连接配置（请求地址/API Key/模型）。设备本地偏好，不进 JSON
@@ -950,6 +1130,25 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     panels.insert(newIndex.clamp(0, panels.length).toInt(), moved);
     _persistPagePanels(page);
     notifyListeners();
+  }
+
+  Future<bool> savePanelSettingsDraft(
+    PanelPageKind page,
+    List<PagePanelSetting> panels,
+  ) async {
+    final normalized = _normalizePanelSettings(panels, page.specs);
+    try {
+      await _store.writeAndFlush(
+        _panelsKeyFor(page),
+        jsonEncode(normalized.map((item) => item.toJson()).toList()),
+      );
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _pagePanels[page] = normalized;
+    notifyListeners();
+    return true;
   }
 
   // 交易列表始终维护 occurredAt 倒序;同一时刻用 id 决出稳定顺序。

@@ -16,268 +16,303 @@ import 'legal_pages.dart';
 import 'reminder_settings_page.dart';
 import 'sheets.dart';
 
-class SettingsPage extends StatelessWidget {
+class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
+
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  late ThemePreference _initialTheme;
+  late ThemePreference _theme;
+  late LocalePreference _initialLocale;
+  late LocalePreference _locale;
+  late bool _initialHaptics;
+  late bool _haptics;
+  late bool _initialTwoDecimals;
+  late bool _twoDecimals;
+  late FabActionMode _initialFabAction;
+  late FabActionMode _fabAction;
+  String? _initialDefaultAccountId;
+  String? _defaultAccountId;
+  late bool _initialAutoSuggest;
+  late bool _autoSuggest;
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) {
+      return;
+    }
+    final controller = VeriFinScope.of(context);
+    _initialTheme = _theme = controller.themePreference;
+    _initialLocale = _locale = controller.localePreference;
+    _initialHaptics = _haptics = controller.hapticsEnabled;
+    _initialTwoDecimals = _twoDecimals = controller.amountForceTwoDecimals;
+    _initialFabAction = _fabAction = controller.fabActionMode;
+    _initialDefaultAccountId = _defaultAccountId = controller.defaultAccountId;
+    _initialAutoSuggest = _autoSuggest = controller.autoSuggestEnabled;
+    _initialized = true;
+  }
 
   @override
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
 
-    return Scaffold(
-      body: SafeArea(
-        child: VeriPage(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
-            children: <Widget>[
-              VeriHeader(
-                title: AppLocalizations.of(context).settingsTitle,
-                showBack: true,
-              ),
-              const SizedBox(height: 10),
-              _sectionLabel(
-                context,
-                AppLocalizations.of(context).settingsSectionGeneral,
-              ),
-              VeriCard(
-                child: Column(
-                  children: <Widget>[
-                    SettingsRow(
-                      icon: Icons.dark_mode_outlined,
-                      title: AppLocalizations.of(context).themeMode,
-                      trailing: controller.themePreference.label(
-                        AppLocalizations.of(context),
-                      ),
-                      trailingIcon: Icons.chevron_right,
-                      onTap: () => _pickThemePreference(context, controller),
-                    ),
-                    const Divider(height: 1),
-                    SettingsRow(
-                      icon: Icons.translate_outlined,
-                      title: AppLocalizations.of(context).settingsLanguage,
-                      trailing: controller.localePreference.label(
-                        AppLocalizations.of(context),
-                      ),
-                      trailingIcon: Icons.chevron_right,
-                      onTap: () => _pickLocalePreference(context, controller),
-                    ),
-                    const Divider(height: 1),
-                    CompactSwitchRow(
-                      icon: Icons.touch_app_outlined,
-                      title: Text(AppLocalizations.of(context).hapticsLabel),
-                      value: controller.hapticsEnabled,
-                      onChanged: controller.setHapticsEnabled,
-                    ),
-                    const Divider(height: 1),
-                    CompactSwitchRow(
-                      icon: Icons.plus_one_outlined,
-                      title: Text(
-                        AppLocalizations.of(context).amountTwoDecimalsLabel,
-                      ),
-                      subtitle: Text(
-                        AppLocalizations.of(context).amountTwoDecimalsDesc,
-                      ),
-                      value: controller.amountForceTwoDecimals,
-                      onChanged: controller.setAmountForceTwoDecimals,
-                    ),
-                    const Divider(height: 1),
-                    SettingsRow(
-                      icon: Icons.lock_outline,
-                      title: AppLocalizations.of(context).appLockLabel,
-                      trailing: controller.appLockEnabled
-                          ? AppLocalizations.of(context).enabledLabel
-                          : AppLocalizations.of(context).notEnabled,
-                      trailingIcon: Icons.chevron_right,
-                      onTap: () {
-                        Navigator.of(context).push<void>(
-                          MaterialPageRoute<void>(
-                            builder: (context) => const AppLockSettingsPage(),
-                          ),
-                        );
-                      },
-                    ),
+    return UnsavedChangesGuard(
+      isDirty: _isDirty,
+      onSave: _save,
+      child: Scaffold(
+        body: SafeArea(
+          child: VeriPage(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
+              children: <Widget>[
+                VeriHeader(
+                  title: AppLocalizations.of(context).settingsTitle,
+                  showBack: true,
+                  actions: <Widget>[
+                    SaveHeaderAction(onPressed: _isDirty ? _saveAndExit : null),
                   ],
                 ),
-              ),
-              const SizedBox(height: 12),
-              _sectionLabel(
-                context,
-                AppLocalizations.of(context).settingsSectionBookkeeping,
-              ),
-              VeriCard(
-                child: Column(
-                  children: <Widget>[
-                    SettingsRow(
-                      icon: Icons.bolt_outlined,
-                      title: AppLocalizations.of(context).fabActionTitle,
-                      trailing: controller.fabActionMode.label(
-                        AppLocalizations.of(context),
-                      ),
-                      trailingIcon: Icons.chevron_right,
-                      onTap: () => _pickFabActionMode(context, controller),
-                    ),
-                    const Divider(height: 1),
-                    SettingsRow(
-                      icon: Icons.account_balance_wallet_outlined,
-                      title: AppLocalizations.of(context).defaultAccountTitle,
-                      trailing: _defaultAccountTrailing(context, controller),
-                      trailingIcon: Icons.chevron_right,
-                      onTap: () => _pickDefaultAccount(context, controller),
-                    ),
-                    const Divider(height: 1),
-                    CompactSwitchRow(
-                      icon: Icons.auto_fix_high_outlined,
-                      title: Text(
-                        AppLocalizations.of(context).autoSuggestLabel,
-                      ),
-                      subtitle: Text(
-                        AppLocalizations.of(context).autoSuggestDesc,
-                      ),
-                      value: controller.autoSuggestEnabled,
-                      onChanged: controller.setAutoSuggestEnabled,
-                    ),
-                    const Divider(height: 1),
-                    SettingsRow(
-                      icon: Icons.auto_awesome_outlined,
-                      title: AppLocalizations.of(context).aiSettingsTitle,
-                      trailing: controller.aiSettings.isConfigured
-                          ? AppLocalizations.of(context).aiConfigured
-                          : AppLocalizations.of(context).aiNotConfigured,
-                      trailingIcon: Icons.chevron_right,
-                      onTap: () {
-                        Navigator.of(context).push<void>(
-                          MaterialPageRoute<void>(
-                            builder: (context) => const AiSettingsPage(),
-                          ),
-                        );
-                      },
-                    ),
-                    const Divider(height: 1),
-                    SettingsRow(
-                      icon: Icons.notifications_active_outlined,
-                      title: AppLocalizations.of(context).reminderTitle,
-                      trailing: controller.reminderSettings.enabled
-                          ? AppLocalizations.of(context).reminderDailyAt(
-                              controller.reminderSettings.timeLabel,
-                            )
-                          : AppLocalizations.of(context).notEnabled,
-                      trailingIcon: Icons.chevron_right,
-                      onTap: () {
-                        Navigator.of(context).push<void>(
-                          MaterialPageRoute<void>(
-                            builder: (context) => const ReminderSettingsPage(),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
+                const SizedBox(height: 10),
+                _sectionLabel(
+                  context,
+                  AppLocalizations.of(context).settingsSectionGeneral,
                 ),
-              ),
-              const SizedBox(height: 12),
-              _sectionLabel(
-                context,
-                AppLocalizations.of(context).settingsSectionAbout,
-              ),
-              VeriCard(
-                child: Column(
-                  children: <Widget>[
-                    // 应用内自更新仅 GitHub 自分发版提供；Play 版关闭（见 build_config.dart）。
-                    if (kSelfUpdateEnabled)
+                VeriCard(
+                  child: Column(
+                    children: <Widget>[
                       SettingsRow(
-                        icon: Icons.system_update_alt_outlined,
-                        title: AppLocalizations.of(context).checkUpdate,
-                        trailing: 'GitHub Release',
+                        icon: Icons.dark_mode_outlined,
+                        title: AppLocalizations.of(context).themeMode,
+                        trailing: _theme.label(AppLocalizations.of(context)),
                         trailingIcon: Icons.chevron_right,
-                        onTap: () => _checkForUpdate(context),
+                        onTap: _pickThemePreference,
                       ),
-                    for (final entry
-                        in LegalDocument.values.indexed) ...<Widget>[
-                      if (kSelfUpdateEnabled || entry.$1 > 0)
-                        const Divider(height: 1),
+                      const Divider(height: 1),
                       SettingsRow(
-                        icon: entry.$2 == LegalDocument.privacyPolicy
-                            ? Icons.privacy_tip_outlined
-                            : Icons.description_outlined,
-                        title: entry.$2.title(AppLocalizations.of(context)),
-                        trailing: AppLocalizations.of(context).viewLabel,
+                        icon: Icons.translate_outlined,
+                        title: AppLocalizations.of(context).settingsLanguage,
+                        trailing: _locale.label(AppLocalizations.of(context)),
+                        trailingIcon: Icons.chevron_right,
+                        onTap: _pickLocalePreference,
+                      ),
+                      const Divider(height: 1),
+                      CompactSwitchRow(
+                        icon: Icons.touch_app_outlined,
+                        title: Text(AppLocalizations.of(context).hapticsLabel),
+                        value: _haptics,
+                        onChanged: (value) => setState(() => _haptics = value),
+                      ),
+                      const Divider(height: 1),
+                      CompactSwitchRow(
+                        icon: Icons.plus_one_outlined,
+                        title: Text(
+                          AppLocalizations.of(context).amountTwoDecimalsLabel,
+                        ),
+                        subtitle: Text(
+                          AppLocalizations.of(context).amountTwoDecimalsDesc,
+                        ),
+                        value: _twoDecimals,
+                        onChanged: (value) =>
+                            setState(() => _twoDecimals = value),
+                      ),
+                      const Divider(height: 1),
+                      SettingsRow(
+                        icon: Icons.lock_outline,
+                        title: AppLocalizations.of(context).appLockLabel,
+                        trailing: controller.appLockEnabled
+                            ? AppLocalizations.of(context).enabledLabel
+                            : AppLocalizations.of(context).notEnabled,
                         trailingIcon: Icons.chevron_right,
                         onTap: () {
                           Navigator.of(context).push<void>(
                             MaterialPageRoute<void>(
-                              builder: (context) =>
-                                  LegalDocumentPage(document: entry.$2),
+                              builder: (context) => const AppLockSettingsPage(),
                             ),
                           );
                         },
                       ),
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                'VeriFin $appVersionLabel',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.38),
-                  fontWeight: FontWeight.w600,
+                const SizedBox(height: 12),
+                _sectionLabel(
+                  context,
+                  AppLocalizations.of(context).settingsSectionBookkeeping,
                 ),
-              ),
-            ],
+                VeriCard(
+                  child: Column(
+                    children: <Widget>[
+                      SettingsRow(
+                        icon: Icons.bolt_outlined,
+                        title: AppLocalizations.of(context).fabActionTitle,
+                        trailing: _fabAction.label(
+                          AppLocalizations.of(context),
+                        ),
+                        trailingIcon: Icons.chevron_right,
+                        onTap: _pickFabActionMode,
+                      ),
+                      const Divider(height: 1),
+                      SettingsRow(
+                        icon: Icons.account_balance_wallet_outlined,
+                        title: AppLocalizations.of(context).defaultAccountTitle,
+                        trailing: _defaultAccountTrailing(context, controller),
+                        trailingIcon: Icons.chevron_right,
+                        onTap: () => _pickDefaultAccount(controller),
+                      ),
+                      const Divider(height: 1),
+                      CompactSwitchRow(
+                        icon: Icons.auto_fix_high_outlined,
+                        title: Text(
+                          AppLocalizations.of(context).autoSuggestLabel,
+                        ),
+                        subtitle: Text(
+                          AppLocalizations.of(context).autoSuggestDesc,
+                        ),
+                        value: _autoSuggest,
+                        onChanged: (value) =>
+                            setState(() => _autoSuggest = value),
+                      ),
+                      const Divider(height: 1),
+                      SettingsRow(
+                        icon: Icons.auto_awesome_outlined,
+                        title: AppLocalizations.of(context).aiSettingsTitle,
+                        trailing: controller.aiSettings.isConfigured
+                            ? AppLocalizations.of(context).aiConfigured
+                            : AppLocalizations.of(context).aiNotConfigured,
+                        trailingIcon: Icons.chevron_right,
+                        onTap: () {
+                          Navigator.of(context).push<void>(
+                            MaterialPageRoute<void>(
+                              builder: (context) => const AiSettingsPage(),
+                            ),
+                          );
+                        },
+                      ),
+                      const Divider(height: 1),
+                      SettingsRow(
+                        icon: Icons.notifications_active_outlined,
+                        title: AppLocalizations.of(context).reminderTitle,
+                        trailing: controller.reminderSettings.enabled
+                            ? AppLocalizations.of(context).reminderDailyAt(
+                                controller.reminderSettings.timeLabel,
+                              )
+                            : AppLocalizations.of(context).notEnabled,
+                        trailingIcon: Icons.chevron_right,
+                        onTap: () {
+                          Navigator.of(context).push<void>(
+                            MaterialPageRoute<void>(
+                              builder: (context) =>
+                                  const ReminderSettingsPage(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _sectionLabel(
+                  context,
+                  AppLocalizations.of(context).settingsSectionAbout,
+                ),
+                VeriCard(
+                  child: Column(
+                    children: <Widget>[
+                      // 应用内自更新仅 GitHub 自分发版提供；Play 版关闭（见 build_config.dart）。
+                      if (kSelfUpdateEnabled)
+                        SettingsRow(
+                          icon: Icons.system_update_alt_outlined,
+                          title: AppLocalizations.of(context).checkUpdate,
+                          trailing: 'GitHub Release',
+                          trailingIcon: Icons.chevron_right,
+                          onTap: () => _checkForUpdate(context),
+                        ),
+                      for (final entry
+                          in LegalDocument.values.indexed) ...<Widget>[
+                        if (kSelfUpdateEnabled || entry.$1 > 0)
+                          const Divider(height: 1),
+                        SettingsRow(
+                          icon: entry.$2 == LegalDocument.privacyPolicy
+                              ? Icons.privacy_tip_outlined
+                              : Icons.description_outlined,
+                          title: entry.$2.title(AppLocalizations.of(context)),
+                          trailing: AppLocalizations.of(context).viewLabel,
+                          trailingIcon: Icons.chevron_right,
+                          onTap: () {
+                            Navigator.of(context).push<void>(
+                              MaterialPageRoute<void>(
+                                builder: (context) =>
+                                    LegalDocumentPage(document: entry.$2),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'VeriFin $appVersionLabel',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.38),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Future<void> _pickThemePreference(
-    BuildContext context,
-    VeriFinController controller,
-  ) async {
+  Future<void> _pickThemePreference() async {
     final selected = await showOptionSheet<ThemePreference>(
       context: context,
       title: AppLocalizations.of(context).themePickerTitle,
       values: ThemePreference.values,
-      selected: controller.themePreference,
+      selected: _theme,
       labelOf: (value) => value.label(AppLocalizations.of(context)),
     );
-    if (selected != null) {
-      controller.setThemePreference(selected);
+    if (selected != null && mounted) {
+      setState(() => _theme = selected);
     }
   }
 
-  Future<void> _pickLocalePreference(
-    BuildContext context,
-    VeriFinController controller,
-  ) async {
+  Future<void> _pickLocalePreference() async {
     final l10n = AppLocalizations.of(context);
     final selected = await showOptionSheet<LocalePreference>(
       context: context,
       title: l10n.languagePickerTitle,
       values: LocalePreference.values,
-      selected: controller.localePreference,
+      selected: _locale,
       labelOf: (value) => value.label(l10n),
     );
-    if (selected != null) {
-      controller.setLocalePreference(selected);
+    if (selected != null && mounted) {
+      setState(() => _locale = selected);
     }
   }
 
-  Future<void> _pickFabActionMode(
-    BuildContext context,
-    VeriFinController controller,
-  ) async {
+  Future<void> _pickFabActionMode() async {
     final l10n = AppLocalizations.of(context);
     final selected = await showOptionSheet<FabActionMode>(
       context: context,
       title: l10n.fabActionPickerTitle,
       values: FabActionMode.values,
-      selected: controller.fabActionMode,
+      selected: _fabAction,
       labelOf: (value) => value.label(l10n),
     );
-    if (selected != null) {
-      controller.setFabActionMode(selected);
+    if (selected != null && mounted) {
+      setState(() => _fabAction = selected);
     }
   }
 
@@ -285,7 +320,7 @@ class SettingsPage extends StatelessWidget {
     BuildContext context,
     VeriFinController controller,
   ) {
-    final id = controller.defaultAccountId;
+    final id = _defaultAccountId;
     if (id == null) {
       return AppLocalizations.of(context).defaultAccountNone;
     }
@@ -295,10 +330,7 @@ class SettingsPage extends StatelessWidget {
     return account?.name ?? AppLocalizations.of(context).defaultAccountNone;
   }
 
-  Future<void> _pickDefaultAccount(
-    BuildContext context,
-    VeriFinController controller,
-  ) async {
+  Future<void> _pickDefaultAccount(VeriFinController controller) async {
     final l10n = AppLocalizations.of(context);
     final accounts = controller.accounts
         .where((account) => !account.hidden)
@@ -313,7 +345,7 @@ class SettingsPage extends StatelessWidget {
       context: context,
       title: l10n.defaultAccountPickerTitle,
       accounts: accounts,
-      selectedId: controller.defaultAccountId ?? '',
+      selectedId: _defaultAccountId ?? '',
       balanceOf: controller.accountBalance,
       noneLabel: l10n.defaultAccountNone,
       noneHint: l10n.defaultAccountNoneHint,
@@ -321,7 +353,11 @@ class SettingsPage extends StatelessWidget {
     if (selected == null) {
       return;
     }
-    controller.setDefaultAccountId(selected.id.isEmpty ? null : selected.id);
+    if (mounted) {
+      setState(
+        () => _defaultAccountId = selected.id.isEmpty ? null : selected.id,
+      );
+    }
   }
 
   Future<void> _checkForUpdate(BuildContext context) async {
@@ -333,6 +369,33 @@ class SettingsPage extends StatelessWidget {
 
   static Widget _sectionLabel(BuildContext context, String text) {
     return SectionLabel(text);
+  }
+
+  bool get _isDirty =>
+      _theme != _initialTheme ||
+      _locale != _initialLocale ||
+      _haptics != _initialHaptics ||
+      _twoDecimals != _initialTwoDecimals ||
+      _fabAction != _initialFabAction ||
+      _defaultAccountId != _initialDefaultAccountId ||
+      _autoSuggest != _initialAutoSuggest;
+
+  Future<void> _saveAndExit() async {
+    if (await _save() && mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  Future<bool> _save() {
+    return VeriFinScope.of(context).saveAppPreferencesDraft(
+      themePreference: _theme,
+      localePreference: _locale,
+      hapticsEnabled: _haptics,
+      amountForceTwoDecimals: _twoDecimals,
+      fabActionMode: _fabAction,
+      defaultAccountId: _defaultAccountId,
+      autoSuggestEnabled: _autoSuggest,
+    );
   }
 }
 

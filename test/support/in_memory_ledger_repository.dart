@@ -116,6 +116,17 @@ class InMemoryLedgerRepository implements LedgerRepository {
   }
 
   @override
+  Future<void> saveBudgetSettings({
+    required Map<String, double> monthlyBudgets,
+    required Map<String, double> categoryBudgets,
+    required Map<String, double> dailyBudgets,
+  }) async {
+    _monthlyBudgets = Map<String, double>.of(monthlyBudgets);
+    _categoryBudgets = Map<String, double>.of(categoryBudgets);
+    _dailyBudgets = Map<String, double>.of(dailyBudgets);
+  }
+
+  @override
   Future<void> replaceAllLedgerData(LedgerDataSnapshot snapshot) async {
     _books = List<LedgerBook>.of(snapshot.books);
     _accounts = List<Account>.of(snapshot.accounts);

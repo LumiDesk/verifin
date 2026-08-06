@@ -31,7 +31,7 @@ void main() {
     expect(find.text('支出走势'), findsOneWidget);
     expect(find.text('可自定义展示的数据与走势曲线'), findsOneWidget);
 
-    // 关闭日历后,首页不再渲染日历卡片。
+    // 开关只改页面草稿。
     await tester.tap(find.byKey(const Key('panel_switch_calendar')));
     await tester.pumpAndSettle();
 
@@ -47,7 +47,7 @@ void main() {
     // 恢复日历面板,返回首页验证渲染与数量文案。
     await tester.tap(find.byKey(const Key('panel_switch_calendar')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('返回'));
+    await tester.tap(find.byTooltip('保存'));
     await tester.pumpAndSettle();
 
     expect(find.byType(BudgetPanel), findsNothing);
@@ -110,6 +110,19 @@ void main() {
     await tester.tap(find.byKey(const Key('panel_sort_toggle')));
     await tester.pumpAndSettle();
 
+    final beforeSave = await makeController(store);
+    expect(
+      beforeSave
+          .panelSettings(PanelPageKind.reports)
+          .map((panel) => panel.id)
+          .take(2),
+      <String>['budget_execution', 'category_ring'],
+    );
+    beforeSave.dispose();
+
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+
     final controller = await makeController(store);
     expect(
       controller
@@ -152,12 +165,18 @@ void main() {
     expect(beforeReset.enabledPanelIds(PanelPageKind.home).length, 3);
     beforeReset.dispose();
 
-    // 确认后恢复默认顺序并开启全部面板。
+    // 确认后只恢复页面草稿。
     await tester.tap(find.byKey(const Key('panel_reset')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('恢复默认'));
     await tester.pumpAndSettle();
 
+    final beforeSave = await makeController(store);
+    expect(beforeSave.enabledPanelIds(PanelPageKind.home).length, 3);
+    beforeSave.dispose();
+
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
     final afterReset = await makeController(store);
     expect(
       afterReset.panelSettings(PanelPageKind.home).map((panel) => panel.id),
