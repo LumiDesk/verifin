@@ -123,6 +123,24 @@ class AiCapabilityProfile {
       Object.hash(endpoint, model, nativeToolCalls, checkedAt, protocolVersion);
 }
 
+/// 解析本次 Agent 请求应交给引擎的协议模式。
+///
+/// 已确认不支持原生工具的端点可直接使用兼容协议；其余自动模式必须继续交给
+/// 引擎，以便端点能力变化时仍能在本次请求内从原生协议安全降级。
+AiToolCallMode resolveAiAgentMode({
+  required AiSettings settings,
+  required AiCapabilityProfile? capability,
+}) {
+  if (settings.toolCallMode != AiToolCallMode.auto) {
+    return settings.toolCallMode;
+  }
+  if (capability?.matches(settings) == true &&
+      capability?.nativeToolCalls == AiNativeToolCapability.unsupported) {
+    return AiToolCallMode.prompt;
+  }
+  return AiToolCallMode.auto;
+}
+
 typedef AiCapabilityCompleteTransport =
     Future<AiCompletionResult> Function(
       List<AiAgentMessage> messages,

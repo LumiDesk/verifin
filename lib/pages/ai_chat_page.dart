@@ -217,14 +217,7 @@ class _AiChatPageState extends State<AiChatPage> {
               tools: tools,
             );
     final capability = scope.aiCapabilityProfile;
-    // 已知不支持时直接走兼容协议；其它 auto 情况仍把 auto 交给引擎，确保端点
-    // 能力变化后遇到明确 protocolUnsupported 仍可在本次请求内安全降级。
-    final mode =
-        settings.toolCallMode == AiToolCallMode.auto &&
-            capability?.matches(settings) == true &&
-            capability?.nativeToolCalls == AiNativeToolCapability.unsupported
-        ? AiToolCallMode.prompt
-        : settings.toolCallMode;
+    final mode = resolveAiAgentMode(settings: settings, capability: capability);
 
     final assistant = _ChatMessage(
       role: _Role.assistant,

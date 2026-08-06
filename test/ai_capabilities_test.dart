@@ -113,4 +113,34 @@ void main() {
       ),
     );
   });
+
+  test(
+    'agent mode keeps auto fallback unless native tools are unsupported',
+    () {
+      final supported = AiCapabilityProfile.forSettings(
+        settings: settings,
+        nativeToolCalls: AiNativeToolCapability.supported,
+      );
+      final unsupported = AiCapabilityProfile.forSettings(
+        settings: settings,
+        nativeToolCalls: AiNativeToolCapability.unsupported,
+      );
+
+      expect(
+        resolveAiAgentMode(settings: settings, capability: supported),
+        AiToolCallMode.auto,
+      );
+      expect(
+        resolveAiAgentMode(settings: settings, capability: unsupported),
+        AiToolCallMode.prompt,
+      );
+      expect(
+        resolveAiAgentMode(
+          settings: settings.copyWith(toolCallMode: AiToolCallMode.native),
+          capability: unsupported,
+        ),
+        AiToolCallMode.native,
+      );
+    },
+  );
 }
