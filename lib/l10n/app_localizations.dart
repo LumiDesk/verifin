@@ -5336,6 +5336,192 @@ abstract class AppLocalizations {
   /// **'能力检测会发起少量测试请求，但不会发送任何账目数据。'**
   String get aiCapabilityProbeNotice;
 
+  /// No description provided for @aiStepRunning.
+  ///
+  /// In zh, this message translates to:
+  /// **'调用中'**
+  String get aiStepRunning;
+
+  /// No description provided for @aiStepSucceeded.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成'**
+  String get aiStepSucceeded;
+
+  /// No description provided for @aiStepFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'失败'**
+  String get aiStepFailed;
+
+  /// No description provided for @aiStepRetrying.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试中'**
+  String get aiStepRetrying;
+
+  /// No description provided for @aiToolSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'查询收支汇总'**
+  String get aiToolSummary;
+
+  /// No description provided for @aiToolCategoryRanking.
+  ///
+  /// In zh, this message translates to:
+  /// **'查询分类排行'**
+  String get aiToolCategoryRanking;
+
+  /// No description provided for @aiToolTagRanking.
+  ///
+  /// In zh, this message translates to:
+  /// **'查询标签排行'**
+  String get aiToolTagRanking;
+
+  /// No description provided for @aiToolQueryTransactions.
+  ///
+  /// In zh, this message translates to:
+  /// **'查询交易明细'**
+  String get aiToolQueryTransactions;
+
+  /// No description provided for @aiToolLargestTransactions.
+  ///
+  /// In zh, this message translates to:
+  /// **'查询大额交易'**
+  String get aiToolLargestTransactions;
+
+  /// No description provided for @aiToolUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'调用只读工具'**
+  String get aiToolUnknown;
+
+  /// No description provided for @aiAgentRetryTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在重新连接'**
+  String get aiAgentRetryTitle;
+
+  /// No description provided for @aiAgentRetryNetwork.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接中断，正在安全重试'**
+  String get aiAgentRetryNetwork;
+
+  /// No description provided for @aiAgentRetryProtocol.
+  ///
+  /// In zh, this message translates to:
+  /// **'端点不支持原生 Tool Calls，正在切换兼容模式'**
+  String get aiAgentRetryProtocol;
+
+  /// No description provided for @aiAgentRetryResource.
+  ///
+  /// In zh, this message translates to:
+  /// **'服务暂时繁忙，正在重试'**
+  String get aiAgentRetryResource;
+
+  /// No description provided for @aiStepKeyword.
+  ///
+  /// In zh, this message translates to:
+  /// **'关键词“{keyword}”'**
+  String aiStepKeyword(String keyword);
+
+  /// No description provided for @aiStepLimit.
+  ///
+  /// In zh, this message translates to:
+  /// **'最多 {count} 条'**
+  String aiStepLimit(int count);
+
+  /// No description provided for @aiStepTransactionsFound.
+  ///
+  /// In zh, this message translates to:
+  /// **'找到 {count} 笔交易'**
+  String aiStepTransactionsFound(int count);
+
+  /// No description provided for @aiStepItemsFound.
+  ///
+  /// In zh, this message translates to:
+  /// **'得到 {count} 项结果'**
+  String aiStepItemsFound(int count);
+
+  /// No description provided for @aiStepDataReady.
+  ///
+  /// In zh, this message translates to:
+  /// **'数据已准备'**
+  String get aiStepDataReady;
+
+  /// No description provided for @aiRangeLastMonth.
+  ///
+  /// In zh, this message translates to:
+  /// **'上月'**
+  String get aiRangeLastMonth;
+
+  /// No description provided for @aiRangeThisYear.
+  ///
+  /// In zh, this message translates to:
+  /// **'今年'**
+  String get aiRangeThisYear;
+
+  /// No description provided for @aiRangeLastYear.
+  ///
+  /// In zh, this message translates to:
+  /// **'去年'**
+  String get aiRangeLastYear;
+
+  /// No description provided for @aiRangeLast7Days.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近 7 天'**
+  String get aiRangeLast7Days;
+
+  /// No description provided for @aiRangeLast30Days.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近 30 天'**
+  String get aiRangeLast30Days;
+
+  /// No description provided for @aiRangeLast3Months.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近 3 个月'**
+  String get aiRangeLast3Months;
+
+  /// No description provided for @aiRangeLast6Months.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近 6 个月'**
+  String get aiRangeLast6Months;
+
+  /// No description provided for @aiRangeLast12Months.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近 12 个月'**
+  String get aiRangeLast12Months;
+
+  /// No description provided for @aiTypeExpense.
+  ///
+  /// In zh, this message translates to:
+  /// **'支出'**
+  String get aiTypeExpense;
+
+  /// No description provided for @aiTypeIncome.
+  ///
+  /// In zh, this message translates to:
+  /// **'收入'**
+  String get aiTypeIncome;
+
+  /// No description provided for @aiTypeTransfer.
+  ///
+  /// In zh, this message translates to:
+  /// **'转账'**
+  String get aiTypeTransfer;
+
+  /// No description provided for @aiRetryAnswer.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新回答'**
+  String get aiRetryAnswer;
+
   /// No description provided for @aiPrivacyNotice.
   ///
   /// In zh, this message translates to:

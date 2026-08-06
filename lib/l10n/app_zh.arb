@@ -1831,6 +1831,65 @@
   "aiActualProtocolPrompt": "实际协议：兼容模式",
   "aiActualProtocolAuto": "实际协议：自动检测",
   "aiCapabilityProbeNotice": "能力检测会发起少量测试请求，但不会发送任何账目数据。",
+  "aiStepRunning": "调用中",
+  "aiStepSucceeded": "完成",
+  "aiStepFailed": "失败",
+  "aiStepRetrying": "重试中",
+  "aiToolSummary": "查询收支汇总",
+  "aiToolCategoryRanking": "查询分类排行",
+  "aiToolTagRanking": "查询标签排行",
+  "aiToolQueryTransactions": "查询交易明细",
+  "aiToolLargestTransactions": "查询大额交易",
+  "aiToolUnknown": "调用只读工具",
+  "aiAgentRetryTitle": "正在重新连接",
+  "aiAgentRetryNetwork": "连接中断，正在安全重试",
+  "aiAgentRetryProtocol": "端点不支持原生 Tool Calls，正在切换兼容模式",
+  "aiAgentRetryResource": "服务暂时繁忙，正在重试",
+  "aiStepKeyword": "关键词“{keyword}”",
+  "@aiStepKeyword": {
+    "placeholders": {
+      "keyword": {
+        "type": "String"
+      }
+    }
+  },
+  "aiStepLimit": "最多 {count} 条",
+  "@aiStepLimit": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiStepTransactionsFound": "找到 {count} 笔交易",
+  "@aiStepTransactionsFound": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiStepItemsFound": "得到 {count} 项结果",
+  "@aiStepItemsFound": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiStepDataReady": "数据已准备",
+  "aiRangeLastMonth": "上月",
+  "aiRangeThisYear": "今年",
+  "aiRangeLastYear": "去年",
+  "aiRangeLast7Days": "最近 7 天",
+  "aiRangeLast30Days": "最近 30 天",
+  "aiRangeLast3Months": "最近 3 个月",
+  "aiRangeLast6Months": "最近 6 个月",
+  "aiRangeLast12Months": "最近 12 个月",
+  "aiTypeExpense": "支出",
+  "aiTypeIncome": "收入",
+  "aiTypeTransfer": "转账",
+  "aiRetryAnswer": "重新回答",
   "aiPrivacyNotice": "AI 功能会把你输入的文字，以及回答问题所需的只读账目查询摘要发送到你配置的第三方服务；配置和完整账目仍只存本机。",
   "aiEntryTitle": "AI 记账",
   "aiEntryInputHint": "用一句话描述，例如「昨天打车 32」",

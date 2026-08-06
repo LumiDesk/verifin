@@ -132,15 +132,16 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | 周期记账 | `recurring.dart` | `advanceRecurring` `dueDatesFor` |
 | 信用类账户 | `credit_card.dart` | `nextDueDate` `daysUntilDue` `nextStatementDate` `currentBillingCycle` `usedCredit` `availableCredit` `billingCycleExpense`；卡号 `cardLast4Of`（在 `models.dart`） |
 | 记账自动识别 | `category_suggest.dart` | `suggestEntry`（推断类型/分类/标签/备注）；`EntrySuggestion` |
-| AI 对话查询工具 | `ai/ledger_query.dart`、`ai/ai_query_tool.dart` | 通用交易筛选 `queryLedgerEntries`（`LedgerQuery`）；只读工具协议 `AiQueryTool` + `AiToolContext` + `AiToolResult` + `AiResultDisplay`（sealed）+ 注册表 `buildAiQueryTools`（**新增分析工具在此登记，并更新 `ai-tools.md`**） |
-| AI 对话引擎 | `ai/ai_chat_engine.dart` | 多轮对话主循环 `AiChatEngine`（注入 `AiChatTransport`，产出 `AiChatEvent`）；流式客户端 `aiChatStream`（`ai/ai_client.dart`） |
+| AI 对话查询工具 | `ai/ledger_query.dart`、`ai/ai_query_tool.dart`、`ai/ai_tool_schema.dart` | 通用交易筛选 `queryLedgerEntries`（`LedgerQuery`）；只读工具协议 `AiQueryTool` + `AiToolContext` + `AiToolResult` + `AiResultDisplay`（sealed）+ typed Schema + 注册表 `buildAiQueryTools`（**新增分析工具在此登记，并更新 `ai-tools.md`**） |
+| AI Agent 引擎 | `ai/ai_agent_engine.dart`、`ai/ai_native_tool_protocol.dart`、`ai/ai_prompt_tool_protocol.dart` | 双协议只读 Agent 状态机（结构化 `AiAgentMessage` / `AiAgentEvent`）；原生 Tool Calls 与兼容标记协议共用工具执行、轮次和重试边界；结构化传输入口为 `aiAgentStream` / `aiAgentComplete` |
 | 设计令牌 | `app_theme.dart` | 色 `veriRoyal`(主 #346edb) `veriBlue` `veriIncome` `veriExpense` `veriWarning` 等；圆角 `veriRadiusSm/Md/Lg`；`veriHeaderHeight` `veriPageMaxWidth` |
 
 ## 族 11 — AI 对话查询 UI
 
 | 名称 | 类型 | 位置 | 用途 |
 |---|---|---|---|
-| `AiChatPage` | 页面 Widget | `ai_chat_page.dart` | 全屏 AI 账目对话页（气泡 + 输入框 + 清空历史，未配置引导去设置）；`debugTransport` 供测试注入假流 |
+| `AiChatPage` | 页面 Widget | `ai_chat_page.dart` | 全屏 AI 财务 Agent 对话页（气泡 + 工具步骤 + 输入框 + 清空历史，未配置引导去设置）；`debugTransport` / `debugCompleteTransport` 供测试注入结构化传输 |
+| `AiAgentStepView` | Widget | `ai_agent_step_view.dart` | Agent 工具调用与重试的紧凑可折叠步骤卡；只展示本地化参数与结果摘要，不展示协议 JSON / reasoning / 底层异常 |
 | `AiResultView` | Widget | `ai_result_view.dart` | 把 `AiResultDisplay` 渲染成统计卡 / 柱状排行 / 折线趋势 / **可点击交易列表** / 表格（新增展示类型在此加一支） |
 
 ---

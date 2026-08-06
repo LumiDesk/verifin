@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:verifin/app/ai/ai_agent_step.dart';
 import 'package:verifin/app/ai/ai_query_tool.dart';
 import 'package:verifin/local_storage/local_storage.dart';
 
@@ -52,6 +53,39 @@ void main() {
     expect(restored, isA<AiRankingDisplay>());
     expect((restored! as AiRankingDisplay).rows.first.label, '餐饮');
     expect((restored as AiRankingDisplay).rows.first.amount, 400);
+    reopened.dispose();
+  });
+
+  test('完成的 Agent 步骤随历史落库并可安全还原', () async {
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store);
+    const step = AiAgentStep(
+      id: 'call_1',
+      toolName: 'queryTransactions',
+      status: AiAgentStepStatus.succeeded,
+      arguments: <String, Object?>{
+        'range': 'thisMonth',
+        'limit': 20,
+        'nested': <String, Object?>{'raw': true},
+      },
+      summary: '找到 4 笔交易',
+    );
+    controller.setAiChatHistory(<Map<String, Object?>>[
+      <String, Object?>{
+        'role': 'assistant',
+        'content': '结果',
+        'steps': <Map<String, Object?>>[step.toJson()],
+      },
+    ]);
+    controller.dispose();
+
+    final reopened = await makeController(store);
+    final rawSteps = reopened.aiChatHistory.single['steps']! as List;
+    final restored = AiAgentStep.fromJson(rawSteps.single)!;
+    expect(restored.toolName, 'queryTransactions');
+    expect(restored.status, AiAgentStepStatus.succeeded);
+    expect(restored.arguments['range'], 'thisMonth');
+    expect(restored.arguments, isNot(contains('nested')));
     reopened.dispose();
   });
 

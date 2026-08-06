@@ -2883,6 +2883,107 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiCapabilityProbeNotice => '能力检测会发起少量测试请求，但不会发送任何账目数据。';
 
   @override
+  String get aiStepRunning => '调用中';
+
+  @override
+  String get aiStepSucceeded => '完成';
+
+  @override
+  String get aiStepFailed => '失败';
+
+  @override
+  String get aiStepRetrying => '重试中';
+
+  @override
+  String get aiToolSummary => '查询收支汇总';
+
+  @override
+  String get aiToolCategoryRanking => '查询分类排行';
+
+  @override
+  String get aiToolTagRanking => '查询标签排行';
+
+  @override
+  String get aiToolQueryTransactions => '查询交易明细';
+
+  @override
+  String get aiToolLargestTransactions => '查询大额交易';
+
+  @override
+  String get aiToolUnknown => '调用只读工具';
+
+  @override
+  String get aiAgentRetryTitle => '正在重新连接';
+
+  @override
+  String get aiAgentRetryNetwork => '连接中断，正在安全重试';
+
+  @override
+  String get aiAgentRetryProtocol => '端点不支持原生 Tool Calls，正在切换兼容模式';
+
+  @override
+  String get aiAgentRetryResource => '服务暂时繁忙，正在重试';
+
+  @override
+  String aiStepKeyword(String keyword) {
+    return '关键词“$keyword”';
+  }
+
+  @override
+  String aiStepLimit(int count) {
+    return '最多 $count 条';
+  }
+
+  @override
+  String aiStepTransactionsFound(int count) {
+    return '找到 $count 笔交易';
+  }
+
+  @override
+  String aiStepItemsFound(int count) {
+    return '得到 $count 项结果';
+  }
+
+  @override
+  String get aiStepDataReady => '数据已准备';
+
+  @override
+  String get aiRangeLastMonth => '上月';
+
+  @override
+  String get aiRangeThisYear => '今年';
+
+  @override
+  String get aiRangeLastYear => '去年';
+
+  @override
+  String get aiRangeLast7Days => '最近 7 天';
+
+  @override
+  String get aiRangeLast30Days => '最近 30 天';
+
+  @override
+  String get aiRangeLast3Months => '最近 3 个月';
+
+  @override
+  String get aiRangeLast6Months => '最近 6 个月';
+
+  @override
+  String get aiRangeLast12Months => '最近 12 个月';
+
+  @override
+  String get aiTypeExpense => '支出';
+
+  @override
+  String get aiTypeIncome => '收入';
+
+  @override
+  String get aiTypeTransfer => '转账';
+
+  @override
+  String get aiRetryAnswer => '重新回答';
+
+  @override
   String get aiPrivacyNotice =>
       'AI 功能会把你输入的文字，以及回答问题所需的只读账目查询摘要发送到你配置的第三方服务；配置和完整账目仍只存本机。';
 

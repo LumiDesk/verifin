@@ -38,12 +38,3 @@ Future<String> aiChatComplete({
 }) async {
   throw AiException(AiErrorCode.notSupported);
 }
-
-Stream<String> aiChatStream({
-  required AiSettings settings,
-  required List<Map<String, String>> messages,
-  double temperature = 0,
-  Duration timeout = const Duration(seconds: 60),
-}) async* {
-  throw AiException(AiErrorCode.notSupported);
-}

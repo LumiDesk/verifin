@@ -2941,6 +2941,110 @@ class AppLocalizationsEn extends AppLocalizations {
       'Capability detection sends a few small test requests without any financial data.';
 
   @override
+  String get aiStepRunning => 'Running';
+
+  @override
+  String get aiStepSucceeded => 'Done';
+
+  @override
+  String get aiStepFailed => 'Failed';
+
+  @override
+  String get aiStepRetrying => 'Retrying';
+
+  @override
+  String get aiToolSummary => 'Query cash-flow summary';
+
+  @override
+  String get aiToolCategoryRanking => 'Query category ranking';
+
+  @override
+  String get aiToolTagRanking => 'Query tag ranking';
+
+  @override
+  String get aiToolQueryTransactions => 'Query transactions';
+
+  @override
+  String get aiToolLargestTransactions => 'Query large transactions';
+
+  @override
+  String get aiToolUnknown => 'Call read-only tool';
+
+  @override
+  String get aiAgentRetryTitle => 'Reconnecting';
+
+  @override
+  String get aiAgentRetryNetwork =>
+      'The connection was interrupted; retrying safely';
+
+  @override
+  String get aiAgentRetryProtocol =>
+      'Native Tool Calls are unsupported; switching to compatibility mode';
+
+  @override
+  String get aiAgentRetryResource =>
+      'The service is temporarily busy; retrying';
+
+  @override
+  String aiStepKeyword(String keyword) {
+    return 'Keyword “$keyword”';
+  }
+
+  @override
+  String aiStepLimit(int count) {
+    return 'Up to $count items';
+  }
+
+  @override
+  String aiStepTransactionsFound(int count) {
+    return 'Found $count transactions';
+  }
+
+  @override
+  String aiStepItemsFound(int count) {
+    return 'Received $count results';
+  }
+
+  @override
+  String get aiStepDataReady => 'Data ready';
+
+  @override
+  String get aiRangeLastMonth => 'Last month';
+
+  @override
+  String get aiRangeThisYear => 'This year';
+
+  @override
+  String get aiRangeLastYear => 'Last year';
+
+  @override
+  String get aiRangeLast7Days => 'Last 7 days';
+
+  @override
+  String get aiRangeLast30Days => 'Last 30 days';
+
+  @override
+  String get aiRangeLast3Months => 'Last 3 months';
+
+  @override
+  String get aiRangeLast6Months => 'Last 6 months';
+
+  @override
+  String get aiRangeLast12Months => 'Last 12 months';
+
+  @override
+  String get aiTypeExpense => 'Expense';
+
+  @override
+  String get aiTypeIncome => 'Income';
+
+  @override
+  String get aiTypeTransfer => 'Transfer';
+
+  @override
+  String get aiRetryAnswer => 'Answer again';
+
+  @override
   String get aiPrivacyNotice =>
       'AI features send your text and the read-only financial summaries needed to answer your questions to your configured third-party service. The configuration and full ledger remain on this device.';
 

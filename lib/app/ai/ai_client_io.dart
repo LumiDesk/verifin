@@ -154,24 +154,6 @@ Future<String> aiChatComplete({
   return result.content;
 }
 
-/// 旧文本流入口仅用于迁移期间的现有聊天引擎；Agent 接入后删除。
-Stream<String> aiChatStream({
-  required AiSettings settings,
-  required List<Map<String, String>> messages,
-  double temperature = 0,
-  Duration timeout = const Duration(seconds: 60),
-}) async* {
-  await for (final event in aiAgentStream(
-    settings: settings,
-    messages: _legacyMessages(messages),
-    temperature: temperature,
-    connectionTimeout: timeout,
-    responseTimeout: timeout,
-  )) {
-    if (event is AiContentDelta) yield event.text;
-  }
-}
-
 void _ensureConfigured(AiSettings settings) {
   if (!settings.isConfigured) {
     throw AiException(AiErrorCode.notConfigured);

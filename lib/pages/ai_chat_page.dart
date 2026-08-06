@@ -1,17 +1,24 @@
 // AI 对话查询页：用户用自然语言询问账目，AI 调用只读工具查询后以图表 / 列表 / 卡片 +
 // Markdown 文字作答。全屏聊天页，消息气泡 + 底部输入框 + 清空历史。
 //
-// 网络传输默认用 `aiChatStream`（SSE）；`debugTransport` 供测试注入假流，避免真实网络。
+// 网络传输默认使用结构化 Agent SSE；debug transport 供测试注入，避免真实网络。
 import 'package:flutter/material.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 
-import '../app/ai/ai_chat_engine.dart';
+import '../app/ai/ai_agent_engine.dart';
+import '../app/ai/ai_agent_event.dart';
+import '../app/ai/ai_agent_message.dart';
+import '../app/ai/ai_agent_step.dart';
+import '../app/ai/ai_capabilities.dart';
 import '../app/ai/ai_client.dart';
 import '../app/ai/ai_query_tool.dart';
+import '../app/ai/ai_settings.dart';
+import '../app/ai/ai_tool_presentation.dart';
 import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
+import 'ai_agent_step_view.dart';
 import 'ai_result_view.dart';
 import 'ai_settings_page.dart';
 
@@ -26,22 +33,27 @@ class _ChatMessage {
     this.text = '',
     this.status = _MsgStatus.done,
     List<AiResultDisplay>? displays,
-  }) : displays = displays ?? <AiResultDisplay>[];
+    List<AiAgentStep>? steps,
+  }) : displays = displays ?? <AiResultDisplay>[],
+       steps = steps ?? <AiAgentStep>[];
 
   final _Role role;
   String text;
   final List<AiResultDisplay> displays;
+  final List<AiAgentStep> steps;
   _MsgStatus status;
-
-  /// 助手正在查询 / 思考时的状态标签（有值即显示带转圈的提示）。
-  String? statusLabel;
+  String? errorText;
 }
 
 class AiChatPage extends StatefulWidget {
-  const AiChatPage({super.key, this.debugTransport});
+  const AiChatPage({
+    super.key,
+    this.debugTransport,
+    this.debugCompleteTransport,
+  });
 
-  /// 测试注入的传输实现；为 null 时用真实的 `aiChatStream`。
-  final AiChatTransport? debugTransport;
+  final AiAgentStreamTransport? debugTransport;
+  final AiAgentCompleteTransport? debugCompleteTransport;
 
   @override
   State<AiChatPage> createState() => _AiChatPageState();
@@ -51,7 +63,7 @@ class _AiChatPageState extends State<AiChatPage> {
   final List<_ChatMessage> _messages = <_ChatMessage>[];
   final TextEditingController _input = TextEditingController();
   final ScrollController _scroll = ScrollController();
-  final AiChatEngine _engine = AiChatEngine(tools: buildAiQueryTools());
+  final AiAgentEngine _engine = AiAgentEngine(tools: buildAiQueryTools());
   bool _streaming = false;
   bool _restored = false;
 
@@ -84,11 +96,18 @@ class _AiChatPageState extends State<AiChatPage> {
                 case final AiResultDisplay display)
               display,
       ];
+      final rawSteps = message['steps'];
+      final steps = <AiAgentStep>[
+        if (rawSteps is List)
+          for (final rawStep in rawSteps)
+            if (AiAgentStep.fromJson(rawStep) case final AiAgentStep step) step,
+      ];
       _messages.add(
         _ChatMessage(
           role: message['role'] == 'user' ? _Role.user : _Role.assistant,
           text: message['content']?.toString() ?? '',
           displays: displays,
+          steps: steps,
         ),
       );
     }
@@ -104,17 +123,36 @@ class _AiChatPageState extends State<AiChatPage> {
 
   bool get _canSend => !_streaming && _input.text.trim().isNotEmpty;
 
-  /// 把当前对话落库（文本 + 序列化的结果卡片，截断到最近 [_historyLimit] 条）。
+  /// 把当前对话落库（可见文本、完成步骤和结果卡片）。
   void _saveHistory() {
     final all = <Map<String, Object?>>[
       for (final m in _messages)
-        if (m.status == _MsgStatus.done &&
-            (m.text.trim().isNotEmpty || m.displays.isNotEmpty))
+        if (m.status != _MsgStatus.streaming &&
+            (m.text.trim().isNotEmpty ||
+                m.displays.isNotEmpty ||
+                m.steps.any(
+                  (step) =>
+                      step.status == AiAgentStepStatus.succeeded ||
+                      step.status == AiAgentStepStatus.failed,
+                )))
           <String, Object?>{
             'role': m.role == _Role.user ? 'user' : 'assistant',
             'content': m.text.trim(),
             if (m.displays.isNotEmpty)
               'displays': m.displays.map((d) => d.toJson()).toList(),
+            if (m.steps.any(
+              (step) =>
+                  step.status == AiAgentStepStatus.succeeded ||
+                  step.status == AiAgentStepStatus.failed,
+            ))
+              'steps': m.steps
+                  .where(
+                    (step) =>
+                        step.status == AiAgentStepStatus.succeeded ||
+                        step.status == AiAgentStepStatus.failed,
+                  )
+                  .map((step) => step.toJson())
+                  .toList(),
           },
     ];
     final trimmed = all.length > _historyLimit
@@ -136,14 +174,16 @@ class _AiChatPageState extends State<AiChatPage> {
   }
 
   /// 从已完成的历史消息构建给模型的上下文（不含正在流式的这条）。
-  List<Map<String, String>> _priorMessages() {
-    return <Map<String, String>>[
+  List<AiTextMessage> _priorMessages() {
+    return <AiTextMessage>[
       for (final m in _messages)
         if (m.status == _MsgStatus.done && m.text.trim().isNotEmpty)
-          <String, String>{
-            'role': m.role == _Role.user ? 'user' : 'assistant',
-            'content': m.text.trim(),
-          },
+          AiTextMessage(
+            role: m.role == _Role.user
+                ? AiMessageRole.user
+                : AiMessageRole.assistant,
+            content: m.text.trim(),
+          ),
     ];
   }
 
@@ -166,13 +206,30 @@ class _AiChatPageState extends State<AiChatPage> {
     final settings = scope.aiSettings;
     final transport =
         widget.debugTransport ??
-        (List<Map<String, String>> messages) =>
-            aiChatStream(settings: settings, messages: messages);
+        (List<AiAgentMessage> messages, List<Map<String, Object?>> tools) =>
+            aiAgentStream(settings: settings, messages: messages, tools: tools);
+    final completeTransport =
+        widget.debugCompleteTransport ??
+        (List<AiAgentMessage> messages, List<Map<String, Object?>> tools) =>
+            aiAgentComplete(
+              settings: settings,
+              messages: messages,
+              tools: tools,
+            );
+    final capability = scope.aiCapabilityProfile;
+    // 已知不支持时直接走兼容协议；其它 auto 情况仍把 auto 交给引擎，确保端点
+    // 能力变化后遇到明确 protocolUnsupported 仍可在本次请求内安全降级。
+    final mode =
+        settings.toolCallMode == AiToolCallMode.auto &&
+            capability?.matches(settings) == true &&
+            capability?.nativeToolCalls == AiNativeToolCapability.unsupported
+        ? AiToolCallMode.prompt
+        : settings.toolCallMode;
 
     final assistant = _ChatMessage(
       role: _Role.assistant,
       status: _MsgStatus.streaming,
-    )..statusLabel = l10n.aiChatThinking;
+    );
     setState(() {
       _input.clear();
       _messages.add(_ChatMessage(role: _Role.user, text: text));
@@ -183,7 +240,9 @@ class _AiChatPageState extends State<AiChatPage> {
 
     try {
       await for (final event in _engine.run(
-        transport: transport,
+        mode: mode,
+        streamTransport: transport,
+        completeTransport: completeTransport,
         context: context0,
         priorMessages: prior,
         userInput: text,
@@ -192,26 +251,79 @@ class _AiChatPageState extends State<AiChatPage> {
           return;
         }
         setState(() {
+          if (event is! AiAgentRetrying) {
+            _finishRetrySteps(assistant);
+          }
           switch (event) {
-            case AiChatToolInvoked():
-              assistant.statusLabel = l10n.aiChatQuerying;
-            case final AiChatToolDisplay e:
-              assistant.displays.add(e.display);
-            case final AiChatAnswerDelta e:
-              assistant.statusLabel = null;
-              assistant.text += e.delta;
-            case final AiChatCompleted e:
-              assistant.statusLabel = null;
+            case final AiAgentToolStarted e:
+              if (mode != AiToolCallMode.prompt &&
+                  scope.aiCapabilityProfile?.matches(settings) != true) {
+                scope.setAiCapabilityProfile(
+                  AiCapabilityProfile.forSettings(
+                    settings: settings,
+                    nativeToolCalls: AiNativeToolCapability.supported,
+                  ),
+                );
+              }
+              assistant.steps.add(
+                AiAgentStep(
+                  id: e.stepId,
+                  toolName: e.toolName,
+                  status: AiAgentStepStatus.running,
+                  arguments: e.arguments,
+                ),
+              );
+            case final AiAgentToolCompleted e:
+              _updateStep(
+                assistant,
+                e.stepId,
+                status: AiAgentStepStatus.succeeded,
+                summary: presentAiToolResultSummary(l10n, e.result),
+              );
+              if (e.result.display != null) {
+                assistant.displays.add(e.result.display!);
+              }
+            case final AiAgentToolFailed e:
+              _updateStep(
+                assistant,
+                e.stepId,
+                status: AiAgentStepStatus.failed,
+                summary: l10n.aiStepFailed,
+              );
+            case final AiAgentRetrying e:
+              if (e.reason == 'protocolFallback') {
+                scope.setAiCapabilityProfile(
+                  AiCapabilityProfile.forSettings(
+                    settings: settings,
+                    nativeToolCalls: AiNativeToolCapability.unsupported,
+                  ),
+                );
+              }
+              assistant.steps.add(
+                AiAgentStep(
+                  id: 'retry-${assistant.steps.length}',
+                  toolName: 'agentRetry',
+                  status: AiAgentStepStatus.retrying,
+                  summary: e.reason,
+                ),
+              );
+            case final AiAgentAnswerDelta e:
+              assistant.text += e.text;
+            case final AiAgentCompleted e:
               if (assistant.text.trim().isEmpty) {
                 assistant.text = e.answer;
               }
               assistant.status = _MsgStatus.done;
-            case final AiChatFailed e:
-              assistant.statusLabel = null;
+            case final AiAgentFailed e:
               assistant.status = _MsgStatus.error;
-              assistant.text = e.error is AiException
+              assistant.errorText = e.error is AiException
                   ? aiErrorMessage(l10n, e.error as AiException)
-                  : '$e';
+                  : l10n.aiErrUnknown;
+              scope.logger?.error(
+                'AI Agent 回答失败',
+                source: 'ai',
+                error: e.error,
+              );
           }
         });
         _scrollToBottom();
@@ -221,10 +333,36 @@ class _AiChatPageState extends State<AiChatPage> {
         setState(() {
           _streaming = false;
           if (assistant.status == _MsgStatus.streaming) {
-            assistant.status = _MsgStatus.done;
+            assistant.status = _MsgStatus.error;
+            assistant.errorText = l10n.aiErrUnknown;
           }
         });
         _saveHistory();
+      }
+    }
+  }
+
+  void _updateStep(
+    _ChatMessage message,
+    String stepId, {
+    required AiAgentStepStatus status,
+    required String summary,
+  }) {
+    final index = message.steps.indexWhere((step) => step.id == stepId);
+    if (index < 0) return;
+    message.steps[index] = message.steps[index].copyWith(
+      status: status,
+      summary: summary,
+    );
+  }
+
+  void _finishRetrySteps(_ChatMessage message) {
+    for (var index = 0; index < message.steps.length; index += 1) {
+      final step = message.steps[index];
+      if (step.status == AiAgentStepStatus.retrying) {
+        message.steps[index] = step.copyWith(
+          status: AiAgentStepStatus.succeeded,
+        );
       }
     }
   }
@@ -322,7 +460,24 @@ class _AiChatPageState extends State<AiChatPage> {
       controller: _scroll,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
       itemCount: _messages.length,
-      itemBuilder: (context, index) => _MessageView(message: _messages[index]),
+      itemBuilder: (context, index) {
+        final message = _messages[index];
+        final retryText =
+            message.status == _MsgStatus.error &&
+                index > 0 &&
+                _messages[index - 1].role == _Role.user
+            ? _messages[index - 1].text
+            : null;
+        return _MessageView(
+          message: message,
+          onRetry: retryText == null || _streaming
+              ? null
+              : () async {
+                  _input.text = retryText;
+                  await _send();
+                },
+        );
+      },
     );
   }
 
@@ -464,9 +619,10 @@ class _SendButton extends StatelessWidget {
 }
 
 class _MessageView extends StatelessWidget {
-  const _MessageView({required this.message});
+  const _MessageView({required this.message, this.onRetry});
 
   final _ChatMessage message;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -500,48 +656,29 @@ class _MessageView extends StatelessWidget {
         ),
       );
     }
-    final isError = message.status == _MsgStatus.error;
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 7),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          if (message.statusLabel != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8, left: 2),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  const SizedBox(
-                    width: 15,
-                    height: 15,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                  const SizedBox(width: 9),
-                  Text(
-                    message.statusLabel!,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          for (final step in message.steps) AiAgentStepView(step: step),
           for (final display in message.displays) ...<Widget>[
             AiResultView(display: display),
             const SizedBox(height: 10),
           ],
           if (message.text.trim().isNotEmpty)
-            isError
-                ? _ErrorBubble(text: message.text)
-                : GptMarkdown(
-                    message.text,
-                    style: TextStyle(
-                      fontSize: 15.5,
-                      height: 1.6,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                  ),
+            GptMarkdown(
+              message.text,
+              style: TextStyle(
+                fontSize: 15.5,
+                height: 1.6,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          if (message.errorText != null) ...<Widget>[
+            const SizedBox(height: 8),
+            _ErrorBubble(text: message.errorText!, onRetry: onRetry),
+          ],
         ],
       ),
     );
@@ -550,9 +687,10 @@ class _MessageView extends StatelessWidget {
 
 /// 助手出错时的提示气泡（红边淡底，比裸红字更精致）。
 class _ErrorBubble extends StatelessWidget {
-  const _ErrorBubble({required this.text});
+  const _ErrorBubble({required this.text, this.onRetry});
 
   final String text;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -570,9 +708,25 @@ class _ErrorBubble extends StatelessWidget {
           Icon(Icons.error_outline, size: 18, color: error),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              text,
-              style: TextStyle(color: error, fontSize: 14, height: 1.45),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  text,
+                  style: TextStyle(color: error, fontSize: 14, height: 1.45),
+                ),
+                if (onRetry != null)
+                  TextButton(
+                    onPressed: onRetry,
+                    style: TextButton.styleFrom(
+                      foregroundColor: error,
+                      padding: const EdgeInsets.only(top: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(AppLocalizations.of(context).aiRetryAnswer),
+                  ),
+              ],
             ),
           ),
         ],

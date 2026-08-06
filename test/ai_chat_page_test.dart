@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:verifin/app/ai/ai_chat_engine.dart';
+import 'package:verifin/app/ai/ai_agent_engine.dart';
+import 'package:verifin/app/ai/ai_completion_event.dart';
+import 'package:verifin/app/ai/ai_error.dart';
 import 'package:verifin/app/ai/ai_settings.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/app/veri_fin_scope.dart';
@@ -8,17 +10,25 @@ import 'package:verifin/pages/ai_chat_page.dart';
 
 import 'support/test_harness.dart';
 
-/// 按调用顺序返回脚本响应、切片模拟流式的假传输。
-AiChatTransport _scripted(List<String> responses) {
+/// 按调用顺序返回结构化补全事件。
+AiAgentStreamTransport _scripted(List<List<AiCompletionEvent>> responses) {
   var index = 0;
-  return (messages) async* {
-    final text = index < responses.length ? responses[index] : '';
+  return (messages, tools) async* {
+    final events = index < responses.length
+        ? responses[index]
+        : const <AiCompletionEvent>[];
     index += 1;
-    for (var i = 0; i < text.length; i += 6) {
-      yield text.substring(i, (i + 6).clamp(0, text.length));
+    for (final event in events) {
+      yield event;
     }
   };
 }
+
+List<AiCompletionEvent> _answer(String text) => <AiCompletionEvent>[
+  AiContentDelta(text),
+  const AiCompletionFinished(AiFinishReason.stop),
+  const AiStreamDone(),
+];
 
 void main() {
   useTestDatabases();
@@ -56,9 +66,18 @@ void main() {
         ),
       );
 
-    final transport = _scripted(<String>[
-      '{"tool":"summary","args":{"range":"thisMonth"}}',
-      '本月支出合计 300 元。',
+    final transport = _scripted(<List<AiCompletionEvent>>[
+      <AiCompletionEvent>[
+        const AiToolCallDelta(
+          index: 0,
+          id: 'call_1',
+          name: 'summary',
+          arguments: '{"range":"thisMonth"}',
+        ),
+        const AiCompletionFinished(AiFinishReason.toolCalls),
+        const AiStreamDone(),
+      ],
+      _answer('本月支出合计 300 元。'),
     ]);
 
     await tester.pumpWidget(
@@ -77,7 +96,9 @@ void main() {
     // 用户气泡
     expect(find.text('本月花了多少'), findsOneWidget);
     // summary 工具的结果卡（标题含「收支汇总」）
-    expect(find.textContaining('收支汇总'), findsOneWidget);
+    expect(find.textContaining('收支汇总'), findsWidgets);
+    expect(find.text('查询收支汇总'), findsOneWidget);
+    expect(find.textContaining('{"tool"'), findsNothing);
     // 统计卡里的净额/支出行
     expect(find.text('支出'), findsWidgets);
     controller.dispose();
@@ -92,7 +113,11 @@ void main() {
       VeriFinScope(
         controller: controller,
         child: zhMaterialApp(
-          home: AiChatPage(debugTransport: _scripted(<String>['你好呀'])),
+          home: AiChatPage(
+            debugTransport: _scripted(<List<AiCompletionEvent>>[
+              _answer('你好呀'),
+            ]),
+          ),
         ),
       ),
     );
@@ -108,6 +133,46 @@ void main() {
     await tester.tap(find.text('清空'));
     await tester.pumpAndSettle();
     expect(find.text('在吗'), findsNothing);
+    controller.dispose();
+  });
+
+  testWidgets('网络错误保留友好文案并提供重新回答', (tester) async {
+    final controller = await makeController()
+      ..setAiSettings(
+        const AiSettings(baseUrl: 'http://x/v1', apiKey: 'k', model: 'm'),
+      );
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(
+          home: AiChatPage(
+            debugTransport: (messages, tools) async* {
+              throw AiException(
+                AiErrorCode.network,
+                detail: 'HttpException: secret upstream detail',
+              );
+            },
+            debugCompleteTransport: (messages, tools) async {
+              throw AiException(
+                AiErrorCode.network,
+                detail: 'HttpException: secret upstream detail',
+              );
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '帮我查一下');
+    await tester.pump();
+    await tester.tap(find.byIcon(Icons.arrow_upward_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.text('无法连接到服务器'), findsOneWidget);
+    expect(find.text('重新回答'), findsOneWidget);
+    expect(find.textContaining('HttpException'), findsNothing);
+    expect(find.textContaining('secret upstream'), findsNothing);
     controller.dispose();
   });
 
@@ -135,6 +200,18 @@ void main() {
               ],
             },
           ],
+          'steps': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'call_1',
+              'tool': 'categoryRanking',
+              'status': 'succeeded',
+              'args': <String, Object?>{
+                'range': 'thisMonth',
+                'type': 'expense',
+              },
+              'summary': '得到 1 项结果',
+            },
+          ],
         },
       ]);
 
@@ -150,6 +227,7 @@ void main() {
     expect(find.text('分类排行'), findsOneWidget);
     expect(find.textContaining('支出分类排行'), findsOneWidget);
     expect(find.text('餐饮'), findsWidgets);
+    expect(find.text('查询分类排行'), findsOneWidget);
     controller.dispose();
   });
 }

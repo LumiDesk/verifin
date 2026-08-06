@@ -228,8 +228,8 @@ Map<String, List<String>> _decodeStringListMap(Object? value) {
   });
 }
 
-/// 解码 AI 聊天记录（`[{role, content, displays?}, …]`）；损坏数据回退空列表。
-/// `displays` 为结果卡片的 JSON 列表（[AiResultDisplay] 序列化），原样保留供聊天页还原。
+/// 解码 AI 聊天记录（`[{role, content, displays?, steps?}, …]`）；损坏数据回退空列表。
+/// 结果卡片与已完成 Agent 步骤原样保留，具体类型校验由聊天页负责。
 List<Map<String, Object?>> _decodeChatHistory(String? raw) {
   if (raw == null || raw.isEmpty) {
     return <Map<String, Object?>>[];
@@ -241,6 +241,7 @@ List<Map<String, Object?>> _decodeChatHistory(String? raw) {
           .whereType<Map>()
           .map((item) {
             final displays = item['displays'];
+            final steps = item['steps'];
             return <String, Object?>{
               'role': item['role']?.toString() ?? 'user',
               'content': item['content']?.toString() ?? '',
@@ -248,6 +249,11 @@ List<Map<String, Object?>> _decodeChatHistory(String? raw) {
                 'displays': displays
                     .whereType<Map>()
                     .map((d) => Map<String, Object?>.from(d))
+                    .toList(),
+              if (steps is List)
+                'steps': steps
+                    .whereType<Map>()
+                    .map((step) => Map<String, Object?>.from(step))
                     .toList(),
             };
           })
