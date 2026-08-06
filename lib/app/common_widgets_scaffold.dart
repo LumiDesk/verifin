@@ -237,6 +237,52 @@ class SaveHeaderAction extends StatelessWidget {
   }
 }
 
+/// Shared header actions for explicit list-sorting sessions.
+///
+/// Normal mode exposes a sort entry point. Sorting mode replaces it with
+/// cancel and the standard floppy save action so a drag never implies
+/// persistence by itself.
+class SortModeHeaderActions extends StatelessWidget {
+  const SortModeHeaderActions({
+    super.key,
+    required this.sorting,
+    required this.canSort,
+    required this.dirty,
+    required this.onStart,
+    required this.onCancel,
+    required this.onSave,
+  });
+
+  final bool sorting;
+  final bool canSort;
+  final bool dirty;
+  final VoidCallback onStart;
+  final VoidCallback onCancel;
+  final VoidCallback onSave;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!sorting) {
+      return HeaderAction(
+        icon: Icons.swap_vert,
+        tooltip: AppLocalizations.of(context).sortLabel,
+        onPressed: canSort ? onStart : null,
+      );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        HeaderAction(
+          icon: Icons.close,
+          tooltip: AppLocalizations.of(context).commonCancel,
+          onPressed: onCancel,
+        ),
+        SaveHeaderAction(onPressed: dirty ? onSave : null),
+      ],
+    );
+  }
+}
+
 class HeaderPopupAction<T> extends StatelessWidget {
   const HeaderPopupAction({
     super.key,

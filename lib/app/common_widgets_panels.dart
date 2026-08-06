@@ -143,16 +143,21 @@ class AccountGroupCard extends StatelessWidget {
                         },
                         itemBuilder: (context, index) {
                           final account = accounts[index];
-                          return ReorderableDelayedDragStartListener(
+                          final row = _AccountRow(
                             key: ValueKey<String>('account_${account.id}'),
+                            account: account,
+                            balance: balances[account] ?? 0,
+                            onTap: onAccountTap == null
+                                ? null
+                                : () => onAccountTap!(account),
+                          );
+                          if (onReorderAccounts == null) {
+                            return row;
+                          }
+                          return ReorderableDelayedDragStartListener(
+                            key: ValueKey<String>('account_drag_${account.id}'),
                             index: index,
-                            child: _AccountRow(
-                              account: account,
-                              balance: balances[account] ?? 0,
-                              onTap: onAccountTap == null
-                                  ? null
-                                  : () => onAccountTap!(account),
-                            ),
+                            child: row,
                           );
                         },
                       ),
@@ -200,6 +205,7 @@ Color accountBalanceColor(
 
 class _AccountRow extends StatelessWidget {
   const _AccountRow({
+    super.key,
     required this.account,
     required this.balance,
     required this.onTap,

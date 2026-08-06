@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
@@ -21,6 +22,11 @@ class CategoryManagementPage extends StatefulWidget {
 
 class _CategoryManagementPageState extends State<CategoryManagementPage> {
   EntryType _type = EntryType.expense;
+  final EditorExitController _exitController = EditorExitController();
+  bool _sorting = false;
+  bool _savingOrder = false;
+  List<Category> _draftCategories = <Category>[];
+  List<String> _initialOrder = <String>[];
 
   // 收起的父分类 id（默认全部展开，收起后隐藏其子树）。
   final Set<String> _collapsed = <String>{};
@@ -28,47 +34,68 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
   @override
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
-    final roots = controller.rootCategoriesForType(_type);
+    final categories = _sorting ? _draftCategories : controller.categories;
+    final roots = rootCategories(categories, _type);
 
-    return Scaffold(
-      body: SafeArea(
-        child: VeriPage(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
-            children: <Widget>[
-              VeriHeader(
-                title: AppLocalizations.of(context).categoryMgmt,
-                subtitle: AppLocalizations.of(context).categoryMgmtSubtitle,
-                showBack: true,
-                actions: <Widget>[
-                  HeaderAction(
-                    icon: Icons.add,
-                    tooltip: AppLocalizations.of(context).addTopCategory,
-                    onPressed: () => _createCategory(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              SegmentedButton<EntryType>(
-                segments: EntryType.userSelectable
-                    .map(
-                      (type) => ButtonSegment<EntryType>(
-                        value: type,
-                        label: Text(type.label(AppLocalizations.of(context))),
+    return UnsavedChangesGuard(
+      isDirty: _isOrderDirty,
+      onSave: _saveOrder,
+      onDiscard: _discardOrder,
+      exitController: _exitController,
+      child: Scaffold(
+        body: SafeArea(
+          child: VeriPage(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
+              children: <Widget>[
+                VeriHeader(
+                  title: AppLocalizations.of(context).categoryMgmt,
+                  subtitle: AppLocalizations.of(context).categoryMgmtSubtitle,
+                  showBack: true,
+                  actions: <Widget>[
+                    if (!_sorting)
+                      HeaderAction(
+                        icon: Icons.add,
+                        tooltip: AppLocalizations.of(context).addTopCategory,
+                        onPressed: () => _createCategory(),
                       ),
-                    )
-                    .toList(),
-                selected: <EntryType>{_type},
-                onSelectionChanged: (selection) {
-                  setState(() => _type = selection.first);
-                },
-              ),
-              const SizedBox(height: 10),
-              VeriCard(
-                padding: EdgeInsets.zero,
-                child: _buildLevel(controller, roots, null, 0),
-              ),
-            ],
+                    SortModeHeaderActions(
+                      sorting: _sorting,
+                      canSort: categories
+                          .where((category) => category.type == _type)
+                          .skip(1)
+                          .isNotEmpty,
+                      dirty: _isOrderDirty,
+                      onStart: () => _startSorting(controller),
+                      onCancel: _cancelSorting,
+                      onSave: _saveOrderAndFinish,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                SegmentedButton<EntryType>(
+                  segments: EntryType.userSelectable
+                      .map(
+                        (type) => ButtonSegment<EntryType>(
+                          value: type,
+                          label: Text(type.label(AppLocalizations.of(context))),
+                        ),
+                      )
+                      .toList(),
+                  selected: <EntryType>{_type},
+                  onSelectionChanged: _sorting
+                      ? null
+                      : (selection) {
+                          setState(() => _type = selection.first);
+                        },
+                ),
+                const SizedBox(height: 10),
+                VeriCard(
+                  padding: EdgeInsets.zero,
+                  child: _buildLevel(controller, categories, roots, null, 0),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -79,6 +106,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
   /// 展开的父分类下方缩进渲染其子级。每级各自是一个可拖拽重排的列表。
   Widget _buildLevel(
     VeriFinController controller,
+    List<Category> allCategories,
     List<Category> siblings,
     String? parentId,
     int depth,
@@ -89,11 +117,13 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
       buildDefaultDragHandles: false,
       itemCount: siblings.length,
       onReorderItem: (oldIndex, newIndex) {
-        controller.reorderCategories(_type, parentId, oldIndex, newIndex);
+        if (_sorting) {
+          _reorderDraft(parentId, oldIndex, newIndex);
+        }
       },
       itemBuilder: (context, index) {
         final category = siblings[index];
-        final children = controller.childCategories(category.id);
+        final children = childrenOf(allCategories, category.id);
         final collapsed = _collapsed.contains(category.id);
         return Column(
           key: ValueKey<String>(category.id),
@@ -116,13 +146,108 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
                       }
                     }),
               onTap: () => _showCategoryActions(category),
+              sorting: _sorting,
             ),
             if (children.isNotEmpty && !collapsed)
-              _buildLevel(controller, children, category.id, depth + 1),
+              _buildLevel(
+                controller,
+                allCategories,
+                children,
+                category.id,
+                depth + 1,
+              ),
           ],
         );
       },
     );
+  }
+
+  bool get _isOrderDirty =>
+      _sorting &&
+      !listEquals(
+        _draftCategories.map((category) => category.id).toList(),
+        _initialOrder,
+      );
+
+  void _startSorting(VeriFinController controller) {
+    setState(() {
+      _sorting = true;
+      _draftCategories = List<Category>.of(controller.categories);
+      _initialOrder = _draftCategories.map((category) => category.id).toList();
+    });
+  }
+
+  void _reorderDraft(String? parentId, int oldIndex, int newIndex) {
+    final positions = <int>[];
+    for (var index = 0; index < _draftCategories.length; index++) {
+      final category = _draftCategories[index];
+      if (category.type == _type && category.parentId == parentId) {
+        positions.add(index);
+      }
+    }
+    if (oldIndex < 0 ||
+        oldIndex >= positions.length ||
+        newIndex < 0 ||
+        newIndex > positions.length) {
+      return;
+    }
+    setState(() {
+      final siblings = <Category>[
+        for (final position in positions) _draftCategories[position],
+      ];
+      final moved = siblings.removeAt(oldIndex);
+      siblings.insert(newIndex.clamp(0, siblings.length), moved);
+      for (var index = 0; index < positions.length; index++) {
+        _draftCategories[positions[index]] = siblings[index];
+      }
+    });
+  }
+
+  Future<bool> _saveOrder() async {
+    if (_savingOrder || !_isOrderDirty) {
+      return !_isOrderDirty;
+    }
+    _savingOrder = true;
+    final saved = await VeriFinScope.of(context).saveCategoryOrderDraft(
+      _draftCategories.map((category) => category.id).toList(),
+    );
+    _savingOrder = false;
+    return saved;
+  }
+
+  Future<void> _saveOrderAndFinish() async {
+    if (await _saveOrder() && mounted) {
+      setState(() {
+        _sorting = false;
+        _draftCategories = <Category>[];
+        _initialOrder = <String>[];
+      });
+    }
+  }
+
+  void _discardOrder() {
+    _sorting = false;
+    _draftCategories = <Category>[];
+    _initialOrder = <String>[];
+  }
+
+  Future<void> _cancelSorting() async {
+    if (!_isOrderDirty) {
+      setState(_discardOrder);
+      return;
+    }
+    final decision = await showUnsavedChangesDialog(context: context);
+    if (!mounted) {
+      return;
+    }
+    switch (decision) {
+      case EditorExitDecision.save:
+        await _saveOrderAndFinish();
+      case EditorExitDecision.discard:
+        setState(_discardOrder);
+      case EditorExitDecision.cancel:
+        break;
+    }
   }
 
   Future<void> _createCategory({Category? parent}) async {
@@ -417,6 +542,7 @@ class _CategoryManageRow extends StatelessWidget {
     required this.collapsed,
     required this.onToggle,
     required this.onTap,
+    required this.sorting,
   });
 
   final int index;
@@ -429,6 +555,7 @@ class _CategoryManageRow extends StatelessWidget {
   /// 展开/收起子分类；无子分类时为 null（不显示折叠箭头）。
   final VoidCallback? onToggle;
   final VoidCallback onTap;
+  final bool sorting;
 
   @override
   Widget build(BuildContext context) {
@@ -442,7 +569,7 @@ class _CategoryManageRow extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(veriRadiusSm),
-        onTap: onTap,
+        onTap: sorting ? null : onTap,
         child: Padding(
           padding: EdgeInsets.fromLTRB(14 + depth * 22, 10, 8, 10),
           child: Row(
@@ -503,19 +630,20 @@ class _CategoryManageRow extends StatelessWidget {
                   ],
                 ),
               ),
-              ReorderableDragStartListener(
-                index: index,
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Icon(
-                    Icons.drag_handle,
-                    size: 18,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.38),
+              if (sorting)
+                ReorderableDragStartListener(
+                  index: index,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Icon(
+                      Icons.drag_handle,
+                      size: 18,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.38),
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),

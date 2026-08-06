@@ -1033,6 +1033,103 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
+  /// Saves the asset page's appearance and ordering as one explicit editor
+  /// submission. Orders are scoped to the active book and both view modes;
+  /// unrelated books retain their existing preferences.
+  Future<bool> saveAssetDisplayDraft({
+    required AssetAccountViewMode viewMode,
+    required String coverUrl,
+    required Map<AssetAccountViewMode, List<String>> sectionOrders,
+    required Map<AssetAccountViewMode, Map<String, List<String>>> accountOrders,
+  }) async {
+    final activeAccountIds = accounts.map((account) => account.id).toSet();
+    for (final mode in AssetAccountViewMode.values) {
+      final sectionIds = sectionOrders[mode];
+      final bySection = accountOrders[mode];
+      if (sectionIds == null ||
+          bySection == null ||
+          sectionIds.toSet().length != sectionIds.length) {
+        return false;
+      }
+      for (final order in bySection.values) {
+        if (order.toSet().length != order.length ||
+            order.any((id) => !activeAccountIds.contains(id))) {
+          return false;
+        }
+      }
+    }
+
+    final nextSectionOrders = Map<String, List<String>>.fromEntries(
+      _assetSectionOrders.entries.map(
+        (entry) => MapEntry(entry.key, List<String>.of(entry.value)),
+      ),
+    );
+    final nextAccountOrders = Map<String, List<String>>.fromEntries(
+      _assetAccountOrders.entries.map(
+        (entry) => MapEntry(entry.key, List<String>.of(entry.value)),
+      ),
+    );
+    for (final mode in AssetAccountViewMode.values) {
+      nextSectionOrders[_assetSectionOrderKeyForMode(_activeBookId, mode)] =
+          List<String>.of(sectionOrders[mode]!);
+      final prefix = '$_activeBookId:${mode.name}:';
+      nextAccountOrders.removeWhere((key, _) => key.startsWith(prefix));
+      for (final entry in accountOrders[mode]!.entries) {
+        nextAccountOrders[_assetSectionKey(_activeBookId, mode, entry.key)] =
+            List<String>.of(entry.value);
+      }
+    }
+
+    final normalizedCover = coverUrl.trim();
+    final previous = <String, String?>{
+      _assetCoverKey: _store.read(_assetCoverKey),
+      _assetViewModeKey: _store.read(_assetViewModeKey),
+      _assetAccountOrderKey: _store.read(_assetAccountOrderKey),
+      _assetSectionOrderKey: _store.read(_assetSectionOrderKey),
+    };
+    try {
+      if (normalizedCover.isEmpty) {
+        await _store.deleteAndFlush(_assetCoverKey);
+      } else {
+        await _store.writeAndFlush(_assetCoverKey, normalizedCover);
+      }
+      await _store.writeAndFlush(_assetViewModeKey, viewMode.name);
+      await _store.writeAndFlush(
+        _assetAccountOrderKey,
+        jsonEncode(nextAccountOrders),
+      );
+      await _store.writeAndFlush(
+        _assetSectionOrderKey,
+        jsonEncode(nextSectionOrders),
+      );
+    } catch (error, stackTrace) {
+      for (final entry in previous.entries) {
+        try {
+          if (entry.value == null) {
+            await _store.deleteAndFlush(entry.key);
+          } else {
+            await _store.writeAndFlush(entry.key, entry.value!);
+          }
+        } catch (_) {
+          // The original error is reported below; rollback is best-effort.
+        }
+      }
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+
+    _assetAccountViewMode = viewMode;
+    _assetCoverUrl = normalizedCover;
+    _assetAccountOrders
+      ..clear()
+      ..addAll(nextAccountOrders);
+    _assetSectionOrders
+      ..clear()
+      ..addAll(nextSectionOrders);
+    notifyListeners();
+    return true;
+  }
+
   bool isAssetSectionCollapsed({
     required AssetAccountViewMode mode,
     required String sectionId,
@@ -2146,6 +2243,33 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
+  /// Persists a complete category ordering draft after the user explicitly
+  /// saves sorting mode. Category fields are read from the current controller
+  /// snapshot so a stale editor cannot overwrite a rename or icon change.
+  Future<bool> saveCategoryOrderDraft(List<String> orderedIds) async {
+    final currentIds = _categories.map((category) => category.id).toSet();
+    if (orderedIds.length != _categories.length ||
+        orderedIds.toSet().length != orderedIds.length ||
+        !orderedIds.toSet().containsAll(currentIds)) {
+      return false;
+    }
+    final byId = <String, Category>{
+      for (final category in _categories) category.id: category,
+    };
+    final next = <Category>[for (final id in orderedIds) byId[id]!];
+    try {
+      await _repository.saveCategories(next);
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _categories
+      ..clear()
+      ..addAll(next);
+    notifyListeners();
+    return true;
+  }
+
   bool deleteCategory(String categoryId) {
     if (_isProtectedCategory(categoryId)) {
       return false;
@@ -2293,6 +2417,29 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
+  /// Persists the tag order only after sorting mode is explicitly saved.
+  Future<bool> saveTagOrderDraft(List<String> orderedIds) async {
+    final currentIds = _tags.map((tag) => tag.id).toSet();
+    if (orderedIds.length != _tags.length ||
+        orderedIds.toSet().length != orderedIds.length ||
+        !orderedIds.toSet().containsAll(currentIds)) {
+      return false;
+    }
+    final byId = <String, Tag>{for (final tag in _tags) tag.id: tag};
+    final next = <Tag>[for (final id in orderedIds) byId[id]!];
+    try {
+      await _repository.saveTags(next);
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _tags
+      ..clear()
+      ..addAll(next);
+    notifyListeners();
+    return true;
+  }
+
   /// 删除标签，并从所有交易的 tagIds 中移除该标签的引用。
   void deleteTag(String tagId) {
     final index = _tags.indexWhere((tag) => tag.id == tagId);
@@ -2390,6 +2537,40 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       );
     _persistAccountGroups();
     notifyListeners();
+  }
+
+  /// Persists the active book's account-group order after explicit save.
+  Future<bool> saveAccountGroupOrderDraft(List<String> orderedIds) async {
+    final current = accountGroups;
+    final currentIds = current.map((group) => group.id).toSet();
+    if (orderedIds.length != current.length ||
+        orderedIds.toSet().length != orderedIds.length ||
+        !orderedIds.toSet().containsAll(currentIds)) {
+      return false;
+    }
+    final byId = <String, AccountGroup>{
+      for (final group in current) group.id: group,
+    };
+    final nextActive = <AccountGroup>[
+      for (final item in orderedIds.indexed)
+        byId[item.$2]!.copyWith(sortOrder: item.$1),
+    ];
+    final next = <AccountGroup>[
+      for (final group in _accountGroups)
+        if (group.bookId != _activeBookId) group,
+      ...nextActive,
+    ];
+    try {
+      await _repository.saveAccountGroups(next);
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _accountGroups
+      ..clear()
+      ..addAll(next);
+    notifyListeners();
+    return true;
   }
 
   void updateProfile(UserProfile profile) {

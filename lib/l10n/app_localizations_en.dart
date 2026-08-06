@@ -740,6 +740,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assetsCoverTitle => 'Asset card background';
 
   @override
+  String get assetDisplaySettingsTitle => 'Asset display settings';
+
+  @override
+  String get assetViewModeLabel => 'Account grouping';
+
+  @override
+  String get assetOrderHint =>
+      'Drag section handles or long-press accounts to reorder';
+
+  @override
   String get coverUseOnline => 'Use online image';
 
   @override

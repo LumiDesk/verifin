@@ -726,6 +726,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get assetsCoverTitle => '资产卡片背景';
 
   @override
+  String get assetDisplaySettingsTitle => '资产显示设置';
+
+  @override
+  String get assetViewModeLabel => '账户分区方式';
+
+  @override
+  String get assetOrderHint => '拖动分区手柄或长按账户调整顺序';
+
+  @override
   String get coverUseOnline => '使用线上图片';
 
   @override

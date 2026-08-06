@@ -72,16 +72,18 @@ void main() {
     expect(controller.accounts, isEmpty);
   });
 
-  testWidgets('opens asset cover selector from the assets page', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('资产背景入口先进入显式保存的显示设置页', (WidgetTester tester) async {
     await pumpApp(tester);
 
     await tapBottomTab(tester, 1);
     await tester.tap(find.byTooltip('更换资产卡片背景'));
     await tester.pumpAndSettle();
 
-    expect(find.text('资产卡片背景'), findsOneWidget);
+    expect(find.text('资产显示设置'), findsOneWidget);
+    expect(find.byTooltip('保存'), findsOneWidget);
+    await tester.tap(find.text('资产卡片背景'));
+    await tester.pumpAndSettle();
+    expect(find.text('资产卡片背景'), findsWidgets);
     expect(find.text('使用线上图片'), findsOneWidget);
     expect(find.text('选择本地图片'), findsOneWidget);
   });
@@ -239,34 +241,40 @@ void main() {
     last4Controller.dispose();
   });
 
-  testWidgets('switches asset account view and persists collapsed sections', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('资产视图保存前不生效，普通折叠不再持久化', (WidgetTester tester) async {
     final store = LocalKeyValueStore();
-    final controller = await makeController(store);
-    controller
-      ..addAccount(
-        Account(
-          id: 'asset-view-alipay',
-          bookId: controller.activeBook.id,
-          name: '支付宝账户',
-          type: AccountType.onlinePayment,
-          groupId: null,
-          initialBalance: 0,
-          iconCode: 'wallet',
-          note: '',
-          includeInAssets: true,
-          hidden: false,
-        ),
-      )
-      ..dispose();
+    final seed = await makeController(store);
+    seed.addAccount(
+      Account(
+        id: 'asset-view-alipay',
+        bookId: seed.activeBook.id,
+        name: '支付宝账户',
+        type: AccountType.onlinePayment,
+        groupId: null,
+        initialBalance: 0,
+        iconCode: 'wallet',
+        note: '',
+        includeInAssets: true,
+        hidden: false,
+      ),
+    );
+    seed.dispose();
 
-    await pumpApp(tester, store);
+    final controller = await pumpApp(tester, store);
     await tapBottomTab(tester, 1);
 
     await tester.tap(find.byTooltip('资产操作'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('切换为分类视图'));
+    await tester.tap(find.text('资产显示设置'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('类型视图'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('分类视图'));
+    await tester.pumpAndSettle();
+
+    // 设置页只更新草稿，Controller 仍保持类型视图。
+    expect(controller.assetAccountViewMode, AssetAccountViewMode.type);
+    await tester.tap(find.byTooltip('保存'));
     await tester.pumpAndSettle();
 
     expect(find.text('未分组'), findsOneWidget);
@@ -281,7 +289,29 @@ void main() {
     await tapBottomTab(tester, 1);
 
     expect(find.text('未分组'), findsOneWidget);
-    expect(find.text('支付宝账户'), findsNothing);
+    expect(find.text('支付宝账户'), findsOneWidget);
+  });
+
+  testWidgets('资产显示设置返回时可放弃草稿', (tester) async {
+    final controller = await pumpApp(tester);
+    await tapBottomTab(tester, 1);
+    await tester.tap(find.byTooltip('资产操作'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('资产显示设置'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('类型视图'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('分类视图'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('返回'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('保存修改？'), findsOneWidget);
+    await tester.tap(find.text('不保存'));
+    await tester.pumpAndSettle();
+    expect(controller.assetAccountViewMode, AssetAccountViewMode.type);
+    expect(find.text('资产显示设置'), findsNothing);
   });
 
   testWidgets('isolates accounts between ledger books', (
@@ -407,9 +437,9 @@ void main() {
     target.dispose();
   });
 
-  testWidgets('sort entry lives in asset actions menu and enters sort mode', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('资产分区排序先留在设置草稿，保存后才写入 Controller', (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(460, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     final controller = await makeController();
     final bookId = controller.activeBook.id;
     controller
@@ -447,20 +477,49 @@ void main() {
     await tapBottomTab(tester, 1);
     await tester.tap(find.byTooltip('资产操作'));
     await tester.pumpAndSettle();
-
-    // 排序入口常驻资产操作菜单（不再因分组数不足而消失）。
-    expect(find.text('排序分组'), findsOneWidget);
-    await tester.tap(find.text('排序分组'));
+    await tester.tap(find.text('资产显示设置'));
     await tester.pumpAndSettle();
 
-    // 两个及以上分组时进入排序模式，出现提示与「完成」按钮。
-    expect(find.text('拖动右侧手柄调整分组顺序'), findsOneWidget);
-    expect(find.text('完成'), findsOneWidget);
+    expect(find.text('拖动分区手柄或长按账户调整顺序'), findsOneWidget);
+    final before = controller.sortedAssetSections<String>(
+      mode: AssetAccountViewMode.type,
+      sections: const <String>['creditCard', 'cash'],
+      idOf: (section) => section,
+    );
+    expect(before, const <String>['creditCard', 'cash']);
+
+    final handles = find.byIcon(Icons.drag_indicator);
+    final firstHandle = tester.getCenter(handles.at(0));
+    final secondHandle = tester.getCenter(handles.at(1));
+    await tester.timedDragFrom(
+      firstHandle,
+      Offset(0, secondHandle.dy - firstHandle.dy + 40),
+      const Duration(milliseconds: 600),
+    );
+    await tester.pumpAndSettle();
+
+    // 拖动只改变页面草稿。
+    expect(
+      controller.sortedAssetSections<String>(
+        mode: AssetAccountViewMode.type,
+        sections: const <String>['creditCard', 'cash'],
+        idOf: (section) => section,
+      ),
+      const <String>['creditCard', 'cash'],
+    );
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+    expect(
+      controller.sortedAssetSections<String>(
+        mode: AssetAccountViewMode.type,
+        sections: const <String>['creditCard', 'cash'],
+        idOf: (section) => section,
+      ),
+      const <String>['cash', 'creditCard'],
+    );
   });
 
-  testWidgets('inline sort button is always visible above asset sections', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('资产页不再提供会即时落库的内联排序', (WidgetTester tester) async {
     final controller = await makeController();
     final bookId = controller.activeBook.id;
     controller
@@ -497,16 +556,10 @@ void main() {
 
     await tapBottomTab(tester, 1);
 
-    // 「排序」按钮常驻分组列表上方，不用打开菜单就能发现。
-    expect(find.text('排序'), findsOneWidget);
-    await tester.tap(find.text('排序'));
+    expect(find.text('排序'), findsNothing);
+    await tester.tap(find.byTooltip('资产操作'));
     await tester.pumpAndSettle();
-
-    // 点击后进入排序模式，出现提示与「完成」按钮；完成后回到「排序」。
-    expect(find.text('拖动右侧手柄调整分组顺序'), findsOneWidget);
-    await tester.tap(find.text('完成'));
-    await tester.pumpAndSettle();
-    expect(find.text('排序'), findsOneWidget);
-    expect(find.text('拖动右侧手柄调整分组顺序'), findsNothing);
+    expect(find.text('排序分组'), findsNothing);
+    expect(find.text('资产显示设置'), findsOneWidget);
   });
 }

@@ -1436,6 +1436,24 @@ abstract class AppLocalizations {
   /// **'资产卡片背景'**
   String get assetsCoverTitle;
 
+  /// No description provided for @assetDisplaySettingsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'资产显示设置'**
+  String get assetDisplaySettingsTitle;
+
+  /// No description provided for @assetViewModeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'账户分区方式'**
+  String get assetViewModeLabel;
+
+  /// No description provided for @assetOrderHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'拖动分区手柄或长按账户调整顺序'**
+  String get assetOrderHint;
+
   /// No description provided for @coverUseOnline.
   ///
   /// In zh, this message translates to:
