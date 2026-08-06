@@ -1,3 +1,5 @@
+import 'ai_agent_message.dart';
+
 /// OpenAI-compatible 聊天补全的标准化结束原因。
 enum AiFinishReason {
   stop,
@@ -44,4 +46,21 @@ class AiCompletionFinished extends AiCompletionEvent {
 
 class AiStreamDone extends AiCompletionEvent {
   const AiStreamDone();
+}
+
+/// 非流式补全的标准化结果。
+class AiCompletionResult {
+  const AiCompletionResult({
+    required this.finishReason,
+    this.content = '',
+    this.reasoningContent = '',
+    this.toolCalls = const <AiNativeToolCall>[],
+  });
+
+  final String content;
+
+  /// 仅供同一个 Agent turn 内协议回传，禁止进入 UI、日志或历史。
+  final String reasoningContent;
+  final List<AiNativeToolCall> toolCalls;
+  final AiFinishReason finishReason;
 }

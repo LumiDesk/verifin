@@ -14,6 +14,8 @@ enum AiErrorCode {
   rateLimited,
   serverError,
   badResponse,
+  incompleteStream,
+  protocolUnsupported,
   upstream,
   unknown,
 }
@@ -43,6 +45,8 @@ String aiErrorMessage(AppLocalizations l10n, AiException error) {
     AiErrorCode.rateLimited => l10n.aiErrRateLimited,
     AiErrorCode.serverError => l10n.aiErrServer,
     AiErrorCode.badResponse => l10n.aiErrBadResponse,
+    AiErrorCode.incompleteStream => l10n.aiErrBadResponse,
+    AiErrorCode.protocolUnsupported => l10n.aiErrNotSupported,
     AiErrorCode.upstream => l10n.aiErrUpstream,
     AiErrorCode.unknown => l10n.aiErrUnknown,
   };

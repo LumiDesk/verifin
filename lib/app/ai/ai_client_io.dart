@@ -2,16 +2,132 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'ai_agent_message.dart';
+import 'ai_completion_event.dart';
 import 'ai_error.dart';
 import 'ai_settings.dart';
 
 export 'ai_error.dart' show AiException, AiErrorCode, aiErrorMessage;
 
-/// 向 OpenAI 兼容的聊天补全接口发一次请求，返回助手消息的文本内容。
+const Duration _defaultConnectTimeout = Duration(seconds: 20);
+const Duration _defaultResponseTimeout = Duration(seconds: 60);
+const Duration _defaultStreamIdleTimeout = Duration(seconds: 45);
+
+/// 发起一次非流式 OpenAI-compatible 补全，并保留文本、推理字段与 Tool Calls。
+Future<AiCompletionResult> aiAgentComplete({
+  required AiSettings settings,
+  required List<AiAgentMessage> messages,
+  List<Map<String, Object?>> tools = const <Map<String, Object?>>[],
+  double temperature = 0,
+  Duration connectionTimeout = _defaultConnectTimeout,
+  Duration responseTimeout = _defaultResponseTimeout,
+}) async {
+  _ensureConfigured(settings);
+  final client = HttpClient()..connectionTimeout = connectionTimeout;
+  try {
+    final response = await _post(
+      client: client,
+      settings: settings,
+      body: _requestBody(
+        settings: settings,
+        messages: messages,
+        tools: tools,
+        temperature: temperature,
+        stream: false,
+      ),
+      responseTimeout: responseTimeout,
+    );
+    final responseText = await response
+        .transform(utf8.decoder)
+        .join()
+        .timeout(responseTimeout);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw _statusException(
+        response.statusCode,
+        responseText,
+        usedTools: tools.isNotEmpty,
+      );
+    }
+    return _parseCompletion(responseText);
+  } catch (error) {
+    throw _mapTransportError(error);
+  } finally {
+    client.close(force: true);
+  }
+}
+
+/// 发起流式 OpenAI-compatible 补全，产出结构化 SSE 事件。
 ///
-/// [messages] 未指定时用 [systemPrompt]/[userPrompt] 组两条消息。请求体不带
-/// `response_format`（不少自建/第三方端点不支持），靠提示词约束输出，由调用方
-/// 从文本中提取 JSON，兼容性最好。[temperature] 默认 0 让解析结果稳定。
+/// 响应体连续 [idleTimeout] 没有任何字节会超时；流自然结束时必须已经收到
+/// `[DONE]` 或合法 `finish_reason`，否则按不完整响应处理。
+Stream<AiCompletionEvent> aiAgentStream({
+  required AiSettings settings,
+  required List<AiAgentMessage> messages,
+  List<Map<String, Object?>> tools = const <Map<String, Object?>>[],
+  double temperature = 0,
+  Duration connectionTimeout = _defaultConnectTimeout,
+  Duration responseTimeout = _defaultResponseTimeout,
+  Duration idleTimeout = _defaultStreamIdleTimeout,
+}) async* {
+  _ensureConfigured(settings);
+  final client = HttpClient()..connectionTimeout = connectionTimeout;
+  var sawDone = false;
+  var sawFinish = false;
+  try {
+    final response = await _post(
+      client: client,
+      settings: settings,
+      body: _requestBody(
+        settings: settings,
+        messages: messages,
+        tools: tools,
+        temperature: temperature,
+        stream: true,
+      ),
+      responseTimeout: responseTimeout,
+      acceptEventStream: true,
+    );
+    if (response.statusCode >= HttpStatus.badRequest) {
+      final errorText = await response
+          .transform(utf8.decoder)
+          .join()
+          .timeout(responseTimeout);
+      throw _statusException(
+        response.statusCode,
+        errorText,
+        usedTools: tools.isNotEmpty,
+      );
+    }
+
+    final lines = response
+        .timeout(idleTimeout)
+        .transform(utf8.decoder)
+        .transform(const LineSplitter());
+    await for (final line in lines) {
+      if (!line.startsWith('data:')) continue;
+      final data = line.substring(5).trim();
+      if (data.isEmpty) continue;
+      if (data == '[DONE]') {
+        sawDone = true;
+        yield const AiStreamDone();
+        break;
+      }
+      for (final event in _parseStreamPayload(data)) {
+        if (event is AiCompletionFinished) sawFinish = true;
+        yield event;
+      }
+    }
+    if (!sawDone && !sawFinish) {
+      throw AiException(AiErrorCode.incompleteStream);
+    }
+  } catch (error) {
+    throw _mapTransportError(error);
+  } finally {
+    client.close(force: true);
+  }
+}
+
+/// 旧的文本补全入口仍供 AI 记账解析使用；内部统一走强类型传输。
 Future<String> aiChatComplete({
   required AiSettings settings,
   String? systemPrompt,
@@ -20,228 +136,284 @@ Future<String> aiChatComplete({
   double temperature = 0,
   Duration timeout = const Duration(seconds: 45),
 }) async {
-  if (!settings.isConfigured) {
-    throw AiException(AiErrorCode.notConfigured);
+  final result = await aiAgentComplete(
+    settings: settings,
+    messages: messages == null
+        ? <AiAgentMessage>[
+            if (systemPrompt != null) AiTextMessage.system(systemPrompt),
+            if (userPrompt != null) AiTextMessage.user(userPrompt),
+          ]
+        : _legacyMessages(messages),
+    temperature: temperature,
+    connectionTimeout: timeout,
+    responseTimeout: timeout,
+  );
+  if (result.content.trim().isEmpty) {
+    throw AiException(AiErrorCode.badResponse, detail: 'empty content');
   }
-  final resolvedMessages =
-      messages ??
-      <Map<String, String>>[
-        if (systemPrompt != null) {'role': 'system', 'content': systemPrompt},
-        if (userPrompt != null) {'role': 'user', 'content': userPrompt},
-      ];
-  final body = jsonEncode(<String, Object?>{
-    'model': settings.model.trim(),
-    'messages': resolvedMessages,
-    'temperature': temperature,
-    'stream': false,
-  });
-
-  final client = HttpClient();
-  client.connectionTimeout = timeout;
-  try {
-    final uri = Uri.parse(settings.chatCompletionsUrl);
-    final request = await client.openUrl('POST', uri).timeout(timeout);
-    request.headers.set(
-      HttpHeaders.authorizationHeader,
-      'Bearer ${settings.apiKey.trim()}',
-    );
-    request.headers.contentType = ContentType(
-      'application',
-      'json',
-      charset: 'utf-8',
-    );
-    request.followRedirects = true;
-    request.add(utf8.encode(body));
-
-    final response = await request.close().timeout(timeout);
-    final responseText = await response
-        .transform(utf8.decoder)
-        .join()
-        .timeout(timeout);
-    if (response.statusCode >= 400) {
-      throw _statusException(response.statusCode, responseText);
-    }
-    return _extractContent(responseText);
-  } on AiException {
-    rethrow;
-  } on TimeoutException {
-    throw AiException(AiErrorCode.timeout);
-  } on SocketException catch (error) {
-    throw AiException(AiErrorCode.network, detail: error.message);
-  } on HandshakeException {
-    throw AiException(AiErrorCode.tls);
-  } on FormatException {
-    throw AiException(AiErrorCode.badUrl);
-  } catch (error) {
-    throw AiException(AiErrorCode.unknown, detail: '$error');
-  } finally {
-    client.close(force: true);
-  }
+  return result.content;
 }
 
-/// 流式版聊天补全（SSE）：逐段 `yield` 助手消息文本增量（`choices[0].delta.content`）。
-///
-/// 对话主循环用它把最终答复逐字呈现给用户；工具调用轮次则在上层缓冲后解析。
-/// 出错（配置缺失、鉴权失败、网络/TLS 等）抛 [AiException]，与非流式一致。
+/// 旧文本流入口仅用于迁移期间的现有聊天引擎；Agent 接入后删除。
 Stream<String> aiChatStream({
   required AiSettings settings,
   required List<Map<String, String>> messages,
   double temperature = 0,
   Duration timeout = const Duration(seconds: 60),
 }) async* {
+  await for (final event in aiAgentStream(
+    settings: settings,
+    messages: _legacyMessages(messages),
+    temperature: temperature,
+    connectionTimeout: timeout,
+    responseTimeout: timeout,
+  )) {
+    if (event is AiContentDelta) yield event.text;
+  }
+}
+
+void _ensureConfigured(AiSettings settings) {
   if (!settings.isConfigured) {
     throw AiException(AiErrorCode.notConfigured);
   }
-  final body = jsonEncode(<String, Object?>{
+}
+
+List<AiAgentMessage> _legacyMessages(List<Map<String, String>> messages) {
+  return messages
+      .map((message) {
+        final role = switch (message['role']) {
+          'system' => AiMessageRole.system,
+          'assistant' => AiMessageRole.assistant,
+          _ => AiMessageRole.user,
+        };
+        return AiTextMessage(role: role, content: message['content'] ?? '');
+      })
+      .toList(growable: false);
+}
+
+Map<String, Object?> _requestBody({
+  required AiSettings settings,
+  required List<AiAgentMessage> messages,
+  required List<Map<String, Object?>> tools,
+  required double temperature,
+  required bool stream,
+}) {
+  return <String, Object?>{
     'model': settings.model.trim(),
-    'messages': messages,
+    'messages': messages
+        .map((message) => message.toJson())
+        .toList(growable: false),
     'temperature': temperature,
-    'stream': true,
-  });
+    'stream': stream,
+    if (tools.isNotEmpty) ...<String, Object?>{
+      'tools': tools,
+      'tool_choice': 'auto',
+    },
+  };
+}
 
-  final client = HttpClient();
-  client.connectionTimeout = timeout;
-  try {
-    final uri = Uri.parse(settings.chatCompletionsUrl);
-    final request = await client.openUrl('POST', uri).timeout(timeout);
-    request.headers.set(
-      HttpHeaders.authorizationHeader,
-      'Bearer ${settings.apiKey.trim()}',
-    );
-    request.headers.contentType = ContentType(
-      'application',
-      'json',
-      charset: 'utf-8',
-    );
+Future<HttpClientResponse> _post({
+  required HttpClient client,
+  required AiSettings settings,
+  required Map<String, Object?> body,
+  required Duration responseTimeout,
+  bool acceptEventStream = false,
+}) async {
+  final uri = Uri.parse(settings.chatCompletionsUrl);
+  final request = await client.openUrl('POST', uri).timeout(responseTimeout);
+  request.headers.set(
+    HttpHeaders.authorizationHeader,
+    'Bearer ${settings.apiKey.trim()}',
+  );
+  request.headers.contentType = ContentType.json;
+  if (acceptEventStream) {
     request.headers.set(HttpHeaders.acceptHeader, 'text/event-stream');
-    request.followRedirects = true;
-    request.add(utf8.encode(body));
+  }
+  request.followRedirects = true;
+  request.add(utf8.encode(jsonEncode(body)));
+  return request.close().timeout(responseTimeout);
+}
 
-    final response = await request.close().timeout(timeout);
-    if (response.statusCode >= 400) {
-      final errorText = await response.transform(utf8.decoder).join();
-      throw _statusException(response.statusCode, errorText);
-    }
+AiCompletionResult _parseCompletion(String responseText) {
+  final root = _decodeRoot(responseText);
+  _throwEmbeddedError(root);
+  final choice = _firstChoice(root);
+  final message = _stringMap(choice['message']);
+  final content =
+      _stringValue(message?['content']) ?? _stringValue(choice['text']) ?? '';
+  final reasoning =
+      _stringValue(message?['reasoning_content']) ??
+      _stringValue(message?['reasoning']) ??
+      '';
+  final toolCalls = _parseToolCalls(message?['tool_calls']);
+  if (content.trim().isEmpty && toolCalls.isEmpty) {
+    throw AiException(AiErrorCode.badResponse, detail: 'empty completion');
+  }
+  return AiCompletionResult(
+    content: content,
+    reasoningContent: reasoning,
+    toolCalls: toolCalls,
+    finishReason: _finishReason(_stringValue(choice['finish_reason'])),
+  );
+}
 
-    final lines = response
-        .transform(utf8.decoder)
-        .transform(const LineSplitter());
-    await for (final line in lines) {
-      if (!line.startsWith('data:')) {
-        continue;
-      }
-      final data = line.substring(5).trim();
-      if (data.isEmpty) {
-        continue;
-      }
-      if (data == '[DONE]') {
-        break;
-      }
-      final delta = _extractStreamDelta(data);
-      if (delta != null && delta.isNotEmpty) {
-        yield delta;
-      }
+List<AiCompletionEvent> _parseStreamPayload(String data) {
+  final root = _decodeRoot(data);
+  _throwEmbeddedError(root);
+  final choices = root['choices'];
+  if (choices is! List || choices.isEmpty) return const <AiCompletionEvent>[];
+  final choice = _stringMap(choices.first);
+  if (choice == null) {
+    throw AiException(AiErrorCode.badResponse, detail: 'invalid choice');
+  }
+  final events = <AiCompletionEvent>[];
+  final delta = _stringMap(choice['delta']);
+  final content =
+      _stringValue(delta?['content']) ?? _stringValue(choice['text']);
+  if (content != null && content.isNotEmpty) {
+    events.add(AiContentDelta(content));
+  }
+  final reasoning =
+      _stringValue(delta?['reasoning_content']) ??
+      _stringValue(delta?['reasoning']);
+  if (reasoning != null && reasoning.isNotEmpty) {
+    events.add(AiReasoningDelta(reasoning));
+  }
+  final rawToolCalls = delta?['tool_calls'];
+  if (rawToolCalls is List) {
+    for (final rawCall in rawToolCalls) {
+      final call = _stringMap(rawCall);
+      if (call == null) continue;
+      final index = call['index'];
+      if (index is! int) continue;
+      final function = _stringMap(call['function']);
+      events.add(
+        AiToolCallDelta(
+          index: index,
+          id: _stringValue(call['id']),
+          name: _stringValue(function?['name']),
+          arguments: _stringValue(function?['arguments']),
+        ),
+      );
     }
-  } on AiException {
-    rethrow;
-  } on TimeoutException {
-    throw AiException(AiErrorCode.timeout);
-  } on SocketException catch (error) {
-    throw AiException(AiErrorCode.network, detail: error.message);
-  } on HandshakeException {
-    throw AiException(AiErrorCode.tls);
+  }
+  final finish = _stringValue(choice['finish_reason']);
+  if (finish != null && finish.isNotEmpty) {
+    events.add(AiCompletionFinished(_finishReason(finish), rawReason: finish));
+  }
+  return events;
+}
+
+Map<String, Object?> _decodeRoot(String source) {
+  try {
+    final decoded = jsonDecode(source);
+    final root = _stringMap(decoded);
+    if (root != null) return root;
   } on FormatException {
-    throw AiException(AiErrorCode.badUrl);
-  } catch (error) {
-    throw AiException(AiErrorCode.unknown, detail: '$error');
-  } finally {
-    client.close(force: true);
+    // 在下方统一映射为 badResponse。
   }
+  throw AiException(AiErrorCode.badResponse, detail: 'non-JSON response');
 }
 
-/// 从一条 SSE `data:` 负载里取出文本增量；解析失败返回 null（跳过该片段）。
-String? _extractStreamDelta(String data) {
-  try {
-    final decoded = jsonDecode(data);
-    if (decoded is Map) {
-      final choices = decoded['choices'];
-      if (choices is List && choices.isNotEmpty) {
-        final first = choices.first;
-        if (first is Map) {
-          final delta = first['delta'];
-          if (delta is Map && delta['content'] is String) {
-            return delta['content'] as String;
-          }
-          // 兼容部分端点把增量放在 text 字段。
-          if (first['text'] is String) {
-            return first['text'] as String;
-          }
-        }
-      }
-    }
-  } catch (_) {
-    // 忽略非标准片段。
-  }
-  return null;
-}
-
-String _extractContent(String responseText) {
-  final Object? decoded;
-  try {
-    decoded = jsonDecode(responseText);
-  } catch (_) {
-    throw AiException(AiErrorCode.badResponse, detail: 'non-JSON');
-  }
-  if (decoded is! Map) {
-    throw AiException(AiErrorCode.badResponse);
-  }
-  final choices = decoded['choices'];
+Map<String, Object?> _firstChoice(Map<String, Object?> root) {
+  final choices = root['choices'];
   if (choices is List && choices.isNotEmpty) {
-    final first = choices.first;
-    if (first is Map) {
-      final message = first['message'];
-      if (message is Map) {
-        final content = message['content'];
-        if (content is String && content.trim().isNotEmpty) {
-          return content;
-        }
-      }
-      // 兼容部分端点把文本放在 text 字段。
-      final text = first['text'];
-      if (text is String && text.trim().isNotEmpty) {
-        return text;
-      }
-    }
+    final choice = _stringMap(choices.first);
+    if (choice != null) return choice;
   }
-  // 上游透传的错误对象。
-  final error = decoded['error'];
-  if (error is Map && error['message'] is String) {
-    throw AiException(AiErrorCode.upstream, detail: error['message'] as String);
-  }
-  throw AiException(AiErrorCode.badResponse, detail: 'empty content');
+  throw AiException(AiErrorCode.badResponse, detail: 'missing choice');
 }
 
-/// 把 HTTP 错误状态映射为错误码；优先把上游 error.message 作为 detail 透出。
-AiException _statusException(int statusCode, String responseText) {
+List<AiNativeToolCall> _parseToolCalls(Object? value) {
+  if (value is! List) return const <AiNativeToolCall>[];
+  final calls = <AiNativeToolCall>[];
+  for (final rawCall in value) {
+    final call = _stringMap(rawCall);
+    final function = _stringMap(call?['function']);
+    final id = _stringValue(call?['id']);
+    final name = _stringValue(function?['name']);
+    final rawArguments = function?['arguments'];
+    final arguments = rawArguments is String
+        ? rawArguments
+        : rawArguments is Map
+        ? jsonEncode(rawArguments)
+        : null;
+    if (id == null || id.isEmpty || name == null || name.isEmpty) continue;
+    calls.add(
+      AiNativeToolCall(id: id, name: name, arguments: arguments ?? '{}'),
+    );
+  }
+  return calls;
+}
+
+Map<String, Object?>? _stringMap(Object? value) =>
+    value is Map ? Map<String, Object?>.from(value) : null;
+
+String? _stringValue(Object? value) => value is String ? value : null;
+
+AiFinishReason _finishReason(String? value) => switch (value) {
+  'stop' => AiFinishReason.stop,
+  'tool_calls' || 'function_call' => AiFinishReason.toolCalls,
+  'length' => AiFinishReason.length,
+  'content_filter' => AiFinishReason.contentFilter,
+  'insufficient_system_resource' => AiFinishReason.insufficientSystemResource,
+  _ => AiFinishReason.other,
+};
+
+void _throwEmbeddedError(Map<String, Object?> root) {
+  final error = _stringMap(root['error']);
+  final message = _stringValue(error?['message']);
+  if (message != null) {
+    throw AiException(AiErrorCode.upstream, detail: message);
+  }
+}
+
+AiException _statusException(
+  int statusCode,
+  String responseText, {
+  required bool usedTools,
+}) {
   String? detail;
   try {
-    final decoded = jsonDecode(responseText);
-    if (decoded is Map) {
-      final error = decoded['error'];
-      if (error is Map && error['message'] is String) {
-        detail = error['message'] as String;
-      } else if (decoded['message'] is String) {
-        detail = decoded['message'] as String;
-      }
-    }
-  } catch (_) {
-    // 忽略，仅按状态码分类。
+    final root = _decodeRoot(responseText);
+    final error = _stringMap(root['error']);
+    detail = _stringValue(error?['message']) ?? _stringValue(root['message']);
+  } on AiException {
+    // 非 JSON 错误页仅按状态码分类。
+  }
+  if (usedTools && _indicatesUnsupportedTools(detail ?? responseText)) {
+    return AiException(AiErrorCode.protocolUnsupported, detail: detail);
   }
   final code = switch (statusCode) {
-    401 || 403 => AiErrorCode.authFailed,
-    404 => AiErrorCode.notFound,
-    429 => AiErrorCode.rateLimited,
+    HttpStatus.unauthorized || HttpStatus.forbidden => AiErrorCode.authFailed,
+    HttpStatus.notFound => AiErrorCode.notFound,
+    HttpStatus.tooManyRequests => AiErrorCode.rateLimited,
     _ => AiErrorCode.serverError,
   };
   return AiException(code, detail: detail ?? '$statusCode');
+}
+
+bool _indicatesUnsupportedTools(String value) {
+  final lower = value.toLowerCase();
+  return (lower.contains('tool') || lower.contains('function')) &&
+      (lower.contains('unsupported') ||
+          lower.contains('not support') ||
+          lower.contains('unknown') ||
+          lower.contains('unrecognized'));
+}
+
+AiException _mapTransportError(Object error) {
+  if (error is AiException) return error;
+  if (error is TimeoutException) return AiException(AiErrorCode.timeout);
+  if (error is HandshakeException) return AiException(AiErrorCode.tls);
+  if (error is SocketException) {
+    return AiException(AiErrorCode.network, detail: error.message);
+  }
+  if (error is HttpException) {
+    return AiException(AiErrorCode.network, detail: error.message);
+  }
+  if (error is FormatException || error is ArgumentError) {
+    return AiException(AiErrorCode.badUrl);
+  }
+  return AiException(AiErrorCode.unknown, detail: '$error');
 }
