@@ -145,7 +145,7 @@ class VeriHeader extends StatelessWidget {
           if (showBack) ...<Widget>[
             IconButton(
               tooltip: AppLocalizations.of(context).commonBack,
-              onPressed: onBack ?? () => Navigator.of(context).pop(),
+              onPressed: onBack ?? () => Navigator.of(context).maybePop(),
               icon: const Icon(Icons.arrow_back),
             ),
             const SizedBox(width: 2),
@@ -207,13 +207,78 @@ class HeaderAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = destructive
+    final baseColor = destructive
         ? veriExpense
         : Theme.of(context).colorScheme.onSurface;
+    final color = baseColor.withValues(alpha: onPressed == null ? 0.32 : 0.82);
     return IconButton(
       tooltip: tooltip,
       onPressed: onPressed,
-      icon: Icon(icon, color: color.withValues(alpha: 0.82)),
+      icon: Icon(icon, color: color),
+    );
+  }
+}
+
+/// 全屏编辑页统一的保存动作。
+///
+/// 固定使用软碟语义图标，避免各页面把“保存”混用成对勾或“完成”。
+class SaveHeaderAction extends StatelessWidget {
+  const SaveHeaderAction({super.key, required this.onPressed});
+
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return HeaderAction(
+      icon: Icons.save_outlined,
+      tooltip: AppLocalizations.of(context).commonSave,
+      onPressed: onPressed,
+    );
+  }
+}
+
+/// Shared header actions for explicit list-sorting sessions.
+///
+/// Normal mode exposes a sort entry point. Sorting mode replaces it with
+/// cancel and the standard floppy save action so a drag never implies
+/// persistence by itself.
+class SortModeHeaderActions extends StatelessWidget {
+  const SortModeHeaderActions({
+    super.key,
+    required this.sorting,
+    required this.canSort,
+    required this.dirty,
+    required this.onStart,
+    required this.onCancel,
+    required this.onSave,
+  });
+
+  final bool sorting;
+  final bool canSort;
+  final bool dirty;
+  final VoidCallback onStart;
+  final VoidCallback onCancel;
+  final VoidCallback onSave;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!sorting) {
+      return HeaderAction(
+        icon: Icons.swap_vert,
+        tooltip: AppLocalizations.of(context).sortLabel,
+        onPressed: canSort ? onStart : null,
+      );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        HeaderAction(
+          icon: Icons.close,
+          tooltip: AppLocalizations.of(context).commonCancel,
+          onPressed: onCancel,
+        ),
+        SaveHeaderAction(onPressed: dirty ? onSave : null),
+      ],
     );
   }
 }

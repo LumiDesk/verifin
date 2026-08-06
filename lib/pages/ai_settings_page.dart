@@ -19,10 +19,12 @@ class AiSettingsPage extends StatefulWidget {
 }
 
 class _AiSettingsPageState extends State<AiSettingsPage> {
+  final EditorExitController _exitController = EditorExitController();
   final TextEditingController _baseUrlController = TextEditingController();
   final TextEditingController _apiKeyController = TextEditingController();
   final TextEditingController _modelController = TextEditingController();
   bool _seeded = false;
+  late AiSettings _initialSettings;
   bool _obscureKey = true;
   bool _testing = false;
   AiToolCallMode _toolCallMode = AiToolCallMode.auto;
@@ -35,6 +37,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     super.didChangeDependencies();
     if (!_seeded) {
       final settings = VeriFinScope.of(context).aiSettings;
+      _initialSettings = settings;
       _baseUrlController.text = settings.baseUrl;
       _apiKeyController.text = settings.apiKey;
       _modelController.text = settings.model;
@@ -63,7 +66,16 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     toolCallMode: _toolCallMode,
   );
 
-  Future<void> _save() async {
+  bool get _isDirty => _seeded && _current() != _initialSettings;
+
+  Future<void> _saveAndExit() async {
+    if (await _save() && mounted) {
+      setState(() => _initialSettings = _current());
+      _exitController.exit();
+    }
+  }
+
+  Future<bool> _save() async {
     final l10n = AppLocalizations.of(context);
     final settings = _current();
     if (!settings.isConfigured) {
@@ -71,24 +83,24 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
         _statusIsError = true;
         _statusText = l10n.aiFillAllFields;
       });
-      return;
+      return false;
     }
     // http 发往公网主机会明文暴露 API Key，保存前提醒确认。
-    if (!await confirmCleartextIfRisky(context, settings.baseUrl)) return;
-    if (!mounted) return;
-    VeriFinScope.of(context).setAiSettings(settings);
+    if (!await confirmCleartextIfRisky(context, settings.baseUrl)) return false;
+    if (!mounted) return false;
     final detected = _detectedProfile;
-    if (detected?.matches(settings) == true) {
-      VeriFinScope.of(context).setAiCapabilityProfile(detected);
+    final saved = await VeriFinScope.of(
+      context,
+    ).saveAiSettingsDraft(settings, detectedProfile: detected);
+    if (!mounted || !saved) {
+      return false;
     }
     FocusScope.of(context).unfocus();
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(l10n.aiSettingsSaved)));
     setState(() {
       _statusIsError = false;
       _statusText = null;
     });
+    return true;
   }
 
   Future<void> _clearConfig() async {
@@ -103,12 +115,18 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     if (!confirmed || !mounted) {
       return;
     }
-    VeriFinScope.of(context).setAiSettings(const AiSettings());
+    final saved = await VeriFinScope.of(
+      context,
+    ).saveAiSettingsDraft(const AiSettings());
+    if (!mounted || !saved) {
+      return;
+    }
     _baseUrlController.clear();
     _apiKeyController.clear();
     _modelController.clear();
     _toolCallMode = AiToolCallMode.auto;
     _detectedProfile = null;
+    _initialSettings = const AiSettings();
     FocusScope.of(context).unfocus();
     setState(() {
       _statusIsError = false;
@@ -233,8 +251,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
         '$protocol';
   }
 
-  void _invalidateDetectedCapability() {
-    if (_detectedProfile == null && _statusText == null) return;
+  void _onConfigChanged() {
     setState(() {
       _detectedProfile = null;
       _statusText = null;
@@ -248,189 +265,188 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurface.withValues(alpha: 0.55);
 
-    return Scaffold(
-      body: SafeArea(
-        child: VeriPage(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
-            children: <Widget>[
-              VeriHeader(
-                title: l10n.aiSettingsTitle,
-                showBack: true,
-                actions: <Widget>[
-                  HeaderAction(
-                    icon: Icons.delete_outline,
-                    tooltip: l10n.aiClearConfig,
-                    destructive: true,
-                    onPressed:
-                        (_baseUrlController.text.isEmpty &&
-                            _apiKeyController.text.isEmpty &&
-                            _modelController.text.isEmpty)
-                        ? null
-                        : _clearConfig,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Text(
-                  l10n.aiSettingsIntro,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: muted,
-                    height: 1.5,
+    return UnsavedChangesGuard(
+      isDirty: _isDirty,
+      onSave: _save,
+      exitController: _exitController,
+      child: Scaffold(
+        body: SafeArea(
+          child: VeriPage(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
+              children: <Widget>[
+                VeriHeader(
+                  title: l10n.aiSettingsTitle,
+                  showBack: true,
+                  actions: <Widget>[
+                    HeaderAction(
+                      icon: Icons.delete_outline,
+                      tooltip: l10n.aiClearConfig,
+                      destructive: true,
+                      onPressed:
+                          (_baseUrlController.text.isEmpty &&
+                              _apiKeyController.text.isEmpty &&
+                              _modelController.text.isEmpty)
+                          ? null
+                          : _clearConfig,
+                    ),
+                    SaveHeaderAction(
+                      onPressed: _isDirty && _current().isConfigured
+                          ? _saveAndExit
+                          : null,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Text(
+                    l10n.aiSettingsIntro,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: muted,
+                      height: 1.5,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              VeriCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    TextField(
-                      controller: _baseUrlController,
-                      onChanged: (_) => _invalidateDetectedCapability(),
-                      keyboardType: TextInputType.url,
-                      autocorrect: false,
-                      decoration: InputDecoration(
-                        labelText: l10n.aiBaseUrlLabel,
-                        hintText: l10n.aiBaseUrlHint,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _apiKeyController,
-                      obscureText: _obscureKey,
-                      autocorrect: false,
-                      enableSuggestions: false,
-                      decoration: InputDecoration(
-                        labelText: l10n.aiApiKeyLabel,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscureKey
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                          ),
-                          onPressed: () =>
-                              setState(() => _obscureKey = !_obscureKey),
+                const SizedBox(height: 12),
+                VeriCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      TextField(
+                        controller: _baseUrlController,
+                        onChanged: (_) => _onConfigChanged(),
+                        keyboardType: TextInputType.url,
+                        autocorrect: false,
+                        decoration: InputDecoration(
+                          labelText: l10n.aiBaseUrlLabel,
+                          hintText: l10n.aiBaseUrlHint,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _modelController,
-                      onChanged: (_) => _invalidateDetectedCapability(),
-                      autocorrect: false,
-                      decoration: InputDecoration(
-                        labelText: l10n.aiModelLabel,
-                        hintText: l10n.aiModelHint,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Material(
-                      color: Colors.transparent,
-                      child: ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(l10n.aiToolModeTitle),
-                        subtitle: Text(
-                          '${_toolModeLabel(_toolCallMode)} · '
-                          '${_toolModeHint(_toolCallMode)}',
-                        ),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: _testing ? null : _selectToolCallMode,
-                      ),
-                    ),
-                    Text(
-                      l10n.aiCapabilityProbeNotice,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: muted,
-                        height: 1.4,
-                      ),
-                    ),
-                    if (_statusText != null) ...<Widget>[
-                      const SizedBox(height: 12),
-                      Text(
-                        _statusText!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: _statusIsError
-                              ? theme.colorScheme.error
-                              : theme.colorScheme.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 14),
-                    Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: _testing ? null : _detectCapabilities,
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size(44, 44),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 10,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                  veriRadiusMd,
-                                ),
-                              ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _apiKeyController,
+                        onChanged: (_) => _onConfigChanged(),
+                        obscureText: _obscureKey,
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        decoration: InputDecoration(
+                          labelText: l10n.aiApiKeyLabel,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureKey
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
                             ),
-                            icon: _testing
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.wifi_tethering, size: 18),
-                            label: Text(l10n.aiDetectCapabilities),
+                            onPressed: () =>
+                                setState(() => _obscureKey = !_obscureKey),
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: FilledButton(
-                            onPressed: _save,
-                            child: Text(l10n.commonSave),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _modelController,
+                        onChanged: (_) => _onConfigChanged(),
+                        autocorrect: false,
+                        decoration: InputDecoration(
+                          labelText: l10n.aiModelLabel,
+                          hintText: l10n.aiModelHint,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Material(
+                        color: Colors.transparent,
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(l10n.aiToolModeTitle),
+                          subtitle: Text(
+                            '${_toolModeLabel(_toolCallMode)} · '
+                            '${_toolModeHint(_toolCallMode)}',
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: _testing ? null : _selectToolCallMode,
+                        ),
+                      ),
+                      Text(
+                        l10n.aiCapabilityProbeNotice,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: muted,
+                          height: 1.4,
+                        ),
+                      ),
+                      if (_statusText != null) ...<Widget>[
+                        const SizedBox(height: 12),
+                        Text(
+                          _statusText!,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: _statusIsError
+                                ? theme.colorScheme.error
+                                : theme.colorScheme.primary,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(
-                    alpha: 0.4,
-                  ),
-                  borderRadius: BorderRadius.circular(veriRadiusMd),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Icon(Icons.privacy_tip_outlined, size: 16, color: muted),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        l10n.aiPrivacyNotice,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: muted,
-                          height: 1.5,
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _testing ? null : _detectCapabilities,
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(44, 44),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(veriRadiusMd),
+                            ),
+                          ),
+                          icon: _testing
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.wifi_tethering, size: 18),
+                          label: Text(l10n.aiDetectCapabilities),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest.withValues(
+                      alpha: 0.4,
+                    ),
+                    borderRadius: BorderRadius.circular(veriRadiusMd),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Icon(Icons.privacy_tip_outlined, size: 16, color: muted),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          l10n.aiPrivacyNotice,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: muted,
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -740,6 +740,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assetsCoverTitle => 'Asset card background';
 
   @override
+  String get assetDisplaySettingsTitle => 'Asset display settings';
+
+  @override
+  String get assetViewModeLabel => 'Account grouping';
+
+  @override
+  String get assetOrderHint =>
+      'Drag section handles or long-press accounts to reorder';
+
+  @override
   String get coverUseOnline => 'Use online image';
 
   @override
@@ -1141,6 +1151,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commonSave => 'Save';
+
+  @override
+  String get unsavedChangesTitle => 'Save changes?';
+
+  @override
+  String get unsavedChangesMessage => 'This page has unsaved changes.';
+
+  @override
+  String get discardChanges => 'Don\'t save';
 
   @override
   String get amountEditTitle => 'Edit amount';
@@ -1988,6 +2007,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recurringDeleteTooltip => 'Delete rule';
+
+  @override
+  String get recurringDeleteTitle => 'Delete this recurring rule?';
+
+  @override
+  String get recurringDeleteMessage =>
+      'This rule cannot be restored once deleted.';
 
   @override
   String get tapToFill => 'Tap to set';

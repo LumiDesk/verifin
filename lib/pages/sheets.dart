@@ -1143,7 +1143,10 @@ Future<({String number, String last4, bool follows})?> showCardNumberDialog({
   return (number: number, last4: last4, follows: follows);
 }
 
-Future<void> confirmDeleteAccount(
+/// Executes the explicit hide/delete command and returns whether the account
+/// detail editor should exit. The caller owns page navigation so an unsaved
+/// changes guard cannot reinterpret this completed command as a back action.
+Future<bool> confirmDeleteAccount(
   BuildContext context,
   Account account,
   List<LedgerEntry> entries,
@@ -1187,17 +1190,15 @@ Future<void> confirmDeleteAccount(
       ),
     );
     if (!context.mounted || action == null) {
-      return;
+      return false;
     }
     if (action == AccountDeleteAction.hide) {
       controller.updateAccount(account.copyWith(hidden: true));
-      Navigator.of(context).pop();
-      return;
+      return true;
     }
     final affected = controller.deleteAccountAndRelatedEntries(account.id);
-    Navigator.of(context).pop();
     notifyDisabledRules(affected);
-    return;
+    return true;
   }
 
   final confirmed = await showDialog<bool>(
@@ -1218,11 +1219,11 @@ Future<void> confirmDeleteAccount(
     ),
   );
   if (!context.mounted || confirmed != true) {
-    return;
+    return false;
   }
   final affected = controller.deleteAccount(account.id);
-  Navigator.of(context).pop();
   notifyDisabledRules(affected);
+  return true;
 }
 
 enum AccountDeleteAction { hide, delete }

@@ -2,35 +2,89 @@ import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
-import '../app/model_lookup.dart';
 import '../app/ledger_math.dart';
+import '../app/model_lookup.dart';
 import '../app/models.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
 import 'sheets.dart';
 
-/// 支出详情页里的「退款」区：展示某笔支出的退款明细（可点开编辑）与净支出汇总，
-/// 并提供「添加退款」。退款条目由 controller 即时增删改（与附件一致，不走保存按钮）。
-class RefundSection extends StatelessWidget {
-  const RefundSection({super.key, required this.expenseId});
+class RefundEditResult {
+  const RefundEditResult.saved(this.refund) : deleted = false;
 
-  final String expenseId;
+  const RefundEditResult.deleted() : refund = null, deleted = true;
+
+  final LedgerEntry? refund;
+  final bool deleted;
+}
+
+/// Controlled refund editor section used by the transaction aggregate draft.
+class RefundSection extends StatelessWidget {
+  const RefundSection({
+    super.key,
+    required this.expense,
+    required this.refunds,
+    required this.onChanged,
+  });
+
+  final LedgerEntry expense;
+  final List<LedgerEntry> refunds;
+  final ValueChanged<List<LedgerEntry>> onChanged;
+
+  double get _remaining {
+    final total = refunds.fold<double>(0, (sum, refund) => sum + refund.amount);
+    return (expense.amount - total).clamp(0.0, expense.amount).toDouble();
+  }
+
+  double get _settledTotal => refunds
+      .where((refund) => refund.isSettledRefund)
+      .fold<double>(0, (sum, refund) => sum + refund.amount);
+
+  List<LedgerEntry> get _sortedRefunds =>
+      List<LedgerEntry>.of(refunds)..sort((a, b) {
+        final aDate = a.settledAt ?? a.occurredAt;
+        final bDate = b.settledAt ?? b.occurredAt;
+        return bDate.compareTo(aDate);
+      });
+
+  Future<void> _edit(BuildContext context, LedgerEntry? existing) async {
+    final result = await showRefundSheet(
+      context: context,
+      expense: expense,
+      refunds: refunds,
+      existing: existing,
+    );
+    if (result == null || !context.mounted) {
+      return;
+    }
+    final next = List<LedgerEntry>.of(refunds);
+    if (result.deleted) {
+      next.removeWhere((refund) => refund.id == existing?.id);
+    } else {
+      final refund = result.refund!;
+      final index = next.indexWhere((item) => item.id == refund.id);
+      if (index == -1) {
+        next.add(refund);
+      } else {
+        next[index] = refund;
+      }
+    }
+    onChanged(next);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final controller = VeriFinScope.of(context);
-    final expense = controller.entries
-        .where((e) => e.id == expenseId)
-        .firstOrNull;
-    if (expense == null || expense.type != EntryType.expense) {
+    if (expense.type != EntryType.expense) {
       return const SizedBox.shrink();
     }
-    final refunds = controller.refundsForEntry(expenseId);
-    final remaining = controller.remainingRefundable(expenseId);
+    final l10n = AppLocalizations.of(context);
+    final controller = VeriFinScope.of(context);
     final pendingTotal = refunds
-        .where((r) => r.isPendingRefund)
-        .fold<double>(0, (sum, r) => sum + r.amount);
+        .where((refund) => refund.isPendingRefund)
+        .fold<double>(0, (sum, refund) => sum + refund.amount);
+    final netAmount = (expense.amount - _settledTotal)
+        .clamp(0.0, expense.amount)
+        .toDouble();
 
     return VeriCard(
       child: Column(
@@ -48,7 +102,7 @@ class RefundSection extends StatelessWidget {
               ),
               if (refunds.isNotEmpty)
                 Text(
-                  l10n.refundNetLabel(formatAmount(expense.netAmount)),
+                  l10n.refundNetLabel(formatAmount(netAmount)),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(
                       context,
@@ -81,23 +135,17 @@ class RefundSection extends StatelessWidget {
               ),
             )
           else
-            for (final refund in refunds)
+            for (final refund in _sortedRefunds)
               _RefundRow(
                 refund: refund,
                 accounts: controller.accounts,
-                onTap: () => showRefundSheet(
-                  context,
-                  expenseId: expenseId,
-                  existing: refund,
-                ),
+                onTap: () => _edit(context, refund),
               ),
           const SizedBox(height: 6),
           Align(
             alignment: Alignment.centerLeft,
             child: OutlinedButton.icon(
-              onPressed: remaining <= 0
-                  ? null
-                  : () => showRefundSheet(context, expenseId: expenseId),
+              onPressed: _remaining <= 0 ? null : () => _edit(context, null),
               icon: const Icon(Icons.add, size: 18),
               label: Text(l10n.refundAdd),
             ),
@@ -132,7 +180,7 @@ class _RefundRow extends StatelessWidget {
     );
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(veriRadiusSm),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
@@ -178,14 +226,13 @@ class _RefundRow extends StatelessWidget {
   }
 }
 
-/// 添加 / 编辑退款的底部弹窗。传 [existing] 为编辑（含删除入口），否则为新增。
-/// 直接经 controller 落库，无返回值。
-Future<void> showRefundSheet(
-  BuildContext context, {
-  required String expenseId,
+Future<RefundEditResult?> showRefundSheet({
+  required BuildContext context,
+  required LedgerEntry expense,
+  required List<LedgerEntry> refunds,
   LedgerEntry? existing,
 }) {
-  return showModalBottomSheet<void>(
+  return showModalBottomSheet<RefundEditResult>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
@@ -193,14 +240,29 @@ Future<void> showRefundSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(veriRadiusLg)),
     ),
-    builder: (_) => _RefundSheet(expenseId: expenseId, existing: existing),
+    builder: (_) =>
+        _RefundSheet(expense: expense, refunds: refunds, existing: existing),
   );
 }
 
-class _RefundSheet extends StatefulWidget {
-  const _RefundSheet({required this.expenseId, this.existing});
+typedef _RefundSnapshot = ({
+  double amount,
+  String accountId,
+  bool settled,
+  DateTime settledAt,
+  DateTime initiatedAt,
+  String note,
+});
 
-  final String expenseId;
+class _RefundSheet extends StatefulWidget {
+  const _RefundSheet({
+    required this.expense,
+    required this.refunds,
+    this.existing,
+  });
+
+  final LedgerEntry expense;
+  final List<LedgerEntry> refunds;
   final LedgerEntry? existing;
 
   @override
@@ -208,28 +270,34 @@ class _RefundSheet extends StatefulWidget {
 }
 
 class _RefundSheetState extends State<_RefundSheet> {
+  final EditorExitController _exitController = EditorExitController();
+  late final String _refundId;
   late double _amount;
   late String _accountId;
   late bool _settled;
   late DateTime _settledAt;
   late DateTime _initiatedAt;
   late String _note;
+  late _RefundSnapshot _initialSnapshot;
+  RefundEditResult? _result;
   bool _initialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _refundId =
+        widget.existing?.id ??
+        'entry_refund_${DateTime.now().microsecondsSinceEpoch}';
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_initialized) return;
+    if (_initialized) {
+      return;
+    }
     _initialized = true;
-    final controller = VeriFinScope.of(context);
-    final expense = controller.entries.firstWhere(
-      (e) => e.id == widget.expenseId,
-    );
     final existing = widget.existing;
-    // 本次可退上限：新增=剩余可退；编辑=剩余可退 + 本笔旧值（本笔可占回自己那份）。
-    final maxRefund =
-        controller.remainingRefundable(widget.expenseId) +
-        (existing?.amount ?? 0);
     if (existing != null) {
       _amount = existing.amount;
       _accountId = existing.accountId;
@@ -238,31 +306,48 @@ class _RefundSheetState extends State<_RefundSheet> {
       _initiatedAt = existing.occurredAt;
       _note = existing.note;
     } else {
-      _amount = maxRefund; // 默认填满剩余可退
-      _accountId = expense.accountId; // 默认原支出账户
+      _amount = _maxRefund;
+      _accountId = widget.expense.accountId;
       _settled = true;
       _settledAt = DateTime.now();
       _initiatedAt = DateTime.now();
       _note = '';
     }
+    _initialSnapshot = _snapshot;
   }
 
   double get _maxRefund {
-    final controller = VeriFinScope.of(context);
-    return controller.remainingRefundable(widget.expenseId) +
-        (widget.existing?.amount ?? 0);
+    final otherTotal = widget.refunds
+        .where((refund) => refund.id != widget.existing?.id)
+        .fold<double>(0, (sum, refund) => sum + refund.amount);
+    return (widget.expense.amount - otherTotal)
+        .clamp(0.0, widget.expense.amount)
+        .toDouble();
   }
 
+  _RefundSnapshot get _snapshot => (
+    amount: _amount,
+    accountId: _accountId,
+    settled: _settled,
+    settledAt: _settledAt,
+    initiatedAt: _initiatedAt,
+    note: _note.trim(),
+  );
+
+  bool get _isDirty =>
+      _initialized &&
+      (widget.existing == null || _snapshot != _initialSnapshot);
+
   Future<void> _editAmount() async {
-    final l10n = AppLocalizations.of(context);
     final value = await showNumberPadSheet(
       context,
-      title: l10n.refundAmountShort,
+      title: AppLocalizations.of(context).refundAmountShort,
       initialAmount: _amount > 0 ? _amount : null,
-      // 数字键盘内显示「最多 剩余可退」并在 OK 时当场封顶（决策 D：禁止超额）。
       maxAmount: _maxRefund,
     );
-    if (value == null || value <= 0 || !mounted) return;
+    if (value == null || value <= 0 || !mounted) {
+      return;
+    }
     setState(() => _amount = value);
   }
 
@@ -272,12 +357,16 @@ class _RefundSheetState extends State<_RefundSheet> {
     final selected = await showAccountPickerSheet(
       context: context,
       title: l10n.refundToAccountLabel,
-      accounts: controller.accounts.where((a) => !a.hidden).toList(),
+      accounts: controller.accounts
+          .where((account) => !account.hidden)
+          .toList(),
       selectedId: _accountId,
       balanceOf: controller.accountBalance,
       noneLabel: l10n.commonNoneShort,
     );
-    if (selected == null || !mounted) return;
+    if (selected == null || !mounted) {
+      return;
+    }
     setState(() => _accountId = selected.id);
   }
 
@@ -288,7 +377,9 @@ class _RefundSheetState extends State<_RefundSheet> {
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
-    if (picked == null || !mounted) return;
+    if (picked == null || !mounted) {
+      return;
+    }
     setState(() {
       if (arrival) {
         _settledAt = picked;
@@ -307,42 +398,41 @@ class _RefundSheetState extends State<_RefundSheet> {
       initialValue: _note,
       allowEmpty: true,
     );
-    if (value == null || !mounted) return;
+    if (value == null || !mounted) {
+      return;
+    }
     setState(() => _note = value);
   }
 
-  void _save() {
-    final controller = VeriFinScope.of(context);
-    if (_amount <= 0) return;
-    final settledAt = _settled ? _settledAt : null;
-    final existing = widget.existing;
-    if (existing == null) {
-      controller.addRefund(
-        expenseId: widget.expenseId,
-        amount: _amount,
-        accountId: _accountId,
-        initiatedAt: _initiatedAt,
-        settledAt: settledAt,
-        note: _note,
-      );
-    } else {
-      controller.updateRefund(
-        existing.copyWith(
-          amount: _amount,
-          accountId: _accountId,
-          occurredAt: _initiatedAt,
-          settledAt: settledAt,
-          clearSettledAt: settledAt == null,
-          note: _note,
-        ),
-      );
+  LedgerEntry _buildRefund() => LedgerEntry(
+    id: _refundId,
+    bookId: widget.expense.bookId,
+    type: EntryType.refund,
+    amount: _amount.clamp(0.0, _maxRefund).toDouble(),
+    categoryId: widget.expense.categoryId,
+    accountId: _accountId,
+    note: _note.trim(),
+    occurredAt: _initiatedAt,
+    refundOf: widget.expense.id,
+    settledAt: _settled ? _settledAt : null,
+  );
+
+  Future<bool> _save() async {
+    if (_amount <= 0 || _maxRefund <= 0) {
+      return false;
     }
-    Navigator.of(context).pop();
+    _result = RefundEditResult.saved(_buildRefund());
+    return true;
+  }
+
+  Future<void> _saveAndExit() async {
+    if (await _save() && mounted) {
+      _exitController.exit(result: () => _result);
+    }
   }
 
   Future<void> _delete() async {
     final l10n = AppLocalizations.of(context);
-    final controller = VeriFinScope.of(context);
     final confirmed = await showConfirmDialog(
       context,
       title: l10n.refundRecordsTitle,
@@ -350,9 +440,11 @@ class _RefundSheetState extends State<_RefundSheet> {
       confirmLabel: l10n.commonDelete,
       destructive: true,
     );
-    if (!confirmed || !mounted) return;
-    controller.deleteRefund(widget.existing!.id);
-    if (mounted) Navigator.of(context).pop();
+    if (!confirmed || !mounted) {
+      return;
+    }
+    _result = const RefundEditResult.deleted();
+    _exitController.exit(result: () => _result);
   }
 
   @override
@@ -365,109 +457,115 @@ class _RefundSheetState extends State<_RefundSheet> {
       _accountId,
       l10n.commonNoneShort,
     );
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          16,
-          4,
-          16,
-          MediaQuery.viewInsetsOf(context).bottom + 16,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    widget.existing == null
-                        ? l10n.refundAdd
-                        : l10n.refundEditTitle,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                // 删除放右上角，与底部「保存」彻底分开，避免误触。
-                if (widget.existing != null)
-                  IconButton(
-                    onPressed: _delete,
-                    icon: const Icon(Icons.delete_outline),
-                    color: veriExpense,
-                    tooltip: l10n.commonDelete,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            // 大金额（点击改）+ 剩余可退提示。
-            InkWell(
-              onTap: _editAmount,
-              borderRadius: BorderRadius.circular(10),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      '+${formatAmount(_amount)}',
-                      style: theme.textTheme.headlineMedium?.copyWith(
+    final canSave = _amount > 0 && (widget.existing == null || _isDirty);
+
+    return UnsavedChangesGuard(
+      isDirty: _isDirty,
+      onSave: _save,
+      popResult: () => _result,
+      exitController: _exitController,
+      child: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            4,
+            16,
+            MediaQuery.viewInsetsOf(context).bottom + 16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      widget.existing == null
+                          ? l10n.refundAdd
+                          : l10n.refundEditTitle,
+                      style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
-                        color: veriIncome,
                       ),
                     ),
-                    Text(
-                      l10n.refundRemainingLabel(formatAmount(_maxRefund)),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.6,
+                  ),
+                  if (widget.existing != null)
+                    IconButton(
+                      onPressed: _delete,
+                      icon: const Icon(Icons.delete_outline),
+                      color: veriExpense,
+                      tooltip: l10n.commonDelete,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              InkWell(
+                onTap: _editAmount,
+                borderRadius: BorderRadius.circular(veriRadiusSm),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        '+${formatAmount(_amount)}',
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: veriIncome,
                         ),
                       ),
-                    ),
-                  ],
+                      Text(
+                        l10n.refundRemainingLabel(formatAmount(_maxRefund)),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.6,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 6),
-            DetailInfoRow(
-              label: l10n.refundToAccountLabel,
-              value: accountName,
-              onTap: _pickAccount,
-            ),
-            CompactSwitchRow(
-              icon: Icons.check_circle_outline,
-              title: Text(l10n.refundIsSettledLabel),
-              value: _settled,
-              onChanged: (v) => setState(() => _settled = v),
-            ),
-            if (_settled)
+              const SizedBox(height: 6),
               DetailInfoRow(
-                label: l10n.refundArrivalDateLabel,
+                label: l10n.refundToAccountLabel,
+                value: accountName,
+                onTap: _pickAccount,
+              ),
+              CompactSwitchRow(
+                icon: Icons.check_circle_outline,
+                title: Text(l10n.refundIsSettledLabel),
+                value: _settled,
+                onChanged: (value) => setState(() => _settled = value),
+              ),
+              if (_settled)
+                DetailInfoRow(
+                  label: l10n.refundArrivalDateLabel,
+                  value:
+                      '${l10n.dateMonthDay(_settledAt)}  ${relativeDay(l10n, _settledAt)}',
+                  onTap: () => _pickDate(arrival: true),
+                ),
+              DetailInfoRow(
+                label: l10n.refundInitiatedDateLabel,
                 value:
-                    '${l10n.dateMonthDay(_settledAt)}  ${relativeDay(l10n, _settledAt)}',
-                onTap: () => _pickDate(arrival: true),
+                    '${l10n.dateMonthDay(_initiatedAt)}  ${relativeDay(l10n, _initiatedAt)}',
+                onTap: () => _pickDate(arrival: false),
               ),
-            DetailInfoRow(
-              label: l10n.refundInitiatedDateLabel,
-              value:
-                  '${l10n.dateMonthDay(_initiatedAt)}  ${relativeDay(l10n, _initiatedAt)}',
-              onTap: () => _pickDate(arrival: false),
-            ),
-            DetailInfoRow(
-              label: l10n.commonNote,
-              value: _note.isEmpty ? l10n.noteHint : _note,
-              placeholder: _note.isEmpty,
-              onTap: _editNote,
-            ),
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: _amount > 0 ? _save : null,
-                child: Text(l10n.commonSave),
+              DetailInfoRow(
+                label: l10n.commonNote,
+                value: _note.isEmpty ? l10n.noteHint : _note,
+                placeholder: _note.isEmpty,
+                onTap: _editNote,
               ),
-            ),
-          ],
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: canSave ? _saveAndExit : null,
+                  child: Text(l10n.commonSave),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

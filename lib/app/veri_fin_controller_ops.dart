@@ -132,6 +132,56 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
+  /// Persists one recurring-rule editor draft before publishing it in memory.
+  Future<bool> saveRecurringRuleDraft(
+    RecurringRule rule, {
+    required bool isNew,
+  }) async {
+    final next = List<RecurringRule>.of(_recurringRules);
+    if (isNew) {
+      next.add(rule);
+    } else {
+      final index = next.indexWhere((item) => item.id == rule.id);
+      if (index == -1) {
+        return false;
+      }
+      next[index] = rule;
+    }
+    try {
+      await _repository.saveRecurringRules(next);
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _recurringRules
+      ..clear()
+      ..addAll(next);
+    notifyListeners();
+    return true;
+  }
+
+  /// Persists the active switches edited on the recurring-rule list as a batch.
+  Future<bool> saveRecurringActiveDraft(Map<String, bool> activeById) async {
+    final next = _recurringRules
+        .map(
+          (rule) => activeById.containsKey(rule.id)
+              ? rule.copyWith(active: activeById[rule.id])
+              : rule,
+        )
+        .toList();
+    try {
+      await _repository.saveRecurringRules(next);
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _recurringRules
+      ..clear()
+      ..addAll(next);
+    notifyListeners();
+    return true;
+  }
+
   /// 补记所有到期的周期交易（打开应用 / 回前台时调用）。为每条到期规则按其
   /// 频率补齐从 `nextRunDate` 到 [now] 的交易，并推进规则的 `nextRunDate`。
   /// 返回新补记的交易数量。处理所有账本的规则（不限当前账本）。
@@ -293,6 +343,33 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
 
   void setWebdavAutoUpload(bool enabled) {
     setWebdavConfig(_webdavConfig.copyWith(autoUpload: enabled));
+  }
+
+  Future<bool> saveDataManagementPreferencesDraft({
+    required BackupFrequency frequency,
+    required int intervalHours,
+    required int retention,
+    required bool webdavAutoUpload,
+  }) async {
+    final nextBackup = _backupSettings.copyWith(
+      frequency: frequency,
+      intervalHours: intervalHours < 1 ? 1 : intervalHours,
+      retention: retention < 1 ? 1 : retention,
+    );
+    final nextWebdav = _webdavConfig.copyWith(autoUpload: webdavAutoUpload);
+    try {
+      await _store.writeAndFlush(_backupSettingsKey, nextBackup.encode());
+      if (nextWebdav.isConfigured) {
+        await _store.writeAndFlush(_webdavKey, nextWebdav.encode());
+      }
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _backupSettings = nextBackup;
+    _webdavConfig = nextWebdav;
+    notifyListeners();
+    return true;
   }
 
   void clearWebdavConfig() {
@@ -508,6 +585,19 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     onReminderChanged?.call(settings);
   }
 
+  Future<bool> saveReminderSettingsDraft(ReminderSettings settings) async {
+    try {
+      await _store.writeAndFlush(_reminderKey, settings.encode());
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _reminderSettings = settings;
+    notifyListeners();
+    onReminderChanged?.call(settings);
+    return true;
+  }
+
   void setHapticsEnabled(bool enabled) {
     if (_hapticsEnabled == enabled) {
       return;
@@ -543,6 +633,92 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
+  Future<bool> saveBudgetSettingsDraft({
+    required double defaultMonthlyBudget,
+    required double dailyBudget,
+    required int cycleStartDay,
+    required Map<String, double> defaultCategoryBudgets,
+  }) async {
+    final nextMonthly = Map<String, double>.of(_monthlyBudgets);
+    final monthlyKey = _defaultMonthlyBudgetKey(_activeBookId);
+    if (defaultMonthlyBudget <= 0) {
+      nextMonthly.remove(monthlyKey);
+    } else {
+      nextMonthly[monthlyKey] = defaultMonthlyBudget;
+    }
+
+    final nextCategories = Map<String, double>.of(_categoryBudgets)
+      ..removeWhere(
+        (key, _) =>
+            key.startsWith('$_activeBookId:$_budgetDefaultMonthSegment:'),
+      );
+    for (final entry in defaultCategoryBudgets.entries) {
+      if (entry.value > 0) {
+        nextCategories[_defaultCategoryBudgetKey(_activeBookId, entry.key)] =
+            entry.value;
+      }
+    }
+
+    final nextDaily = Map<String, double>.of(_dailyBudgets);
+    if (dailyBudget <= 0) {
+      nextDaily.remove(_activeBookId);
+    } else {
+      nextDaily[_activeBookId] = dailyBudget;
+    }
+
+    final clampedStartDay = clampBudgetCycleStartDay(cycleStartDay);
+    final nextCycleDays = Map<String, int>.of(_budgetCycleStartDays);
+    if (clampedStartDay == naturalMonthStartDay) {
+      nextCycleDays.remove(_activeBookId);
+    } else {
+      nextCycleDays[_activeBookId] = clampedStartDay;
+    }
+    final previousCycleJson = jsonEncode(_budgetCycleStartDays);
+    try {
+      await _store.writeAndFlush(_budgetCycleKey, jsonEncode(nextCycleDays));
+      await _repository.saveBudgetSettings(
+        monthlyBudgets: nextMonthly,
+        categoryBudgets: nextCategories,
+        dailyBudgets: nextDaily,
+      );
+    } catch (error, stackTrace) {
+      try {
+        await _store.writeAndFlush(_budgetCycleKey, previousCycleJson);
+      } catch (_) {
+        // 原错误已上报；回滚偏好也失败时保留同一条用户提示，避免重复噪音。
+      }
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+
+    _monthlyBudgets
+      ..clear()
+      ..addAll(nextMonthly);
+    _categoryBudgets
+      ..clear()
+      ..addAll(nextCategories);
+    _dailyBudgets
+      ..clear()
+      ..addAll(nextDaily);
+    _budgetCycleStartDays
+      ..clear()
+      ..addAll(nextCycleDays);
+    notifyListeners();
+    return true;
+  }
+
+  Future<bool> saveHomeTrendConfigDraft(HomeTrendConfig config) async {
+    try {
+      await _store.writeAndFlush(_homeTrendKey, config.encode());
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _homeTrendConfig = config;
+    notifyListeners();
+    return true;
+  }
+
   /// 当前账本的默认付款账户 id；未设置、或该账户已删除/隐藏时返回 null。设备本地
   /// 偏好，不进 JSON 备份、初始化时随账户一起清空。记账（手动/AI 未识别账户时）
   /// 用它作默认账户。
@@ -568,6 +744,27 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     }
     _persistDefaultAccounts();
     notifyListeners();
+  }
+
+  /// 账户编辑页显式提交默认账户偏好，KV 写入成功后才更新内存。
+  Future<bool> saveDefaultAccountDraft(String? accountId) async {
+    final next = Map<String, String>.of(_defaultAccountIds);
+    if (accountId == null || accountId.isEmpty) {
+      next.remove(_activeBookId);
+    } else {
+      next[_activeBookId] = accountId;
+    }
+    try {
+      await _store.writeAndFlush(_defaultAccountKey, jsonEncode(next));
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _defaultAccountIds
+      ..clear()
+      ..addAll(next);
+    notifyListeners();
+    return true;
   }
 
   void _clearDefaultAccountRef(String accountId) {
@@ -604,6 +801,60 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
+  /// 主设置页一次性提交显示与记账偏好；所有 KV 写入完成后才更新 Controller。
+  Future<bool> saveAppPreferencesDraft({
+    required ThemePreference themePreference,
+    required LocalePreference localePreference,
+    required bool hapticsEnabled,
+    required bool amountForceTwoDecimals,
+    required FabActionMode fabActionMode,
+    required String? defaultAccountId,
+    required bool autoSuggestEnabled,
+  }) async {
+    final nextDefaultAccounts = Map<String, String>.of(_defaultAccountIds);
+    if (defaultAccountId == null || defaultAccountId.isEmpty) {
+      nextDefaultAccounts.remove(_activeBookId);
+    } else {
+      nextDefaultAccounts[_activeBookId] = defaultAccountId;
+    }
+    try {
+      await _store.writeAndFlush(_themeKey, themePreference.name);
+      await _store.writeAndFlush(_localeKey, localePreference.name);
+      await _store.writeAndFlush(_hapticsKey, hapticsEnabled.toString());
+      await _store.writeAndFlush(
+        _amountFormatKey,
+        amountForceTwoDecimals.toString(),
+      );
+      await _store.writeAndFlush(_fabActionKey, fabActionMode.name);
+      await _store.writeAndFlush(
+        _defaultAccountKey,
+        jsonEncode(nextDefaultAccounts),
+      );
+      await _store.writeAndFlush(
+        _autoSuggestKey,
+        autoSuggestEnabled.toString(),
+      );
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+
+    _themePreference = themePreference;
+    _localePreference = localePreference;
+    _hapticsEnabled = hapticsEnabled;
+    _amountForceTwoDecimals = amountForceTwoDecimals;
+    amount_format.amountForceTwoDecimals = amountForceTwoDecimals;
+    _fabActionMode = fabActionMode;
+    _defaultAccountIds
+      ..clear()
+      ..addAll(nextDefaultAccounts);
+    _autoSuggestEnabled = autoSuggestEnabled;
+    themePreferenceListenable.value = themePreference;
+    localePreferenceListenable.value = localePreference;
+    notifyListeners();
+    return true;
+  }
+
   /// AI 对话记账的连接配置（请求地址/API Key/模型）。设备本地偏好，不进 JSON
   /// 备份、初始化保留（API Key 明文存本机）。
   AiSettings get aiSettings => _aiSettings;
@@ -626,6 +877,36 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       _store.delete(_aiSettingsKey);
     }
     notifyListeners();
+  }
+
+  /// Persists the AI connection editor draft before publishing it in memory.
+  Future<bool> saveAiSettingsDraft(
+    AiSettings settings, {
+    AiCapabilityProfile? detectedProfile,
+  }) async {
+    try {
+      if (settings.isConfigured ||
+          settings.baseUrl.isNotEmpty ||
+          settings.apiKey.isNotEmpty ||
+          settings.model.isNotEmpty) {
+        await _store.writeAndFlush(_aiSettingsKey, settings.encode());
+      } else {
+        await _store.deleteAndFlush(_aiSettingsKey);
+      }
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+
+    _aiSettings = settings;
+    final nextProfile = detectedProfile?.matches(settings) == true
+        ? detectedProfile
+        : _aiCapabilityProfile?.matches(settings) == true
+        ? _aiCapabilityProfile
+        : null;
+    setAiCapabilityProfile(nextProfile);
+    notifyListeners();
+    return true;
   }
 
   AiCapabilityProfile? get aiCapabilityProfile => _aiCapabilityProfile;
@@ -750,6 +1031,103 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         : AssetAccountViewMode.group;
     _store.write(_assetViewModeKey, _assetAccountViewMode.name);
     notifyListeners();
+  }
+
+  /// Saves the asset page's appearance and ordering as one explicit editor
+  /// submission. Orders are scoped to the active book and both view modes;
+  /// unrelated books retain their existing preferences.
+  Future<bool> saveAssetDisplayDraft({
+    required AssetAccountViewMode viewMode,
+    required String coverUrl,
+    required Map<AssetAccountViewMode, List<String>> sectionOrders,
+    required Map<AssetAccountViewMode, Map<String, List<String>>> accountOrders,
+  }) async {
+    final activeAccountIds = accounts.map((account) => account.id).toSet();
+    for (final mode in AssetAccountViewMode.values) {
+      final sectionIds = sectionOrders[mode];
+      final bySection = accountOrders[mode];
+      if (sectionIds == null ||
+          bySection == null ||
+          sectionIds.toSet().length != sectionIds.length) {
+        return false;
+      }
+      for (final order in bySection.values) {
+        if (order.toSet().length != order.length ||
+            order.any((id) => !activeAccountIds.contains(id))) {
+          return false;
+        }
+      }
+    }
+
+    final nextSectionOrders = Map<String, List<String>>.fromEntries(
+      _assetSectionOrders.entries.map(
+        (entry) => MapEntry(entry.key, List<String>.of(entry.value)),
+      ),
+    );
+    final nextAccountOrders = Map<String, List<String>>.fromEntries(
+      _assetAccountOrders.entries.map(
+        (entry) => MapEntry(entry.key, List<String>.of(entry.value)),
+      ),
+    );
+    for (final mode in AssetAccountViewMode.values) {
+      nextSectionOrders[_assetSectionOrderKeyForMode(_activeBookId, mode)] =
+          List<String>.of(sectionOrders[mode]!);
+      final prefix = '$_activeBookId:${mode.name}:';
+      nextAccountOrders.removeWhere((key, _) => key.startsWith(prefix));
+      for (final entry in accountOrders[mode]!.entries) {
+        nextAccountOrders[_assetSectionKey(_activeBookId, mode, entry.key)] =
+            List<String>.of(entry.value);
+      }
+    }
+
+    final normalizedCover = coverUrl.trim();
+    final previous = <String, String?>{
+      _assetCoverKey: _store.read(_assetCoverKey),
+      _assetViewModeKey: _store.read(_assetViewModeKey),
+      _assetAccountOrderKey: _store.read(_assetAccountOrderKey),
+      _assetSectionOrderKey: _store.read(_assetSectionOrderKey),
+    };
+    try {
+      if (normalizedCover.isEmpty) {
+        await _store.deleteAndFlush(_assetCoverKey);
+      } else {
+        await _store.writeAndFlush(_assetCoverKey, normalizedCover);
+      }
+      await _store.writeAndFlush(_assetViewModeKey, viewMode.name);
+      await _store.writeAndFlush(
+        _assetAccountOrderKey,
+        jsonEncode(nextAccountOrders),
+      );
+      await _store.writeAndFlush(
+        _assetSectionOrderKey,
+        jsonEncode(nextSectionOrders),
+      );
+    } catch (error, stackTrace) {
+      for (final entry in previous.entries) {
+        try {
+          if (entry.value == null) {
+            await _store.deleteAndFlush(entry.key);
+          } else {
+            await _store.writeAndFlush(entry.key, entry.value!);
+          }
+        } catch (_) {
+          // The original error is reported below; rollback is best-effort.
+        }
+      }
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+
+    _assetAccountViewMode = viewMode;
+    _assetCoverUrl = normalizedCover;
+    _assetAccountOrders
+      ..clear()
+      ..addAll(nextAccountOrders);
+    _assetSectionOrders
+      ..clear()
+      ..addAll(nextSectionOrders);
+    notifyListeners();
+    return true;
   }
 
   bool isAssetSectionCollapsed({
@@ -931,6 +1309,25 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
+  Future<bool> savePanelSettingsDraft(
+    PanelPageKind page,
+    List<PagePanelSetting> panels,
+  ) async {
+    final normalized = _normalizePanelSettings(panels, page.specs);
+    try {
+      await _store.writeAndFlush(
+        _panelsKeyFor(page),
+        jsonEncode(normalized.map((item) => item.toJson()).toList()),
+      );
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _pagePanels[page] = normalized;
+    notifyListeners();
+    return true;
+  }
+
   // 交易列表始终维护 occurredAt 倒序;同一时刻用 id 决出稳定顺序。
   VoidCallback? onEntryAdded;
 
@@ -940,6 +1337,109 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _persistEntries();
     notifyListeners();
     onEntryAdded?.call();
+  }
+
+  /// Atomically persists an entry together with its refunds and attachments.
+  ///
+  /// [entry.refundedAmount] is ignored and derived again from the settled
+  /// refunds, preventing an editor's stale entry snapshot from overwriting the
+  /// controller-managed cache.
+  Future<bool> saveEntryAggregateDraft({
+    required LedgerEntry entry,
+    required bool isNew,
+    List<LedgerEntry> refunds = const <LedgerEntry>[],
+    List<Attachment> attachments = const <Attachment>[],
+  }) async {
+    final currentIndex = _entries.indexWhere((item) => item.id == entry.id);
+    if ((isNew && currentIndex != -1) || (!isNew && currentIndex == -1)) {
+      return false;
+    }
+    if (!isNew && _entries[currentIndex].bookId != entry.bookId) {
+      return false;
+    }
+    if (refunds.any(
+          (refund) =>
+              refund.type != EntryType.refund ||
+              refund.refundOf != entry.id ||
+              refund.bookId != entry.bookId ||
+              refund.amount <= 0,
+        ) ||
+        attachments.any((attachment) => attachment.entryId != entry.id)) {
+      return false;
+    }
+    final refundTotal = refunds.fold<double>(
+      0,
+      (total, refund) => total + refund.amount,
+    );
+    if (entry.type != EntryType.expense && refunds.isNotEmpty ||
+        refundTotal > entry.amount + 0.0001) {
+      return false;
+    }
+
+    final existingEntryIds = _entries.map((item) => item.id).toSet();
+    final hasNewEntry =
+        isNew || refunds.any((refund) => !existingEntryIds.contains(refund.id));
+    final nextEntries = <LedgerEntry>[];
+    for (final current in _entries) {
+      if (current.id == entry.id) {
+        nextEntries.add(entry.copyWith(refundedAmount: 0));
+      } else if (current.type == EntryType.refund &&
+          current.refundOf == entry.id) {
+        continue;
+      } else {
+        nextEntries.add(current);
+      }
+    }
+    if (isNew) {
+      nextEntries.add(entry.copyWith(refundedAmount: 0));
+    }
+    nextEntries.addAll(refunds);
+
+    final settledByExpense = <String, double>{};
+    for (final current in nextEntries) {
+      if (current.isSettledRefund && current.refundOf != null) {
+        settledByExpense[current.refundOf!] =
+            (settledByExpense[current.refundOf!] ?? 0) + current.amount;
+      }
+    }
+    for (var i = 0; i < nextEntries.length; i++) {
+      final current = nextEntries[i];
+      if (current.type != EntryType.expense) {
+        continue;
+      }
+      final refundedAmount = (settledByExpense[current.id] ?? 0)
+          .clamp(0.0, current.amount)
+          .toDouble();
+      nextEntries[i] = current.copyWith(refundedAmount: refundedAmount);
+    }
+    nextEntries.sort(_compareEntriesLatestFirst);
+
+    final nextAttachments = <Attachment>[
+      for (final attachment in _attachments)
+        if (attachment.entryId != entry.id) attachment,
+      ...attachments,
+    ];
+    try {
+      await _repository.saveEntryAggregate(
+        entries: nextEntries,
+        attachments: nextAttachments,
+      );
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+
+    _entries
+      ..clear()
+      ..addAll(nextEntries);
+    _attachments
+      ..clear()
+      ..addAll(nextAttachments);
+    notifyListeners();
+    if (hasNewEntry) {
+      onEntryAdded?.call();
+    }
+    return true;
   }
 
   /// 解析 CSV 文本并把交易导入当前账本；匹配不到的账户/分类按名称新建。
@@ -1451,6 +1951,21 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
+  /// 编辑页提交新账户：只有 SQLite 写入成功后才更新内存并通知 UI。
+  Future<bool> addAccountDraft(Account account) async {
+    final normalized = account.copyWith(name: account.name.trim());
+    final next = <Account>[..._accounts, normalized];
+    try {
+      await _repository.saveAccounts(next);
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _accounts.add(normalized);
+    notifyListeners();
+    return true;
+  }
+
   void updateAccount(Account account) {
     final index = _accounts.indexWhere((item) => item.id == account.id);
     if (index == -1) {
@@ -1459,6 +1974,25 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _accounts[index] = account.copyWith(name: account.name.trim());
     _persistAccounts();
     notifyListeners();
+  }
+
+  /// 编辑页提交已有账户：只有 SQLite 写入成功后才替换内存快照。
+  Future<bool> saveAccountDraft(Account account) async {
+    final index = _accounts.indexWhere((item) => item.id == account.id);
+    if (index == -1) {
+      return false;
+    }
+    final normalized = account.copyWith(name: account.name.trim());
+    final next = List<Account>.of(_accounts)..[index] = normalized;
+    try {
+      await _repository.saveAccounts(next);
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _accounts[index] = normalized;
+    notifyListeners();
+    return true;
   }
 
   /// 停用引用 [accountId] 的周期规则并清掉其账户引用（转出改为「无账户」、
@@ -1709,6 +2243,33 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
+  /// Persists a complete category ordering draft after the user explicitly
+  /// saves sorting mode. Category fields are read from the current controller
+  /// snapshot so a stale editor cannot overwrite a rename or icon change.
+  Future<bool> saveCategoryOrderDraft(List<String> orderedIds) async {
+    final currentIds = _categories.map((category) => category.id).toSet();
+    if (orderedIds.length != _categories.length ||
+        orderedIds.toSet().length != orderedIds.length ||
+        !orderedIds.toSet().containsAll(currentIds)) {
+      return false;
+    }
+    final byId = <String, Category>{
+      for (final category in _categories) category.id: category,
+    };
+    final next = <Category>[for (final id in orderedIds) byId[id]!];
+    try {
+      await _repository.saveCategories(next);
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _categories
+      ..clear()
+      ..addAll(next);
+    notifyListeners();
+    return true;
+  }
+
   bool deleteCategory(String categoryId) {
     if (_isProtectedCategory(categoryId)) {
       return false;
@@ -1856,6 +2417,29 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
+  /// Persists the tag order only after sorting mode is explicitly saved.
+  Future<bool> saveTagOrderDraft(List<String> orderedIds) async {
+    final currentIds = _tags.map((tag) => tag.id).toSet();
+    if (orderedIds.length != _tags.length ||
+        orderedIds.toSet().length != orderedIds.length ||
+        !orderedIds.toSet().containsAll(currentIds)) {
+      return false;
+    }
+    final byId = <String, Tag>{for (final tag in _tags) tag.id: tag};
+    final next = <Tag>[for (final id in orderedIds) byId[id]!];
+    try {
+      await _repository.saveTags(next);
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _tags
+      ..clear()
+      ..addAll(next);
+    notifyListeners();
+    return true;
+  }
+
   /// 删除标签，并从所有交易的 tagIds 中移除该标签的引用。
   void deleteTag(String tagId) {
     final index = _tags.indexWhere((tag) => tag.id == tagId);
@@ -1955,10 +2539,57 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
+  /// Persists the active book's account-group order after explicit save.
+  Future<bool> saveAccountGroupOrderDraft(List<String> orderedIds) async {
+    final current = accountGroups;
+    final currentIds = current.map((group) => group.id).toSet();
+    if (orderedIds.length != current.length ||
+        orderedIds.toSet().length != orderedIds.length ||
+        !orderedIds.toSet().containsAll(currentIds)) {
+      return false;
+    }
+    final byId = <String, AccountGroup>{
+      for (final group in current) group.id: group,
+    };
+    final nextActive = <AccountGroup>[
+      for (final item in orderedIds.indexed)
+        byId[item.$2]!.copyWith(sortOrder: item.$1),
+    ];
+    final next = <AccountGroup>[
+      for (final group in _accountGroups)
+        if (group.bookId != _activeBookId) group,
+      ...nextActive,
+    ];
+    try {
+      await _repository.saveAccountGroups(next);
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _accountGroups
+      ..clear()
+      ..addAll(next);
+    notifyListeners();
+    return true;
+  }
+
   void updateProfile(UserProfile profile) {
     _profile = profile;
     _store.write(_profileKey, jsonEncode(profile.toJson()));
     notifyListeners();
+  }
+
+  /// 个人资料编辑页的显式提交；KV 写入成功后才替换 Controller 快照。
+  Future<bool> saveProfileDraft(UserProfile profile) async {
+    try {
+      await _store.writeAndFlush(_profileKey, jsonEncode(profile.toJson()));
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _profile = profile;
+    notifyListeners();
+    return true;
   }
 
   void setAssetCoverUrl(String value) {

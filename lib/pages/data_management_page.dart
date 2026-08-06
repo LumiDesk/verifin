@@ -22,275 +22,327 @@ import 'sheets.dart';
 
 part 'data_management_dialogs.dart';
 
-class DataManagementPage extends StatelessWidget {
+class DataManagementPage extends StatefulWidget {
   const DataManagementPage({super.key});
+
+  @override
+  State<DataManagementPage> createState() => _DataManagementPageState();
+}
+
+class _DataManagementPageState extends State<DataManagementPage> {
+  final EditorExitController _exitController = EditorExitController();
+  late BackupFrequency _initialFrequency;
+  late BackupFrequency _draftFrequency;
+  late int _initialIntervalHours;
+  late int _draftIntervalHours;
+  late int _initialRetention;
+  late int _draftRetention;
+  late bool _initialWebdavAutoUpload;
+  late bool _draftWebdavAutoUpload;
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) {
+      return;
+    }
+    final controller = VeriFinScope.of(context);
+    final backup = controller.backupSettings;
+    _initialFrequency = _draftFrequency = backup.frequency;
+    _initialIntervalHours = _draftIntervalHours = backup.intervalHours;
+    _initialRetention = _draftRetention = backup.retention;
+    _initialWebdavAutoUpload = _draftWebdavAutoUpload =
+        controller.webdavConfig.autoUpload;
+    _initialized = true;
+  }
 
   @override
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
 
-    return Scaffold(
-      body: SafeArea(
-        child: VeriPage(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
-            children: <Widget>[
-              VeriHeader(
-                title: AppLocalizations.of(context).dataManagement,
-                subtitle: AppLocalizations.of(context).dataMgmtSubtitle,
-                showBack: true,
-              ),
-              const SizedBox(height: 10),
-              _sectionLabel(
-                context,
-                AppLocalizations.of(context).dataSectionLocalBackup,
-              ),
-              VeriCard(
-                child: Column(
-                  children: <Widget>[
-                    SettingsRow(
-                      icon: Icons.folder_outlined,
-                      title: AppLocalizations.of(context).backupDirLabel,
-                      trailing: controller.backupSettings.hasDirectory
-                          ? controller.backupSettings.directoryLabel
-                          : AppLocalizations.of(context).notChosen,
-                      trailingIcon: Icons.chevron_right,
-                      onTap: () => _chooseBackupDirectory(context, controller),
-                    ),
-                    const Divider(),
-                    SettingsRow(
-                      icon: Icons.backup_outlined,
-                      title: AppLocalizations.of(context).backupNow,
-                      trailing: _lastBackupLabel(
-                        AppLocalizations.of(context),
-                        controller.backupSettings,
-                      ),
-                      trailingIcon: Icons.chevron_right,
-                      onTap: () => _backupNow(context, controller),
-                    ),
-                    const Divider(),
-                    SettingsRow(
-                      icon: Icons.download_outlined,
-                      title: AppLocalizations.of(context).exportData,
-                      trailing: AppLocalizations.of(context).jsonBackup,
-                      trailingIcon: Icons.chevron_right,
-                      onTap: () => _exportData(context, controller),
-                    ),
-                    const Divider(),
-                    SettingsRow(
-                      icon: Icons.upload_file_outlined,
-                      title: AppLocalizations.of(context).importData,
-                      trailing: AppLocalizations.of(context).restoreFromFile,
-                      trailingIcon: Icons.chevron_right,
-                      onTap: () => _confirmImport(context, controller),
-                    ),
-                    if (controller.backupSettings.hasDirectory) ...<Widget>[
-                      const Divider(),
-                      SettingsRow(
-                        icon: Icons.link_off,
-                        title: AppLocalizations.of(context).clearBackupDir,
-                        trailing: AppLocalizations.of(context).stopLocalBackup,
-                        trailingIcon: Icons.chevron_right,
-                        contentColor: veriExpense,
-                        onTap: () => controller.clearBackupDirectory(),
-                      ),
-                    ],
+    return UnsavedChangesGuard(
+      isDirty: _isDirty,
+      onSave: _save,
+      exitController: _exitController,
+      child: Scaffold(
+        body: SafeArea(
+          child: VeriPage(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
+              children: <Widget>[
+                VeriHeader(
+                  title: AppLocalizations.of(context).dataManagement,
+                  subtitle: AppLocalizations.of(context).dataMgmtSubtitle,
+                  showBack: true,
+                  actions: <Widget>[
+                    SaveHeaderAction(onPressed: _isDirty ? _saveAndExit : null),
                   ],
                 ),
-              ),
-              if (controller.backupSettings.hasDirectory) ...<Widget>[
                 const SizedBox(height: 10),
-                _sectionLabel(context, AppLocalizations.of(context).autoBackup),
+                _sectionLabel(
+                  context,
+                  AppLocalizations.of(context).dataSectionLocalBackup,
+                ),
                 VeriCard(
                   child: Column(
                     children: <Widget>[
                       SettingsRow(
-                        icon: Icons.schedule_outlined,
-                        title: AppLocalizations.of(
-                          context,
-                        ).backupFrequencyLabel,
-                        trailing: controller.backupSettings.frequency.label(
-                          AppLocalizations.of(context),
-                        ),
+                        icon: Icons.folder_outlined,
+                        title: AppLocalizations.of(context).backupDirLabel,
+                        trailing: controller.backupSettings.hasDirectory
+                            ? controller.backupSettings.directoryLabel
+                            : AppLocalizations.of(context).notChosen,
                         trailingIcon: Icons.chevron_right,
-                        onTap: () => _pickBackupFrequency(context, controller),
+                        onTap: () =>
+                            _chooseBackupDirectory(context, controller),
                       ),
-                      if (controller.backupSettings.frequency ==
-                          BackupFrequency.everyNHours) ...<Widget>[
-                        const Divider(),
-                        SettingsRow(
-                          icon: Icons.hourglass_bottom_outlined,
-                          title: AppLocalizations.of(
-                            context,
-                          ).backupIntervalLabel,
-                          trailing: AppLocalizations.of(context)
-                              .everyNHoursLabel(
-                                controller.backupSettings.intervalHours,
-                              ),
-                          trailingIcon: Icons.chevron_right,
-                          onTap: () => _pickBackupInterval(context, controller),
-                        ),
-                      ],
                       const Divider(),
                       SettingsRow(
-                        icon: Icons.inventory_2_outlined,
-                        title: AppLocalizations.of(context).retentionLabel,
+                        icon: Icons.backup_outlined,
+                        title: AppLocalizations.of(context).backupNow,
+                        trailing: _lastBackupLabel(
+                          AppLocalizations.of(context),
+                          controller.backupSettings,
+                        ),
+                        trailingIcon: Icons.chevron_right,
+                        onTap: () => _backupNow(context, controller),
+                      ),
+                      const Divider(),
+                      SettingsRow(
+                        icon: Icons.download_outlined,
+                        title: AppLocalizations.of(context).exportData,
+                        trailing: AppLocalizations.of(context).jsonBackup,
+                        trailingIcon: Icons.chevron_right,
+                        onTap: () => _exportData(context, controller),
+                      ),
+                      const Divider(),
+                      SettingsRow(
+                        icon: Icons.upload_file_outlined,
+                        title: AppLocalizations.of(context).importData,
+                        trailing: AppLocalizations.of(context).restoreFromFile,
+                        trailingIcon: Icons.chevron_right,
+                        onTap: () => _confirmImport(context, controller),
+                      ),
+                      if (controller.backupSettings.hasDirectory) ...<Widget>[
+                        const Divider(),
+                        SettingsRow(
+                          icon: Icons.link_off,
+                          title: AppLocalizations.of(context).clearBackupDir,
+                          trailing: AppLocalizations.of(
+                            context,
+                          ).stopLocalBackup,
+                          trailingIcon: Icons.chevron_right,
+                          contentColor: veriExpense,
+                          onTap: () => _clearBackupDirectory(controller),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (controller.backupSettings.hasDirectory) ...<Widget>[
+                  const SizedBox(height: 10),
+                  _sectionLabel(
+                    context,
+                    AppLocalizations.of(context).autoBackup,
+                  ),
+                  VeriCard(
+                    child: Column(
+                      children: <Widget>[
+                        SettingsRow(
+                          icon: Icons.schedule_outlined,
+                          title: AppLocalizations.of(
+                            context,
+                          ).backupFrequencyLabel,
+                          trailing: _draftFrequency.label(
+                            AppLocalizations.of(context),
+                          ),
+                          trailingIcon: Icons.chevron_right,
+                          onTap: _pickBackupFrequency,
+                        ),
+                        if (_draftFrequency ==
+                            BackupFrequency.everyNHours) ...<Widget>[
+                          const Divider(),
+                          SettingsRow(
+                            icon: Icons.hourglass_bottom_outlined,
+                            title: AppLocalizations.of(
+                              context,
+                            ).backupIntervalLabel,
+                            trailing: AppLocalizations.of(
+                              context,
+                            ).everyNHoursLabel(_draftIntervalHours),
+                            trailingIcon: Icons.chevron_right,
+                            onTap: _pickBackupInterval,
+                          ),
+                        ],
+                        const Divider(),
+                        SettingsRow(
+                          icon: Icons.inventory_2_outlined,
+                          title: AppLocalizations.of(context).retentionLabel,
+                          trailing: AppLocalizations.of(
+                            context,
+                          ).latestNCopies(_draftRetention),
+                          trailingIcon: Icons.chevron_right,
+                          onTap: _pickBackupRetention,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 10),
+                _sectionLabel(
+                  context,
+                  AppLocalizations.of(context).backupEncryption,
+                ),
+                VeriCard(
+                  child: Column(
+                    children: <Widget>[
+                      SettingsRow(
+                        icon: Icons.enhanced_encryption_outlined,
+                        title: AppLocalizations.of(context).encryptionKey,
+                        trailing: controller.backupEncryptionEnabled
+                            ? AppLocalizations.of(context).enabledLabel
+                            : AppLocalizations.of(context).notSet,
+                        trailingIcon: Icons.chevron_right,
+                        onTap: () => _editBackupPassphrase(context, controller),
+                      ),
+                      if (controller.backupEncryptionEnabled) ...<Widget>[
+                        const Divider(),
+                        SettingsRow(
+                          icon: Icons.no_encryption_outlined,
+                          title: AppLocalizations.of(
+                            context,
+                          ).clearEncryptionKey,
+                          trailing: AppLocalizations.of(context).noEncryptHint,
+                          trailingIcon: Icons.chevron_right,
+                          contentColor: veriExpense,
+                          onTap: () =>
+                              _confirmClearPassphrase(context, controller),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _sectionLabel(
+                  context,
+                  AppLocalizations.of(context).webdavSection,
+                ),
+                VeriCard(
+                  child: Column(
+                    children: <Widget>[
+                      SettingsRow(
+                        icon: Icons.cloud_outlined,
+                        title: AppLocalizations.of(context).webdavServer,
+                        trailing: controller.webdavConfig.isConfigured
+                            ? AppLocalizations.of(context).configuredLabel
+                            : AppLocalizations.of(context).notConfigured,
+                        trailingIcon: Icons.chevron_right,
+                        onTap: () => _editWebdav(context, controller),
+                      ),
+                      if (controller.webdavConfig.isConfigured) ...<Widget>[
+                        const Divider(),
+                        SettingsRow(
+                          icon: Icons.cloud_upload_outlined,
+                          title: AppLocalizations.of(context).uploadToWebdav,
+                          trailing: AppLocalizations.of(context).uploadNow,
+                          trailingIcon: Icons.chevron_right,
+                          onTap: () => _uploadToWebdav(context, controller),
+                        ),
+                        const Divider(),
+                        SettingsRow(
+                          icon: Icons.cloud_download_outlined,
+                          title: AppLocalizations.of(context).restoreFromWebdav,
+                          trailing: AppLocalizations.of(context).chooseBackup,
+                          trailingIcon: Icons.chevron_right,
+                          onTap: () => _restoreFromWebdav(context, controller),
+                        ),
+                        const Divider(),
+                        CompactSwitchRow(
+                          icon: Icons.sync_outlined,
+                          title: Text(
+                            AppLocalizations.of(context).autoUploadWebdav,
+                          ),
+                          value: _draftWebdavAutoUpload,
+                          onChanged: (value) =>
+                              setState(() => _draftWebdavAutoUpload = value),
+                        ),
+                        const Divider(),
+                        SettingsRow(
+                          icon: Icons.cloud_off_outlined,
+                          title: AppLocalizations.of(context).clearWebdav,
+                          trailing: AppLocalizations.of(
+                            context,
+                          ).disconnectLabel,
+                          trailingIcon: Icons.chevron_right,
+                          contentColor: veriExpense,
+                          onTap: () => _confirmClearWebdav(context, controller),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _sectionLabel(
+                  context,
+                  AppLocalizations.of(context).importFromSheets,
+                ),
+                VeriCard(
+                  child: Column(
+                    children: <Widget>[
+                      SettingsRow(
+                        icon: Icons.account_balance_wallet_outlined,
+                        title: AppLocalizations.of(context).importBillFile,
                         trailing: AppLocalizations.of(
                           context,
-                        ).latestNCopies(controller.backupSettings.retention),
+                        ).importBillFileHint,
                         trailingIcon: Icons.chevron_right,
-                        onTap: () => _pickBackupRetention(context, controller),
+                        onTap: () => _importFromPlatform(context, controller),
+                      ),
+                      const Divider(),
+                      SettingsRow(
+                        icon: Icons.file_download_outlined,
+                        title: AppLocalizations.of(context).downloadCsvTemplate,
+                        trailing: AppLocalizations.of(context).excelHint,
+                        trailingIcon: Icons.chevron_right,
+                        onTap: () => _downloadCsvTemplate(context),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _sectionLabel(
+                  context,
+                  AppLocalizations.of(context).dataSectionMaintenance,
+                ),
+                VeriCard(
+                  child: Column(
+                    children: <Widget>[
+                      SettingsRow(
+                        icon: Icons.description_outlined,
+                        title: AppLocalizations.of(context).appLog,
+                        trailing: AppLocalizations.of(context).viewLabel,
+                        trailingIcon: Icons.chevron_right,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (context) => const AppLogPage(),
+                          ),
+                        ),
+                      ),
+                      const Divider(),
+                      SettingsRow(
+                        icon: Icons.restart_alt,
+                        title: AppLocalizations.of(context).resetData,
+                        trailing: AppLocalizations.of(context).deleteAllLocal,
+                        trailingIcon: Icons.chevron_right,
+                        contentColor: veriExpense,
+                        onTap: () => _confirmReset(context, controller),
                       ),
                     ],
                   ),
                 ),
               ],
-              const SizedBox(height: 10),
-              _sectionLabel(
-                context,
-                AppLocalizations.of(context).backupEncryption,
-              ),
-              VeriCard(
-                child: Column(
-                  children: <Widget>[
-                    SettingsRow(
-                      icon: Icons.enhanced_encryption_outlined,
-                      title: AppLocalizations.of(context).encryptionKey,
-                      trailing: controller.backupEncryptionEnabled
-                          ? AppLocalizations.of(context).enabledLabel
-                          : AppLocalizations.of(context).notSet,
-                      trailingIcon: Icons.chevron_right,
-                      onTap: () => _editBackupPassphrase(context, controller),
-                    ),
-                    if (controller.backupEncryptionEnabled) ...<Widget>[
-                      const Divider(),
-                      SettingsRow(
-                        icon: Icons.no_encryption_outlined,
-                        title: AppLocalizations.of(context).clearEncryptionKey,
-                        trailing: AppLocalizations.of(context).noEncryptHint,
-                        trailingIcon: Icons.chevron_right,
-                        contentColor: veriExpense,
-                        onTap: () =>
-                            _confirmClearPassphrase(context, controller),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              _sectionLabel(
-                context,
-                AppLocalizations.of(context).webdavSection,
-              ),
-              VeriCard(
-                child: Column(
-                  children: <Widget>[
-                    SettingsRow(
-                      icon: Icons.cloud_outlined,
-                      title: AppLocalizations.of(context).webdavServer,
-                      trailing: controller.webdavConfig.isConfigured
-                          ? AppLocalizations.of(context).configuredLabel
-                          : AppLocalizations.of(context).notConfigured,
-                      trailingIcon: Icons.chevron_right,
-                      onTap: () => _editWebdav(context, controller),
-                    ),
-                    if (controller.webdavConfig.isConfigured) ...<Widget>[
-                      const Divider(),
-                      SettingsRow(
-                        icon: Icons.cloud_upload_outlined,
-                        title: AppLocalizations.of(context).uploadToWebdav,
-                        trailing: AppLocalizations.of(context).uploadNow,
-                        trailingIcon: Icons.chevron_right,
-                        onTap: () => _uploadToWebdav(context, controller),
-                      ),
-                      const Divider(),
-                      SettingsRow(
-                        icon: Icons.cloud_download_outlined,
-                        title: AppLocalizations.of(context).restoreFromWebdav,
-                        trailing: AppLocalizations.of(context).chooseBackup,
-                        trailingIcon: Icons.chevron_right,
-                        onTap: () => _restoreFromWebdav(context, controller),
-                      ),
-                      const Divider(),
-                      CompactSwitchRow(
-                        icon: Icons.sync_outlined,
-                        title: Text(
-                          AppLocalizations.of(context).autoUploadWebdav,
-                        ),
-                        value: controller.webdavConfig.autoUpload,
-                        onChanged: controller.setWebdavAutoUpload,
-                      ),
-                      const Divider(),
-                      SettingsRow(
-                        icon: Icons.cloud_off_outlined,
-                        title: AppLocalizations.of(context).clearWebdav,
-                        trailing: AppLocalizations.of(context).disconnectLabel,
-                        trailingIcon: Icons.chevron_right,
-                        contentColor: veriExpense,
-                        onTap: () => _confirmClearWebdav(context, controller),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              _sectionLabel(
-                context,
-                AppLocalizations.of(context).importFromSheets,
-              ),
-              VeriCard(
-                child: Column(
-                  children: <Widget>[
-                    SettingsRow(
-                      icon: Icons.account_balance_wallet_outlined,
-                      title: AppLocalizations.of(context).importBillFile,
-                      trailing: AppLocalizations.of(context).importBillFileHint,
-                      trailingIcon: Icons.chevron_right,
-                      onTap: () => _importFromPlatform(context, controller),
-                    ),
-                    const Divider(),
-                    SettingsRow(
-                      icon: Icons.file_download_outlined,
-                      title: AppLocalizations.of(context).downloadCsvTemplate,
-                      trailing: AppLocalizations.of(context).excelHint,
-                      trailingIcon: Icons.chevron_right,
-                      onTap: () => _downloadCsvTemplate(context),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              _sectionLabel(
-                context,
-                AppLocalizations.of(context).dataSectionMaintenance,
-              ),
-              VeriCard(
-                child: Column(
-                  children: <Widget>[
-                    SettingsRow(
-                      icon: Icons.description_outlined,
-                      title: AppLocalizations.of(context).appLog,
-                      trailing: AppLocalizations.of(context).viewLabel,
-                      trailingIcon: Icons.chevron_right,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (context) => const AppLogPage(),
-                        ),
-                      ),
-                    ),
-                    const Divider(),
-                    SettingsRow(
-                      icon: Icons.restart_alt,
-                      title: AppLocalizations.of(context).resetData,
-                      trailing: AppLocalizations.of(context).deleteAllLocal,
-                      trailingIcon: Icons.chevron_right,
-                      contentColor: veriExpense,
-                      onTap: () => _confirmReset(context, controller),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -419,57 +471,46 @@ class DataManagementPage extends StatelessWidget {
     return l10n.backupFailedRetry;
   }
 
-  Future<void> _pickBackupFrequency(
-    BuildContext context,
-    VeriFinController controller,
-  ) async {
+  Future<void> _pickBackupFrequency() async {
     final selected = await showOptionSheet<BackupFrequency>(
       context: context,
       title: AppLocalizations.of(context).pickBackupFrequency,
       values: BackupFrequency.values,
-      selected: controller.backupSettings.frequency,
+      selected: _draftFrequency,
       labelOf: (value) => value.label(AppLocalizations.of(context)),
     );
-    if (selected != null) {
-      controller.setBackupFrequency(selected);
+    if (selected != null && mounted) {
+      setState(() => _draftFrequency = selected);
     }
   }
 
-  Future<void> _pickBackupInterval(
-    BuildContext context,
-    VeriFinController controller,
-  ) async {
+  Future<void> _pickBackupInterval() async {
     const options = <int>[1, 3, 6, 12, 24, 48, 72];
     final selected = await showOptionSheet<int>(
       context: context,
       title: AppLocalizations.of(context).backupIntervalTitle,
       values: options,
-      selected: options.contains(controller.backupSettings.intervalHours)
-          ? controller.backupSettings.intervalHours
+      selected: options.contains(_draftIntervalHours)
+          ? _draftIntervalHours
           : 24,
       labelOf: (value) => AppLocalizations.of(context).everyNHoursLabel(value),
     );
-    if (selected != null) {
-      controller.setBackupIntervalHours(selected);
+    if (selected != null && mounted) {
+      setState(() => _draftIntervalHours = selected);
     }
   }
 
-  Future<void> _pickBackupRetention(
-    BuildContext context,
-    VeriFinController controller,
-  ) async {
+  Future<void> _pickBackupRetention() async {
     const options = <int>[3, 5, 10, 20, 50];
     final selected = await showOptionSheet<int>(
       context: context,
       title: AppLocalizations.of(context).retentionTitle,
       values: options,
-      selected: options.contains(controller.backupSettings.retention)
-          ? controller.backupSettings.retention
-          : 10,
+      selected: options.contains(_draftRetention) ? _draftRetention : 10,
       labelOf: (value) => AppLocalizations.of(context).latestNCopies(value),
     );
-    if (selected != null) {
-      controller.setBackupRetention(selected);
+    if (selected != null && mounted) {
+      setState(() => _draftRetention = selected);
     }
   }
 
@@ -643,6 +684,11 @@ class DataManagementPage extends StatelessWidget {
       // http 发往公网主机会明文暴露账号密码，保存前提醒确认。
       if (!await confirmCleartextIfRisky(context, saved.url)) return;
       controller.setWebdavConfig(saved);
+      if (mounted) {
+        setState(() {
+          _initialWebdavAutoUpload = _draftWebdavAutoUpload = saved.autoUpload;
+        });
+      }
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(AppLocalizations.of(context).webdavSaved)),
@@ -650,6 +696,39 @@ class DataManagementPage extends StatelessWidget {
       }
     }
   }
+
+  void _clearBackupDirectory(VeriFinController controller) {
+    controller.clearBackupDirectory();
+    setState(() {
+      _initialFrequency = _draftFrequency = BackupFrequency.manual;
+    });
+  }
+
+  bool get _isDirty =>
+      _draftFrequency != _initialFrequency ||
+      _draftIntervalHours != _initialIntervalHours ||
+      _draftRetention != _initialRetention ||
+      _draftWebdavAutoUpload != _initialWebdavAutoUpload;
+
+  Future<void> _saveAndExit() async {
+    if (await _save() && mounted) {
+      setState(() {
+        _initialFrequency = _draftFrequency;
+        _initialIntervalHours = _draftIntervalHours;
+        _initialRetention = _draftRetention;
+        _initialWebdavAutoUpload = _draftWebdavAutoUpload;
+      });
+      _exitController.exit();
+    }
+  }
+
+  Future<bool> _save() =>
+      VeriFinScope.of(context).saveDataManagementPreferencesDraft(
+        frequency: _draftFrequency,
+        intervalHours: _draftIntervalHours,
+        retention: _draftRetention,
+        webdavAutoUpload: _draftWebdavAutoUpload,
+      );
 
   Future<void> _uploadToWebdav(
     BuildContext context,
@@ -1308,7 +1387,7 @@ class DataManagementPage extends StatelessWidget {
     if (secondConfirmed) {
       controller.resetAllData();
       if (context.mounted) {
-        Navigator.of(context).pop();
+        _exitController.exit();
       }
     }
   }

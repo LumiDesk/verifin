@@ -17,11 +17,13 @@ class ProfileInfoPage extends StatefulWidget {
 }
 
 class _ProfileInfoPageState extends State<ProfileInfoPage> {
+  final EditorExitController _exitController = EditorExitController();
   late TextEditingController _nicknameController;
   late TextEditingController _bioController;
   late TextEditingController _cityController;
   late TextEditingController _occupationController;
   late String _avatarDataUrl;
+  late UserProfile _initialProfile;
   ProfileGender _gender = ProfileGender.unset;
   String _birthday = '';
   var _initialized = false;
@@ -33,6 +35,7 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
       return;
     }
     final profile = VeriFinScope.of(context).profile;
+    _initialProfile = profile;
     _nicknameController = TextEditingController(text: profile.nickname);
     _bioController = TextEditingController(text: profile.bio);
     _cityController = TextEditingController(text: profile.city);
@@ -40,11 +43,19 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
     _avatarDataUrl = profile.avatarDataUrl;
     _gender = profile.gender;
     _birthday = profile.birthday;
+    _nicknameController.addListener(_handleDraftChanged);
+    _bioController.addListener(_handleDraftChanged);
+    _cityController.addListener(_handleDraftChanged);
+    _occupationController.addListener(_handleDraftChanged);
     _initialized = true;
   }
 
   @override
   void dispose() {
+    _nicknameController.removeListener(_handleDraftChanged);
+    _bioController.removeListener(_handleDraftChanged);
+    _cityController.removeListener(_handleDraftChanged);
+    _occupationController.removeListener(_handleDraftChanged);
     _nicknameController.dispose();
     _bioController.dispose();
     _cityController.dispose();
@@ -56,84 +67,85 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
 
-    return Scaffold(
-      body: SafeArea(
-        child: VeriPage(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
-            children: <Widget>[
-              VeriHeader(
-                title: AppLocalizations.of(context).personalInfo,
-                showBack: true,
-                actions: <Widget>[
-                  HeaderAction(
-                    icon: Icons.check,
-                    tooltip: AppLocalizations.of(context).commonSave,
-                    onPressed: _save,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Center(
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(42),
-                  onTap: _pickAvatar,
-                  child: ProfileAvatar(
-                    profile: controller.profile.copyWith(
-                      avatarDataUrl: _avatarDataUrl,
+    return UnsavedChangesGuard(
+      isDirty: _isDirty,
+      onSave: _save,
+      exitController: _exitController,
+      child: Scaffold(
+        body: SafeArea(
+          child: VeriPage(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
+              children: <Widget>[
+                VeriHeader(
+                  title: AppLocalizations.of(context).personalInfo,
+                  showBack: true,
+                  actions: <Widget>[
+                    SaveHeaderAction(onPressed: _isDirty ? _saveAndExit : null),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Center(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(42),
+                    onTap: _pickAvatar,
+                    child: ProfileAvatar(
+                      profile: controller.profile.copyWith(
+                        avatarDataUrl: _avatarDataUrl,
+                      ),
+                      radius: 40,
                     ),
-                    radius: 40,
                   ),
                 ),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: _nicknameController,
-                decoration: InputDecoration(
-                  labelText: AppLocalizations.of(context).nicknameLabel,
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _nicknameController,
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context).nicknameLabel,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _bioController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  labelText: AppLocalizations.of(context).bioLabel,
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _bioController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context).bioLabel,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10),
-              SelectField(
-                label: AppLocalizations.of(context).genderLabel,
-                value: _gender.label(AppLocalizations.of(context)),
-                icon: Icons.person_outline,
-                onTap: _pickGender,
-              ),
-              const SizedBox(height: 10),
-              SelectField(
-                label: AppLocalizations.of(context).birthdayLabel,
-                value: _birthday.isEmpty
-                    ? AppLocalizations.of(context).clearOption
-                    : _birthday,
-                icon: Icons.cake_outlined,
-                onTap: _pickBirthday,
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _cityController,
-                maxLines: 1,
-                decoration: InputDecoration(
-                  labelText: AppLocalizations.of(context).cityLabel,
+                const SizedBox(height: 10),
+                SelectField(
+                  label: AppLocalizations.of(context).genderLabel,
+                  value: _gender.label(AppLocalizations.of(context)),
+                  icon: Icons.person_outline,
+                  onTap: _pickGender,
                 ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _occupationController,
-                maxLines: 1,
-                decoration: InputDecoration(
-                  labelText: AppLocalizations.of(context).occupationLabel,
+                const SizedBox(height: 10),
+                SelectField(
+                  label: AppLocalizations.of(context).birthdayLabel,
+                  value: _birthday.isEmpty
+                      ? AppLocalizations.of(context).clearOption
+                      : _birthday,
+                  icon: Icons.cake_outlined,
+                  onTap: _pickBirthday,
                 ),
-              ),
-            ],
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _cityController,
+                  maxLines: 1,
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context).cityLabel,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _occupationController,
+                  maxLines: 1,
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context).occupationLabel,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -201,42 +213,61 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
     }
   }
 
-  Future<void> _save() async {
+  void _handleDraftChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  UserProfile _draftProfile({required bool useNicknameFallback}) {
+    final nickname = _nicknameController.text.trim();
+    return UserProfile(
+      nickname: useNicknameFallback && nickname.isEmpty ? 'Veri Fin' : nickname,
+      bio: _bioController.text.trim(),
+      avatarDataUrl: _avatarDataUrl,
+      gender: _gender,
+      birthday: _birthday,
+      city: _cityController.text.trim(),
+      occupation: _occupationController.text.trim(),
+    );
+  }
+
+  bool get _isDirty {
+    final draft = _draftProfile(useNicknameFallback: false);
+    return draft.nickname != _initialProfile.nickname ||
+        draft.bio != _initialProfile.bio ||
+        draft.avatarDataUrl != _initialProfile.avatarDataUrl ||
+        draft.gender != _initialProfile.gender ||
+        draft.birthday != _initialProfile.birthday ||
+        draft.city != _initialProfile.city ||
+        draft.occupation != _initialProfile.occupation;
+  }
+
+  Future<void> _saveAndExit() async {
+    if (await _save() && mounted) {
+      setState(() {
+        _initialProfile = _draftProfile(useNicknameFallback: true);
+      });
+      _exitController.exit();
+    }
+  }
+
+  Future<bool> _save() async {
     final l10n = AppLocalizations.of(context);
     final nickname = _nicknameController.text.trim();
     if (nickname.isEmpty) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(l10n.nicknameEmptyTitle),
-          content: Text(l10n.nicknameEmptyMessage),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(l10n.commonCancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(l10n.commonSave),
-            ),
-          ],
-        ),
+      final confirmed = await showConfirmDialog(
+        context,
+        title: l10n.nicknameEmptyTitle,
+        message: l10n.nicknameEmptyMessage,
+        confirmLabel: l10n.commonSave,
       );
       if (confirmed != true || !mounted) {
-        return;
+        return false;
       }
     }
-    VeriFinScope.of(context).updateProfile(
-      UserProfile(
-        nickname: nickname.isEmpty ? 'Veri Fin' : nickname,
-        bio: _bioController.text.trim(),
-        avatarDataUrl: _avatarDataUrl,
-        gender: _gender,
-        birthday: _birthday,
-        city: _cityController.text.trim(),
-        occupation: _occupationController.text.trim(),
-      ),
-    );
-    Navigator.of(context).pop();
+    return VeriFinScope.of(
+      context,
+    ).saveProfileDraft(_draftProfile(useNicknameFallback: true));
   }
 }

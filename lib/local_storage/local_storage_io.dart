@@ -32,12 +32,36 @@ class LocalKeyValueStore {
     }
   }
 
+  /// 编辑页显式保存使用的可等待写入。只有平台确认写入成功后才更新内存镜像；
+  /// 失败会抛出，让页面保留草稿而不是误报成功。
+  Future<void> writeAndFlush(String key, String value) async {
+    final preferences = _preferences;
+    if (preferences != null) {
+      final succeeded = await preferences.setString(key, value);
+      if (!succeeded) {
+        throw StateError('Failed to persist local preference');
+      }
+    }
+    _memory[key] = value;
+  }
+
   void delete(String key) {
     _memory.remove(key);
     final preferences = _preferences;
     if (preferences != null) {
       _track(preferences.remove(key));
     }
+  }
+
+  Future<void> deleteAndFlush(String key) async {
+    final preferences = _preferences;
+    if (preferences != null) {
+      final succeeded = await preferences.remove(key);
+      if (!succeeded) {
+        throw StateError('Failed to delete local preference');
+      }
+    }
+    _memory.remove(key);
   }
 
   void _track(Future<void> op) {

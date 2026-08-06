@@ -1,7 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../app/account_icon_assets.dart';
 import '../app/app_theme.dart';
@@ -22,6 +23,7 @@ import 'account_detail_page.dart';
 
 part 'account_group_pages.dart';
 part 'add_account_page.dart';
+part 'asset_display_settings_page.dart';
 
 const double assetCoverAspectRatio = 1200 / 760;
 
@@ -60,10 +62,8 @@ class _AssetsPageState extends State<AssetsPage> {
     ),
   ];
 
-  bool _sortingSections = false;
-  // 当前可见分组数，供「资产操作」菜单里的「排序分组」判断能否进入排序模式
-  // （<2 个分组无从排序）。在 build 中同步。
-  int _visibleSectionCount = 0;
+  // 普通浏览时的展开/折叠仅是临时 UI 状态，不再静默持久化。
+  final Set<String> _collapsedSections = <String>{};
 
   @override
   Widget build(BuildContext context) {
@@ -148,10 +148,6 @@ class _AssetsPageState extends State<AssetsPage> {
     final visibleAssetSections = assetSections
         .where((section) => section.accounts.isNotEmpty)
         .toList(growable: false);
-    final canSortSections = visibleAssetSections.length >= 2;
-    final sortingSections = _sortingSections && canSortSections;
-    _visibleSectionCount = visibleAssetSections.length;
-
     return VeriPage(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(14, 8, 14, 82),
@@ -222,8 +218,7 @@ class _AssetsPageState extends State<AssetsPage> {
                             tooltip: AppLocalizations.of(
                               context,
                             ).assetsChangeCover,
-                            onPressed: () =>
-                                _changeAssetCover(context, controller),
+                            onPressed: () => _openDisplaySettings(context),
                             style: IconButton.styleFrom(
                               fixedSize: const Size(32, 32),
                               minimumSize: const Size(32, 32),
@@ -306,124 +301,34 @@ class _AssetsPageState extends State<AssetsPage> {
             const SizedBox(height: 12),
           ],
           if (visibleAssetSections.isNotEmpty) ...<Widget>[
-            // 「排序」按钮常驻分组列表上方（就算只有 1 个分组也显示，保证可发现，
-            // 点击时不足 2 个分组会提示）；「资产操作」菜单里保留同一入口。
-            // 进入排序模式后变为提示 + 「完成」。
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: sortingSections
-                        ? Text(
-                            AppLocalizations.of(context).assetsSortHint,
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurface
-                                      .withValues(alpha: 0.52),
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          )
-                        : const SizedBox.shrink(),
+            for (final section in visibleAssetSections)
+              Padding(
+                key: ValueKey<String>('asset_section_${section.id}'),
+                padding: const EdgeInsets.only(bottom: 12),
+                child: AccountGroupCard(
+                  title: section.title,
+                  accounts: section.accounts,
+                  balances: balances,
+                  collapsed: _collapsedSections.contains(
+                    '${viewMode.name}:${section.id}',
                   ),
-                  _SectionSortButton(
-                    sorting: sortingSections,
-                    onTap: sortingSections
-                        ? () => setState(() => _sortingSections = false)
-                        : () => _enterSectionSorting(context),
-                  ),
-                ],
+                  hapticsEnabled: controller.hapticsEnabled,
+                  onToggleCollapsed: () => setState(() {
+                    final key = '${viewMode.name}:${section.id}';
+                    if (!_collapsedSections.add(key)) {
+                      _collapsedSections.remove(key);
+                    }
+                  }),
+                  onAccountTap: (account) {
+                    Navigator.of(context).push<void>(
+                      MaterialPageRoute<void>(
+                        builder: (context) =>
+                            AccountDetailPage(account: account),
+                      ),
+                    );
+                  },
+                ),
               ),
-            ),
-            ReorderableListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              buildDefaultDragHandles: false,
-              proxyDecorator: (_, index, _) {
-                final section = visibleAssetSections[index];
-                return Material(
-                  color: Colors.transparent,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(veriRadiusMd),
-                      boxShadow: <BoxShadow>[
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.14),
-                          blurRadius: 18,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: AccountGroupCard(
-                      title: section.title,
-                      accounts: section.accounts,
-                      balances: balances,
-                      collapsed: true,
-                      sectionDragIndex: index,
-                      hapticsEnabled: controller.hapticsEnabled,
-                    ),
-                  ),
-                );
-              },
-              onReorderStart: (_) => _triggerSelectionHaptic(controller),
-              onReorderEnd: (_) => _triggerSelectionHaptic(controller),
-              onReorderItem: (oldIndex, newIndex) {
-                _triggerSelectionHaptic(controller);
-                controller.reorderAssetSections<_AssetAccountSection>(
-                  mode: viewMode,
-                  sections: visibleAssetSections,
-                  idOf: (section) => section.id,
-                  oldIndex: oldIndex,
-                  newIndex: newIndex,
-                );
-              },
-              itemCount: visibleAssetSections.length,
-              itemBuilder: (context, index) {
-                final section = visibleAssetSections[index];
-                return Padding(
-                  key: ValueKey<String>('asset_section_${section.id}'),
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: AccountGroupCard(
-                    title: section.title,
-                    accounts: section.accounts,
-                    balances: balances,
-                    collapsed:
-                        sortingSections ||
-                        controller.isAssetSectionCollapsed(
-                          mode: viewMode,
-                          sectionId: section.id,
-                        ),
-                    sectionDragIndex: sortingSections ? index : null,
-                    sectionDragImmediate: true,
-                    hapticsEnabled: controller.hapticsEnabled,
-                    onToggleCollapsed: sortingSections
-                        ? null
-                        : () => controller.toggleAssetSectionCollapsed(
-                            mode: viewMode,
-                            sectionId: section.id,
-                          ),
-                    onReorderAccounts: (oldIndex, newIndex) =>
-                        controller.reorderAssetAccounts(
-                          mode: viewMode,
-                          sectionId: section.id,
-                          accounts: section.accounts,
-                          oldIndex: oldIndex,
-                          newIndex: newIndex,
-                        ),
-                    onAccountTap: sortingSections
-                        ? null
-                        : (account) {
-                            Navigator.of(context).push<void>(
-                              MaterialPageRoute<void>(
-                                builder: (context) =>
-                                    AccountDetailPage(account: account),
-                              ),
-                            );
-                          },
-                  ),
-                );
-              },
-            ),
           ],
           if (hiddenAccounts.isNotEmpty) ...<Widget>[
             VeriCard(
@@ -474,116 +379,33 @@ class _AssetsPageState extends State<AssetsPage> {
     );
   }
 
-  void _triggerSelectionHaptic(VeriFinController controller) {
-    if (controller.hapticsEnabled) {
-      HapticFeedback.selectionClick();
-    }
-  }
-
-  Future<void> _changeAssetCover(
-    BuildContext context,
-    VeriFinController controller,
-  ) async {
-    final action = await showOptionSheet<String>(
-      context: context,
-      title: AppLocalizations.of(context).assetsCoverTitle,
-      values: const <String>['online', 'custom_url', 'local', 'clear'],
-      selected: 'online',
-      labelOf: (value) {
-        return switch (value) {
-          'online' => AppLocalizations.of(context).coverUseOnline,
-          'custom_url' => AppLocalizations.of(context).coverEnterUrl,
-          'local' => AppLocalizations.of(context).coverPickLocal,
-          'clear' => AppLocalizations.of(context).coverClear,
-          _ => value,
-        };
-      },
+  void _openDisplaySettings(BuildContext context) {
+    unawaited(
+      Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          builder: (context) => const AssetDisplaySettingsPage(),
+        ),
+      ),
     );
-    if (action == null || !context.mounted) {
-      return;
-    }
-
-    switch (action) {
-      case 'online':
-        final selected = await showOptionSheet<_AssetCoverPreset>(
-          context: context,
-          title: AppLocalizations.of(context).coverPickOnlineTitle,
-          values: _coverPresets,
-          selected: _coverPresets.firstWhere(
-            (item) => item.url == controller.assetCoverUrl,
-            orElse: () => _coverPresets.first,
-          ),
-          labelOf: (value) => value.label(AppLocalizations.of(context)),
-        );
-        if (selected != null) {
-          controller.setAssetCoverUrl(selected.url);
-        }
-      case 'custom_url':
-        final url = await showTextInputDialog(
-          context: context,
-          title: AppLocalizations.of(context).coverCustomTitle,
-          label: AppLocalizations.of(context).coverUrlLabel,
-          initialValue: controller.assetCoverUrl.startsWith('http')
-              ? controller.assetCoverUrl
-              : '',
-        );
-        if (url != null) {
-          controller.setAssetCoverUrl(url);
-        }
-      case 'local':
-        final rawImage = await pickRawImageDataUrl();
-        if (rawImage == null || !context.mounted) {
-          return;
-        }
-        final crop = await showImageCropper(
-          context: context,
-          imageDataUrl: rawImage,
-          title: AppLocalizations.of(context).coverCropTitle,
-          aspectRatio: assetCoverAspectRatio,
-        );
-        if (crop == null || !context.mounted) {
-          return;
-        }
-        final dataUrl = await runWithLoadingDialog<String?>(
-          context: context,
-          message: AppLocalizations.of(context).coverGenerating,
-          task: () => cropImageDataUrl(
-            sourceDataUrl: rawImage,
-            targetWidth: assetCoverTargetWidth,
-            targetHeight: assetCoverTargetHeight,
-            zoom: crop.zoom,
-            offsetX: crop.offsetX,
-            offsetY: crop.offsetY,
-          ),
-        );
-        if (dataUrl != null) {
-          controller.setAssetCoverUrl(dataUrl);
-        }
-      case 'clear':
-        controller.setAssetCoverUrl('');
-    }
   }
 
   Future<void> _showAssetActions(BuildContext context) async {
-    final controller = VeriFinScope.of(context);
     final selected = await showOptionSheet<String>(
       context: context,
       title: AppLocalizations.of(context).assetsActions,
       values: const <String>[
         'add_account',
         'manage_groups',
-        'switch_view',
-        'sort_sections',
+        'display_settings',
       ],
       selected: 'add_account',
       labelOf: (value) {
         return switch (value) {
           'add_account' => AppLocalizations.of(context).accountAdd,
           'manage_groups' => AppLocalizations.of(context).groupManage,
-          'switch_view' => controller.assetAccountViewMode.toggleLabel(
-            AppLocalizations.of(context),
-          ),
-          'sort_sections' => AppLocalizations.of(context).sectionSort,
+          'display_settings' => AppLocalizations.of(
+            context,
+          ).assetDisplaySettingsTitle,
           _ => value,
         };
       },
@@ -607,56 +429,9 @@ class _AssetsPageState extends State<AssetsPage> {
         ),
       );
     }
-    if (selected == 'switch_view') {
-      controller.toggleAssetAccountViewMode();
+    if (selected == 'display_settings') {
+      _openDisplaySettings(context);
     }
-    if (selected == 'sort_sections') {
-      _enterSectionSorting(context);
-    }
-  }
-
-  void _enterSectionSorting(BuildContext context) {
-    if (_visibleSectionCount >= 2) {
-      setState(() => _sortingSections = true);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).sectionSortNeedTwo),
-        ),
-      );
-    }
-  }
-}
-
-class _SectionSortButton extends StatelessWidget {
-  const _SectionSortButton({required this.sorting, required this.onTap});
-
-  final bool sorting;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextButton.icon(
-      onPressed: onTap,
-      icon: Icon(sorting ? Icons.check : Icons.swap_vert, size: 16),
-      label: Text(
-        sorting
-            ? AppLocalizations.of(context).commonDone
-            : AppLocalizations.of(context).sortLabel,
-      ),
-      style: TextButton.styleFrom(
-        visualDensity: VisualDensity.compact,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        foregroundColor: sorting
-            ? veriRoyal
-            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-        textStyle: Theme.of(
-          context,
-        ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
-      ),
-    );
   }
 }
 

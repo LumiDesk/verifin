@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 import '../app/ai/ai_entry_parser.dart';
@@ -90,6 +91,13 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   String? _expandedTopId;
   // 防重复提交：极快双击「保存」可能在 pop 生效前触发两次、落两条交易。
   bool _saving = false;
+  bool _saved = false;
+  late final String _entryId =
+      widget.draftEntry?.id ?? DateTime.now().microsecondsSinceEpoch.toString();
+  LedgerEntry? _initialEntryDraft;
+  List<String>? _initialAttachmentDataUrls;
+  LedgerEntry? _savedResult;
+  final EditorExitController _exitController = EditorExitController();
   // 程序化写入备注时置真，令备注监听忽略这次（不误判为用户输入）。
   bool _applyingSuggestion = false;
   bool _didInitialSuggest = false;
@@ -176,7 +184,11 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   void _onNoteChanged() {
     // 先看哨兵/挂载：initState 里程序化写备注也会触发本监听，那时不能查
     // InheritedWidget（_autoSuggestEnabled 要读 controller）。
-    if (_applyingSuggestion || !mounted || !_autoSuggestEnabled) {
+    if (_applyingSuggestion || !mounted) {
+      return;
+    }
+    if (!_autoSuggestEnabled) {
+      setState(() {});
       return;
     }
     // 用户真的在输备注：标记已改（不再回填备注），并按新备注重算类型/分类/标签。
@@ -315,298 +327,307 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       // 退款不在此页手动选择，仅作穷尽兜底（正向流入用青绿）。
       EntryType.refund => veriIncome,
     };
+    _captureInitialSnapshot();
 
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: <Widget>[
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(14, 8, 14, 20),
-                children: <Widget>[
-                  VeriHeader(
-                    // 标题展示当前账本名（此前误为固定文案）。
-                    title: controller.activeBook.name,
-                    subtitle: AppLocalizations.of(context).entryDetailSubtitle,
-                    showBack: true,
-                  ),
-                  if (widget.initialDraft != null) ...<Widget>[
-                    const SizedBox(height: 12),
-                    _AiReviewBanner(draft: widget.initialDraft!),
-                  ],
-                  const SizedBox(height: 12),
-                  SegmentedButton<EntryType>(
-                    key: const Key('entry_type_segmented_button'),
-                    segments: EntryType.userSelectable
-                        .map(
-                          (type) => ButtonSegment<EntryType>(
-                            value: type,
-                            label: Text(
-                              type.label(AppLocalizations.of(context)),
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    selected: <EntryType>{_type},
-                    onSelectionChanged: (selection) {
-                      setState(() {
-                        _type = selection.first;
-                        _typeTouched = true;
-                        // 同上：空列表时留空，不取 `.first` 以免抛异常白屏。
-                        final next = _categoriesForType(controller, _type);
-                        _categoryId = next.isEmpty ? '' : next.first.id;
-                        _normalizeTransferAccounts(accounts);
-                      });
-                      // 用户改了类型后，在该类型内重新识别分类/标签/备注。
-                      _recomputeSuggestion();
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  InkWell(
-                    key: const Key('detail_amount_button'),
-                    borderRadius: BorderRadius.circular(veriRadiusMd),
-                    onTap: _editAmount,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Text(
-                        formatAmount(_amount),
-                        style: Theme.of(context).textTheme.displayLarge
-                            ?.copyWith(
-                              color: amountColor,
-                              fontWeight: FontWeight.w800,
-                            ),
-                      ),
-                    ),
-                  ),
-                  const Divider(height: 24),
-                  Text(
-                    AppLocalizations.of(context).commonCategory,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: <Widget>[
-                      ..._visibleTopChips(
-                        rootCategoriesForType,
-                        selectedTopId,
-                      ).map((top) {
-                        final hasKids = categories.any(
-                          (c) => c.parentId == top.id,
-                        );
-                        final isExpanded = expandedTopId == top.id;
-                        return ChoiceChip(
-                          avatar: CategoryGlyph(
-                            iconCode: top.iconCode,
-                            size: 18,
-                          ),
-                          label: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              Text(top.label),
-                              if (hasKids) ...<Widget>[
-                                const SizedBox(width: 2),
-                                Icon(
-                                  isExpanded
-                                      ? Icons.expand_more
-                                      : Icons.chevron_right,
-                                  size: 16,
-                                ),
-                              ],
-                            ],
-                          ),
-                          selected: _categoryId == top.id,
-                          onSelected: (_) {
-                            setState(() {
-                              _categoryId = top.id;
-                              _categoryTouched = true;
-                              // 有子分类：点一下展开、再点收起；无子分类：选中并收起面板。
-                              _expandedTopId = hasKids && !isExpanded
-                                  ? top.id
-                                  : null;
-                            });
-                          },
-                        );
-                      }),
-                      ActionChip(
-                        avatar: const Icon(Icons.more_horiz, size: 18),
-                        label: Text(AppLocalizations.of(context).allLabel),
-                        onPressed: _showAllCategories,
-                      ),
-                    ],
-                  ),
-                  if (expandedTopId != null)
-                    _SubcategoryPanel(
-                      parent: categories.firstWhere(
-                        (c) => c.id == expandedTopId,
-                        orElse: () => categories.first,
-                      ),
-                      children: categories
-                          .where((c) => c.parentId == expandedTopId)
-                          .toList(),
-                      selectedId: _categoryId,
-                      onSelected: (id) {
-                        setState(() {
-                          _categoryId = id;
-                          _categoryTouched = true;
-                        });
-                      },
-                    ),
-                  const SizedBox(height: 18),
-                  if (hasAccounts && _type == EntryType.transfer) ...<Widget>[
-                    SelectField(
-                      key: const Key('account_dropdown'),
-                      label: AppLocalizations.of(context).transferOutAccount,
-                      value:
-                          '${accountById(accounts, _accountId).name} (${formatAmount(controller.accountBalance(accountById(accounts, _accountId)))})',
-                      leading: AccountIconBox(
-                        iconCode: accountById(accounts, _accountId).iconCode,
-                        size: 26,
-                      ),
-                      onTap: () => _pickAccount(accounts),
-                    ),
-                    const SizedBox(height: 10),
-                    SelectField(
-                      key: const Key('to_account_dropdown'),
-                      label: AppLocalizations.of(context).transferInAccount,
-                      value: _toAccountId == null
-                          ? AppLocalizations.of(context).pleaseSelect
-                          : '${accountById(accounts, _toAccountId!).name} (${formatAmount(controller.accountBalance(accountById(accounts, _toAccountId!)))})',
-                      icon: _toAccountId == null ? Icons.call_received : null,
-                      leading: _toAccountId == null
-                          ? null
-                          : AccountIconBox(
-                              iconCode: accountById(
-                                accounts,
-                                _toAccountId!,
-                              ).iconCode,
-                              size: 26,
-                            ),
-                      onTap: accounts.length < 2
-                          ? null
-                          : () => _pickToAccount(accounts),
-                    ),
-                    const SizedBox(height: 10),
-                    SelectField(
-                      key: const Key('fee_field'),
-                      label: AppLocalizations.of(context).feeLabel,
-                      value: _fee > 0
-                          ? formatAmount(_fee)
-                          : AppLocalizations.of(context).feeNoneTapToFill,
-                      icon: Icons.paid_outlined,
-                      onTap: _editFee,
-                    ),
-                  ] else if (hasAccounts)
-                    SelectField(
-                      key: const Key('account_dropdown'),
-                      label: AppLocalizations.of(context).accountLabel,
-                      value: _noAccount
-                          ? AppLocalizations.of(context).noAccountLabel
-                          : '${accountById(accounts, _accountId).name} (${formatAmount(controller.accountBalance(accountById(accounts, _accountId)))})',
-                      icon: _noAccount ? Icons.money_off_csred_outlined : null,
-                      leading: _noAccount
-                          ? null
-                          : AccountIconBox(
-                              iconCode: accountById(
-                                accounts,
-                                _accountId,
-                              ).iconCode,
-                              size: 26,
-                            ),
-                      onTap: () => _pickAccount(accounts),
-                    )
-                  else
-                    EmptyState(
-                      icon: Icons.account_balance_wallet_outlined,
-                      title: AppLocalizations.of(context).noUsableAccountTitle,
-                      description: AppLocalizations.of(
+    return UnsavedChangesGuard(
+      isDirty: _isDirty,
+      onSave: _save,
+      popResult: () => _savedResult,
+      exitController: _exitController,
+      child: Scaffold(
+        body: SafeArea(
+          child: Column(
+            children: <Widget>[
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(14, 8, 14, 20),
+                  children: <Widget>[
+                    VeriHeader(
+                      // 标题展示当前账本名（此前误为固定文案）。
+                      title: controller.activeBook.name,
+                      subtitle: AppLocalizations.of(
                         context,
-                      ).noUsableAccountDesc,
-                    ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    key: const Key('entry_note_field'),
-                    controller: _noteController,
-                    maxLines: 1,
-                    decoration: InputDecoration(
-                      labelText: AppLocalizations.of(context).commonNote,
-                      hintText: AppLocalizations.of(context).noteHint,
-                      prefixIcon: const Icon(Icons.notes),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: <Widget>[
-                      ActionChip(
-                        avatar: const Icon(Icons.calendar_today, size: 18),
-                        label: Text(
-                          AppLocalizations.of(
-                            context,
-                          ).dateMonthDay(_occurredAt),
-                        ),
-                        onPressed: _pickDate,
-                      ),
-                      ActionChip(
-                        avatar: const Icon(Icons.schedule, size: 18),
-                        label: Text(formatTime(_occurredAt)),
-                        onPressed: _pickTime,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  EntryTagField(
-                    tagIds: _tagIds,
-                    tagLabelOf: (id) =>
-                        controller.tagById(id)?.label ?? _extraTagLabel(id),
-                    onTap: _pickTags,
-                  ),
-                  if (_type == EntryType.expense) ...<Widget>[
-                    const SizedBox(height: 6),
-                    Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: Text(
-                            AppLocalizations.of(context).markReimbursable,
-                          ),
-                        ),
-                        Switch(
-                          value: _reimbursable,
-                          onChanged: (value) =>
-                              setState(() => _reimbursable = value),
+                      ).entryDetailSubtitle,
+                      showBack: true,
+                      actions: <Widget>[
+                        SaveHeaderAction(
+                          key: const Key('save_entry_button'),
+                          onPressed: _isDirty && _canSave(accounts)
+                              ? _saveAndExit
+                              : null,
                         ),
                       ],
                     ),
-                  ],
-                  // 导入草稿编辑不涉及图片附件（附件在正式落库后按 id 关联）。
-                  if (!_isDraft) ...<Widget>[
-                    const Divider(height: 24),
-                    AttachmentsEditor(
-                      dataUrls: _pendingAttachments,
-                      onAddDataUrl: (dataUrl) =>
-                          setState(() => _pendingAttachments.add(dataUrl)),
-                      onRemoveIndex: (index) =>
-                          setState(() => _pendingAttachments.removeAt(index)),
+                    if (widget.initialDraft != null) ...<Widget>[
+                      const SizedBox(height: 12),
+                      _AiReviewBanner(draft: widget.initialDraft!),
+                    ],
+                    const SizedBox(height: 12),
+                    SegmentedButton<EntryType>(
+                      key: const Key('entry_type_segmented_button'),
+                      segments: EntryType.userSelectable
+                          .map(
+                            (type) => ButtonSegment<EntryType>(
+                              value: type,
+                              label: Text(
+                                type.label(AppLocalizations.of(context)),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      selected: <EntryType>{_type},
+                      onSelectionChanged: (selection) {
+                        setState(() {
+                          _type = selection.first;
+                          _typeTouched = true;
+                          // 同上：空列表时留空，不取 `.first` 以免抛异常白屏。
+                          final next = _categoriesForType(controller, _type);
+                          _categoryId = next.isEmpty ? '' : next.first.id;
+                          _normalizeTransferAccounts(accounts);
+                        });
+                        // 用户改了类型后，在该类型内重新识别分类/标签/备注。
+                        _recomputeSuggestion();
+                      },
                     ),
+                    const SizedBox(height: 16),
+                    InkWell(
+                      key: const Key('detail_amount_button'),
+                      borderRadius: BorderRadius.circular(veriRadiusMd),
+                      onTap: _editAmount,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Text(
+                          formatAmount(_amount),
+                          style: Theme.of(context).textTheme.displayLarge
+                              ?.copyWith(
+                                color: amountColor,
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                      ),
+                    ),
+                    const Divider(height: 24),
+                    Text(
+                      AppLocalizations.of(context).commonCategory,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: <Widget>[
+                        ..._visibleTopChips(
+                          rootCategoriesForType,
+                          selectedTopId,
+                        ).map((top) {
+                          final hasKids = categories.any(
+                            (c) => c.parentId == top.id,
+                          );
+                          final isExpanded = expandedTopId == top.id;
+                          return ChoiceChip(
+                            avatar: CategoryGlyph(
+                              iconCode: top.iconCode,
+                              size: 18,
+                            ),
+                            label: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Text(top.label),
+                                if (hasKids) ...<Widget>[
+                                  const SizedBox(width: 2),
+                                  Icon(
+                                    isExpanded
+                                        ? Icons.expand_more
+                                        : Icons.chevron_right,
+                                    size: 16,
+                                  ),
+                                ],
+                              ],
+                            ),
+                            selected: _categoryId == top.id,
+                            onSelected: (_) {
+                              setState(() {
+                                _categoryId = top.id;
+                                _categoryTouched = true;
+                                // 有子分类：点一下展开、再点收起；无子分类：选中并收起面板。
+                                _expandedTopId = hasKids && !isExpanded
+                                    ? top.id
+                                    : null;
+                              });
+                            },
+                          );
+                        }),
+                        ActionChip(
+                          avatar: const Icon(Icons.more_horiz, size: 18),
+                          label: Text(AppLocalizations.of(context).allLabel),
+                          onPressed: _showAllCategories,
+                        ),
+                      ],
+                    ),
+                    if (expandedTopId != null)
+                      _SubcategoryPanel(
+                        parent: categories.firstWhere(
+                          (c) => c.id == expandedTopId,
+                          orElse: () => categories.first,
+                        ),
+                        children: categories
+                            .where((c) => c.parentId == expandedTopId)
+                            .toList(),
+                        selectedId: _categoryId,
+                        onSelected: (id) {
+                          setState(() {
+                            _categoryId = id;
+                            _categoryTouched = true;
+                          });
+                        },
+                      ),
+                    const SizedBox(height: 18),
+                    if (hasAccounts && _type == EntryType.transfer) ...<Widget>[
+                      SelectField(
+                        key: const Key('account_dropdown'),
+                        label: AppLocalizations.of(context).transferOutAccount,
+                        value:
+                            '${accountById(accounts, _accountId).name} (${formatAmount(controller.accountBalance(accountById(accounts, _accountId)))})',
+                        leading: AccountIconBox(
+                          iconCode: accountById(accounts, _accountId).iconCode,
+                          size: 26,
+                        ),
+                        onTap: () => _pickAccount(accounts),
+                      ),
+                      const SizedBox(height: 10),
+                      SelectField(
+                        key: const Key('to_account_dropdown'),
+                        label: AppLocalizations.of(context).transferInAccount,
+                        value: _toAccountId == null
+                            ? AppLocalizations.of(context).pleaseSelect
+                            : '${accountById(accounts, _toAccountId!).name} (${formatAmount(controller.accountBalance(accountById(accounts, _toAccountId!)))})',
+                        icon: _toAccountId == null ? Icons.call_received : null,
+                        leading: _toAccountId == null
+                            ? null
+                            : AccountIconBox(
+                                iconCode: accountById(
+                                  accounts,
+                                  _toAccountId!,
+                                ).iconCode,
+                                size: 26,
+                              ),
+                        onTap: accounts.length < 2
+                            ? null
+                            : () => _pickToAccount(accounts),
+                      ),
+                      const SizedBox(height: 10),
+                      SelectField(
+                        key: const Key('fee_field'),
+                        label: AppLocalizations.of(context).feeLabel,
+                        value: _fee > 0
+                            ? formatAmount(_fee)
+                            : AppLocalizations.of(context).feeNoneTapToFill,
+                        icon: Icons.paid_outlined,
+                        onTap: _editFee,
+                      ),
+                    ] else if (hasAccounts)
+                      SelectField(
+                        key: const Key('account_dropdown'),
+                        label: AppLocalizations.of(context).accountLabel,
+                        value: _noAccount
+                            ? AppLocalizations.of(context).noAccountLabel
+                            : '${accountById(accounts, _accountId).name} (${formatAmount(controller.accountBalance(accountById(accounts, _accountId)))})',
+                        icon: _noAccount
+                            ? Icons.money_off_csred_outlined
+                            : null,
+                        leading: _noAccount
+                            ? null
+                            : AccountIconBox(
+                                iconCode: accountById(
+                                  accounts,
+                                  _accountId,
+                                ).iconCode,
+                                size: 26,
+                              ),
+                        onTap: () => _pickAccount(accounts),
+                      )
+                    else
+                      EmptyState(
+                        icon: Icons.account_balance_wallet_outlined,
+                        title: AppLocalizations.of(
+                          context,
+                        ).noUsableAccountTitle,
+                        description: AppLocalizations.of(
+                          context,
+                        ).noUsableAccountDesc,
+                      ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      key: const Key('entry_note_field'),
+                      controller: _noteController,
+                      maxLines: 1,
+                      decoration: InputDecoration(
+                        labelText: AppLocalizations.of(context).commonNote,
+                        hintText: AppLocalizations.of(context).noteHint,
+                        prefixIcon: const Icon(Icons.notes),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: <Widget>[
+                        ActionChip(
+                          avatar: const Icon(Icons.calendar_today, size: 18),
+                          label: Text(
+                            AppLocalizations.of(
+                              context,
+                            ).dateMonthDay(_occurredAt),
+                          ),
+                          onPressed: _pickDate,
+                        ),
+                        ActionChip(
+                          avatar: const Icon(Icons.schedule, size: 18),
+                          label: Text(formatTime(_occurredAt)),
+                          onPressed: _pickTime,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    EntryTagField(
+                      tagIds: _tagIds,
+                      tagLabelOf: (id) =>
+                          controller.tagById(id)?.label ?? _extraTagLabel(id),
+                      onTap: _pickTags,
+                    ),
+                    if (_type == EntryType.expense) ...<Widget>[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: Text(
+                              AppLocalizations.of(context).markReimbursable,
+                            ),
+                          ),
+                          Switch(
+                            value: _reimbursable,
+                            onChanged: (value) =>
+                                setState(() => _reimbursable = value),
+                          ),
+                        ],
+                      ),
+                    ],
+                    // 导入草稿编辑不涉及图片附件（附件在正式落库后按 id 关联）。
+                    if (!_isDraft) ...<Widget>[
+                      const Divider(height: 24),
+                      AttachmentsEditor(
+                        dataUrls: _pendingAttachments,
+                        onAddDataUrl: (dataUrl) =>
+                            setState(() => _pendingAttachments.add(dataUrl)),
+                        onRemoveIndex: (index) =>
+                            setState(() => _pendingAttachments.removeAt(index)),
+                      ),
+                    ],
                   ],
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
-              child: SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: FilledButton(
-                  key: const Key('save_entry_button'),
-                  onPressed: _canSave(accounts) ? _save : null,
-                  child: Text(AppLocalizations.of(context).commonSave),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -810,65 +831,118 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     });
   }
 
-  void _save() {
+  LedgerEntry _buildDraftEntry() {
+    final original = widget.draftEntry;
+    final noAccount = _type != EntryType.transfer && _noAccount;
+    return LedgerEntry(
+      id: _entryId,
+      bookId: original?.bookId ?? VeriFinScope.of(context).activeBook.id,
+      type: _type,
+      amount: _amount,
+      categoryId: _categoryId,
+      accountId: noAccount ? '' : _accountId,
+      toAccountId: _type == EntryType.transfer ? _toAccountId : null,
+      note: _noteController.text.trim(),
+      occurredAt: _occurredAt,
+      tagIds: List<String>.of(_tagIds),
+      fee: _type == EntryType.transfer ? _fee : 0,
+      reimbursable: _type == EntryType.expense && _reimbursable,
+      refundedAmount: original?.refundedAmount ?? 0,
+    );
+  }
+
+  void _captureInitialSnapshot() {
+    _initialEntryDraft ??= _buildDraftEntry();
+    _initialAttachmentDataUrls ??= List<String>.of(_pendingAttachments);
+  }
+
+  bool _sameDraft(LedgerEntry left, LedgerEntry right) =>
+      left.type == right.type &&
+      left.amount == right.amount &&
+      left.categoryId == right.categoryId &&
+      left.accountId == right.accountId &&
+      left.toAccountId == right.toAccountId &&
+      left.note == right.note &&
+      left.occurredAt == right.occurredAt &&
+      listEquals(left.tagIds, right.tagIds) &&
+      left.fee == right.fee &&
+      left.reimbursable == right.reimbursable;
+
+  bool get _isDirty {
+    if (_saved) {
+      return false;
+    }
+    // Reaching a new-entry page means the user already entered or supplied a
+    // draft amount; the not-yet-created entity itself is pending work.
+    if (!_isDraft) {
+      return true;
+    }
+    final initial = _initialEntryDraft;
+    final initialAttachments = _initialAttachmentDataUrls;
+    if (initial == null || initialAttachments == null) {
+      return false;
+    }
+    return !_sameDraft(initial, _buildDraftEntry()) ||
+        !listEquals(initialAttachments, _pendingAttachments);
+  }
+
+  Future<void> _saveAndExit() async {
+    if (await _save() && mounted) {
+      _exitController.exit(result: () => _savedResult);
+    }
+  }
+
+  Future<bool> _save() async {
     if (_saving) {
-      return;
+      return false;
     }
     final controller = VeriFinScope.of(context);
-    final noAccount = _type != EntryType.transfer && _noAccount;
+    final accounts =
+        (_isDraft
+                ? <Account>[
+                    ...controller.accounts,
+                    ...widget.draftExtraAccounts!,
+                  ]
+                : controller.accounts)
+            .where((account) => !account.hidden)
+            .toList();
+    if (!_canSave(accounts)) {
+      return false;
+    }
+    final draft = _buildDraftEntry();
     // 草稿编辑模式：不落库，构造修改后的交易并回传给上层（如导入预览页）。
     if (_isDraft) {
       _saving = true;
-      final original = widget.draftEntry!;
-      Navigator.of(context).pop(
-        LedgerEntry(
-          id: original.id,
-          bookId: original.bookId,
-          type: _type,
-          amount: _amount,
-          // 转账也带分类（已归一化到「转出」类），与正式落库路径（_save 非草稿分支）、
-          // 导入口径一致——空 categoryId 会被交易列表回退成「已删除分类」（issue #14）。
-          categoryId: _categoryId,
-          accountId: noAccount ? '' : _accountId,
-          toAccountId: _type == EntryType.transfer ? _toAccountId : null,
-          note: _noteController.text.trim(),
-          occurredAt: _occurredAt,
-          tagIds: _tagIds,
-          fee: _type == EntryType.transfer ? _fee : 0,
-          reimbursable: _type == EntryType.expense && _reimbursable,
-          refundedAmount: original.refundedAmount,
-        ),
-      );
-      return;
+      _savedResult = draft;
+      _saved = true;
+      return true;
     }
-    if (!noAccount &&
+    if (draft.accountId.isNotEmpty &&
         !controller.accounts
             .where((account) => !account.hidden)
-            .any((account) => account.id == _accountId)) {
-      return;
+            .any((account) => account.id == draft.accountId)) {
+      return false;
     }
     _saving = true;
-    final entryId = DateTime.now().microsecondsSinceEpoch.toString();
-    controller.addEntry(
-      LedgerEntry(
-        id: entryId,
-        bookId: controller.activeBook.id,
-        type: _type,
-        amount: _amount,
-        categoryId: _categoryId,
-        accountId: noAccount ? '' : _accountId,
-        toAccountId: _type == EntryType.transfer ? _toAccountId : null,
-        note: _noteController.text.trim(),
-        occurredAt: _occurredAt,
-        tagIds: _tagIds,
-        fee: _type == EntryType.transfer ? _fee : 0,
-        reimbursable: _type == EntryType.expense && _reimbursable,
-      ),
+    final attachments = <Attachment>[
+      for (var index = 0; index < _pendingAttachments.length; index++)
+        Attachment(
+          id: 'att_${_entryId}_$index',
+          entryId: _entryId,
+          dataUrl: _pendingAttachments[index],
+        ),
+    ];
+    final saved = await controller.saveEntryAggregateDraft(
+      entry: draft,
+      isNew: true,
+      attachments: attachments,
     );
-    for (final dataUrl in _pendingAttachments) {
-      controller.addAttachment(entryId, dataUrl);
+    if (!saved) {
+      _saving = false;
+      return false;
     }
-    Navigator.of(context).pop();
+    _saved = true;
+    return true;
   }
 }
 

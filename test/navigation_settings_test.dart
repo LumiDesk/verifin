@@ -29,7 +29,7 @@ void main() {
   testWidgets('changes theme preference from the profile page', (
     WidgetTester tester,
   ) async {
-    await pumpApp(tester);
+    final controller = await pumpApp(tester);
 
     await tapBottomTab(tester, 3);
     await tester.tap(find.byIcon(Icons.settings_outlined));
@@ -49,13 +49,22 @@ void main() {
 
     expect(find.text('主题模式'), findsOneWidget);
     expect(find.text('深色'), findsOneWidget);
+    expect(controller.themePreference, ThemePreference.system);
+
+    await tester.fling(firstVerticalScrollable(), const Offset(0, 1200), 1000);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+    expect(controller.themePreference, ThemePreference.dark);
+    expect(find.byTooltip('保存'), findsNothing);
+    expect(find.text('未保存的修改'), findsNothing);
   });
 
   testWidgets('changes language preference and persists across restart', (
     WidgetTester tester,
   ) async {
     final store = LocalKeyValueStore();
-    await pumpApp(tester, store);
+    final controller = await pumpApp(tester, store);
 
     await tapBottomTab(tester, 3);
     await tester.tap(find.byIcon(Icons.settings_outlined));
@@ -72,8 +81,14 @@ void main() {
     await tester.tap(find.text('English'));
     await tester.pumpAndSettle();
 
-    // 设置页即时切换为英文并落盘。
-    expect(find.text('Language'), findsOneWidget);
+    // 选择仅更新草稿，保存前不切换应用语言、不写 KV。
+    expect(find.text('语言'), findsOneWidget);
+    expect(controller.localePreference, LocalePreference.zh);
+    expect(store.read('verifin.locale.v1'), 'zh');
+
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+    expect(controller.localePreference, LocalePreference.en);
     expect(store.read('verifin.locale.v1'), 'en');
 
     // 模拟重启：先卸载旧树（同类型根组件会被框架复用 State），再用同一

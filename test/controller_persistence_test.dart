@@ -117,6 +117,55 @@ void main() {
     expect(reloaded.accountBalance(cash), 930); // 1000 − 100 + 30
   });
 
+  test('交易聚合保存会重算退款缓存，并原子持久化交易、退款和附件', () async {
+    final repo = await openRepo();
+    final controller = await VeriFinController.create(
+      LocalKeyValueStore(),
+      repository: repo,
+    );
+    final original = entry('5', amount: 100);
+    controller.addEntry(original);
+    await controller.waitForPendingWrites();
+
+    final refund = LedgerEntry(
+      id: 'refund-5',
+      bookId: original.bookId,
+      type: EntryType.refund,
+      amount: 40,
+      categoryId: original.categoryId,
+      accountId: original.accountId,
+      note: '',
+      occurredAt: DateTime(2026, 5, 6),
+      refundOf: original.id,
+      settledAt: DateTime(2026, 5, 7),
+    );
+    const attachment = Attachment(
+      id: 'attachment-5',
+      entryId: '5',
+      dataUrl: 'data:image/jpeg;base64,QUJD',
+    );
+
+    final saved = await controller.saveEntryAggregateDraft(
+      // 模拟 Issue #31：交易编辑器仍持有 refundedAmount=0 的旧快照。
+      entry: original.copyWith(note: '修改后的备注', refundedAmount: 0),
+      isNew: false,
+      refunds: <LedgerEntry>[refund],
+      attachments: const <Attachment>[attachment],
+    );
+    expect(saved, isTrue);
+
+    final reloaded = await VeriFinController.create(
+      LocalKeyValueStore(),
+      repository: repo,
+    );
+    final persisted = reloaded.entries.firstWhere((item) => item.id == '5');
+    expect(persisted.note, '修改后的备注');
+    expect(persisted.refundedAmount, 40);
+    expect(persisted.netAmount, 60);
+    expect(reloaded.refundsForEntry('5').single.id, 'refund-5');
+    expect(reloaded.attachmentsForEntry('5').single.id, 'attachment-5');
+  });
+
   test('账本/账户/分组写入 SQLite 并被新控制器读回', () async {
     final repo = await openRepo();
     final controller = await VeriFinController.create(

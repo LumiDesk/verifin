@@ -11,9 +11,19 @@ class BudgetSettingsPage extends StatefulWidget {
 }
 
 class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
+  final EditorExitController _exitController = EditorExitController();
   // 收起的父分类 id（默认折叠：首次构建时把所有含子类的分类加入）。
   final Set<String> _collapsedCategories = <String>{};
   bool _collapseInitialized = false;
+  bool _draftInitialized = false;
+  late double _initialDefaultBudget;
+  late double _draftDefaultBudget;
+  late double _initialDailyBudget;
+  late double _draftDailyBudget;
+  late int _initialStartDay;
+  late int _draftStartDay;
+  final Map<String, double> _initialCategoryBudgets = <String, double>{};
+  final Map<String, double> _draftCategoryBudgets = <String, double>{};
 
   void _initCollapse(VeriFinController controller) {
     if (_collapseInitialized) {
@@ -27,126 +37,164 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
     }
   }
 
+  void _initDraft(VeriFinController controller) {
+    if (_draftInitialized) {
+      return;
+    }
+    _draftInitialized = true;
+    _initialDefaultBudget = _draftDefaultBudget =
+        controller.defaultMonthlyBudget;
+    _initialDailyBudget = _draftDailyBudget = controller.dailyBudget();
+    _initialStartDay = _draftStartDay = controller.budgetCycleStartDay;
+    for (final category in controller.categoriesForType(EntryType.expense)) {
+      final amount = controller.defaultCategoryBudget(category.id);
+      _initialCategoryBudgets[category.id] = amount;
+      _draftCategoryBudgets[category.id] = amount;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
     final l10n = AppLocalizations.of(context);
     _initCollapse(controller);
+    _initDraft(controller);
 
     // 分类默认预算树展示「当前周期实际花销 vs 默认预算」，spent 只作参考。
     final now = DateTime.now();
-    final keyMonth = controller.budgetKeyMonthFor(now);
+    final keyMonth = budgetCycleKeyMonthFor(now, _draftStartDay);
     final periodEntries = entriesInWindow(
       controller.entries,
-      controller.budgetWindow(keyMonth),
+      budgetCycleOfKeyMonth(keyMonth, _draftStartDay),
     );
-    final categorySnapshots = computeCategoryBudgetSnapshots(
+    final persistedCategorySnapshots = computeCategoryBudgetSnapshots(
       controller: controller,
       month: keyMonth,
       monthEntries: periodEntries,
       useDefaultBudget: true,
     );
+    final categorySnapshots = persistedCategorySnapshots
+        .map(
+          (snapshot) => CategoryBudgetSnapshot(
+            category: snapshot.category,
+            spent: snapshot.spent,
+            budget: _draftCategoryBudgets[snapshot.category.id] ?? 0,
+            previousSpent: snapshot.previousSpent,
+          ),
+        )
+        .toList();
 
-    final defaultBudget = controller.defaultMonthlyBudget;
-    final dailyBudget = controller.dailyBudget();
-    final startDay = controller.budgetCycleStartDay;
+    final defaultBudget = _draftDefaultBudget;
+    final dailyBudget = _draftDailyBudget;
+    final startDay = _draftStartDay;
 
-    return Scaffold(
-      body: SafeArea(
-        child: VeriPage(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
-            children: <Widget>[
-              VeriHeader(
-                title: l10n.budgetSettingsTitle,
-                subtitle: controller.activeBook.name,
-                showBack: true,
-              ),
-              const SizedBox(height: 10),
-              _sectionLabel(context, l10n.budgetSettingsSectionOverall),
-              VeriCard(
-                child: Column(
-                  children: <Widget>[
-                    SettingsRow(
-                      icon: Icons.flag_outlined,
-                      title: l10n.defaultMonthlyBudgetTitle,
-                      trailing: defaultBudget > 0
-                          ? formatAmount(defaultBudget)
-                          : l10n.budgetCycleNotSet,
-                      trailingIcon: Icons.chevron_right,
-                      onTap: _editDefaultMonthlyBudget,
-                    ),
-                    const Divider(height: 1),
-                    SettingsRow(
-                      icon: Icons.today_outlined,
-                      title: l10n.dailyBudgetTitle,
-                      trailing: dailyBudget > 0
-                          ? formatAmount(dailyBudget)
-                          : l10n.budgetCycleNotSet,
-                      trailingIcon: Icons.chevron_right,
-                      onTap: _editDailyBudget,
-                    ),
-                    const Divider(height: 1),
-                    SettingsRow(
-                      icon: Icons.event_repeat_outlined,
-                      title: l10n.budgetCycleStartDayTitle,
-                      trailing: startDay == naturalMonthStartDay
-                          ? l10n.budgetCycleNaturalMonth
-                          : l10n.budgetCycleStartDayOption(startDay),
-                      trailingIcon: Icons.chevron_right,
-                      onTap: _editCycleStartDay,
-                    ),
+    return UnsavedChangesGuard(
+      isDirty: _isDirty,
+      onSave: _save,
+      exitController: _exitController,
+      child: Scaffold(
+        body: SafeArea(
+          child: VeriPage(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
+              children: <Widget>[
+                VeriHeader(
+                  title: l10n.budgetSettingsTitle,
+                  subtitle: controller.activeBook.name,
+                  showBack: true,
+                  actions: <Widget>[
+                    SaveHeaderAction(onPressed: _isDirty ? _saveAndExit : null),
                   ],
                 ),
-              ),
-              const SizedBox(height: 12),
-              _sectionLabel(context, l10n.budgetSettingsSectionCategory),
-              VeriCard(
-                padding: const EdgeInsets.fromLTRB(13, 6, 13, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(0, 6, 0, 2),
-                      child: Text(
-                        l10n.defaultCategoryBudgetDesc,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.52),
-                          fontWeight: FontWeight.w600,
-                        ),
+                const SizedBox(height: 10),
+                _sectionLabel(context, l10n.budgetSettingsSectionOverall),
+                VeriCard(
+                  child: Column(
+                    children: <Widget>[
+                      SettingsRow(
+                        icon: Icons.flag_outlined,
+                        title: l10n.defaultMonthlyBudgetTitle,
+                        trailing: defaultBudget > 0
+                            ? formatAmount(defaultBudget)
+                            : l10n.budgetCycleNotSet,
+                        trailingIcon: Icons.chevron_right,
+                        onTap: _editDefaultMonthlyBudget,
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    if (categorySnapshots.isEmpty)
+                      const Divider(height: 1),
+                      SettingsRow(
+                        icon: Icons.today_outlined,
+                        title: l10n.dailyBudgetTitle,
+                        trailing: dailyBudget > 0
+                            ? formatAmount(dailyBudget)
+                            : l10n.budgetCycleNotSet,
+                        trailingIcon: Icons.chevron_right,
+                        onTap: _editDailyBudget,
+                      ),
+                      const Divider(height: 1),
+                      SettingsRow(
+                        icon: Icons.event_repeat_outlined,
+                        title: l10n.budgetCycleStartDayTitle,
+                        trailing: startDay == naturalMonthStartDay
+                            ? l10n.budgetCycleNaturalMonth
+                            : l10n.budgetCycleStartDayOption(startDay),
+                        trailingIcon: Icons.chevron_right,
+                        onTap: _editCycleStartDay,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _sectionLabel(context, l10n.budgetSettingsSectionCategory),
+                VeriCard(
+                  padding: const EdgeInsets.fromLTRB(13, 6, 13, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
                       Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        child: Center(
-                          child: Text(
-                            l10n.noExpenseCategories,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurface
-                                      .withValues(alpha: 0.48),
-                                ),
-                          ),
+                        padding: const EdgeInsets.fromLTRB(0, 6, 0, 2),
+                        child: Text(
+                          l10n.defaultCategoryBudgetDesc,
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.52),
+                                fontWeight: FontWeight.w600,
+                              ),
                         ),
-                      )
-                    else
-                      ..._buildCategoryDefaultTree(
-                        controller,
-                        <String, CategoryBudgetSnapshot>{
-                          for (final snapshot in categorySnapshots)
-                            snapshot.category.id: snapshot,
-                        },
-                        controller.rootCategoriesForType(EntryType.expense),
-                        0,
                       ),
-                  ],
+                      const SizedBox(height: 4),
+                      if (categorySnapshots.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          child: Center(
+                            child: Text(
+                              l10n.noExpenseCategories,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.48),
+                                  ),
+                            ),
+                          ),
+                        )
+                      else
+                        ..._buildCategoryDefaultTree(
+                          controller,
+                          <String, CategoryBudgetSnapshot>{
+                            for (final snapshot in categorySnapshots)
+                              snapshot.category.id: snapshot,
+                          },
+                          controller.rootCategoriesForType(EntryType.expense),
+                          0,
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -206,33 +254,30 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
   }
 
   Future<void> _editDefaultMonthlyBudget() async {
-    final controller = VeriFinScope.of(context);
     final amount = await _promptBudgetAmount(
       AppLocalizations.of(context).setDefaultMonthlyBudgetTitle,
-      controller.defaultMonthlyBudget,
+      _draftDefaultBudget,
     );
     if (amount == null || !mounted) {
       return;
     }
-    controller.setDefaultMonthlyBudget(amount);
+    setState(() => _draftDefaultBudget = amount);
   }
 
   Future<void> _editDailyBudget() async {
-    final controller = VeriFinScope.of(context);
     final amount = await _promptBudgetAmount(
       AppLocalizations.of(context).setDailyBudgetTitle,
-      controller.dailyBudget(),
+      _draftDailyBudget,
     );
     if (amount == null || !mounted) {
       return;
     }
-    controller.setDailyBudget(amount);
+    setState(() => _draftDailyBudget = amount);
   }
 
   /// 选择预算周期起始日（1–28，账本级）。改起始日只是换周期口径，各键月已存
   /// 的预算金额不动。
   Future<void> _editCycleStartDay() async {
-    final controller = VeriFinScope.of(context);
     final l10n = AppLocalizations.of(context);
     final selected = await showOptionSheet<int>(
       context: context,
@@ -245,29 +290,64 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
         )
           day,
       ],
-      selected: controller.budgetCycleStartDay,
+      selected: _draftStartDay,
       labelOf: (day) => day == naturalMonthStartDay
           ? l10n.budgetCycleNaturalMonth
           : l10n.budgetCycleStartDayOption(day),
     );
     if (selected != null && mounted) {
-      controller.setBudgetCycleStartDay(selected);
+      setState(() => _draftStartDay = selected);
     }
   }
 
   Future<void> _editDefaultCategoryBudget(Category category) async {
-    final controller = VeriFinScope.of(context);
     final amount = await _promptBudgetAmount(
       AppLocalizations.of(
         context,
       ).setDefaultCategoryBudgetTitle(category.label),
-      controller.defaultCategoryBudget(category.id),
+      _draftCategoryBudgets[category.id] ?? 0,
     );
     if (amount == null || !mounted) {
       return;
     }
-    controller.setDefaultCategoryBudget(category.id, amount);
+    setState(() => _draftCategoryBudgets[category.id] = amount);
   }
+
+  bool get _isDirty {
+    if (_draftDefaultBudget != _initialDefaultBudget ||
+        _draftDailyBudget != _initialDailyBudget ||
+        _draftStartDay != _initialStartDay ||
+        _draftCategoryBudgets.length != _initialCategoryBudgets.length) {
+      return true;
+    }
+    for (final entry in _draftCategoryBudgets.entries) {
+      if (_initialCategoryBudgets[entry.key] != entry.value) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Future<void> _saveAndExit() async {
+    if (await _save() && mounted) {
+      setState(() {
+        _initialDefaultBudget = _draftDefaultBudget;
+        _initialDailyBudget = _draftDailyBudget;
+        _initialStartDay = _draftStartDay;
+        _initialCategoryBudgets
+          ..clear()
+          ..addAll(_draftCategoryBudgets);
+      });
+      _exitController.exit();
+    }
+  }
+
+  Future<bool> _save() => VeriFinScope.of(context).saveBudgetSettingsDraft(
+    defaultMonthlyBudget: _draftDefaultBudget,
+    dailyBudget: _draftDailyBudget,
+    cycleStartDay: _draftStartDay,
+    defaultCategoryBudgets: _draftCategoryBudgets,
+  );
 }
 
 /// 段落标题（与设置页风格一致的小节标签）。

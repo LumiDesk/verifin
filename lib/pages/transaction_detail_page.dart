@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../app/common_widgets.dart';
@@ -21,6 +23,7 @@ class TransactionDetailPage extends StatefulWidget {
 }
 
 class _TransactionDetailPageState extends State<TransactionDetailPage> {
+  final EditorExitController _exitController = EditorExitController();
   LedgerEntry? _initialEntry;
   late EntryType _type;
   late double _amount;
@@ -34,6 +37,10 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
   late double _fee;
   late bool _reimbursable;
   late final TextEditingController _noteController;
+  late List<LedgerEntry> _refunds;
+  late List<Attachment> _attachments;
+  late String _initialFingerprint;
+  bool _saving = false;
 
   @override
   void didChangeDependencies() {
@@ -41,9 +48,10 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     if (_initialEntry != null) {
       return;
     }
-    final entry = VeriFinScope.of(
-      context,
-    ).entries.where((item) => item.id == widget.entryId).firstOrNull;
+    final controller = VeriFinScope.of(context);
+    final entry = controller.entries
+        .where((item) => item.id == widget.entryId)
+        .firstOrNull;
     if (entry == null) {
       return;
     }
@@ -59,6 +67,11 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     _fee = entry.fee;
     _reimbursable = entry.reimbursable;
     _noteController = TextEditingController(text: entry.note);
+    _refunds = List<LedgerEntry>.of(controller.refundsForEntry(entry.id));
+    _attachments = List<Attachment>.of(
+      controller.attachmentsForEntry(entry.id),
+    );
+    _initialFingerprint = _draftFingerprint;
   }
 
   @override
@@ -113,7 +126,10 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     final canSave =
         (accounts.isNotEmpty || _noAccount) &&
         (_type != EntryType.transfer ||
-            (_toAccountId != null && _toAccountId != _accountId));
+            (_toAccountId != null && _toAccountId != _accountId)) &&
+        (_type == EntryType.expense
+            ? _refundTotal <= _amount + 0.0001
+            : _refunds.isEmpty);
     final amountColor = colorForType(_type);
     final amountText = switch (_type) {
       EntryType.expense => formatExpenseAmount(_amount),
@@ -122,192 +138,205 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       EntryType.refund => '+${formatIncomeAmount(_amount)}',
     };
 
-    return Scaffold(
-      body: SafeArea(
-        child: VeriPage(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 26),
-            children: <Widget>[
-              VeriHeader(
-                title: _type.label(AppLocalizations.of(context)),
-                showBack: true,
-                actions: <Widget>[
-                  HeaderAction(
-                    icon: Icons.delete_outline,
-                    tooltip: AppLocalizations.of(context).deleteEntryTooltip,
-                    destructive: true,
-                    onPressed: () => _confirmDeleteEntry(context, entry),
-                  ),
-                  HeaderAction(
-                    icon: Icons.check,
-                    tooltip: AppLocalizations.of(context).saveEntryTooltip,
-                    onPressed: canSave ? _save : null,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              VeriCard(
-                onTap: _editAmount,
-                padding: const EdgeInsets.fromLTRB(14, 16, 14, 14),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: <Widget>[
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            AppLocalizations.of(context).amountLabel,
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurface
-                                      .withValues(alpha: 0.42),
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            amountText,
-                            style: Theme.of(context).textTheme.displayLarge
-                                ?.copyWith(
-                                  color: amountColor,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                          ),
-                        ],
-                      ),
+    return UnsavedChangesGuard(
+      isDirty: _isDirty,
+      onSave: _save,
+      exitController: _exitController,
+      child: Scaffold(
+        body: SafeArea(
+          child: VeriPage(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 26),
+              children: <Widget>[
+                VeriHeader(
+                  title: _type.label(AppLocalizations.of(context)),
+                  showBack: true,
+                  actions: <Widget>[
+                    HeaderAction(
+                      icon: Icons.delete_outline,
+                      tooltip: AppLocalizations.of(context).deleteEntryTooltip,
+                      destructive: true,
+                      onPressed: _delete,
                     ),
-                    CategoryIconBox(
-                      iconCode: category.iconCode,
-                      color: amountColor,
-                      size: 38,
+                    SaveHeaderAction(
+                      onPressed: canSave && _isDirty ? _saveAndExit : null,
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 10),
-              VeriCard(
-                child: Column(
-                  children: <Widget>[
-                    DetailInfoRow(
-                      label: AppLocalizations.of(context).commonType,
-                      value: _type.label(AppLocalizations.of(context)),
-                      onTap: _pickType,
-                    ),
-                    DetailInfoRow(
-                      label: AppLocalizations.of(context).commonCategory,
-                      value: category.label,
-                      onTap: _pickCategory,
-                    ),
-                    if (_type == EntryType.transfer) ...<Widget>[
-                      DetailInfoRow(
-                        label: AppLocalizations.of(context).transferOutAccount,
-                        value:
-                            '${account.name} (${formatAmount(controller.accountBalance(account))})',
-                        onTap: accounts.isEmpty
-                            ? null
-                            : () => _pickAccount(accounts),
-                      ),
-                      DetailInfoRow(
-                        label: AppLocalizations.of(context).transferInAccount,
-                        value: toAccount == null
-                            ? AppLocalizations.of(context).pleaseSelect
-                            : '${toAccount.name} (${formatAmount(controller.accountBalance(toAccount))})',
-                        placeholder: toAccount == null,
-                        onTap: accounts.length < 2
-                            ? null
-                            : () => _pickToAccount(accounts),
-                      ),
-                      DetailInfoRow(
-                        label: AppLocalizations.of(context).feeLabel,
-                        value: _fee > 0
-                            ? formatAmount(_fee)
-                            : AppLocalizations.of(context).commonNoneShort,
-                        placeholder: _fee <= 0,
-                        onTap: _editFee,
-                      ),
-                    ] else
-                      DetailInfoRow(
-                        label: AppLocalizations.of(context).accountLabel,
-                        value: accountFieldValue,
-                        placeholder: _noAccount,
-                        onTap: accounts.isEmpty && !_noAccount
-                            ? null
-                            : () => _pickAccount(accounts),
-                      ),
-                    DetailInfoRow(
-                      label: AppLocalizations.of(context).dateLabel,
-                      value:
-                          '${AppLocalizations.of(context).dateMonthDay(_occurredAt)}  ${relativeDay(AppLocalizations.of(context), _occurredAt)}',
-                      onTap: _pickDate,
-                    ),
-                    DetailInfoRow(
-                      label: AppLocalizations.of(context).timeLabel,
-                      value: formatTime(_occurredAt),
-                      onTap: _pickTime,
-                    ),
-                    DetailInfoRow(
-                      label: AppLocalizations.of(context).commonNote,
-                      value: _noteController.text.trim().isEmpty
-                          ? AppLocalizations.of(context).noteHint
-                          : _noteController.text.trim(),
-                      placeholder: _noteController.text.trim().isEmpty,
-                      onTap: _editNote,
-                    ),
-                    DetailInfoRow(
-                      label: AppLocalizations.of(context).tagLabel,
-                      value: _tagLabels(controller).isEmpty
-                          ? AppLocalizations.of(context).entryAddTags
-                          : _tagLabels(controller).join('、'),
-                      placeholder: _tagLabels(controller).isEmpty,
-                      onTap: _pickTags,
-                    ),
-                    if (_type == EntryType.expense)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Row(
+                const SizedBox(height: 12),
+                VeriCard(
+                  onTap: _editAmount,
+                  padding: const EdgeInsets.fromLTRB(14, 16, 14, 14),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: <Widget>[
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            Expanded(
-                              child: Text(
-                                AppLocalizations.of(context).markReimbursable,
-                              ),
+                            Text(
+                              AppLocalizations.of(context).amountLabel,
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.42),
+                                    fontWeight: FontWeight.w700,
+                                  ),
                             ),
-                            Switch(
-                              value: _reimbursable,
-                              onChanged: (value) =>
-                                  setState(() => _reimbursable = value),
+                            const SizedBox(height: 6),
+                            Text(
+                              amountText,
+                              style: Theme.of(context).textTheme.displayLarge
+                                  ?.copyWith(
+                                    color: amountColor,
+                                    fontWeight: FontWeight.w800,
+                                  ),
                             ),
                           ],
                         ),
                       ),
-                  ],
+                      CategoryIconBox(
+                        iconCode: category.iconCode,
+                        color: amountColor,
+                        size: 38,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              // 退款区（关联退款条目，即时增删改，不走保存按钮）。
-              if (_type == EntryType.expense) ...<Widget>[
+                const SizedBox(height: 10),
+                VeriCard(
+                  child: Column(
+                    children: <Widget>[
+                      DetailInfoRow(
+                        label: AppLocalizations.of(context).commonType,
+                        value: _type.label(AppLocalizations.of(context)),
+                        onTap: _pickType,
+                      ),
+                      DetailInfoRow(
+                        label: AppLocalizations.of(context).commonCategory,
+                        value: category.label,
+                        onTap: _pickCategory,
+                      ),
+                      if (_type == EntryType.transfer) ...<Widget>[
+                        DetailInfoRow(
+                          label: AppLocalizations.of(
+                            context,
+                          ).transferOutAccount,
+                          value:
+                              '${account.name} (${formatAmount(controller.accountBalance(account))})',
+                          onTap: accounts.isEmpty
+                              ? null
+                              : () => _pickAccount(accounts),
+                        ),
+                        DetailInfoRow(
+                          label: AppLocalizations.of(context).transferInAccount,
+                          value: toAccount == null
+                              ? AppLocalizations.of(context).pleaseSelect
+                              : '${toAccount.name} (${formatAmount(controller.accountBalance(toAccount))})',
+                          placeholder: toAccount == null,
+                          onTap: accounts.length < 2
+                              ? null
+                              : () => _pickToAccount(accounts),
+                        ),
+                        DetailInfoRow(
+                          label: AppLocalizations.of(context).feeLabel,
+                          value: _fee > 0
+                              ? formatAmount(_fee)
+                              : AppLocalizations.of(context).commonNoneShort,
+                          placeholder: _fee <= 0,
+                          onTap: _editFee,
+                        ),
+                      ] else
+                        DetailInfoRow(
+                          label: AppLocalizations.of(context).accountLabel,
+                          value: accountFieldValue,
+                          placeholder: _noAccount,
+                          onTap: accounts.isEmpty && !_noAccount
+                              ? null
+                              : () => _pickAccount(accounts),
+                        ),
+                      DetailInfoRow(
+                        label: AppLocalizations.of(context).dateLabel,
+                        value:
+                            '${AppLocalizations.of(context).dateMonthDay(_occurredAt)}  ${relativeDay(AppLocalizations.of(context), _occurredAt)}',
+                        onTap: _pickDate,
+                      ),
+                      DetailInfoRow(
+                        label: AppLocalizations.of(context).timeLabel,
+                        value: formatTime(_occurredAt),
+                        onTap: _pickTime,
+                      ),
+                      DetailInfoRow(
+                        label: AppLocalizations.of(context).commonNote,
+                        value: _noteController.text.trim().isEmpty
+                            ? AppLocalizations.of(context).noteHint
+                            : _noteController.text.trim(),
+                        placeholder: _noteController.text.trim().isEmpty,
+                        onTap: _editNote,
+                      ),
+                      DetailInfoRow(
+                        label: AppLocalizations.of(context).tagLabel,
+                        value: _tagLabels(controller).isEmpty
+                            ? AppLocalizations.of(context).entryAddTags
+                            : _tagLabels(controller).join('、'),
+                        placeholder: _tagLabels(controller).isEmpty,
+                        onTap: _pickTags,
+                      ),
+                      if (_type == EntryType.expense)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: <Widget>[
+                              Expanded(
+                                child: Text(
+                                  AppLocalizations.of(context).markReimbursable,
+                                ),
+                              ),
+                              Switch(
+                                value: _reimbursable,
+                                onChanged: (value) =>
+                                    setState(() => _reimbursable = value),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                // 退款与交易本体共用同一份草稿，只在页头保存时一起落库。
+                if (_type == EntryType.expense) ...<Widget>[
+                  const SizedBox(height: 12),
+                  RefundSection(
+                    expense: _buildEntry(),
+                    refunds: _refunds,
+                    onChanged: (refunds) => setState(() => _refunds = refunds),
+                  ),
+                ],
                 const SizedBox(height: 12),
-                RefundSection(expenseId: widget.entryId),
-              ],
-              const SizedBox(height: 12),
-              VeriCard(
-                child: Builder(
-                  builder: (context) {
-                    final attachments = controller.attachmentsForEntry(
-                      widget.entryId,
-                    );
-                    return AttachmentsEditor(
-                      dataUrls: attachments
-                          .map((a) => a.dataUrl)
-                          .toList(growable: false),
-                      onAddDataUrl: (dataUrl) =>
-                          controller.addAttachment(widget.entryId, dataUrl),
-                      onRemoveIndex: (index) =>
-                          controller.removeAttachment(attachments[index].id),
-                    );
-                  },
+                VeriCard(
+                  child: AttachmentsEditor(
+                    dataUrls: _attachments
+                        .map((attachment) => attachment.dataUrl)
+                        .toList(growable: false),
+                    onAddDataUrl: (dataUrl) {
+                      setState(() {
+                        _attachments.add(
+                          Attachment(
+                            id: 'att_${widget.entryId}_${DateTime.now().microsecondsSinceEpoch}',
+                            entryId: widget.entryId,
+                            dataUrl: dataUrl,
+                          ),
+                        );
+                      });
+                    },
+                    onRemoveIndex: (index) =>
+                        setState(() => _attachments.removeAt(index)),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -340,10 +369,13 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
   }
 
   Future<void> _pickType() async {
+    final values = _refunds.isEmpty
+        ? EntryType.userSelectable
+        : const <EntryType>[EntryType.expense];
     final selected = await showOptionSheet<EntryType>(
       context: context,
       title: AppLocalizations.of(context).pickTypeTitle,
-      values: EntryType.userSelectable,
+      values: values,
       selected: _type,
       labelOf: (value) => value.label(AppLocalizations.of(context)),
     );
@@ -491,10 +523,62 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     }
   }
 
-  void _save() {
+  double get _refundTotal =>
+      _refunds.fold<double>(0, (total, refund) => total + refund.amount);
+
+  double get _settledRefundTotal => _refunds
+      .where((refund) => refund.isSettledRefund)
+      .fold<double>(0, (total, refund) => total + refund.amount);
+
+  LedgerEntry _buildEntry() {
     final entry = _initialEntry;
     if (entry == null) {
-      return;
+      throw StateError('Transaction draft is not initialized.');
+    }
+    final noAccount = _type != EntryType.transfer && _noAccount;
+    return entry.copyWith(
+      type: _type,
+      amount: _amount,
+      categoryId: _categoryId,
+      accountId: noAccount ? '' : _accountId,
+      toAccountId: _type == EntryType.transfer ? _toAccountId : null,
+      clearToAccountId: _type != EntryType.transfer,
+      note: _noteController.text.trim(),
+      occurredAt: _occurredAt,
+      tagIds: List<String>.of(_tagIds),
+      fee: _type == EntryType.transfer ? _fee : 0,
+      reimbursable: _type == EntryType.expense && _reimbursable,
+      refundedAmount: _type == EntryType.expense
+          ? _settledRefundTotal.clamp(0.0, _amount).toDouble()
+          : 0,
+    );
+  }
+
+  String get _draftFingerprint {
+    final refunds = List<LedgerEntry>.of(_refunds)
+      ..sort((a, b) => a.id.compareTo(b.id));
+    return jsonEncode(<String, Object?>{
+      'entry': _buildEntry().toJson(),
+      'refunds': refunds.map((refund) => refund.toJson()).toList(),
+      'attachments': _attachments
+          .map((attachment) => attachment.toJson())
+          .toList(),
+    });
+  }
+
+  bool get _isDirty =>
+      _initialEntry != null && _draftFingerprint != _initialFingerprint;
+
+  Future<void> _saveAndExit() async {
+    if (await _save() && mounted) {
+      setState(() => _initialFingerprint = _draftFingerprint);
+      _exitController.exit();
+    }
+  }
+
+  Future<bool> _save() async {
+    if (_saving || _initialEntry == null) {
+      return false;
     }
     if (_type == EntryType.transfer &&
         (_toAccountId == null || _toAccountId == _accountId)) {
@@ -503,27 +587,33 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
           content: Text(AppLocalizations.of(context).transferNeedsTwoAccounts),
         ),
       );
+      return false;
+    }
+    if (_refundTotal > _amount + 0.0001 ||
+        (_type != EntryType.expense && _refunds.isNotEmpty)) {
+      return false;
+    }
+    _saving = true;
+    final saved = await VeriFinScope.of(context).saveEntryAggregateDraft(
+      entry: _buildEntry(),
+      isNew: false,
+      refunds: _refunds,
+      attachments: _attachments,
+    );
+    if (mounted) {
+      _saving = false;
+    }
+    return saved;
+  }
+
+  Future<void> _delete() async {
+    final entry = _initialEntry;
+    if (entry == null || !await _confirmDeleteEntry(context, entry)) {
       return;
     }
-    final noAccount = _type != EntryType.transfer && _noAccount;
-    VeriFinScope.of(context).updateEntry(
-      entry.copyWith(
-        type: _type,
-        amount: _amount,
-        categoryId: _categoryId,
-        accountId: noAccount ? '' : _accountId,
-        toAccountId: _type == EntryType.transfer ? _toAccountId : null,
-        clearToAccountId: _type != EntryType.transfer,
-        note: _noteController.text.trim(),
-        occurredAt: _occurredAt,
-        tagIds: _tagIds,
-        fee: _type == EntryType.transfer ? _fee : 0,
-        reimbursable: _type == EntryType.expense && _reimbursable,
-        // 退款由关联退款条目管理（见 RefundSection），此处只保留净额缓存不动。
-        refundedAmount: _type == EntryType.expense ? entry.refundedAmount : 0,
-      ),
-    );
-    Navigator.of(context).pop();
+    if (mounted) {
+      _exitController.exit();
+    }
   }
 
   List<String> _tagLabels(VeriFinController controller) {
@@ -542,7 +632,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
   }
 }
 
-Future<void> _confirmDeleteEntry(
+Future<bool> _confirmDeleteEntry(
   BuildContext context,
   LedgerEntry entry,
 ) async {
@@ -555,10 +645,10 @@ Future<void> _confirmDeleteEntry(
     destructive: true,
   );
   if (!context.mounted || !confirmed) {
-    return;
+    return false;
   }
   controller.deleteEntry(entry.id);
-  Navigator.of(context).pop();
+  return true;
 }
 
 void openEntryDetail(BuildContext context, LedgerEntry entry) {

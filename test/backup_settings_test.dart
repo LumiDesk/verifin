@@ -1,13 +1,16 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/backup/backup_archive.dart';
 import 'package:verifin/app/backup/backup_service.dart';
 import 'package:verifin/app/backup/backup_settings.dart';
 import 'package:verifin/app/backup/backup_storage.dart';
 import 'package:verifin/app/models.dart';
+import 'package:verifin/app/veri_fin_scope.dart';
 import 'package:verifin/local_storage/local_storage.dart';
+import 'package:verifin/pages/data_management_page.dart';
 
 import 'support/test_harness.dart';
 
@@ -170,6 +173,80 @@ void main() {
       controller.clearBackupDirectory();
       expect(controller.backupSettings.hasDirectory, isFalse);
       expect(controller.backupSettings.frequency, BackupFrequency.manual);
+    });
+
+    testWidgets('数据管理页只在明确保存后提交备份频率', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(460, 1800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final controller = await makeController();
+      addTearDown(controller.dispose);
+      controller.setBackupDirectory('content://tree/backups', '备份目录');
+
+      await tester.pumpWidget(
+        VeriFinScope(
+          controller: controller,
+          child: zhMaterialApp(home: const DataManagementPage()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('备份频率'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('每次打开应用'));
+      await tester.pumpAndSettle();
+
+      expect(controller.backupSettings.frequency, BackupFrequency.manual);
+      await tester.tap(find.byTooltip('保存'));
+      await tester.pumpAndSettle();
+      expect(controller.backupSettings.frequency, BackupFrequency.onOpen);
+    });
+
+    testWidgets('修改偏好后初始化数据会直接退出，不再触发未保存提示', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(460, 1800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final controller = await makeController();
+      addTearDown(controller.dispose);
+      controller.setBackupDirectory('content://tree/backups', '备份目录');
+
+      await tester.pumpWidget(
+        VeriFinScope(
+          controller: controller,
+          child: zhMaterialApp(
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: FilledButton(
+                  key: const Key('open_data_management'),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const DataManagementPage(),
+                    ),
+                  ),
+                  child: const Text('打开'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.byKey(const Key('open_data_management')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('备份频率'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('每次打开应用'));
+      await tester.pumpAndSettle();
+      expect(controller.backupSettings.frequency, BackupFrequency.manual);
+
+      await tester.ensureVisible(find.text('初始化数据'));
+      await tester.tap(find.text('初始化数据'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, '继续'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, '确认初始化'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('open_data_management')), findsOneWidget);
+      expect(find.text('保存修改？'), findsNothing);
     });
   });
 

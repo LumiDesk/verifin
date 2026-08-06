@@ -1436,6 +1436,24 @@ abstract class AppLocalizations {
   /// **'资产卡片背景'**
   String get assetsCoverTitle;
 
+  /// No description provided for @assetDisplaySettingsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'资产显示设置'**
+  String get assetDisplaySettingsTitle;
+
+  /// No description provided for @assetViewModeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'账户分区方式'**
+  String get assetViewModeLabel;
+
+  /// No description provided for @assetOrderHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'拖动分区手柄或长按账户调整顺序'**
+  String get assetOrderHint;
+
   /// No description provided for @coverUseOnline.
   ///
   /// In zh, this message translates to:
@@ -2197,6 +2215,24 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'保存'**
   String get commonSave;
+
+  /// No description provided for @unsavedChangesTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存修改？'**
+  String get unsavedChangesTitle;
+
+  /// No description provided for @unsavedChangesMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'此页面有尚未保存的修改。'**
+  String get unsavedChangesMessage;
+
+  /// No description provided for @discardChanges.
+  ///
+  /// In zh, this message translates to:
+  /// **'不保存'**
+  String get discardChanges;
 
   /// No description provided for @amountEditTitle.
   ///
@@ -3613,6 +3649,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'删除规则'**
   String get recurringDeleteTooltip;
+
+  /// No description provided for @recurringDeleteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除这条周期规则？'**
+  String get recurringDeleteTitle;
+
+  /// No description provided for @recurringDeleteMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除后无法恢复这条规则。'**
+  String get recurringDeleteMessage;
 
   /// No description provided for @tapToFill.
   ///

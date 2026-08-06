@@ -193,6 +193,38 @@ void _runContract(String name, Future<LedgerRepository> Function() openRepo) {
       expect((await repo.loadTags()).map((t) => t.id).toList(), <String>['t2']);
     });
 
+    test('saveEntryAggregate 同时覆盖交易与附件', () async {
+      final repo = await openRepo();
+      await repo.saveEntries(<LedgerEntry>[
+        _entry('old', DateTime(2026, 1, 1)),
+      ]);
+      await repo.saveAttachments(const <Attachment>[
+        Attachment(
+          id: 'old-attachment',
+          entryId: 'old',
+          dataUrl: 'data:image/jpeg;base64,T0xE',
+        ),
+      ]);
+
+      final nextEntries = <LedgerEntry>[
+        _entry('new', DateTime(2026, 2, 1), note: '聚合保存'),
+      ];
+      const nextAttachments = <Attachment>[
+        Attachment(
+          id: 'new-attachment',
+          entryId: 'new',
+          dataUrl: 'data:image/jpeg;base64,TkVX',
+        ),
+      ];
+      await repo.saveEntryAggregate(
+        entries: nextEntries,
+        attachments: nextAttachments,
+      );
+
+      expect(_jsonOf(await repo.loadEntries()), _jsonOf(nextEntries));
+      expect(_jsonOf(await repo.loadAttachments()), _jsonOf(nextAttachments));
+    });
+
     test('已载入基线后的增删改保存，load 反映最新内容', () async {
       final repo = await openRepo();
       await repo.saveEntries(<LedgerEntry>[

@@ -359,6 +359,164 @@ Future<bool> showConfirmDialog(
   return confirmed ?? false;
 }
 
+/// 编辑页存在未保存修改时，用户对退出请求作出的决定。
+enum EditorExitDecision { save, discard, cancel }
+
+/// Lets an editor's explicit save action request the same guarded exit path
+/// used by back navigation, without relying on a rebuild to clear dirty first.
+class EditorExitController {
+  void Function(Object? Function()? resultBuilder)? _exit;
+
+  void exit({Object? Function()? result}) {
+    _exit?.call(result);
+  }
+}
+
+/// 统一的未保存修改对话框。
+///
+/// 点击遮罩或系统返回等价于 [EditorExitDecision.cancel]，不会隐式丢弃草稿。
+Future<EditorExitDecision> showUnsavedChangesDialog({
+  required BuildContext context,
+}) async {
+  final l10n = AppLocalizations.of(context);
+  final decision = await showDialog<EditorExitDecision>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text(l10n.unsavedChangesTitle),
+      content: Text(l10n.unsavedChangesMessage),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () =>
+              Navigator.of(dialogContext).pop(EditorExitDecision.cancel),
+          child: Text(l10n.commonCancel),
+        ),
+        TextButton(
+          onPressed: () =>
+              Navigator.of(dialogContext).pop(EditorExitDecision.discard),
+          style: TextButton.styleFrom(foregroundColor: veriExpense),
+          child: Text(l10n.discardChanges),
+        ),
+        FilledButton(
+          onPressed: () =>
+              Navigator.of(dialogContext).pop(EditorExitDecision.save),
+          child: Text(l10n.commonSave),
+        ),
+      ],
+    ),
+  );
+  return decision ?? EditorExitDecision.cancel;
+}
+
+/// 统一拦截编辑页的 Header 返回、Android 返回与预测性返回。
+///
+/// [onSave] 仅在实际写入成功时返回 true；校验或持久化失败返回 false，页面会保留
+/// 草稿并继续停留。无修改时不拦截。调用方不得在 [onSave] 内自行 pop。
+class UnsavedChangesGuard extends StatefulWidget {
+  const UnsavedChangesGuard({
+    super.key,
+    required this.isDirty,
+    required this.onSave,
+    required this.child,
+    this.onDiscard,
+    this.popResult,
+    this.exitController,
+  });
+
+  final bool isDirty;
+  final Future<bool> Function() onSave;
+  final VoidCallback? onDiscard;
+  final Object? Function()? popResult;
+  final EditorExitController? exitController;
+  final Widget child;
+
+  @override
+  State<UnsavedChangesGuard> createState() => _UnsavedChangesGuardState();
+}
+
+class _UnsavedChangesGuardState extends State<UnsavedChangesGuard> {
+  bool _handlingPop = false;
+  bool _allowNextPop = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.exitController?._exit = _exitPage;
+  }
+
+  @override
+  void didUpdateWidget(UnsavedChangesGuard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.exitController != widget.exitController) {
+      if (oldWidget.exitController?._exit == _exitPage) {
+        oldWidget.exitController?._exit = null;
+      }
+      widget.exitController?._exit = _exitPage;
+    }
+  }
+
+  @override
+  void dispose() {
+    if (widget.exitController?._exit == _exitPage) {
+      widget.exitController?._exit = null;
+    }
+    super.dispose();
+  }
+
+  Future<void> _handleBlockedPop() async {
+    if (_handlingPop) {
+      return;
+    }
+    setState(() => _handlingPop = true);
+    try {
+      final decision = await showUnsavedChangesDialog(context: context);
+      if (!mounted) {
+        return;
+      }
+      switch (decision) {
+        case EditorExitDecision.save:
+          if (await widget.onSave() && mounted) {
+            _exitPage(null);
+          }
+          break;
+        case EditorExitDecision.discard:
+          widget.onDiscard?.call();
+          _exitPage(null);
+          break;
+        case EditorExitDecision.cancel:
+          break;
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _handlingPop = false);
+      }
+    }
+  }
+
+  void _exitPage(Object? Function()? resultBuilder) {
+    final navigator = Navigator.of(context);
+    final result = (resultBuilder ?? widget.popResult)?.call();
+    setState(() => _allowNextPop = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        navigator.maybePop(result);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope<Object?>(
+      canPop: !widget.isDirty || _allowNextPop,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          unawaited(_handleBlockedPop());
+        }
+      },
+      child: widget.child,
+    );
+  }
+}
+
 /// 「完整卡号 + 后四位」输入组，含「后四位跟随完整卡号」开关（仅信用卡/储蓄卡使用）。
 /// 开关打开时后四位只读、自动取完整卡号末四位；关闭后可手填、独立于完整卡号。
 /// **受控组件**：开关状态由调用方以 [follows] 传入、经 [onFollowsChanged] 回传持久化

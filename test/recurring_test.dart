@@ -1,6 +1,9 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/recurring.dart';
 import 'package:verifin/app/models.dart';
+import 'package:verifin/app/veri_fin_scope.dart';
+import 'package:verifin/pages/recurring_page.dart';
 
 import 'support/test_harness.dart';
 
@@ -170,5 +173,83 @@ void main() {
     expect(target.recurringRules.single.note, '房租');
     expect(target.recurringRules.single.frequency, RecurringFrequency.monthly);
     target.dispose();
+  });
+
+  testWidgets('周期规则开关只在明确保存后提交', (tester) async {
+    final controller = await makeController();
+    addTearDown(controller.dispose);
+    final rule = _rule(
+      freq: RecurringFrequency.monthly,
+      start: DateTime(2030, 1, 1),
+    );
+    expect(await controller.saveRecurringRuleDraft(rule, isNew: true), isTrue);
+
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(home: const RecurringRulesPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+    expect(controller.recurringRules.single.active, isTrue);
+
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+    expect(controller.recurringRules.single.active, isFalse);
+    expect(find.text('未保存的修改'), findsNothing);
+  });
+
+  testWidgets('编辑后删除规则会直接退出，不再触发未保存提示', (tester) async {
+    final controller = await makeController();
+    addTearDown(controller.dispose);
+    final rule = _rule(
+      freq: RecurringFrequency.monthly,
+      start: DateTime(2030, 1, 1),
+    );
+    expect(await controller.saveRecurringRuleDraft(rule, isNew: true), isTrue);
+
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: FilledButton(
+                key: const Key('open_recurring_editor'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => RecurringRuleEditPage(rule: rule),
+                  ),
+                ),
+                child: const Text('打开'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('open_recurring_editor')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('频率'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('每周'));
+    await tester.pumpAndSettle();
+    expect(
+      controller.recurringRules.single.frequency,
+      RecurringFrequency.monthly,
+    );
+
+    await tester.tap(find.byTooltip('删除规则'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '删除'));
+    await tester.pumpAndSettle();
+
+    expect(controller.recurringRules, isEmpty);
+    expect(find.byKey(const Key('open_recurring_editor')), findsOneWidget);
+    expect(find.text('保存修改？'), findsNothing);
   });
 }

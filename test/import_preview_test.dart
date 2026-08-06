@@ -534,6 +534,8 @@ void main() {
       // 预填了原备注。
       expect(find.text('原备注'), findsOneWidget);
       await tester.enterText(find.byKey(const Key('entry_note_field')), '改后备注');
+      await tester.ensureVisible(find.byKey(const Key('save_entry_button')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('save_entry_button')));
       await tester.pumpAndSettle();
 

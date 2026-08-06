@@ -214,7 +214,7 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('点槽位选新指标即时保存', (tester) async {
+    testWidgets('点槽位只改草稿，点击保存后持久化', (tester) async {
       final controller = await makeController();
       await pumpPage(tester, controller);
 
@@ -229,6 +229,15 @@ void main() {
       await tester.tap(find.text('日均收入'));
       await tester.pumpAndSettle();
 
+      expect(controller.homeTrendConfig.big, HomeTrendConfig.defaults.big);
+      await tester.fling(
+        firstVerticalScrollable(),
+        const Offset(0, 1200),
+        1000,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('保存'));
+      await tester.pumpAndSettle();
       expect(controller.homeTrendConfig.big, HomeMetric.dailyAvgIncome);
     });
 
@@ -244,6 +253,9 @@ void main() {
       await tester.tap(find.text('恢复默认'));
       await tester.pumpAndSettle();
 
+      expect(controller.homeTrendConfig.big, HomeMetric.netAssets);
+      await tester.tap(find.byTooltip('保存'));
+      await tester.pumpAndSettle();
       expect(controller.homeTrendConfig, HomeTrendConfig.defaults);
     });
   });

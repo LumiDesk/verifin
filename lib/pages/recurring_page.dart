@@ -8,80 +8,149 @@ import '../l10n/app_localizations.dart';
 import 'sheets.dart';
 
 /// 周期记账规则列表：新增 / 编辑 / 启停 / 删除。
-class RecurringRulesPage extends StatelessWidget {
+class RecurringRulesPage extends StatefulWidget {
   const RecurringRulesPage({super.key});
+
+  @override
+  State<RecurringRulesPage> createState() => _RecurringRulesPageState();
+}
+
+class _RecurringRulesPageState extends State<RecurringRulesPage> {
+  final EditorExitController _exitController = EditorExitController();
+  final Map<String, bool> _initialActive = <String, bool>{};
+  final Map<String, bool> _draftActive = <String, bool>{};
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) {
+      return;
+    }
+    _syncRules(VeriFinScope.of(context).recurringRules);
+    _initialized = true;
+  }
 
   @override
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
     final rules = controller.recurringRules;
+    _syncRules(rules);
 
-    return Scaffold(
-      body: SafeArea(
-        child: VeriPage(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
-            children: <Widget>[
-              VeriHeader(
-                title: AppLocalizations.of(context).recurringTitle,
-                subtitle: AppLocalizations.of(context).recurringSubtitle,
-                showBack: true,
-                actions: <Widget>[
-                  HeaderAction(
-                    icon: Icons.add,
-                    tooltip: AppLocalizations.of(context).recurringAddTooltip,
-                    onPressed: () => _openEditor(context, null),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              if (rules.isEmpty)
-                VeriCard(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    child: Center(
-                      child: Text(
-                        AppLocalizations.of(context).recurringEmpty,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.5),
+    return UnsavedChangesGuard(
+      isDirty: _isDirty,
+      onSave: _save,
+      exitController: _exitController,
+      child: Scaffold(
+        body: SafeArea(
+          child: VeriPage(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
+              children: <Widget>[
+                VeriHeader(
+                  title: AppLocalizations.of(context).recurringTitle,
+                  subtitle: AppLocalizations.of(context).recurringSubtitle,
+                  showBack: true,
+                  actions: <Widget>[
+                    HeaderAction(
+                      icon: Icons.add,
+                      tooltip: AppLocalizations.of(context).recurringAddTooltip,
+                      onPressed: () => _openEditor(context, null),
+                    ),
+                    SaveHeaderAction(onPressed: _isDirty ? _saveAndExit : null),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                if (rules.isEmpty)
+                  VeriCard(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Center(
+                        child: Text(
+                          AppLocalizations.of(context).recurringEmpty,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.5),
+                              ),
                         ),
                       ),
                     ),
+                  )
+                else
+                  VeriCard(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      children: <Widget>[
+                        for (final rule in rules)
+                          _RecurringRow(
+                            rule: rule.copyWith(
+                              active: _draftActive[rule.id] ?? rule.active,
+                            ),
+                            category: controller.categoryById(rule.categoryId),
+                            onTap: () => _openEditor(context, rule),
+                            onToggle: (value) {
+                              setState(() => _draftActive[rule.id] = value);
+                            },
+                          ),
+                      ],
+                    ),
                   ),
-                )
-              else
-                VeriCard(
-                  padding: EdgeInsets.zero,
-                  child: Column(
-                    children: <Widget>[
-                      for (final rule in rules)
-                        _RecurringRow(
-                          rule: rule,
-                          category: controller.categoryById(rule.categoryId),
-                          onTap: () => _openEditor(context, rule),
-                          onToggle: (value) =>
-                              controller.setRecurringRuleActive(rule.id, value),
-                        ),
-                    ],
-                  ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  void _openEditor(BuildContext context, RecurringRule? rule) {
-    Navigator.of(context).push<void>(
+  void _syncRules(List<RecurringRule> rules) {
+    final ids = rules.map((rule) => rule.id).toSet();
+    _initialActive.removeWhere((id, _) => !ids.contains(id));
+    _draftActive.removeWhere((id, _) => !ids.contains(id));
+    for (final rule in rules) {
+      _initialActive.putIfAbsent(rule.id, () => rule.active);
+      _draftActive.putIfAbsent(rule.id, () => rule.active);
+    }
+  }
+
+  bool get _isDirty {
+    if (_draftActive.length != _initialActive.length) {
+      return true;
+    }
+    return _draftActive.entries.any(
+      (entry) => _initialActive[entry.key] != entry.value,
+    );
+  }
+
+  Future<void> _openEditor(BuildContext context, RecurringRule? rule) async {
+    await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (context) => RecurringRuleEditPage(rule: rule),
       ),
     );
+    if (mounted) {
+      setState(() {
+        _syncRules(VeriFinScope.of(context).recurringRules);
+      });
+    }
   }
+
+  Future<void> _saveAndExit() async {
+    if (await _save() && mounted) {
+      setState(() {
+        _initialActive
+          ..clear()
+          ..addAll(_draftActive);
+      });
+      _exitController.exit();
+    }
+  }
+
+  Future<bool> _save() =>
+      VeriFinScope.of(context).saveRecurringActiveDraft(_draftActive);
 }
 
 class _RecurringRow extends StatelessWidget {
@@ -151,6 +220,17 @@ class _RecurringRow extends StatelessWidget {
 }
 
 /// 周期规则新增 / 编辑表单。
+typedef _RecurringRuleDraftSnapshot = ({
+  EntryType type,
+  double amount,
+  String categoryId,
+  String accountId,
+  String? toAccountId,
+  RecurringFrequency frequency,
+  DateTime startDate,
+  String note,
+});
+
 class RecurringRuleEditPage extends StatefulWidget {
   const RecurringRuleEditPage({super.key, this.rule});
 
@@ -161,6 +241,7 @@ class RecurringRuleEditPage extends StatefulWidget {
 }
 
 class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
+  final EditorExitController _exitController = EditorExitController();
   late EntryType _type;
   late double _amount;
   late String _categoryId;
@@ -169,6 +250,7 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
   late RecurringFrequency _frequency;
   late DateTime _startDate;
   late final TextEditingController _noteController;
+  late _RecurringRuleDraftSnapshot _initialDraft;
   var _initialized = false;
 
   @override
@@ -200,6 +282,7 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
       _startDate = dateOnly(DateTime.now());
       _noteController = TextEditingController();
     }
+    _initialDraft = _draftSnapshot;
   }
 
   @override
@@ -215,125 +298,130 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
     final category = controller.categoryById(_categoryId);
     final account = accounts.where((a) => a.id == _accountId).firstOrNull;
 
-    return Scaffold(
-      body: SafeArea(
-        child: VeriPage(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
-            children: <Widget>[
-              VeriHeader(
-                title: widget.rule == null
-                    ? AppLocalizations.of(context).recurringNewTitle
-                    : AppLocalizations.of(context).recurringEditTitle,
-                showBack: true,
-                actions: <Widget>[
-                  if (widget.rule != null)
-                    HeaderAction(
-                      icon: Icons.delete_outline,
-                      tooltip: AppLocalizations.of(
-                        context,
-                      ).recurringDeleteTooltip,
-                      destructive: true,
-                      onPressed: _delete,
-                    ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              SegmentedButton<EntryType>(
-                segments: EntryType.userSelectable
-                    .map(
-                      (type) => ButtonSegment<EntryType>(
-                        value: type,
-                        label: Text(type.label(AppLocalizations.of(context))),
+    return UnsavedChangesGuard(
+      isDirty: _isDirty,
+      onSave: _save,
+      exitController: _exitController,
+      child: Scaffold(
+        body: SafeArea(
+          child: VeriPage(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
+              children: <Widget>[
+                VeriHeader(
+                  title: widget.rule == null
+                      ? AppLocalizations.of(context).recurringNewTitle
+                      : AppLocalizations.of(context).recurringEditTitle,
+                  showBack: true,
+                  actions: <Widget>[
+                    if (widget.rule != null)
+                      HeaderAction(
+                        icon: Icons.delete_outline,
+                        tooltip: AppLocalizations.of(
+                          context,
+                        ).recurringDeleteTooltip,
+                        destructive: true,
+                        onPressed: _delete,
                       ),
-                    )
-                    .toList(),
-                selected: <EntryType>{_type},
-                onSelectionChanged: (selection) {
-                  setState(() {
-                    _type = selection.first;
-                    _categoryId = controller.categoriesForType(_type).first.id;
-                  });
-                },
-              ),
-              const SizedBox(height: 12),
-              VeriCard(
-                child: Column(
-                  children: <Widget>[
-                    DetailInfoRow(
-                      label: AppLocalizations.of(context).amountLabel,
-                      value: _amount > 0
-                          ? formatAmount(_amount)
-                          : AppLocalizations.of(context).tapToFill,
-                      placeholder: _amount <= 0,
-                      onTap: _editAmount,
-                    ),
-                    DetailInfoRow(
-                      label: AppLocalizations.of(context).commonCategory,
-                      value: category.label,
-                      onTap: _pickCategory,
-                    ),
-                    DetailInfoRow(
-                      label: _type == EntryType.transfer
-                          ? AppLocalizations.of(context).transferOutAccount
-                          : AppLocalizations.of(context).accountLabel,
-                      value: accounts.isEmpty
-                          ? AppLocalizations.of(context).addAccountFirst
-                          : _accountId.isEmpty
-                          ? AppLocalizations.of(context).noAccountLabel
-                          : account?.name ??
-                                AppLocalizations.of(context).noAccountLabel,
-                      placeholder: accounts.isEmpty,
-                      onTap: accounts.isEmpty
-                          ? null
-                          : () => _pickAccount(false),
-                    ),
-                    if (_type == EntryType.transfer)
-                      DetailInfoRow(
-                        label: AppLocalizations.of(context).transferInAccount,
-                        value:
-                            accounts
-                                .where((a) => a.id == _toAccountId)
-                                .firstOrNull
-                                ?.name ??
-                            AppLocalizations.of(context).pleaseSelect,
-                        placeholder: _toAccountId == null,
-                        onTap: accounts.length < 2
-                            ? null
-                            : () => _pickAccount(true),
-                      ),
-                    DetailInfoRow(
-                      label: AppLocalizations.of(context).frequencyLabel,
-                      value: _frequency.label(AppLocalizations.of(context)),
-                      onTap: _pickFrequency,
-                    ),
-                    DetailInfoRow(
-                      label: AppLocalizations.of(context).startDateLabel,
-                      value: AppLocalizations.of(
-                        context,
-                      ).dateMonthDay(_startDate),
-                      onTap: _pickStartDate,
-                    ),
-                    DetailInfoRow(
-                      label: AppLocalizations.of(context).commonNote,
-                      value: _noteController.text.trim().isEmpty
-                          ? AppLocalizations.of(context).noteHint
-                          : _noteController.text.trim(),
-                      placeholder: _noteController.text.trim().isEmpty,
-                      onTap: _editNote,
+                    SaveHeaderAction(
+                      onPressed: _isDirty && _canSave(accounts)
+                          ? _saveAndExit
+                          : null,
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 48,
-                child: FilledButton(
-                  onPressed: _canSave(accounts) ? _save : null,
-                  child: Text(AppLocalizations.of(context).commonSave),
+                const SizedBox(height: 10),
+                SegmentedButton<EntryType>(
+                  segments: EntryType.userSelectable
+                      .map(
+                        (type) => ButtonSegment<EntryType>(
+                          value: type,
+                          label: Text(type.label(AppLocalizations.of(context))),
+                        ),
+                      )
+                      .toList(),
+                  selected: <EntryType>{_type},
+                  onSelectionChanged: (selection) {
+                    setState(() {
+                      _type = selection.first;
+                      _categoryId = controller
+                          .categoriesForType(_type)
+                          .first
+                          .id;
+                    });
+                  },
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                VeriCard(
+                  child: Column(
+                    children: <Widget>[
+                      DetailInfoRow(
+                        label: AppLocalizations.of(context).amountLabel,
+                        value: _amount > 0
+                            ? formatAmount(_amount)
+                            : AppLocalizations.of(context).tapToFill,
+                        placeholder: _amount <= 0,
+                        onTap: _editAmount,
+                      ),
+                      DetailInfoRow(
+                        label: AppLocalizations.of(context).commonCategory,
+                        value: category.label,
+                        onTap: _pickCategory,
+                      ),
+                      DetailInfoRow(
+                        label: _type == EntryType.transfer
+                            ? AppLocalizations.of(context).transferOutAccount
+                            : AppLocalizations.of(context).accountLabel,
+                        value: accounts.isEmpty
+                            ? AppLocalizations.of(context).addAccountFirst
+                            : _accountId.isEmpty
+                            ? AppLocalizations.of(context).noAccountLabel
+                            : account?.name ??
+                                  AppLocalizations.of(context).noAccountLabel,
+                        placeholder: accounts.isEmpty,
+                        onTap: accounts.isEmpty
+                            ? null
+                            : () => _pickAccount(false),
+                      ),
+                      if (_type == EntryType.transfer)
+                        DetailInfoRow(
+                          label: AppLocalizations.of(context).transferInAccount,
+                          value:
+                              accounts
+                                  .where((a) => a.id == _toAccountId)
+                                  .firstOrNull
+                                  ?.name ??
+                              AppLocalizations.of(context).pleaseSelect,
+                          placeholder: _toAccountId == null,
+                          onTap: accounts.length < 2
+                              ? null
+                              : () => _pickAccount(true),
+                        ),
+                      DetailInfoRow(
+                        label: AppLocalizations.of(context).frequencyLabel,
+                        value: _frequency.label(AppLocalizations.of(context)),
+                        onTap: _pickFrequency,
+                      ),
+                      DetailInfoRow(
+                        label: AppLocalizations.of(context).startDateLabel,
+                        value: AppLocalizations.of(
+                          context,
+                        ).dateMonthDay(_startDate),
+                        onTap: _pickStartDate,
+                      ),
+                      DetailInfoRow(
+                        label: AppLocalizations.of(context).commonNote,
+                        value: _noteController.text.trim().isEmpty
+                            ? AppLocalizations.of(context).noteHint
+                            : _noteController.text.trim(),
+                        placeholder: _noteController.text.trim().isEmpty,
+                        onTap: _editNote,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -462,47 +550,77 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
     }
   }
 
-  void _save() {
+  _RecurringRuleDraftSnapshot get _draftSnapshot => (
+    type: _type,
+    amount: _amount,
+    categoryId: _categoryId,
+    accountId: _accountId,
+    toAccountId: _type == EntryType.transfer ? _toAccountId : null,
+    frequency: _frequency,
+    startDate: _startDate,
+    note: _noteController.text.trim(),
+  );
+
+  bool get _isDirty => _initialized && _draftSnapshot != _initialDraft;
+
+  Future<void> _saveAndExit() async {
+    if (await _save() && mounted) {
+      setState(() => _initialDraft = _draftSnapshot);
+      _exitController.exit();
+    }
+  }
+
+  Future<bool> _save() async {
     final controller = VeriFinScope.of(context);
     final existing = widget.rule;
-    if (existing == null) {
-      controller.addRecurringRule(
-        RecurringRule(
-          id: 'recur_${DateTime.now().microsecondsSinceEpoch}',
-          bookId: controller.activeBook.id,
-          type: _type,
-          amount: _amount,
-          categoryId: _categoryId,
-          accountId: _accountId,
-          toAccountId: _type == EntryType.transfer ? _toAccountId : null,
-          note: _noteController.text.trim(),
-          frequency: _frequency,
-          startDate: _startDate,
-          nextRunDate: _startDate,
-        ),
-      );
-    } else {
-      controller.updateRecurringRule(
-        existing.copyWith(
-          type: _type,
-          amount: _amount,
-          categoryId: _categoryId,
-          accountId: _accountId,
-          toAccountId: _type == EntryType.transfer ? _toAccountId : null,
-          clearToAccountId: _type != EntryType.transfer,
-          note: _noteController.text.trim(),
-          frequency: _frequency,
-          startDate: _startDate,
-        ),
-      );
+    final draft = existing == null
+        ? RecurringRule(
+            id: 'recur_${DateTime.now().microsecondsSinceEpoch}',
+            bookId: controller.activeBook.id,
+            type: _type,
+            amount: _amount,
+            categoryId: _categoryId,
+            accountId: _accountId,
+            toAccountId: _type == EntryType.transfer ? _toAccountId : null,
+            note: _noteController.text.trim(),
+            frequency: _frequency,
+            startDate: _startDate,
+            nextRunDate: _startDate,
+          )
+        : existing.copyWith(
+            type: _type,
+            amount: _amount,
+            categoryId: _categoryId,
+            accountId: _accountId,
+            toAccountId: _type == EntryType.transfer ? _toAccountId : null,
+            clearToAccountId: _type != EntryType.transfer,
+            note: _noteController.text.trim(),
+            frequency: _frequency,
+            startDate: _startDate,
+          );
+    if (!await controller.saveRecurringRuleDraft(
+      draft,
+      isNew: existing == null,
+    )) {
+      return false;
     }
     // 立即补记已到期的交易。
     controller.applyDueRecurring(DateTime.now());
-    Navigator.of(context).pop();
+    return true;
   }
 
-  void _delete() {
+  Future<void> _delete() async {
+    final confirmed = await showConfirmDialog(
+      context,
+      title: AppLocalizations.of(context).recurringDeleteTitle,
+      message: AppLocalizations.of(context).recurringDeleteMessage,
+      confirmLabel: AppLocalizations.of(context).commonDelete,
+      destructive: true,
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
     VeriFinScope.of(context).deleteRecurringRule(widget.rule!.id);
-    Navigator.of(context).pop();
+    _exitController.exit();
   }
 }

@@ -28,6 +28,9 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
   DateTime _occurredAt = DateTime.now();
   final TextEditingController _noteController = TextEditingController();
   bool _saving = false;
+  bool _saved = false;
+  late final String _entryId = DateTime.now().microsecondsSinceEpoch.toString();
+  final EditorExitController _exitController = EditorExitController();
   bool _initialized = false;
 
   @override
@@ -82,55 +85,59 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
     _ensureDefaultFrom(controller);
     final canConfirm = _amount > 0;
 
-    return Scaffold(
-      body: SafeArea(
-        child: VeriPage(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
-            children: <Widget>[
-              VeriHeader(
-                title: l10n.creditRepayTitle,
-                subtitle: widget.account.name,
-                showBack: true,
-                actions: <Widget>[
-                  HeaderAction(
-                    icon: Icons.check,
-                    tooltip: l10n.commonConfirm,
-                    onPressed: canConfirm ? _save : null,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              SelectField(
-                label: l10n.creditRepayAmountLabel,
-                value: formatAmount(_amount),
-                icon: Icons.payments_outlined,
-                onTap: _pickAmount,
-              ),
-              const SizedBox(height: 10),
-              SelectField(
-                key: const Key('repay_from_account'),
-                label: l10n.creditRepayFromAccount,
-                value: _noAccount
-                    ? l10n.creditRepayNoAccountLabel
-                    : _fromAccountLabel(controller),
-                icon: Icons.account_balance_wallet_outlined,
-                onTap: () => _pickFromAccount(controller),
-              ),
-              const SizedBox(height: 10),
-              SelectField(
-                label: l10n.dateLabel,
-                value: l10n.dateMonthDay(_occurredAt),
-                icon: Icons.event_outlined,
-                onTap: _pickDate,
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _noteController,
-                maxLines: 1,
-                decoration: InputDecoration(labelText: l10n.commonNote),
-              ),
-            ],
+    return UnsavedChangesGuard(
+      isDirty: !_saved,
+      onSave: _save,
+      exitController: _exitController,
+      child: Scaffold(
+        body: SafeArea(
+          child: VeriPage(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
+              children: <Widget>[
+                VeriHeader(
+                  title: l10n.creditRepayTitle,
+                  subtitle: widget.account.name,
+                  showBack: true,
+                  actions: <Widget>[
+                    SaveHeaderAction(
+                      onPressed: canConfirm ? _saveAndExit : null,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                SelectField(
+                  label: l10n.creditRepayAmountLabel,
+                  value: formatAmount(_amount),
+                  icon: Icons.payments_outlined,
+                  onTap: _pickAmount,
+                ),
+                const SizedBox(height: 10),
+                SelectField(
+                  key: const Key('repay_from_account'),
+                  label: l10n.creditRepayFromAccount,
+                  value: _noAccount
+                      ? l10n.creditRepayNoAccountLabel
+                      : _fromAccountLabel(controller),
+                  icon: Icons.account_balance_wallet_outlined,
+                  onTap: () => _pickFromAccount(controller),
+                ),
+                const SizedBox(height: 10),
+                SelectField(
+                  label: l10n.dateLabel,
+                  value: l10n.dateMonthDay(_occurredAt),
+                  icon: Icons.event_outlined,
+                  onTap: _pickDate,
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _noteController,
+                  onChanged: (_) => setState(() {}),
+                  maxLines: 1,
+                  decoration: InputDecoration(labelText: l10n.commonNote),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -206,9 +213,15 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
     });
   }
 
-  void _save() {
+  Future<void> _saveAndExit() async {
+    if (await _save() && mounted) {
+      _exitController.exit();
+    }
+  }
+
+  Future<bool> _save() async {
     if (_amount <= 0 || _saving) {
-      return;
+      return false;
     }
     final controller = VeriFinScope.of(context);
     final fromId = _noAccount ? '' : (_fromAccountId ?? '');
@@ -218,9 +231,9 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
         ? ''
         : transferCategories.first.id;
     _saving = true;
-    controller.addEntry(
-      LedgerEntry(
-        id: DateTime.now().microsecondsSinceEpoch.toString(),
+    final saved = await controller.saveEntryAggregateDraft(
+      entry: LedgerEntry(
+        id: _entryId,
         bookId: controller.activeBook.id,
         type: EntryType.transfer,
         amount: _amount,
@@ -230,10 +243,16 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
         note: _noteController.text.trim(),
         occurredAt: _occurredAt,
       ),
+      isNew: true,
     );
+    if (!mounted || !saved) {
+      _saving = false;
+      return false;
+    }
+    _saved = true;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(AppLocalizations.of(context).creditRepaySuccess)),
     );
-    Navigator.of(context).pop();
+    return true;
   }
 }

@@ -61,6 +61,12 @@ abstract interface class LedgerRepository {
   Future<List<Attachment>> loadAttachments();
   Future<void> saveAttachments(List<Attachment> attachments);
 
+  /// Replaces entries and attachments in one transaction.
+  Future<void> saveEntryAggregate({
+    required List<LedgerEntry> entries,
+    required List<Attachment> attachments,
+  });
+
   Future<List<RecurringRule>> loadRecurringRules();
   Future<void> saveRecurringRules(List<RecurringRule> rules);
 
@@ -72,6 +78,13 @@ abstract interface class LedgerRepository {
 
   Future<Map<String, double>> loadDailyBudgets();
   Future<void> saveDailyBudgets(Map<String, double> budgets);
+
+  /// 在单个事务中保存三张预算表，供预算设置页一次性提交草稿。
+  Future<void> saveBudgetSettings({
+    required Map<String, double> monthlyBudgets,
+    required Map<String, double> categoryBudgets,
+    required Map<String, double> dailyBudgets,
+  });
 
   /// 在单个数据库事务中整体替换全部账目类表。用于导入/恢复/重置/删账本：
   /// 保证跨表一致——中途失败会整体回滚，不会留下「entries 已换、accounts 还是旧的」
@@ -203,6 +216,22 @@ class SqliteLedgerRepository implements LedgerRepository {
     await _replaceAll('attachments', _indexed(attachments, _attachmentToRow));
   }
 
+  @override
+  Future<void> saveEntryAggregate({
+    required List<LedgerEntry> entries,
+    required List<Attachment> attachments,
+  }) async {
+    await _db.transaction((txn) async {
+      await _replaceInTxn(txn, 'entries', entries.map(_entryToRow));
+      await _replaceInTxn(
+        txn,
+        'attachments',
+        _indexed(attachments, _attachmentToRow),
+      );
+    });
+    _seedSnapshot('entries', entries.map(_entryToRow));
+  }
+
   // ---- 周期记账规则 ----
 
   @override
@@ -246,6 +275,23 @@ class SqliteLedgerRepository implements LedgerRepository {
   @override
   Future<void> saveDailyBudgets(Map<String, double> budgets) =>
       _saveBudgetMap('daily_budgets', budgets);
+
+  @override
+  Future<void> saveBudgetSettings({
+    required Map<String, double> monthlyBudgets,
+    required Map<String, double> categoryBudgets,
+    required Map<String, double> dailyBudgets,
+  }) async {
+    await _db.transaction((txn) async {
+      await _replaceInTxn(txn, 'monthly_budgets', _budgetRows(monthlyBudgets));
+      await _replaceInTxn(
+        txn,
+        'category_budgets',
+        _budgetRows(categoryBudgets),
+      );
+      await _replaceInTxn(txn, 'daily_budgets', _budgetRows(dailyBudgets));
+    });
+  }
 
   @override
   Future<void> replaceAllLedgerData(LedgerDataSnapshot snapshot) async {

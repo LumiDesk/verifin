@@ -636,11 +636,17 @@ mixin _ControllerState on ChangeNotifier {
 
   // 记录最近一次 SQLite 写入，供测试等待其落库。写入按连接串行，等待最新即可。
   Future<void> _pendingWrite = Future<void>.value();
+  int _writeGeneration = 0;
+  int _lastFailedWriteGeneration = -1;
 
   void _trackWrite(Future<void> write) {
     // 挂 catchError：落库失败时记录日志并回调 UI 提示，避免「内存已改但库未写」
     // 的静默不一致——用户以为已保存、重启后却丢失。
-    final tracked = write.catchError(_handlePersistError);
+    final generation = ++_writeGeneration;
+    final tracked = write.catchError((Object error, StackTrace stackTrace) {
+      _lastFailedWriteGeneration = generation;
+      _handlePersistError(error, stackTrace);
+    });
     _pendingWrite = tracked;
     unawaited(tracked);
   }
@@ -652,6 +658,17 @@ mixin _ControllerState on ChangeNotifier {
 
   /// 等待挂起的 SQLite 写入落库。
   Future<void> waitForPendingWrites() => _pendingWrite;
+
+  /// 等待调用前最近一次 SQLite 写入，并返回该次写入是否成功。
+  ///
+  /// 编辑页用此结果决定是否允许退出；错误仍由 [_handlePersistError] 统一记录并
+  /// 通过 [onPersistError] 给用户反馈。保留 [waitForPendingWrites] 的兼容语义，
+  /// 避免后台刷新流程因已上报的写入错误再次抛出。
+  Future<bool> waitForPendingWritesSucceeded() async {
+    final generation = _writeGeneration;
+    await _pendingWrite;
+    return _lastFailedWriteGeneration != generation;
+  }
 
   /// 刷盘所有挂起写入：偏好类 KV **与** 账目类 SQLite。应用切到后台时调用，
   /// 确保应用锁 / 隐私同意等关键偏好，以及用户刚记下的交易，在进程可能被系统
