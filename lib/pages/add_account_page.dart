@@ -24,12 +24,20 @@ class _AddAccountPageState extends State<AddAccountPage> {
   @override
   void initState() {
     super.initState();
-    _nameController.addListener(_suggestIconFromName);
+    _nameController.addListener(_handleNameChanged);
+    _balanceController.addListener(_handleDraftChanged);
+    _cardLast4Controller.addListener(_handleDraftChanged);
+    _cardNumberController.addListener(_handleDraftChanged);
+    _noteController.addListener(_handleDraftChanged);
   }
 
   @override
   void dispose() {
-    _nameController.removeListener(_suggestIconFromName);
+    _nameController.removeListener(_handleNameChanged);
+    _balanceController.removeListener(_handleDraftChanged);
+    _cardLast4Controller.removeListener(_handleDraftChanged);
+    _cardNumberController.removeListener(_handleDraftChanged);
+    _noteController.removeListener(_handleDraftChanged);
     _nameController.dispose();
     _balanceController.dispose();
     _cardLast4Controller.dispose();
@@ -43,94 +51,98 @@ class _AddAccountPageState extends State<AddAccountPage> {
     final controller = VeriFinScope.of(context);
     final groups = controller.accountGroups;
 
-    return Scaffold(
-      body: SafeArea(
-        child: VeriPage(
-          child: Form(
-            key: _formKey,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
-              children: <Widget>[
-                VeriHeader(
-                  title: AppLocalizations.of(context).accountAdd,
-                  showBack: true,
-                  actions: <Widget>[
-                    HeaderAction(
-                      icon: Icons.check,
-                      tooltip: AppLocalizations.of(context).accountSaveTooltip,
-                      onPressed: _save,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                SelectField(
-                  label: AppLocalizations.of(context).accountTypeLabel,
-                  value: _type.label(AppLocalizations.of(context)),
-                  icon: Icons.category_outlined,
-                  onTap: _pickAccountType,
-                ),
-                const SizedBox(height: 10),
-                TextFormField(
-                  controller: _nameController,
-                  decoration: InputDecoration(
-                    labelText: AppLocalizations.of(context).accountNameLabel,
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return AppLocalizations.of(context).accountNameRequired;
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 10),
-                if (_type.supportsCardLast4) ...<Widget>[
-                  CardNumberFields(
-                    numberController: _cardNumberController,
-                    last4Controller: _cardLast4Controller,
-                    follows: _cardLast4Follows,
-                    onFollowsChanged: (value) =>
-                        setState(() => _cardLast4Follows = value),
+    return UnsavedChangesGuard(
+      isDirty: _isDirty,
+      onSave: _save,
+      child: Scaffold(
+        body: SafeArea(
+          child: VeriPage(
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
+                children: <Widget>[
+                  VeriHeader(
+                    title: AppLocalizations.of(context).accountAdd,
+                    showBack: true,
+                    actions: <Widget>[
+                      SaveHeaderAction(
+                        onPressed: _isDirty ? _saveAndExit : null,
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 10),
+                  SelectField(
+                    label: AppLocalizations.of(context).accountTypeLabel,
+                    value: _type.label(AppLocalizations.of(context)),
+                    icon: Icons.category_outlined,
+                    onTap: _pickAccountType,
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context).accountNameLabel,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return AppLocalizations.of(context).accountNameRequired;
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  if (_type.supportsCardLast4) ...<Widget>[
+                    CardNumberFields(
+                      numberController: _cardNumberController,
+                      last4Controller: _cardLast4Controller,
+                      follows: _cardLast4Follows,
+                      onFollowsChanged: (value) =>
+                          setState(() => _cardLast4Follows = value),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  TextFormField(
+                    controller: _balanceController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                      signed: true,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: AppLocalizations.of(
+                        context,
+                      ).accountBalanceLabel,
+                      hintText: AppLocalizations.of(context).accountBalanceHint,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SelectField(
+                    key: const Key('account_icon_select_field'),
+                    label: AppLocalizations.of(context).accountIconLabel,
+                    value: iconLabelForCode(
+                      AppLocalizations.of(context),
+                      _iconCode,
+                    ),
+                    leading: AccountIconBox(iconCode: _iconCode, size: 28),
+                    onTap: _pickAccountIcon,
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _noteController,
+                    maxLines: 1,
+                    decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context).accountNoteLabel,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SelectField(
+                    label: AppLocalizations.of(context).accountGroupLabel,
+                    value: _groupLabel(groups),
+                    icon: Icons.folder_outlined,
+                    onTap: () => _pickAccountGroup(groups),
+                  ),
                 ],
-                TextFormField(
-                  controller: _balanceController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                    signed: true,
-                  ),
-                  decoration: InputDecoration(
-                    labelText: AppLocalizations.of(context).accountBalanceLabel,
-                    hintText: AppLocalizations.of(context).accountBalanceHint,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                SelectField(
-                  key: const Key('account_icon_select_field'),
-                  label: AppLocalizations.of(context).accountIconLabel,
-                  value: iconLabelForCode(
-                    AppLocalizations.of(context),
-                    _iconCode,
-                  ),
-                  leading: AccountIconBox(iconCode: _iconCode, size: 28),
-                  onTap: _pickAccountIcon,
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _noteController,
-                  maxLines: 1,
-                  decoration: InputDecoration(
-                    labelText: AppLocalizations.of(context).accountNoteLabel,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                SelectField(
-                  label: AppLocalizations.of(context).accountGroupLabel,
-                  value: _groupLabel(groups),
-                  icon: Icons.folder_outlined,
-                  onTap: () => _pickAccountGroup(groups),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -171,15 +183,20 @@ class _AddAccountPageState extends State<AddAccountPage> {
     }
   }
 
-  void _suggestIconFromName() {
-    if (_iconManuallySelected) {
-      return;
+  void _handleNameChanged() {
+    if (!_iconManuallySelected) {
+      final suggested = suggestedAccountIconCode(_nameController.text);
+      if (suggested != null) {
+        _iconCode = suggested;
+      }
     }
-    final suggested = suggestedAccountIconCode(_nameController.text);
-    if (suggested == null || suggested == _iconCode) {
-      return;
+    _handleDraftChanged();
+  }
+
+  void _handleDraftChanged() {
+    if (mounted) {
+      setState(() {});
     }
-    setState(() => _iconCode = suggested);
   }
 
   Future<void> _pickAccountGroup(List<AccountGroup> groups) async {
@@ -230,12 +247,35 @@ class _AddAccountPageState extends State<AddAccountPage> {
         .name;
   }
 
-  void _save() {
+  bool get _isDirty {
+    final balanceText = _balanceController.text.trim();
+    final parsedBalance = double.tryParse(balanceText);
+    final balanceChanged =
+        balanceText.isNotEmpty && (parsedBalance == null || parsedBalance != 0);
+    return _nameController.text.trim().isNotEmpty ||
+        balanceChanged ||
+        _type != AccountType.onlinePayment ||
+        _iconCode != 'wallet' ||
+        _groupId != 'ungrouped' ||
+        _noteController.text.trim().isNotEmpty ||
+        (_type.supportsCardLast4 &&
+            (_cardNumberController.text.trim().isNotEmpty ||
+                cardLast4Of(_cardLast4Controller.text).isNotEmpty ||
+                !_cardLast4Follows));
+  }
+
+  Future<void> _saveAndExit() async {
+    if (await _save() && mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  Future<bool> _save() async {
     if (!_formKey.currentState!.validate()) {
-      return;
+      return false;
     }
     final controller = VeriFinScope.of(context);
-    controller.addAccount(
+    return controller.addAccountDraft(
       Account(
         id: DateTime.now().microsecondsSinceEpoch.toString(),
         bookId: controller.activeBook.id,
@@ -256,6 +296,5 @@ class _AddAccountPageState extends State<AddAccountPage> {
         cardLast4Follows: _type.supportsCardLast4 ? _cardLast4Follows : true,
       ),
     );
-    Navigator.of(context).pop();
   }
 }

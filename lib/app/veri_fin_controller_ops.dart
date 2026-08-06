@@ -570,6 +570,27 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
+  /// 账户编辑页显式提交默认账户偏好，KV 写入成功后才更新内存。
+  Future<bool> saveDefaultAccountDraft(String? accountId) async {
+    final next = Map<String, String>.of(_defaultAccountIds);
+    if (accountId == null || accountId.isEmpty) {
+      next.remove(_activeBookId);
+    } else {
+      next[_activeBookId] = accountId;
+    }
+    try {
+      await _store.writeAndFlush(_defaultAccountKey, jsonEncode(next));
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _defaultAccountIds
+      ..clear()
+      ..addAll(next);
+    notifyListeners();
+    return true;
+  }
+
   void _clearDefaultAccountRef(String accountId) {
     final before = _defaultAccountIds.length;
     _defaultAccountIds.removeWhere((_, id) => id == accountId);
@@ -1451,6 +1472,21 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
+  /// 编辑页提交新账户：只有 SQLite 写入成功后才更新内存并通知 UI。
+  Future<bool> addAccountDraft(Account account) async {
+    final normalized = account.copyWith(name: account.name.trim());
+    final next = <Account>[..._accounts, normalized];
+    try {
+      await _repository.saveAccounts(next);
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _accounts.add(normalized);
+    notifyListeners();
+    return true;
+  }
+
   void updateAccount(Account account) {
     final index = _accounts.indexWhere((item) => item.id == account.id);
     if (index == -1) {
@@ -1459,6 +1495,25 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _accounts[index] = account.copyWith(name: account.name.trim());
     _persistAccounts();
     notifyListeners();
+  }
+
+  /// 编辑页提交已有账户：只有 SQLite 写入成功后才替换内存快照。
+  Future<bool> saveAccountDraft(Account account) async {
+    final index = _accounts.indexWhere((item) => item.id == account.id);
+    if (index == -1) {
+      return false;
+    }
+    final normalized = account.copyWith(name: account.name.trim());
+    final next = List<Account>.of(_accounts)..[index] = normalized;
+    try {
+      await _repository.saveAccounts(next);
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _accounts[index] = normalized;
+    notifyListeners();
+    return true;
   }
 
   /// 停用引用 [accountId] 的周期规则并清掉其账户引用（转出改为「无账户」、
@@ -1959,6 +2014,19 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _profile = profile;
     _store.write(_profileKey, jsonEncode(profile.toJson()));
     notifyListeners();
+  }
+
+  /// 个人资料编辑页的显式提交；KV 写入成功后才替换 Controller 快照。
+  Future<bool> saveProfileDraft(UserProfile profile) async {
+    try {
+      await _store.writeAndFlush(_profileKey, jsonEncode(profile.toJson()));
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _profile = profile;
+    notifyListeners();
+    return true;
   }
 
   void setAssetCoverUrl(String value) {

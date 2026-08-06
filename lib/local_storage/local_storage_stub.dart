@@ -9,7 +9,15 @@ class LocalKeyValueStore {
     _memory[key] = value;
   }
 
+  Future<void> writeAndFlush(String key, String value) async {
+    _memory[key] = value;
+  }
+
   void delete(String key) {
+    _memory.remove(key);
+  }
+
+  Future<void> deleteAndFlush(String key) async {
     _memory.remove(key);
   }
 

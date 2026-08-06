@@ -28,12 +28,27 @@ void main() {
 
     // 清空简介输入框后保存。
     await tester.enterText(find.text('原来的简介'), '');
+    await tester.pump();
+    final saveButton = tester.widget<IconButton>(
+      find.widgetWithIcon(IconButton, Icons.save_outlined),
+    );
+    expect(saveButton.onPressed, isNotNull);
     await tester.tap(find.byTooltip('保存'));
     await tester.pumpAndSettle();
 
     // 昵称非空 → 直接保存，简介为空字符串（此前 bug 会被替换成默认简介）。
     expect(controller.profile.bio, '');
     expect(controller.profile.nickname, '张三');
+  });
+
+  testWidgets('个人资料未修改时保存按钮禁用', (tester) async {
+    final controller = await makeController();
+    await pumpProfilePage(tester, controller);
+
+    final saveButton = tester.widget<IconButton>(
+      find.widgetWithIcon(IconButton, Icons.save_outlined),
+    );
+    expect(saveButton.onPressed, isNull);
   });
 
   testWidgets('昵称留空保存时弹确认框，取消则不保存', (tester) async {
@@ -45,6 +60,7 @@ void main() {
     await pumpProfilePage(tester, controller);
 
     await tester.enterText(find.text('张三'), '');
+    await tester.pump();
     await tester.tap(find.byTooltip('保存'));
     await tester.pumpAndSettle();
 
@@ -66,6 +82,7 @@ void main() {
     await pumpProfilePage(tester, controller);
 
     await tester.enterText(find.text('张三'), '');
+    await tester.pump();
     await tester.tap(find.byTooltip('保存'));
     await tester.pumpAndSettle();
 

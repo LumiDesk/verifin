@@ -50,6 +50,28 @@ void main() {
     expect(find.text('中信银行'), findsOneWidget);
   });
 
+  testWidgets('添加账户修改后返回可选择不保存', (tester) async {
+    final controller = await pumpApp(tester);
+
+    await tapBottomTab(tester, 1);
+    await tester.tap(find.byTooltip('资产操作'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('添加账户'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, '临时账户');
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('返回'));
+    await tester.pumpAndSettle();
+    expect(find.text('保存修改？'), findsOneWidget);
+    expect(controller.accounts, isEmpty);
+
+    await tester.tap(find.text('不保存'));
+    await tester.pumpAndSettle();
+    expect(find.text('临时账户'), findsNothing);
+    expect(controller.accounts, isEmpty);
+  });
+
   testWidgets('opens asset cover selector from the assets page', (
     WidgetTester tester,
   ) async {

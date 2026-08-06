@@ -64,8 +64,9 @@ void main() {
     controller.onPersistError = (error) => reported = error;
 
     controller.setMonthlyBudget(DateTime(2026, 7), 1000);
-    await controller.waitForPendingWrites();
+    final succeeded = await controller.waitForPendingWritesSucceeded();
 
+    expect(succeeded, isFalse);
     expect(reported, isNotNull);
     expect(logger.records.any((r) => r.source == 'persist'), isTrue);
     controller.dispose();

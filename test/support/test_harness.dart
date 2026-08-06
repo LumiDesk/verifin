@@ -100,7 +100,8 @@ Future<void> addTestAccount(WidgetTester tester, String name) async {
   await tester.tap(find.text('添加账户'));
   await tester.pumpAndSettle();
   await tester.enterText(find.byType(TextFormField).first, name);
-  await tester.tap(find.byTooltip('保存账户'));
+  await tester.pump();
+  await tester.tap(find.byTooltip('保存'));
   await tester.pumpAndSettle();
 }
 
