@@ -201,6 +201,53 @@ void main() {
     },
   );
 
+  test('account balance normalizes floating-point residue to zero', () async {
+    final controller = await makeController();
+    final account = Account(
+      id: 'floating-zero-account',
+      bookId: controller.activeBook.id,
+      name: '零钱账户',
+      type: AccountType.cash,
+      groupId: null,
+      initialBalance: 0.3,
+      iconCode: 'cash',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+    );
+    controller
+      ..addAccount(account)
+      ..addEntry(
+        LedgerEntry(
+          id: 'floating-zero-expense-1',
+          bookId: controller.activeBook.id,
+          type: EntryType.expense,
+          amount: 0.1,
+          categoryId: 'dining',
+          accountId: account.id,
+          note: '',
+          occurredAt: DateTime(2026, 7, 3, 9),
+        ),
+      )
+      ..addEntry(
+        LedgerEntry(
+          id: 'floating-zero-expense-2',
+          bookId: controller.activeBook.id,
+          type: EntryType.expense,
+          amount: 0.2,
+          categoryId: 'dining',
+          accountId: account.id,
+          note: '',
+          occurredAt: DateTime(2026, 7, 3, 10),
+        ),
+      );
+
+    final balance = controller.accountBalance(account);
+    expect(balance, 0);
+    expect(balance.isNegative, isFalse);
+    controller.dispose();
+  });
+
   test('deleting a ledger book removes its asset view preferences', () async {
     final store = LocalKeyValueStore();
     final controller = await makeController(store);

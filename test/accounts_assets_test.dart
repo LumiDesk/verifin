@@ -171,6 +171,64 @@ void main() {
     expect(find.text('600'), findsNothing);
   });
 
+  testWidgets('account balance colors use a distinct neutral color for zero', (
+    WidgetTester tester,
+  ) async {
+    const account = Account(
+      id: 'balance-color-account',
+      bookId: defaultLedgerBookId,
+      name: '余额颜色账户',
+      type: AccountType.cash,
+      groupId: null,
+      initialBalance: 0,
+      iconCode: 'cash',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+    );
+    const excludedAccount = Account(
+      id: 'excluded-balance-color-account',
+      bookId: defaultLedgerBookId,
+      name: '不计入资产账户',
+      type: AccountType.cash,
+      groupId: null,
+      initialBalance: 0,
+      iconCode: 'cash',
+      note: '',
+      includeInAssets: false,
+      hidden: false,
+    );
+    final theme = buildVeriFinTheme(Brightness.light);
+    late Color zeroColor;
+    late Color nearZeroColor;
+    late Color positiveColor;
+    late Color negativeColor;
+    late Color excludedColor;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: theme,
+        home: Builder(
+          builder: (context) {
+            zeroColor = accountBalanceColor(context, account, 0);
+            nearZeroColor = accountBalanceColor(context, account, -1e-12);
+            positiveColor = accountBalanceColor(context, account, 1);
+            negativeColor = accountBalanceColor(context, account, -1);
+            excludedColor = accountBalanceColor(context, excludedAccount, 0);
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+
+    expect(zeroColor, theme.colorScheme.onSurface);
+    expect(nearZeroColor, theme.colorScheme.onSurface);
+    expect(positiveColor, veriIncome);
+    expect(negativeColor, veriExpense);
+    expect(excludedColor, theme.colorScheme.onSurface.withValues(alpha: 0.42));
+    expect(zeroColor, isNot(excludedColor));
+  });
+
   testWidgets('account row shows card last four digits', (
     WidgetTester tester,
   ) async {

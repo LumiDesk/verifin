@@ -2958,7 +2958,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     )) {
       balance += accountDeltaForEntry(entry, account.id);
     }
-    return balance;
+    // 金额以分为最小展示/输入单位；连续加减 double 可能把数学上的 0 留成
+    // -2.7e-17 一类残差，进而误触发负余额颜色和正负判断。
+    return normalizeAmount(balance);
   }
 
   /// 载入偏好类小数据（KV）。账目类数据由 [_loadFromRepository] 从 SQLite 载入。

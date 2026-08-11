@@ -77,6 +77,9 @@ double sumByType(Iterable<LedgerEntry> entries, EntryType type) {
 
 bool isZeroAmount(num value) => value.abs() < 0.005;
 
+/// 将金额规整到最小货币单位（分），消除 `double` 连续加减留下的浮点残差。
+double normalizeAmount(num value) => (value * 100).round() / 100;
+
 class DateWindow {
   const DateWindow({required this.start, required this.end});
 

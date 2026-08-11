@@ -191,7 +191,8 @@ class AccountGroupCard extends StatelessWidget {
   }
 }
 
-/// 资产列表中的余额颜色:不计入资产的账户用弱化色,负余额红色,其余青绿色。
+/// 资产列表中的余额颜色：不计入资产的账户用弱化色，零余额用主题中性色，
+/// 负余额红色，正余额青绿色。
 Color accountBalanceColor(
   BuildContext context,
   Account account,
@@ -199,6 +200,9 @@ Color accountBalanceColor(
 ) {
   if (!account.includeInAssets) {
     return Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.42);
+  }
+  if (isZeroAmount(balance)) {
+    return Theme.of(context).colorScheme.onSurface;
   }
   return balance < 0 ? veriExpense : veriIncome;
 }
