@@ -44,9 +44,9 @@ class AccountGroupCard extends StatelessWidget {
     final resolvedTotalText =
         totalText ??
         (currencies.length == 1
-            ? formatMoney(total, currencies.single)
+            ? formatUserMoney(total, currencies.single)
             : currencies.isEmpty
-            ? formatMoney(0, defaultCurrencyCode)
+            ? formatUserMoney(0, defaultCurrencyCode)
             : '—');
 
     return VeriCard(
@@ -285,7 +285,7 @@ class _AccountRow extends StatelessWidget {
                         account.creditLimit != null)
                       Text(
                         '${AppLocalizations.of(context).creditAvailableLabel} '
-                        '${formatMoney(availableCredit(account.creditLimit, balance) ?? 0, account.currencyCode)}',
+                        '${formatUserMoney(availableCredit(account.creditLimit, balance) ?? 0, account.currencyCode)}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -299,7 +299,7 @@ class _AccountRow extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Text(
-                formatMoney(balance, account.currencyCode),
+                formatUserMoney(balance, account.currencyCode),
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: accountBalanceColor(context, account, balance),
                   fontWeight: FontWeight.w800,
@@ -314,9 +314,15 @@ class _AccountRow extends StatelessWidget {
 }
 
 class CalendarPreview extends StatefulWidget {
-  const CalendarPreview({super.key, required this.entries, this.onDayTap});
+  const CalendarPreview({
+    super.key,
+    required this.entries,
+    required this.currencyCode,
+    this.onDayTap,
+  });
 
   final List<LedgerEntry> entries;
+  final String currencyCode;
   final ValueChanged<DateTime>? onDayTap;
 
   @override
@@ -510,6 +516,11 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                 ),
               );
             },
+          ),
+          const SizedBox(height: 6),
+          Align(
+            alignment: Alignment.centerRight,
+            child: MoneyUnitLabel(currencyCode: widget.currencyCode),
           ),
         ],
       ),

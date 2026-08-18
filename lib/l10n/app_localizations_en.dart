@@ -2399,6 +2399,27 @@ class AppLocalizationsEn extends AppLocalizations {
       'Always show amounts with two decimals (e.g. 12 becomes 12.00)';
 
   @override
+  String get moneyUnitStyleLabel => 'Currency unit style';
+
+  @override
+  String get moneyUnitStyleSymbol => 'Symbol after (100 \$)';
+
+  @override
+  String get moneyUnitStyleCode => 'Code before (USD 100)';
+
+  @override
+  String get hideSingleCurrencyUnitLabel => 'Hide unit for one currency';
+
+  @override
+  String get hideSingleCurrencyUnitDesc =>
+      'Do not repeat the unit beside every amount when a ledger uses only one currency';
+
+  @override
+  String moneyUnitLabel(String unit) {
+    return 'Unit: $unit';
+  }
+
+  @override
   String get autoSuggestLabel => 'Auto-fill from history';
 
   @override

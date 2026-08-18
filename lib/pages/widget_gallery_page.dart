@@ -24,7 +24,7 @@ class WidgetGalleryPage extends StatelessWidget {
     // 预览用实时数据，让展示更贴近桌面上的真实效果。预算与桌面小组件同口径：
     // 按预算周期（键月 + 周期窗口）取数。
     final baseCurrencyCode = controller.activeBook.baseCurrencyCode;
-    final today = formatMoney(
+    final today = formatUserMoney(
       dayExpenseTotal(entries, dateOnly(now)),
       baseCurrencyCode,
     );
@@ -42,7 +42,7 @@ class WidgetGalleryPage extends StatelessWidget {
     );
     final netWorth = accountValuation.completeTotal == null
         ? '—'
-        : formatMoney(accountValuation.completeTotal!, baseCurrencyCode);
+        : formatUserMoney(accountValuation.completeTotal!, baseCurrencyCode);
 
     final specs = <_WidgetSpec>[
       _WidgetSpec(
@@ -64,7 +64,7 @@ class WidgetGalleryPage extends StatelessWidget {
             : (cyclic
                   ? l10n.widgetPeriodBudgetAvailable
                   : l10n.widgetBudgetAvailable),
-        previewValue: formatMoney(remaining.abs(), baseCurrencyCode),
+        previewValue: formatUserMoney(remaining.abs(), baseCurrencyCode),
       ),
       _WidgetSpec(
         widgetKey: 'net_worth',

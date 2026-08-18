@@ -142,7 +142,7 @@ class ProfilePage extends StatelessWidget {
                           label: AppLocalizations.of(context).netAssets,
                           value: accountValuation.completeTotal == null
                               ? '—'
-                              : formatMoney(
+                              : formatUserMoney(
                                   accountValuation.completeTotal!,
                                   controller.activeBook.baseCurrencyCode,
                                 ),

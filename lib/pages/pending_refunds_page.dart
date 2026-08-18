@@ -53,7 +53,7 @@ class PendingRefundsPage extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '+${formatMoney(total, controller.activeBook.baseCurrencyCode)}',
+                        '+${formatUserMoney(total, controller.activeBook.baseCurrencyCode)}',
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
                               fontWeight: FontWeight.w800,
@@ -117,7 +117,7 @@ class _PendingRefundRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    '+${formatMoney(refund.amount, refund.currencyCode)} · $accountName',
+                    '+${formatUserMoney(refund.amount, refund.currencyCode)} · $accountName',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),

@@ -13,6 +13,27 @@ import 'models/currency.dart';
 /// [CurrencyFractionStyle.compact]（默认）去掉多余的尾随零。
 CurrencyFractionStyle currencyFractionStyle = CurrencyFractionStyle.compact;
 
+/// 金额货币单位样式。默认使用更紧凑的后置符号，用户可在设置中改为 ISO 代码。
+MoneyUnitStyle moneyUnitStyle = MoneyUnitStyle.symbol;
+
+/// 单币种账本是否隐藏每一处金额旁重复出现的货币单位。
+bool hideUnitInSingleCurrency = true;
+
+/// 当前活动账本是否实际涉及多个币种，由 [VeriFinController] 随状态同步。
+bool activeBookUsesMultipleCurrencies = false;
+
+/// 用户选择的单位样式，不考虑单币种隐藏规则。
+MoneyCodeDisplay get preferredMoneyCodeDisplay => switch (moneyUnitStyle) {
+  MoneyUnitStyle.symbol => MoneyCodeDisplay.symbol,
+  MoneyUnitStyle.code => MoneyCodeDisplay.code,
+};
+
+/// 当前活动账本用于普通金额展示的样式。
+MoneyCodeDisplay get activeMoneyCodeDisplay =>
+    hideUnitInSingleCurrency && !activeBookUsesMultipleCurrencies
+    ? MoneyCodeDisplay.none
+    : preferredMoneyCodeDisplay;
+
 /// 旧版“两位小数”偏好的兼容入口。
 ///
 /// 迁移完成前保留该 getter/setter，避免旧设置、备份和调用点在同一阶段失效。多币种下

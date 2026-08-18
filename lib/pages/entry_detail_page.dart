@@ -723,7 +723,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         key: const Key('account_dropdown'),
                         label: AppLocalizations.of(context).transferOutAccount,
                         value:
-                            '${accountById(accounts, _accountId).name} (${formatMoney(controller.accountBalance(accountById(accounts, _accountId)), accountById(accounts, _accountId).currencyCode)})',
+                            '${accountById(accounts, _accountId).name} (${formatUserMoney(controller.accountBalance(accountById(accounts, _accountId)), accountById(accounts, _accountId).currencyCode)})',
                         leading: AccountIconBox(
                           iconCode: accountById(accounts, _accountId).iconCode,
                           size: 26,
@@ -736,7 +736,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         label: AppLocalizations.of(context).transferInAccount,
                         value: _toAccountId == null
                             ? AppLocalizations.of(context).pleaseSelect
-                            : '${accountById(accounts, _toAccountId!).name} (${formatMoney(controller.accountBalance(accountById(accounts, _toAccountId!)), accountById(accounts, _toAccountId!).currencyCode)})',
+                            : '${accountById(accounts, _toAccountId!).name} (${formatUserMoney(controller.accountBalance(accountById(accounts, _toAccountId!)), accountById(accounts, _toAccountId!).currencyCode)})',
                         icon: _toAccountId == null ? Icons.call_received : null,
                         leading: _toAccountId == null
                             ? null
@@ -756,7 +756,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         key: const Key('fee_field'),
                         label: AppLocalizations.of(context).feeLabel,
                         value: _fee > 0
-                            ? formatMoney(
+                            ? formatUserMoney(
                                 _fee,
                                 _currencyCode ??
                                     controller.activeBook.baseCurrencyCode,
@@ -771,7 +771,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         label: AppLocalizations.of(context).accountLabel,
                         value: _noAccount
                             ? AppLocalizations.of(context).noAccountLabel
-                            : '${accountById(accounts, _accountId).name} (${formatMoney(controller.accountBalance(accountById(accounts, _accountId)), accountById(accounts, _accountId).currencyCode)})',
+                            : '${accountById(accounts, _accountId).name} (${formatUserMoney(controller.accountBalance(accountById(accounts, _accountId)), accountById(accounts, _accountId).currencyCode)})',
                         icon: _noAccount
                             ? Icons.money_off_csred_outlined
                             : null,

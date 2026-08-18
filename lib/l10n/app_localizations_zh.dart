@@ -2359,6 +2359,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get amountTwoDecimalsDesc => '开启后金额始终显示两位小数（如 12 显示为 12.00）';
 
   @override
+  String get moneyUnitStyleLabel => '货币单位样式';
+
+  @override
+  String get moneyUnitStyleSymbol => '符号后置（100 ¥）';
+
+  @override
+  String get moneyUnitStyleCode => '代码前置（CNY 100）';
+
+  @override
+  String get hideSingleCurrencyUnitLabel => '单币种隐藏单位';
+
+  @override
+  String get hideSingleCurrencyUnitDesc => '账本只使用一种货币时，不在每个金额旁重复显示单位';
+
+  @override
+  String moneyUnitLabel(String unit) {
+    return '单位：$unit';
+  }
+
+  @override
   String get autoSuggestLabel => '自动识别';
 
   @override

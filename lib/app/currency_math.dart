@@ -45,7 +45,7 @@ String formatCurrencyNumber(
 
 /// 格式化带货币标识的金额。
 ///
-/// 代码使用不可歧义的 `CNY 12.34` 形式；符号使用紧凑的 `¥12.34` 形式。
+/// 代码使用不可歧义的 `CNY 12.34` 形式；符号使用紧凑的 `12.34 ¥` 形式。
 String formatMoney(
   num value,
   String currencyCode, {
@@ -57,8 +57,59 @@ String formatMoney(
   return switch (display) {
     MoneyCodeDisplay.none => number,
     MoneyCodeDisplay.code => '${currency.code} $number',
-    MoneyCodeDisplay.symbol => '${currency.symbol}$number',
+    MoneyCodeDisplay.symbol => '$number ${_compactCurrencySymbol(currency)}',
   };
+}
+
+/// 用户界面的金额格式：遵循设置中的单位样式，并可在单币种账本隐藏重复单位。
+///
+/// [forceUnit] 用于同一控件同时展示两个币种的换算字段；即使账本此前还是单币种，
+/// 草稿中的两端金额也必须保留单位，不能产生歧义。
+String formatUserMoney(
+  num value,
+  String currencyCode, {
+  bool forceUnit = false,
+  CurrencyFractionStyle? style,
+}) {
+  return formatMoney(
+    value,
+    currencyCode,
+    display: forceUnit
+        ? amount_format.preferredMoneyCodeDisplay
+        : amount_format.activeMoneyCodeDisplay,
+    style: style,
+  );
+}
+
+String formatSignedUserMoney(
+  num value,
+  String currencyCode, {
+  bool forceUnit = false,
+  CurrencyFractionStyle? style,
+}) {
+  return formatSignedMoney(
+    value,
+    currencyCode,
+    display: forceUnit
+        ? amount_format.preferredMoneyCodeDisplay
+        : amount_format.activeMoneyCodeDisplay,
+    style: style,
+  );
+}
+
+/// 设置页预览和卡片“单位”提示使用的紧凑单位文本。
+String displayCurrencyUnit(String currencyCode, {MoneyUnitStyle? unitStyle}) {
+  final currency = CurrencyCatalog.require(currencyCode);
+  return switch (unitStyle ?? amount_format.moneyUnitStyle) {
+    MoneyUnitStyle.code => currency.code,
+    MoneyUnitStyle.symbol => _compactCurrencySymbol(currency),
+  };
+}
+
+String _compactCurrencySymbol(CurrencyDefinition currency) {
+  // CLDR 的 CNY 常规符号是 `CN¥`，用于跨地区文本消歧很合适，但用户选择“符号”
+  // 样式时期待的是紧凑的 `¥`；需要无歧义时可切回 ISO 代码样式。
+  return currency.code == 'CNY' ? '¥' : currency.symbol;
 }
 
 String formatSignedMoney(
@@ -75,8 +126,23 @@ String formatSignedMoney(
   return '$prefix${formatMoney(value.abs(), currencyCode, display: display, style: style)}';
 }
 
-/// Formats a rate with up to ten decimal places without amount rounding.
+/// 面向界面的可读汇率：常见数值最多 4 位小数，极小汇率逐步放宽到 8 位，
+/// 避免 `0.138888889` 一类长串，同时不会把合法的小汇率轻易显示成 0。
 String formatRateValue(num value) {
+  if (!value.isFinite) return '—';
+  final absolute = value.abs();
+  if (absolute == 0) return '0';
+  final fractionDigits = absolute >= 0.01
+      ? 4
+      : absolute >= 0.0001
+      ? 6
+      : 8;
+  final fixed = value.toDouble().toStringAsFixed(fractionDigits);
+  return fixed.replaceFirst(RegExp(r'\.?0+$'), '');
+}
+
+/// 数据导出使用的高精度汇率文本；与界面可读格式分开，避免 CSV 往返损失精度。
+String formatRateValueExact(num value) {
   if (!value.isFinite) return '—';
   final fixed = value.toDouble().toStringAsFixed(10);
   return fixed.replaceFirst(RegExp(r'\.?0+$'), '');

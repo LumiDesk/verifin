@@ -78,4 +78,4 @@
 - 初版：建立工具协议 + 注册表 + 通用交易筛选纯函数，首批工具 `summary` / `categoryRanking` / `tagRanking` / `queryTransactions` / `largestTransactions`。
 - Agent 升级（issue #32）：旧的文本猜测循环替换为 `AiAgentEngine`；原生 Tool Calls 与兼容标记协议共用强类型消息、工具 schema、执行边界和结构化事件。传输层新增完整 SSE 结束校验、空闲超时、错误分类、安全重试与非流式回退；聊天页展示并持久化已完成的工具步骤，不渲染推理文本、原始工具 JSON 或底层异常。
 - UI 打磨 + 结果卡片可持久化：`AiResultDisplay` 增加 `toJson`/`aiResultDisplayFromJson`，聊天历史每条可带 `displays`（序列化的结果卡片），**重开时连同图表一并还原**（交易列表仍只存 id、按当前数据实时解析）；聊天页改用通用 `VeriHeader`、输入栏/发送按钮/间距/字号/图表纵轴/表格样式全面优化；AI 设置页加「清空配置」。
-- 多币种：`AiToolContext` 增加账本本位币；统计与金额筛选明确采用冻结本位币口径，摘要和结果卡片展示 ISO 代码；AI 记账草稿可解析 ISO 4217 原币并在保存前继续由用户复核。
+- 多币种：`AiToolContext` 增加账本本位币；统计与金额筛选明确采用冻结本位币口径，工具回馈模型的摘要保留 ISO 代码，用户可见结果卡片则遵循货币单位偏好并在卡片标题标注本位币；AI 记账草稿可解析 ISO 4217 原币并在保存前继续由用户复核。

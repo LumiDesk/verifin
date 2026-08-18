@@ -241,10 +241,10 @@ void main() {
     // 打开添加退款弹窗：默认金额=剩余可退 150。
     await tester.tap(find.text('添加退款'));
     await tester.pumpAndSettle();
-    expect(find.text('+CNY 150'), findsOneWidget);
+    expect(find.text('+150'), findsOneWidget);
 
     // 点大金额进数字键盘 → 清空 → 输 999（超上限）。
-    await tester.tap(find.text('+CNY 150'));
+    await tester.tap(find.text('+150'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('number_key_C')));
     await tester.tap(find.byKey(const Key('number_key_9')));
@@ -257,7 +257,7 @@ void main() {
     // 确认 → 封顶为 150 回到退款弹窗（不是 999）。
     await tester.tap(find.byKey(const Key('number_pad_ok')));
     await tester.pumpAndSettle();
-    expect(find.text('+CNY 150'), findsOneWidget);
-    expect(find.text('+CNY 999'), findsNothing);
+    expect(find.text('+150'), findsOneWidget);
+    expect(find.text('+999'), findsNothing);
   });
 }

@@ -7,6 +7,7 @@ import 'package:verifin/local_storage/local_storage.dart';
 import 'package:verifin/pages/assets_pages.dart';
 import 'package:verifin/pages/currency_rates_page.dart';
 import 'package:verifin/pages/entry_detail_page.dart';
+import 'package:verifin/pages/home_page.dart';
 import 'package:verifin/pages/ledger_books_page.dart';
 import 'package:verifin/pages/recurring_page.dart';
 import 'package:verifin/pages/sheets.dart';
@@ -135,7 +136,7 @@ void main() {
     expect(controller.exchangeRates.single.currencyCode, 'USD');
     expect(controller.exchangeRates.single.rateToBase, 7.123456);
     await tester.pumpAndSettle();
-    expect(find.text('1 USD = 7.123456 CNY'), findsOneWidget);
+    expect(find.text('1 USD = 7.1235 CNY'), findsOneWidget);
     expect(find.textContaining('应用不会联网'), findsOneWidget);
   });
 
@@ -203,7 +204,7 @@ void main() {
 
     expect(find.text('交易币种: USD'), findsOneWidget);
     expect(find.byKey(const Key('entry_base_amount')), findsOneWidget);
-    expect(find.text('CNY 72'), findsOneWidget);
+    expect(find.text('72 ¥'), findsOneWidget);
     await tester.ensureVisible(find.byKey(const Key('save_entry_button')));
     await tester.tap(find.byKey(const Key('save_entry_button')));
     await tester.pumpAndSettle();
@@ -262,7 +263,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('entry_to_account_amount')), findsOneWidget);
-    expect(find.text('CNY 72'), findsOneWidget);
+    expect(find.text('72 ¥'), findsOneWidget);
     await tester.ensureVisible(find.byKey(const Key('save_entry_button')));
     await tester.tap(find.byKey(const Key('save_entry_button')));
     await tester.pumpAndSettle();
@@ -273,6 +274,49 @@ void main() {
     expect(saved.accountAmount, 10);
     expect(saved.toAccountAmount, 72);
     expect(saved.baseAmount, 0);
+  });
+
+  testWidgets('收支统计按本位币聚合外币交易并标明单位', (tester) async {
+    final controller = await makeController();
+    final bookId = controller.activeBook.id;
+    controller
+      ..addAccount(
+        Account(
+          id: 'usd-cash',
+          bookId: bookId,
+          name: '美元现金',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 0,
+          iconCode: 'cash',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+          currencyCode: 'USD',
+        ),
+      )
+      ..addEntry(
+        LedgerEntry(
+          id: 'usd-expense',
+          bookId: bookId,
+          type: EntryType.expense,
+          amount: 10,
+          currencyCode: 'USD',
+          accountAmount: 10,
+          baseAmount: 72,
+          conversionSource: ConversionSource.manual,
+          categoryId: 'dining',
+          accountId: 'usd-cash',
+          note: '',
+          occurredAt: DateTime.now(),
+        ),
+      );
+
+    await pumpPage(tester, controller, const IncomeExpenseStatsPage());
+
+    expect(find.text('单位：¥'), findsOneWidget);
+    expect(find.text('-72'), findsAtLeastNWidgets(2));
+    expect(find.text('-10'), findsNothing);
   });
 
   testWidgets('外币退款锁定原币并分别保存到账与本位币冲抵额', (tester) async {
@@ -334,14 +378,14 @@ void main() {
     await tester.tap(find.text('添加退款'));
     await tester.pumpAndSettle();
     expect(find.textContaining('退款原币沿用原支出'), findsOneWidget);
-    expect(find.text('USD 100'), findsWidgets);
+    expect(find.text('100 \$'), findsWidgets);
 
     await tester.tap(find.text('到账账户'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('人民币现金'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('refund_account_amount')), findsOneWidget);
-    expect(find.text('CNY 720'), findsAtLeastNWidgets(2));
+    expect(find.text('720 ¥'), findsAtLeastNWidgets(2));
     await tester.tap(find.text('保存'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('保存'));
@@ -398,8 +442,8 @@ void main() {
       RecurringRuleEditPage(rule: controller.recurringRules.single),
     );
 
-    expect(find.text('USD 10'), findsOneWidget);
-    expect(find.text('CNY 72'), findsOneWidget);
+    expect(find.text('10 \$'), findsOneWidget);
+    expect(find.text('72 ¥'), findsOneWidget);
     expect(find.text('每次使用最新本地汇率'), findsOneWidget);
     await tester.ensureVisible(find.text('每次使用最新本地汇率'));
     await tester.tap(find.text('每次使用最新本地汇率'));

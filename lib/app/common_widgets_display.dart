@@ -201,9 +201,36 @@ class CurrencyAmountField extends StatelessWidget {
   Widget build(BuildContext context) {
     return DetailInfoRow(
       label: label,
-      value: amount == null ? missingText : formatMoney(amount!, currencyCode),
+      value: amount == null
+          ? missingText
+          : formatUserMoney(amount!, currencyCode, forceUnit: true),
       placeholder: amount == null,
       onTap: onTap,
+    );
+  }
+}
+
+/// 聚合卡片/页面使用的轻量金额单位提示，避免在每个数字旁重复堆叠货币标识。
+class MoneyUnitLabel extends StatelessWidget {
+  const MoneyUnitLabel({super.key, required this.currencyCode, this.color});
+
+  final String currencyCode;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground =
+        color ??
+        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.46);
+    return Text(
+      AppLocalizations.of(
+        context,
+      ).moneyUnitLabel(displayCurrencyUnit(currencyCode)),
+      key: Key('money_unit_$currencyCode'),
+      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+        color: foreground,
+        fontWeight: FontWeight.w700,
+      ),
     );
   }
 }

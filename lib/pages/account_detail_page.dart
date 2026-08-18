@@ -98,9 +98,9 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
               children: <Widget>[
                 VeriHeader(
                   title: currentAccount.name,
-                  subtitle: currentAccount.type.label(
-                    AppLocalizations.of(context),
-                  ),
+                  subtitle:
+                      '${currentAccount.type.label(AppLocalizations.of(context))} · '
+                      '${AppLocalizations.of(context).moneyUnitLabel(displayCurrencyUnit(currentAccount.currencyCode))}',
                   showBack: true,
                   actions: <Widget>[
                     HeaderAction(
@@ -130,7 +130,10 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                             Text(AppLocalizations.of(context).currentBalance),
                             const SizedBox(height: 6),
                             Text(
-                              formatMoney(balance, currentAccount.currencyCode),
+                              formatUserMoney(
+                                balance,
+                                currentAccount.currencyCode,
+                              ),
                               style: Theme.of(context).textTheme.displaySmall
                                   ?.copyWith(
                                     color: veriBlue,
@@ -219,7 +222,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                               ChartTooltipLine(
                                 text: AppLocalizations.of(context)
                                     .balanceAmount(
-                                      formatMoney(
+                                      formatUserMoney(
                                         balanceTrendValues[index],
                                         currentAccount.currencyCode,
                                       ),
@@ -424,7 +427,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                           title: AppLocalizations.of(context).creditLimitLabel,
                           trailing: currentAccount.creditLimit == null
                               ? AppLocalizations.of(context).notSet
-                              : formatMoney(
+                              : formatUserMoney(
                                   currentAccount.creditLimit!,
                                   currentAccount.currencyCode,
                                 ),
@@ -568,7 +571,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
               Text(
                 AppLocalizations.of(context).balanceEditConfirmMessage(
                   account.name,
-                  formatMoney(amount, account.currencyCode),
+                  formatUserMoney(amount, account.currencyCode),
                 ),
               ),
               const SizedBox(height: 8),
@@ -1005,7 +1008,9 @@ class AccountReportPage extends StatelessWidget {
             children: <Widget>[
               VeriHeader(
                 title: AppLocalizations.of(context).accountReportTitle,
-                subtitle: currentAccount.name,
+                subtitle:
+                    '${currentAccount.name} · '
+                    '${AppLocalizations.of(context).moneyUnitLabel(displayCurrencyUnit(controller.activeBook.baseCurrencyCode))}',
                 showBack: true,
               ),
               const SizedBox(height: 10),
@@ -1018,17 +1023,26 @@ class AccountReportPage extends StatelessWidget {
                   children: <Widget>[
                     SummaryMetric(
                       label: AppLocalizations.of(context).currentBalance,
-                      value: formatMoney(balance, currentAccount.currencyCode),
+                      value: formatUserMoney(
+                        balance,
+                        currentAccount.currencyCode,
+                      ),
                       color: balance < 0 ? veriExpense : veriRoyal,
                     ),
                     SummaryMetric(
                       label: AppLocalizations.of(context).entryTypeIncome,
-                      value: formatAmount(income),
+                      value: formatUserMoney(
+                        income,
+                        controller.activeBook.baseCurrencyCode,
+                      ),
                       color: veriIncome,
                     ),
                     SummaryMetric(
                       label: AppLocalizations.of(context).entryTypeExpense,
-                      value: formatExpenseAmount(expense),
+                      value: formatSignedUserMoney(
+                        -expense,
+                        controller.activeBook.baseCurrencyCode,
+                      ),
                       color: isZeroAmount(expense)
                           ? Theme.of(
                               context,
@@ -1069,7 +1083,7 @@ class AccountReportPage extends StatelessWidget {
                           lines: <ChartTooltipLine>[
                             ChartTooltipLine(
                               text: AppLocalizations.of(context).balanceAmount(
-                                formatMoney(
+                                formatUserMoney(
                                   reportBalanceValues[index],
                                   currentAccount.currencyCode,
                                 ),
@@ -1218,7 +1232,7 @@ class _CreditSummaryCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  formatMoney(limit, account.currencyCode),
+                  formatUserMoney(limit, account.currencyCode),
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
@@ -1241,13 +1255,13 @@ class _CreditSummaryCard extends StatelessWidget {
                 Expanded(
                   child: _CreditStat(
                     label: l10n.creditUsedLabel,
-                    value: formatMoney(used, account.currencyCode),
+                    value: formatUserMoney(used, account.currencyCode),
                   ),
                 ),
                 Expanded(
                   child: _CreditStat(
                     label: l10n.creditAvailableLabel,
-                    value: formatMoney(
+                    value: formatUserMoney(
                       availableCredit(limit, balance) ?? 0,
                       account.currencyCode,
                     ),
@@ -1265,7 +1279,7 @@ class _CreditSummaryCard extends StatelessWidget {
           if (statementDay != null)
             _CreditStat(
               label: l10n.currentBillLabel,
-              value: formatMoney(
+              value: formatUserMoney(
                 billingCycleExpense(
                   entries,
                   account.id,

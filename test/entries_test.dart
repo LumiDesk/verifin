@@ -115,7 +115,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('选择转出账户'), findsOneWidget);
     expect(find.text('备用账户'), findsAtLeastNWidgets(1));
-    expect(find.text('CNY 0'), findsAtLeastNWidgets(2));
+    expect(find.text('0'), findsAtLeastNWidgets(2));
     expect(find.byType(AccountIconBox), findsAtLeastNWidgets(2));
 
     await tester.tap(find.text('现金账户'));

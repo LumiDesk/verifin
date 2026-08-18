@@ -28,6 +28,49 @@ void main() {
     controller.dispose();
   });
 
+  test('金额单位偏好持久化，并随活动账本币种构成更新', () async {
+    final repository = InMemoryLedgerRepository();
+    final store = LocalKeyValueStore();
+    final controller = await VeriFinController.create(
+      store,
+      repository: repository,
+    );
+    expect(controller.moneyUnitStyle, MoneyUnitStyle.symbol);
+    expect(controller.hideUnitInSingleCurrency, isTrue);
+    expect(controller.activeBookUsesMultipleCurrencies, isFalse);
+
+    controller.addAccount(
+      Account(
+        id: 'usd-cash',
+        bookId: controller.activeBook.id,
+        name: '美元现金',
+        type: AccountType.cash,
+        groupId: null,
+        initialBalance: 0,
+        iconCode: 'cash',
+        note: '',
+        includeInAssets: true,
+        hidden: false,
+        currencyCode: 'USD',
+      ),
+    );
+    expect(controller.activeBookUsesMultipleCurrencies, isTrue);
+    controller.setMoneyDisplayPreferences(
+      unitStyle: MoneyUnitStyle.code,
+      hideInSingleCurrency: false,
+    );
+
+    final restarted = await VeriFinController.create(
+      store,
+      repository: repository,
+    );
+    expect(restarted.moneyUnitStyle, MoneyUnitStyle.code);
+    expect(restarted.hideUnitInSingleCurrency, isFalse);
+    expect(restarted.activeBookUsesMultipleCurrencies, isTrue);
+    controller.dispose();
+    restarted.dispose();
+  });
+
   test('汇率新增、同日覆盖、历史解析、重启载入与删除', () async {
     final repository = InMemoryLedgerRepository();
     final controller = await controllerWith(repository);

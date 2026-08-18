@@ -1597,6 +1597,15 @@
   "@amountTwoDecimalsDesc": {
     "description": "Subtitle explaining the two-decimals toggle"
   },
+  "moneyUnitStyleLabel": "货币单位样式",
+  "moneyUnitStyleSymbol": "符号后置（100 ¥）",
+  "moneyUnitStyleCode": "代码前置（CNY 100）",
+  "hideSingleCurrencyUnitLabel": "单币种隐藏单位",
+  "hideSingleCurrencyUnitDesc": "账本只使用一种货币时，不在每个金额旁重复显示单位",
+  "moneyUnitLabel": "单位：{unit}",
+  "@moneyUnitLabel": {
+    "placeholders": {"unit": {"type": "String"}}
+  },
   "autoSuggestLabel": "自动识别",
   "@autoSuggestLabel": {
     "description": "Settings toggle: auto-fill new entries from history"

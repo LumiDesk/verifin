@@ -913,7 +913,7 @@ class _AccountPickerRow extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             Text(
-              formatMoney(balance, account.currencyCode),
+              formatUserMoney(balance, account.currencyCode),
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 color: accountBalanceColor(context, account, balance),
                 fontWeight: FontWeight.w800,

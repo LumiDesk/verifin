@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 import '../app/chart_painters.dart';
 import '../app/common_widgets.dart';
+import '../app/currency_math.dart';
 import '../app/home_metrics.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
@@ -77,6 +78,7 @@ class HomePage extends StatelessWidget {
             config: trendConfig,
             metricContext: metricContext,
             chartValues: trendChartValues,
+            currencyCode: controller.activeBook.baseCurrencyCode,
             onTap: () {
               Navigator.of(context).push<void>(
                 MaterialPageRoute<void>(
@@ -144,6 +146,7 @@ class HomePage extends StatelessWidget {
             expense: budgetExpense,
             budget: monthlyBudget,
             categoryRisk: categoryBudgetRisk,
+            currencyCode: controller.activeBook.baseCurrencyCode,
             onTap: () {
               Navigator.of(context).push<void>(
                 MaterialPageRoute<void>(
@@ -156,6 +159,7 @@ class HomePage extends StatelessWidget {
         case 'calendar':
           return CalendarPreview(
             entries: entries,
+            currencyCode: controller.activeBook.baseCurrencyCode,
             onDayTap: (date) {
               Navigator.of(context).push<void>(
                 MaterialPageRoute<void>(
@@ -176,7 +180,8 @@ class HomePage extends StatelessWidget {
           PageHeader(
             title: AppLocalizations.of(context).tabHome,
             subtitle:
-                '${controller.activeBook.name} · ${controller.activeBook.baseCurrencyCode}',
+                '${controller.activeBook.name} · '
+                '${AppLocalizations.of(context).moneyUnitLabel(displayCurrencyUnit(controller.activeBook.baseCurrencyCode))}',
           ),
           for (final id in panelIds) ...<Widget>[
             const SizedBox(height: 10),
@@ -288,6 +293,7 @@ class HomeTrendPanel extends StatelessWidget {
     required this.config,
     required this.metricContext,
     required this.chartValues,
+    required this.currencyCode,
     required this.onTap,
   });
 
@@ -295,6 +301,7 @@ class HomeTrendPanel extends StatelessWidget {
   final HomeTrendConfig config;
   final HomeMetricContext metricContext;
   final List<double> chartValues;
+  final String currencyCode;
   final VoidCallback onTap;
 
   @override
@@ -347,6 +354,8 @@ class HomeTrendPanel extends StatelessWidget {
                     ],
                   ),
                 ),
+                MoneyUnitLabel(currencyCode: currencyCode),
+                const SizedBox(width: 8),
                 const _CircleArrow(),
               ],
             ),
@@ -559,6 +568,7 @@ class BudgetPanel extends StatelessWidget {
     required this.expense,
     required this.budget,
     required this.categoryRisk,
+    required this.currencyCode,
     required this.onTap,
   });
 
@@ -571,6 +581,7 @@ class BudgetPanel extends StatelessWidget {
   final double expense;
   final double budget;
   final CategoryBudgetSnapshot? categoryRisk;
+  final String currencyCode;
   final VoidCallback onTap;
 
   @override
@@ -609,6 +620,8 @@ class BudgetPanel extends StatelessWidget {
                   ),
                 ),
               ),
+              MoneyUnitLabel(currencyCode: currencyCode),
+              const SizedBox(width: 8),
               const _CircleArrow(),
             ],
           ),
@@ -782,10 +795,7 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
           : sparseLabelsForWindow(window);
     }
 
-    final total = rangeEntries.fold<double>(
-      0,
-      (sum, entry) => sum + entry.amount,
-    );
+    final total = sumByType(rangeEntries, _type);
     final statRows = isYear
         ? _monthlyStatRows(rangeEntries, _focusDate.year, total)
         : _periodDayRows(rangeEntries, window!, total);
@@ -815,6 +825,9 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
             children: <Widget>[
               VeriHeader(
                 title: l10n.incomeExpenseTitle,
+                subtitle: l10n.moneyUnitLabel(
+                  displayCurrencyUnit(controller.activeBook.baseCurrencyCode),
+                ),
                 showBack: true,
                 actions: <Widget>[
                   HeaderAction(
@@ -1191,10 +1204,7 @@ List<_DailyStatRow> _periodDayRows(
     if (dayEntries.isEmpty) {
       continue;
     }
-    final amount = dayEntries.fold<double>(
-      0,
-      (sum, entry) => sum + entry.amount,
-    );
+    final amount = sumByType(dayEntries, dayEntries.first.type);
     rows.add(
       _DailyStatRow(
         date: day,
@@ -1221,10 +1231,7 @@ List<_DailyStatRow> _monthlyStatRows(
     if (monthEntries.isEmpty) {
       continue;
     }
-    final amount = monthEntries.fold<double>(
-      0,
-      (sum, entry) => sum + entry.amount,
-    );
+    final amount = sumByType(monthEntries, monthEntries.first.type);
     rows.add(
       _DailyStatRow(
         date: DateTime(year, month, 1),

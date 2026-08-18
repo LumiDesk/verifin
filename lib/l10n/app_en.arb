@@ -846,6 +846,15 @@
   "@amountTwoDecimalsDesc": {
     "description": "Subtitle explaining the two-decimals toggle"
   },
+  "moneyUnitStyleLabel": "Currency unit style",
+  "moneyUnitStyleSymbol": "Symbol after (100 $)",
+  "moneyUnitStyleCode": "Code before (USD 100)",
+  "hideSingleCurrencyUnitLabel": "Hide unit for one currency",
+  "hideSingleCurrencyUnitDesc": "Do not repeat the unit beside every amount when a ledger uses only one currency",
+  "moneyUnitLabel": "Unit: {unit}",
+  "@moneyUnitLabel": {
+    "placeholders": {"unit": {"type": "String"}}
+  },
   "autoSuggestLabel": "Auto-fill from history",
   "@autoSuggestLabel": {
     "description": "Settings toggle: auto-fill new entries from history"

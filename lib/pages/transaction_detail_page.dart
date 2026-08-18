@@ -141,7 +141,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     final noneLabel = AppLocalizations.of(context).noAccountLabel;
     final accountFieldValue = _noAccount
         ? noneLabel
-        : '${account.name} (${formatMoney(controller.accountBalance(account), account.currencyCode)})';
+        : '${account.name} (${formatUserMoney(controller.accountBalance(account), account.currencyCode)})';
     final canSave =
         (accounts.isNotEmpty || _noAccount) &&
         (_type == EntryType.transfer ||
@@ -258,7 +258,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                             context,
                           ).transferOutAccount,
                           value:
-                              '${account.name} (${formatMoney(controller.accountBalance(account), account.currencyCode)})',
+                              '${account.name} (${formatUserMoney(controller.accountBalance(account), account.currencyCode)})',
                           onTap: accounts.isEmpty
                               ? null
                               : () => _pickAccount(accounts),
@@ -267,7 +267,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                           label: AppLocalizations.of(context).transferInAccount,
                           value: toAccount == null
                               ? AppLocalizations.of(context).pleaseSelect
-                              : '${toAccount.name} (${formatMoney(controller.accountBalance(toAccount), toAccount.currencyCode)})',
+                              : '${toAccount.name} (${formatUserMoney(controller.accountBalance(toAccount), toAccount.currencyCode)})',
                           placeholder: toAccount == null,
                           onTap: accounts.length < 2
                               ? null
@@ -276,7 +276,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                         DetailInfoRow(
                           label: AppLocalizations.of(context).feeLabel,
                           value: _fee > 0
-                              ? formatMoney(_fee, _currencyCode)
+                              ? formatUserMoney(_fee, _currencyCode)
                               : AppLocalizations.of(context).commonNoneShort,
                           placeholder: _fee <= 0,
                           onTap: _editFee,

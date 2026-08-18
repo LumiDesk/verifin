@@ -31,14 +31,21 @@ class AiResultView extends StatelessWidget {
   }
 }
 
-Widget _cardTitle(BuildContext context, String title) {
+Widget _cardTitle(BuildContext context, String title, {String? currencyCode}) {
   return Padding(
     padding: const EdgeInsets.only(bottom: 8),
-    child: Text(
-      title,
-      style: Theme.of(
-        context,
-      ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+    child: Row(
+      children: <Widget>[
+        Expanded(
+          child: Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+          ),
+        ),
+        if (currencyCode != null) MoneyUnitLabel(currencyCode: currencyCode),
+      ],
     ),
   );
 }
@@ -79,7 +86,7 @@ class _StatCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _cardTitle(context, display.title),
+          _cardTitle(context, display.title, currencyCode: baseCurrencyCode),
           for (final item in display.items)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 3),
@@ -91,7 +98,7 @@ class _StatCard extends StatelessWidget {
                   ),
                   const Spacer(),
                   Text(
-                    formatMoney(item.value, baseCurrencyCode),
+                    formatUserMoney(item.value, baseCurrencyCode),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: item.emphasize
                           ? FontWeight.w700
@@ -123,7 +130,7 @@ class _RankingCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            _cardTitle(context, display.title),
+            _cardTitle(context, display.title, currencyCode: baseCurrencyCode),
             _emptyHint(context, AppLocalizations.of(context).aiChatNoData),
           ],
         ),
@@ -137,7 +144,7 @@ class _RankingCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _cardTitle(context, display.title),
+          _cardTitle(context, display.title, currencyCode: baseCurrencyCode),
           SizedBox(
             height: 172,
             child: InteractiveBarChart(
@@ -148,7 +155,7 @@ class _RankingCard extends StatelessWidget {
                 title: labels[index],
                 lines: <ChartTooltipLine>[
                   ChartTooltipLine(
-                    text: formatMoney(values[index], baseCurrencyCode),
+                    text: formatUserMoney(values[index], baseCurrencyCode),
                   ),
                   ChartTooltipLine(
                     text:
@@ -181,7 +188,7 @@ class _RankingCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    formatMoney(row.amount, baseCurrencyCode),
+                    formatUserMoney(row.amount, baseCurrencyCode),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -209,7 +216,7 @@ class _TrendCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            _cardTitle(context, display.title),
+            _cardTitle(context, display.title, currencyCode: baseCurrencyCode),
             _emptyHint(context, AppLocalizations.of(context).aiChatNoData),
           ],
         ),
@@ -219,7 +226,7 @@ class _TrendCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _cardTitle(context, display.title),
+          _cardTitle(context, display.title, currencyCode: baseCurrencyCode),
           SizedBox(
             height: 172,
             child: InteractiveTrendChart(
@@ -233,7 +240,10 @@ class _TrendCard extends StatelessWidget {
                     : '',
                 lines: <ChartTooltipLine>[
                   ChartTooltipLine(
-                    text: formatMoney(display.values[index], baseCurrencyCode),
+                    text: formatUserMoney(
+                      display.values[index],
+                      baseCurrencyCode,
+                    ),
                   ),
                 ],
               ),
@@ -264,7 +274,11 @@ class _TransactionsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            _cardTitle(context, display.title),
+            _cardTitle(
+              context,
+              display.title,
+              currencyCode: controller.activeBook.baseCurrencyCode,
+            ),
             _emptyHint(
               context,
               AppLocalizations.of(context).aiChatNoMatchingTx,
@@ -277,12 +291,11 @@ class _TransactionsCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 6),
-          child: Text(
+          padding: const EdgeInsets.only(left: 4, right: 4),
+          child: _cardTitle(
+            context,
             display.title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+            currencyCode: controller.activeBook.baseCurrencyCode,
           ),
         ),
         TransactionListCard(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:verifin/app/amount_format.dart' as amount_format;
 import 'package:verifin/app/common_widgets.dart';
 import 'package:verifin/app/models.dart';
 
@@ -7,6 +8,12 @@ import 'support/test_harness.dart';
 
 /// 覆盖 [TransactionTile] 的展示：分类层级、备注/无备注副行、标签、智能时间。
 void main() {
+  setUp(() {
+    amount_format.moneyUnitStyle = MoneyUnitStyle.symbol;
+    amount_format.hideUnitInSingleCurrency = true;
+    amount_format.activeBookUsesMultipleCurrencies = false;
+  });
+
   final account = Account(
     id: 'acc1',
     bookId: 'b1',
@@ -125,6 +132,7 @@ void main() {
   });
 
   testWidgets('跨币种交易以原币为主金额并显示账户实际金额', (tester) async {
+    amount_format.activeBookUsesMultipleCurrencies = true;
     await pumpTile(
       tester,
       LedgerEntry(
@@ -144,8 +152,8 @@ void main() {
       baseCurrencyCode: 'CNY',
     );
 
-    expect(find.text('-USD 10'), findsOneWidget);
-    expect(find.text('CNY 72'), findsOneWidget);
+    expect(find.text('-10 \$'), findsOneWidget);
+    expect(find.text('72 ¥'), findsOneWidget);
     expect(find.text('-72'), findsNothing);
   });
 }

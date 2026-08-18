@@ -509,7 +509,7 @@ baseAmount = 72.35 CNY
 - 初始余额、信用额度、当前余额旁显示账户币种代码；
 - 已使用账户的币种行只读，点击显示锁定原因；
 - 账户详情不再硬编码人民币；
-- 账户选择器的余额使用账户原币显示，混币列表必须显示代码。
+- 账户选择器的余额使用账户原币显示，混币列表必须带单位并遵循用户选择的符号/代码样式；账户币种选择项本身仍显示 ISO 代码。
 
 ### 10.4 汇率管理页
 
@@ -572,26 +572,37 @@ baseAmount = 72.35 CNY
 
 ### 10.9 列表、报表和资产展示
 
-- 单币种上下文可只显示金额，并在 Header/卡片标题标注币种；
-- 混币列表必须显示 ISO code，不能只显示歧义符号；
+- 设置页可选符号后置（`100 ¥`）或代码前置（`CNY 100`），默认符号后置；
+- 单币种上下文默认只显示金额，用户可关闭「单币种隐藏单位」；Header/卡片标题通过 `MoneyUnitLabel` 标注币种；
+- 混币列表始终显示单位；符号样式可能重复，需要无歧义时用户可切换为 ISO code，货币选择器和汇率管理页仍固定显示 code；
 - 交易列表主金额优先显示原币，副行在不同币时显示账户金额/本位币金额；
-- 报表、预算、首页收支指标统一显示账本本位币；
+- 报表、预算、首页概览/日历/收支指标、AI 结果统一使用账本本位币，并在卡片或页头标明单位；
 - 账户卡片显示原币余额，资产总览显示本位币折算值和汇率日期；
 - 缺资产汇率时，总资产显示 `—` 和“有 N 个账户待设置汇率”，不显示部分总额；
 - 历史资产图缺某日折算率时显示断点/缺失态，不把缺失值画成 0；
-- 图表仍使用 `InteractiveTrendChart`/`InteractiveBarChart`，点按信息中带币种代码。
+- 图表仍使用 `InteractiveTrendChart`/`InteractiveBarChart`，点按信息遵循同一单位样式与隐藏规则。
 
 ### 10.10 金额格式化
 
-新增货币感知入口，逐步替换用户可见的裸 `formatAmount`：
+已将用户可见的带币种金额统一到两层入口：
 
 ```dart
 String formatMoney(
   num value,
   String currencyCode, {
-  MoneyCodeDisplay codeDisplay = MoneyCodeDisplay.auto,
+  MoneyCodeDisplay display = MoneyCodeDisplay.code,
+})
+
+String formatUserMoney(
+  num value,
+  String currencyCode, {
+  bool forceUnit = false,
 })
 ```
+
+`formatMoney` 是显式选择 code/symbol/none 的底层与机器文本入口；UI 必须优先使用
+`formatUserMoney` / `formatSignedUserMoney`，由 Controller 同步的全局偏好决定符号/代码及单币种隐藏。
+`forceUnit: true` 只用在同一控件同时展示两个币种的换算字段。
 
 当前 `amountForceTwoDecimals` 不能直接用于 JPY/KWD。建议迁移为：
 
@@ -605,6 +616,10 @@ enum CurrencyFractionStyle {
 旧偏好 `false → compact`、`true → standard`。JPY 两种模式都是 0 位，KWD 最多/固定 3 位。
 金额为零继续使用中性色且不显示 `-0`。
 
+汇率的「保存精度」与「展示精度」分离：`formatRateValue` 对常见值最多保留 4 位小数，
+小于 `0.01` / `0.0001` 时逐步放宽到 6 / 8 位，避免极小汇率显示为 0；CSV 导出使用
+`formatRateValueExact` 保留最高 10 位小数，不因 UI 舍入损失往返精度。
+
 ### 10.11 组件复用与新增注册项
 
 实现前继续遵守 `docs/dev/components.md`：
@@ -615,8 +630,7 @@ enum CurrencyFractionStyle {
 - 简单选择器复用 `showOptionSheet`，货币搜索较复杂时新增统一 `showCurrencyPickerSheet`；
 - 账户选择继续走 `showAccountPickerSheet`；
 - 确认框继续走 `showConfirmDialog`；
-- 新增可复用的 `MoneyText`、`CurrencyAmountField`、`ExchangeRateSummary` 和 sheet helper 后，
-  同步登记 `docs/dev/components.md`，不能在多个页面复制实现。
+- 带币种换算行复用 `CurrencyAmountField`，聚合卡片的单位提示复用 `MoneyUnitLabel`；新增共享件后同步登记 `docs/dev/components.md`，不能在多个页面复制实现。
 
 ### 10.12 国际化与无障碍
 
@@ -963,9 +977,11 @@ v2 增加：
 1. CNY/USD 2 位、JPY 0 位、KWD 3 位。
 2. compact/standard 两种显示风格和旧 bool 偏好迁移。
 3. 零值中性色、不出现 `-0`。
-4. 同符号币种在混币列表显示代码。
-5. 非法/停用/未知代码的读取与新建策略。
-6. 目录 code 唯一、numeric code 格式、minor unit 合法。
+4. 符号后置/代码前置偏好，单币种隐藏开/关，多币种强制带单位。
+5. 账本在账户、交易、周期规则或汇率任一处出现外币时都能识别为多币种。
+6. 常见汇率 4 位、极小汇率 6/8 位的展示边界，及 CSV 10 位精确往返。
+7. 非法/停用/未知代码的读取与新建策略。
+8. 目录 code 唯一、numeric code 格式、minor unit 合法。
 
 ### 17.2 汇率纯函数
 
@@ -1170,7 +1186,7 @@ flutter test
 - [x] 修改/删除汇率不改变历史收支；资产估值按目标日有效汇率。
 - [x] 缺率不猜 1:1、不静默丢数据、不显示部分总资产。
 - [x] 预算、报表、首页、AI 汇总统一使用账本本位币。
-- [x] 账户和交易列表保留原币信息，混币页面无歧义符号。
+- [x] 账户和交易列表保留原币信息，符号/代码样式与单币种隐藏规则可配置，聚合卡片统一标注单位。
 - [x] 周期规则缺率时可见、可恢复、不会重复或跳过到期日。
 - [x] 第三方导入和本应用 CSV 保留币种，预览可解决缺率。
 - [x] v1/v2 备份、zip/加密、样例备份和冷启动往返通过。
@@ -1181,7 +1197,7 @@ flutter test
 - [x] 相关文档与 CHANGELOG 已同步。
 
 自动化验收记录（2026-08-18）：`dart format .` 完成；`flutter analyze` 为
-`No issues found`；`flutter test` 共 **810** 项通过。当前环境仅检测到 Windows 与 Chrome，
+`No issues found`；`flutter test` 共 **815** 项通过。当前环境仅检测到 Windows 与 Chrome，
 没有 Android 模拟器或真机，因此最后一项保留到 GitHub CI release APK 的真机验收阶段。
 
 ## 22. 产品决策记录
@@ -1194,6 +1210,8 @@ flutter test
 4. **汇率来源**：首版只有本地手工汇率和导入文件汇率，不提供任何在线自动更新。
 5. **预算口径**：所有预算都使用账本本位币，不允许每个预算单独选币种。
 6. **小数显示**：使用各币种 ISO minor unit；现有“强制两位小数”迁移为“标准精度/精简尾零”。
+7. **单位样式**：默认使用符号后置并隐藏单币种重复单位；用户可切换为 ISO 代码前置，或让单币种也始终带单位。
+8. **汇率小数**：界面可读文本与数据精度分离；常见值显示至多 4 位，极小值自适应 6–8 位，存储/导出仍保留最高 10 位。
 
 实施过程必须按第 18 节阶段推进，在通过与该阶段风险相称的测试后形成独立提交，不把全部改动
 拖到最后一次提交；除非出现必须由用户决定的阻塞问题，开发中途不要求额外确认。

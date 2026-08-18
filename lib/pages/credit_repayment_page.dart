@@ -113,7 +113,7 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
                 const SizedBox(height: 10),
                 SelectField(
                   label: l10n.creditRepayAmountLabel,
-                  value: formatMoney(_amount, widget.account.currencyCode),
+                  value: formatUserMoney(_amount, widget.account.currencyCode),
                   icon: Icons.payments_outlined,
                   onTap: _pickAmount,
                 ),
@@ -126,7 +126,7 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
                       label: l10n.entryTransferOutAmount,
                       value: _fromAmount == null
                           ? l10n.exchangeRateNotSet
-                          : formatMoney(
+                          : formatUserMoney(
                               _fromAmount!,
                               sourceAccount.currencyCode,
                             ),
@@ -173,7 +173,7 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
       return AppLocalizations.of(context).creditRepayNoAccountLabel;
     }
     return '${account.name} '
-        '(${formatMoney(controller.accountBalance(account), account.currencyCode)})';
+        '(${formatUserMoney(controller.accountBalance(account), account.currencyCode)})';
   }
 
   Account? _fromAccount(VeriFinController controller) => controller.accounts

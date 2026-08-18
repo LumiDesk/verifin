@@ -140,8 +140,8 @@ void main() {
       260,
       scrollable: find.byType(Scrollable).last,
     );
-    expect(find.text('USD 10'), findsOneWidget);
-    expect(find.text('CNY 172'), findsNothing);
+    expect(find.text('10 \$'), findsOneWidget);
+    expect(find.text('172 ¥'), findsNothing);
 
     expect(
       await controller.saveExchangeRateDraft(
@@ -154,8 +154,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('有 1 个账户待设置汇率'), findsNothing);
-    expect(find.text('CNY 172'), findsNWidgets(2));
-    expect(find.text('USD 10'), findsOneWidget);
+    expect(find.text('172 ¥'), findsNWidgets(2));
+    expect(find.text('10 \$'), findsOneWidget);
   });
 
   testWidgets('shows empty state on account groups page', (
@@ -227,7 +227,7 @@ void main() {
     final totalText = tester.widget<Text>(
       find.byKey(const Key('account_group_total_现金')),
     );
-    expect(totalText.data, 'CNY 100');
+    expect(totalText.data, '100');
     expect(find.text('600'), findsNothing);
   });
 

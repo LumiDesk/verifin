@@ -59,6 +59,9 @@ void main() {
   group('货币金额', () {
     tearDown(() {
       amount_format.currencyFractionStyle = CurrencyFractionStyle.compact;
+      amount_format.moneyUnitStyle = MoneyUnitStyle.symbol;
+      amount_format.hideUnitInSingleCurrency = true;
+      amount_format.activeBookUsesMultipleCurrencies = false;
     });
 
     test('按各自 minor unit 规整', () {
@@ -112,9 +115,34 @@ void main() {
       expect(formatMoney(12.3, 'CNY'), 'CNY 12.3');
       expect(
         formatMoney(12.3, 'CNY', display: MoneyCodeDisplay.symbol),
-        'CN¥12.3',
+        '12.3 ¥',
       );
       expect(formatMoney(12.3, 'CNY', display: MoneyCodeDisplay.none), '12.3');
+    });
+
+    test('用户金额按设置切换样式并在单币种账本隐藏重复单位', () {
+      expect(formatUserMoney(100, 'CNY'), '100');
+      expect(formatUserMoney(100, 'CNY', forceUnit: true), '100 ¥');
+      expect(displayCurrencyUnit('CNY'), '¥');
+
+      amount_format.activeBookUsesMultipleCurrencies = true;
+      expect(formatUserMoney(100, 'CNY'), '100 ¥');
+      expect(formatSignedUserMoney(-10, 'USD'), r'-10 $');
+
+      amount_format.moneyUnitStyle = MoneyUnitStyle.code;
+      expect(formatUserMoney(100, 'CNY'), 'CNY 100');
+      expect(displayCurrencyUnit('CNY'), 'CNY');
+
+      amount_format.activeBookUsesMultipleCurrencies = false;
+      amount_format.hideUnitInSingleCurrency = false;
+      expect(formatUserMoney(100, 'CNY'), 'CNY 100');
+    });
+
+    test('界面汇率限制冗长小数，导出格式保留高精度', () {
+      expect(formatRateValue(0.138888889), '0.1389');
+      expect(formatRateValue(7.123456789), '7.1235');
+      expect(formatRateValue(0.0000123456789), '0.00001235');
+      expect(formatRateValueExact(0.138888889), '0.138888889');
     });
   });
 

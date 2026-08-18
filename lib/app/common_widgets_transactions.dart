@@ -63,10 +63,15 @@ class TransactionTile extends StatelessWidget {
     final noneLabel = AppLocalizations.of(context).noAccountLabel;
     final amountColor = colorForType(entry.type);
     final amountText = switch (entry.type) {
-      EntryType.expense => formatSignedMoney(-entry.amount, entry.currencyCode),
-      EntryType.income ||
-      EntryType.refund => formatSignedMoney(entry.amount, entry.currencyCode),
-      EntryType.transfer => formatMoney(entry.amount, entry.currencyCode),
+      EntryType.expense => formatSignedUserMoney(
+        -entry.amount,
+        entry.currencyCode,
+      ),
+      EntryType.income || EntryType.refund => formatSignedUserMoney(
+        entry.amount,
+        entry.currencyCode,
+      ),
+      EntryType.transfer => formatUserMoney(entry.amount, entry.currencyCode),
     };
     // 空 accountId / null toAccountId 表示「无账户」，不能用 accountById（会误回退首个账户）。
     final fromName = accountDisplayName(accounts, entry.accountId, noneLabel);
@@ -80,20 +85,24 @@ class TransactionTile extends StatelessWidget {
             (final from?, final to?)
                 when entry.accountAmount != null &&
                     entry.toAccountAmount != null =>
-              '${formatMoney(entry.accountAmount!, from.currencyCode)} → ${formatMoney(entry.toAccountAmount!, to.currencyCode)}',
+              '${formatUserMoney(entry.accountAmount!, from.currencyCode, forceUnit: true)} → ${formatUserMoney(entry.toAccountAmount!, to.currencyCode, forceUnit: true)}',
             _ => null,
           }
         : fromAccount != null &&
               entry.accountAmount != null &&
               fromAccount.currencyCode != entry.currencyCode
-        ? formatMoney(entry.accountAmount!, fromAccount.currencyCode)
+        ? formatUserMoney(
+            entry.accountAmount!,
+            fromAccount.currencyCode,
+            forceUnit: true,
+          )
         : null;
     final baseAmountText =
         entry.type != EntryType.transfer &&
             baseCurrencyCode != null &&
             baseCurrencyCode != entry.currencyCode &&
             baseCurrencyCode != fromAccount?.currencyCode
-        ? formatMoney(entry.baseAmount, baseCurrencyCode!)
+        ? formatUserMoney(entry.baseAmount, baseCurrencyCode!, forceUnit: true)
         : null;
     final conversionText = <String>[
       ?accountAmountText,
@@ -398,7 +407,7 @@ class DateGroupHeader extends StatelessWidget {
           Text(
             baseCurrencyCode == null
                 ? formatSignedAmount(dayTotal)
-                : formatSignedMoney(dayTotal, baseCurrencyCode!),
+                : formatSignedUserMoney(dayTotal, baseCurrencyCode!),
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               color: Theme.of(
                 context,

@@ -234,6 +234,7 @@ class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
                     trendEntries,
                     window,
                   ),
+                  currencyCode: controller.activeBook.baseCurrencyCode,
                   onTap: () {},
                 ),
                 const SizedBox(height: 16),
