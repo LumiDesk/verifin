@@ -23,6 +23,7 @@ void main() {
     );
     expect(find.text('4个首页面板'), findsOneWidget);
     expect(find.byType(CalendarPreview), findsOneWidget);
+    expect(find.byType(MoneyUnitLabel), findsWidgets);
 
     await tester.tap(find.byKey(const Key('panel_settings_entry_home')));
     await tester.pumpAndSettle();
@@ -55,6 +56,13 @@ void main() {
     await tester.drag(firstVerticalScrollable(), const Offset(0, 800));
     await tester.pumpAndSettle();
     expect(find.byType(HomeTrendPanel), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(HomeTrendPanel),
+        matching: find.byType(MoneyUnitLabel),
+      ),
+      findsOneWidget,
+    );
     await tester.scrollUntilVisible(
       find.byKey(const Key('panel_settings_entry_home')),
       200,
