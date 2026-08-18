@@ -4153,4 +4153,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recurringRetryNow => 'Post due entries now';
+
+  @override
+  String recurringGeneratedCount(int count) {
+    return 'Posted $count due transactions';
+  }
 }

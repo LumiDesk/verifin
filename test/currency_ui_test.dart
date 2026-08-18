@@ -8,7 +8,9 @@ import 'package:verifin/pages/assets_pages.dart';
 import 'package:verifin/pages/currency_rates_page.dart';
 import 'package:verifin/pages/entry_detail_page.dart';
 import 'package:verifin/pages/ledger_books_page.dart';
+import 'package:verifin/pages/recurring_page.dart';
 import 'package:verifin/pages/sheets.dart';
+import 'package:verifin/pages/transaction_detail_page.dart';
 
 import 'support/in_memory_ledger_repository.dart';
 import 'support/test_harness.dart';
@@ -271,5 +273,145 @@ void main() {
     expect(saved.accountAmount, 10);
     expect(saved.toAccountAmount, 72);
     expect(saved.baseAmount, 0);
+  });
+
+  testWidgets('外币退款锁定原币并分别保存到账与本位币冲抵额', (tester) async {
+    final controller = await makeController();
+    final bookId = controller.activeBook.id;
+    controller
+      ..addAccount(
+        Account(
+          id: 'usd-cash',
+          bookId: bookId,
+          name: '美元现金',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 100,
+          iconCode: 'cash',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+          currencyCode: 'USD',
+        ),
+      )
+      ..addAccount(
+        Account(
+          id: 'cny-cash',
+          bookId: bookId,
+          name: '人民币现金',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 0,
+          iconCode: 'cash',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+        ),
+      )
+      ..addEntry(
+        LedgerEntry(
+          id: 'usd-expense',
+          bookId: bookId,
+          type: EntryType.expense,
+          amount: 100,
+          currencyCode: 'USD',
+          accountAmount: 100,
+          baseAmount: 720,
+          conversionSource: ConversionSource.manual,
+          categoryId: 'dining',
+          accountId: 'usd-cash',
+          note: '',
+          occurredAt: DateTime.now(),
+        ),
+      );
+    await tester.binding.setSurfaceSize(const Size(460, 2600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await pumpPage(
+      tester,
+      controller,
+      const TransactionDetailPage(entryId: 'usd-expense'),
+    );
+    await tester.tap(find.text('添加退款'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('退款原币沿用原支出'), findsOneWidget);
+    expect(find.text('USD 100'), findsWidgets);
+
+    await tester.tap(find.text('到账账户'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('人民币现金'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('refund_account_amount')), findsOneWidget);
+    expect(find.text('CNY 720'), findsAtLeastNWidgets(2));
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+
+    final refund = controller.refundsForEntry('usd-expense').single;
+    expect(refund.currencyCode, 'USD');
+    expect(refund.amount, 100);
+    expect(refund.accountId, 'cny-cash');
+    expect(refund.accountAmount, 720);
+    expect(refund.baseAmount, 720);
+  });
+
+  testWidgets('周期规则编辑器展示汇率策略与完整多币种金额', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(460, 1800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final controller = await makeController();
+    final bookId = controller.activeBook.id;
+    controller.addAccount(
+      Account(
+        id: 'usd-cash',
+        bookId: bookId,
+        name: '美元现金',
+        type: AccountType.cash,
+        groupId: null,
+        initialBalance: 0,
+        iconCode: 'cash',
+        note: '',
+        includeInAssets: true,
+        hidden: false,
+        currencyCode: 'USD',
+      ),
+    );
+    final rule = RecurringRule(
+      id: 'future-usd',
+      bookId: bookId,
+      type: EntryType.income,
+      amount: 10,
+      currencyCode: 'USD',
+      accountAmount: 10,
+      baseAmount: 72,
+      ratePolicy: RecurringRatePolicy.latestAvailable,
+      categoryId: 'salary',
+      accountId: 'usd-cash',
+      note: '',
+      frequency: RecurringFrequency.monthly,
+      startDate: DateTime(2030, 1, 1),
+      nextRunDate: DateTime(2030, 1, 1),
+    );
+    expect(await controller.saveRecurringRuleDraft(rule, isNew: true), isTrue);
+    await pumpPage(
+      tester,
+      controller,
+      RecurringRuleEditPage(rule: controller.recurringRules.single),
+    );
+
+    expect(find.text('USD 10'), findsOneWidget);
+    expect(find.text('CNY 72'), findsOneWidget);
+    expect(find.text('每次使用最新本地汇率'), findsOneWidget);
+    await tester.ensureVisible(find.text('每次使用最新本地汇率'));
+    await tester.tap(find.text('每次使用最新本地汇率'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('固定当前金额'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+
+    expect(
+      controller.recurringRules.single.ratePolicy,
+      RecurringRatePolicy.fixedAmounts,
+    );
   });
 }

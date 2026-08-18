@@ -103,6 +103,15 @@ class InMemoryLedgerRepository implements LedgerRepository {
   }
 
   @override
+  Future<void> saveRecurringGeneration({
+    required List<LedgerEntry> entries,
+    required List<RecurringRule> recurringRules,
+  }) async {
+    _entries = List<LedgerEntry>.of(entries);
+    _recurringRules = List<RecurringRule>.of(recurringRules);
+  }
+
+  @override
   Future<List<ExchangeRate>> loadExchangeRates() async =>
       List<ExchangeRate>.of(_exchangeRates);
 

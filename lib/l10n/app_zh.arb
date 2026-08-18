@@ -2564,5 +2564,9 @@
   "@recurringMissingRateCount": {
     "placeholders": {"count": {"type": "int"}}
   },
-  "recurringRetryNow": "立即补记"
+  "recurringRetryNow": "立即补记",
+  "recurringGeneratedCount": "已补记 {count} 笔交易",
+  "@recurringGeneratedCount": {
+    "placeholders": {"count": {"type": "int"}}
+  }
 }

@@ -1628,5 +1628,9 @@
   "@recurringMissingRateCount": {
     "placeholders": {"count": {"type": "int"}}
   },
-  "recurringRetryNow": "Post due entries now"
+  "recurringRetryNow": "Post due entries now",
+  "recurringGeneratedCount": "Posted {count} due transactions",
+  "@recurringGeneratedCount": {
+    "placeholders": {"count": {"type": "int"}}
+  }
 }

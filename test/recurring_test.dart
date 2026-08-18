@@ -128,12 +128,12 @@ void main() {
       ).copyWith(),
     );
     // addRecurringRule 保存的是账本无关计数；用 activeBook 版本重建 bookId。
-    final generated = controller.applyDueRecurring(now);
+    final generated = await controller.applyDueRecurring(now);
     // 5/1、6/1、7/1 三笔。
     expect(generated, 3);
     expect(controller.entries.length, 3);
     // 再次调用不应重复补记。
-    expect(controller.applyDueRecurring(now), 0);
+    expect(await controller.applyDueRecurring(now), 0);
     expect(controller.recurringRules.single.nextRunDate, DateTime(2026, 8, 1));
     controller.dispose();
   });
@@ -144,7 +144,7 @@ void main() {
     controller.addRecurringRule(
       _rule(freq: RecurringFrequency.monthly, start: DateTime(2026, 7, 1)),
     );
-    expect(controller.applyDueRecurring(now), 1); // 7/1 一笔
+    expect(await controller.applyDueRecurring(now), 1); // 7/1 一笔
     expect(controller.entries.length, 1);
     // 用户把规则 nextRunDate 回拨到 7/1，重新触发补记。
     final rule = controller.recurringRules.single;
@@ -152,8 +152,104 @@ void main() {
       rule.copyWith(nextRunDate: DateTime(2026, 7, 1)),
     );
     // 同一到期日 id 已存在，应跳过而非覆盖，交易数保持 1。
-    expect(controller.applyDueRecurring(now), 0);
+    expect(await controller.applyDueRecurring(now), 0);
     expect(controller.entries.length, 1);
+    controller.dispose();
+  });
+
+  test('最新汇率策略缺汇率时不生成也不推进，补率后可重试', () async {
+    final controller = await makeController();
+    final bookId = controller.activeBook.id;
+    controller.addAccount(
+      Account(
+        id: 'usd-cash',
+        bookId: bookId,
+        name: '美元现金',
+        type: AccountType.cash,
+        groupId: null,
+        initialBalance: 0,
+        iconCode: 'cash',
+        note: '',
+        includeInAssets: true,
+        hidden: false,
+        currencyCode: 'USD',
+      ),
+    );
+    final due = DateTime(2026, 7, 1);
+    final rule = RecurringRule(
+      id: 'usd-rule',
+      bookId: bookId,
+      type: EntryType.income,
+      amount: 100,
+      currencyCode: 'USD',
+      accountAmount: 100,
+      baseAmount: 720,
+      ratePolicy: RecurringRatePolicy.latestAvailable,
+      categoryId: 'salary',
+      accountId: 'usd-cash',
+      note: '美元工资',
+      frequency: RecurringFrequency.monthly,
+      startDate: due,
+      nextRunDate: due,
+    );
+    expect(await controller.saveRecurringRuleDraft(rule, isNew: true), isTrue);
+
+    expect(await controller.applyDueRecurring(DateTime(2026, 7, 2)), 0);
+    expect(controller.entries, isEmpty);
+    expect(controller.recurringRules.single.nextRunDate, due);
+    expect(
+      controller.dueRecurringMissingRates(DateTime(2026, 7, 2)),
+      <String, Set<String>>{
+        'usd-rule': <String>{'USD'},
+      },
+    );
+
+    expect(
+      await controller.saveExchangeRateDraft(
+        currencyCode: 'USD',
+        effectiveDate: due,
+        rateToBase: 7.2,
+      ),
+      isTrue,
+    );
+    expect(await controller.applyDueRecurring(DateTime(2026, 7, 2)), 1);
+    final generated = controller.entries.single;
+    expect(generated.currencyCode, 'USD');
+    expect(generated.accountAmount, 100);
+    expect(generated.baseAmount, 720);
+    expect(controller.recurringRules.single.nextRunDate, DateTime(2026, 8, 1));
+    controller.dispose();
+  });
+
+  test('固定金额策略不依赖后来修改的汇率', () async {
+    final controller = await makeController();
+    final due = DateTime(2026, 7, 1);
+    final rule = RecurringRule(
+      id: 'fixed-usd',
+      bookId: controller.activeBook.id,
+      type: EntryType.expense,
+      amount: 10,
+      currencyCode: 'USD',
+      accountAmount: null,
+      baseAmount: 71,
+      ratePolicy: RecurringRatePolicy.fixedAmounts,
+      categoryId: 'dining',
+      accountId: '',
+      note: '',
+      frequency: RecurringFrequency.monthly,
+      startDate: due,
+      nextRunDate: due,
+    );
+    expect(await controller.saveRecurringRuleDraft(rule, isNew: true), isTrue);
+    await controller.saveExchangeRateDraft(
+      currencyCode: 'USD',
+      effectiveDate: due,
+      rateToBase: 9,
+    );
+
+    expect(await controller.applyDueRecurring(DateTime(2026, 7, 2)), 1);
+    expect(controller.entries.single.baseAmount, 71);
+    expect(controller.entries.single.conversionSource, ConversionSource.manual);
     controller.dispose();
   });
 

@@ -4043,4 +4043,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get recurringRetryNow => '立即补记';
+
+  @override
+  String recurringGeneratedCount(int count) {
+    return '已补记 $count 笔交易';
+  }
 }

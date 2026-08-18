@@ -73,6 +73,12 @@ abstract interface class LedgerRepository {
   Future<List<RecurringRule>> loadRecurringRules();
   Future<void> saveRecurringRules(List<RecurringRule> rules);
 
+  /// Persists generated recurring entries and advanced rules atomically.
+  Future<void> saveRecurringGeneration({
+    required List<LedgerEntry> entries,
+    required List<RecurringRule> recurringRules,
+  });
+
   Future<List<ExchangeRate>> loadExchangeRates();
   Future<void> saveExchangeRates(List<ExchangeRate> rates);
 
@@ -265,6 +271,23 @@ class SqliteLedgerRepository implements LedgerRepository {
       'recurring_rules',
       _indexed(rules, _recurringToRow),
     );
+  }
+
+  @override
+  Future<void> saveRecurringGeneration({
+    required List<LedgerEntry> entries,
+    required List<RecurringRule> recurringRules,
+  }) async {
+    await _db.transaction((txn) async {
+      await _replaceInTxn(txn, 'entries', entries.map(_entryToRow));
+      await _replaceInTxn(
+        txn,
+        'recurring_rules',
+        _indexed(recurringRules, _recurringToRow),
+      );
+    });
+    _seedSnapshot('entries', entries.map(_entryToRow));
+    _seedSnapshot('recurring_rules', _indexed(recurringRules, _recurringToRow));
   }
 
   // ---- 本地汇率 ----

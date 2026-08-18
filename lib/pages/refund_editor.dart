@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
-import '../app/ledger_math.dart';
+import '../app/currency_catalog.dart';
+import '../app/currency_math.dart';
 import '../app/model_lookup.dart';
 import '../app/models.dart';
 import '../app/veri_fin_scope.dart';
@@ -36,9 +37,9 @@ class RefundSection extends StatelessWidget {
     return (expense.amount - total).clamp(0.0, expense.amount).toDouble();
   }
 
-  double get _settledTotal => refunds
+  double get _settledBaseTotal => refunds
       .where((refund) => refund.isSettledRefund)
-      .fold<double>(0, (sum, refund) => sum + refund.amount);
+      .fold<double>(0, (sum, refund) => sum + refund.baseAmount);
 
   List<LedgerEntry> get _sortedRefunds =>
       List<LedgerEntry>.of(refunds)..sort((a, b) {
@@ -82,8 +83,8 @@ class RefundSection extends StatelessWidget {
     final pendingTotal = refunds
         .where((refund) => refund.isPendingRefund)
         .fold<double>(0, (sum, refund) => sum + refund.amount);
-    final netAmount = (expense.amount - _settledTotal)
-        .clamp(0.0, expense.amount)
+    final netBaseAmount = (expense.baseAmount - _settledBaseTotal)
+        .clamp(0.0, expense.baseAmount)
         .toDouble();
 
     return VeriCard(
@@ -102,7 +103,12 @@ class RefundSection extends StatelessWidget {
               ),
               if (refunds.isNotEmpty)
                 Text(
-                  l10n.refundNetLabel(formatAmount(netAmount)),
+                  l10n.refundNetLabel(
+                    formatMoney(
+                      netBaseAmount,
+                      controller.activeBook.baseCurrencyCode,
+                    ),
+                  ),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(
                       context,
@@ -115,7 +121,9 @@ class RefundSection extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 2),
               child: Text(
-                l10n.refundPendingTotal(formatAmount(pendingTotal)),
+                l10n.refundPendingTotal(
+                  formatMoney(pendingTotal, expense.currencyCode),
+                ),
                 style: Theme.of(
                   context,
                 ).textTheme.bodySmall?.copyWith(color: veriBlue),
@@ -196,7 +204,7 @@ class _RefundRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    '+${formatAmount(refund.amount)} · $accountName',
+                    '+${formatMoney(refund.amount, refund.currencyCode)} · $accountName',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -231,6 +239,7 @@ Future<RefundEditResult?> showRefundSheet({
   required LedgerEntry expense,
   required List<LedgerEntry> refunds,
   LedgerEntry? existing,
+  bool markSettled = false,
 }) {
   return showModalBottomSheet<RefundEditResult>(
     context: context,
@@ -240,14 +249,20 @@ Future<RefundEditResult?> showRefundSheet({
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(veriRadiusLg)),
     ),
-    builder: (_) =>
-        _RefundSheet(expense: expense, refunds: refunds, existing: existing),
+    builder: (_) => _RefundSheet(
+      expense: expense,
+      refunds: refunds,
+      existing: existing,
+      markSettled: markSettled,
+    ),
   );
 }
 
 typedef _RefundSnapshot = ({
   double amount,
   String accountId,
+  double? accountAmount,
+  double baseAmount,
   bool settled,
   DateTime settledAt,
   DateTime initiatedAt,
@@ -259,11 +274,13 @@ class _RefundSheet extends StatefulWidget {
     required this.expense,
     required this.refunds,
     this.existing,
+    this.markSettled = false,
   });
 
   final LedgerEntry expense;
   final List<LedgerEntry> refunds;
   final LedgerEntry? existing;
+  final bool markSettled;
 
   @override
   State<_RefundSheet> createState() => _RefundSheetState();
@@ -274,6 +291,11 @@ class _RefundSheetState extends State<_RefundSheet> {
   late final String _refundId;
   late double _amount;
   late String _accountId;
+  double? _accountAmount;
+  late double _baseAmount;
+  bool _accountAmountTouched = false;
+  bool _baseAmountTouched = false;
+  ConversionSource _conversionSource = ConversionSource.identity;
   late bool _settled;
   late DateTime _settledAt;
   late DateTime _initiatedAt;
@@ -301,6 +323,9 @@ class _RefundSheetState extends State<_RefundSheet> {
     if (existing != null) {
       _amount = existing.amount;
       _accountId = existing.accountId;
+      _accountAmount = existing.accountAmount;
+      _baseAmount = existing.baseAmount;
+      _conversionSource = existing.conversionSource;
       _settled = existing.settledAt != null;
       _settledAt = existing.settledAt ?? DateTime.now();
       _initiatedAt = existing.occurredAt;
@@ -308,12 +333,18 @@ class _RefundSheetState extends State<_RefundSheet> {
     } else {
       _amount = _maxRefund;
       _accountId = widget.expense.accountId;
+      _baseAmount = 0;
       _settled = true;
       _settledAt = DateTime.now();
       _initiatedAt = DateTime.now();
       _note = '';
+      _resolveAmounts(forceAccount: true, forceBase: true);
     }
     _initialSnapshot = _snapshot;
+    if (existing != null && widget.markSettled && !_settled) {
+      _settled = true;
+      _settledAt = DateTime.now();
+    }
   }
 
   double get _maxRefund {
@@ -325,9 +356,59 @@ class _RefundSheetState extends State<_RefundSheet> {
         .toDouble();
   }
 
+  Account? get _selectedAccount {
+    if (_accountId.isEmpty) return null;
+    return VeriFinScope.of(
+      context,
+    ).accounts.where((account) => account.id == _accountId).firstOrNull;
+  }
+
+  void _resolveAmounts({bool forceAccount = false, bool forceBase = false}) {
+    final controller = VeriFinScope.of(context);
+    final expense = widget.expense;
+    final baseCode = controller.activeBook.baseCurrencyCode;
+    if ((forceBase || !_baseAmountTouched) && expense.amount > 0) {
+      _baseAmount = normalizeCurrencyAmount(
+        expense.baseAmount * _amount / expense.amount,
+        baseCode,
+      );
+    }
+    final account = _selectedAccount;
+    if (account == null) {
+      _accountAmount = null;
+    } else if (forceAccount || !_accountAmountTouched) {
+      if (account.id == expense.accountId && expense.accountAmount != null) {
+        _accountAmount = normalizeCurrencyAmount(
+          expense.accountAmount! * _amount / expense.amount,
+          account.currencyCode,
+        );
+      } else if (account.currencyCode == baseCode) {
+        _accountAmount = _baseAmount;
+      } else {
+        final converted = controller.convertAmount(
+          amount: _amount,
+          sourceCurrencyCode: expense.currencyCode,
+          targetCurrencyCode: account.currencyCode,
+          date: _initiatedAt,
+        );
+        _accountAmount = converted is ConvertedCurrencyAmount
+            ? converted.amount
+            : null;
+      }
+    }
+    _conversionSource = _accountAmountTouched || _baseAmountTouched
+        ? ConversionSource.manual
+        : expense.currencyCode == baseCode &&
+              (account == null || account.currencyCode == baseCode)
+        ? ConversionSource.identity
+        : ConversionSource.rateTable;
+  }
+
   _RefundSnapshot get _snapshot => (
     amount: _amount,
     accountId: _accountId,
+    accountAmount: _accountAmount,
+    baseAmount: _baseAmount,
     settled: _settled,
     settledAt: _settledAt,
     initiatedAt: _initiatedAt,
@@ -344,11 +425,17 @@ class _RefundSheetState extends State<_RefundSheet> {
       title: AppLocalizations.of(context).refundAmountShort,
       initialAmount: _amount > 0 ? _amount : null,
       maxAmount: _maxRefund,
+      maxFractionDigits: CurrencyCatalog.require(
+        widget.expense.currencyCode,
+      ).minorUnit,
     );
     if (value == null || value <= 0 || !mounted) {
       return;
     }
-    setState(() => _amount = value);
+    setState(() {
+      _amount = normalizeCurrencyAmount(value, widget.expense.currencyCode);
+      _resolveAmounts();
+    });
   }
 
   Future<void> _pickAccount() async {
@@ -367,7 +454,11 @@ class _RefundSheetState extends State<_RefundSheet> {
     if (selected == null || !mounted) {
       return;
     }
-    setState(() => _accountId = selected.id);
+    setState(() {
+      _accountId = selected.id;
+      _accountAmountTouched = false;
+      _resolveAmounts(forceAccount: true);
+    });
   }
 
   Future<void> _pickDate({required bool arrival}) async {
@@ -385,7 +476,53 @@ class _RefundSheetState extends State<_RefundSheet> {
         _settledAt = picked;
       } else {
         _initiatedAt = picked;
+        _resolveAmounts();
       }
+    });
+  }
+
+  Future<void> _editAccountAmount(String currencyCode) async {
+    final value = await showNumberPadSheet(
+      context,
+      title: AppLocalizations.of(context).entryAmountInputTitle(
+        AppLocalizations.of(context).refundAccountAmountLabel,
+        currencyCode,
+      ),
+      initialAmount: _accountAmount,
+      maxFractionDigits: CurrencyCatalog.require(currencyCode).minorUnit,
+    );
+    if (value == null || value <= 0 || !mounted) return;
+    setState(() {
+      _accountAmount = normalizeCurrencyAmount(value, currencyCode);
+      _accountAmountTouched = true;
+      if (currencyCode ==
+          VeriFinScope.of(context).activeBook.baseCurrencyCode) {
+        _baseAmount = _accountAmount!;
+        _baseAmountTouched = true;
+      }
+      _conversionSource = ConversionSource.manual;
+    });
+  }
+
+  Future<void> _editBaseAmount(String baseCode) async {
+    final value = await showNumberPadSheet(
+      context,
+      title: AppLocalizations.of(context).entryAmountInputTitle(
+        AppLocalizations.of(context).refundBaseAmountLabel,
+        baseCode,
+      ),
+      initialAmount: _baseAmount > 0 ? _baseAmount : null,
+      maxFractionDigits: CurrencyCatalog.require(baseCode).minorUnit,
+    );
+    if (value == null || value <= 0 || !mounted) return;
+    setState(() {
+      _baseAmount = normalizeCurrencyAmount(value, baseCode);
+      _baseAmountTouched = true;
+      if (_selectedAccount?.currencyCode == baseCode) {
+        _accountAmount = _baseAmount;
+        _accountAmountTouched = true;
+      }
+      _conversionSource = ConversionSource.manual;
     });
   }
 
@@ -409,6 +546,10 @@ class _RefundSheetState extends State<_RefundSheet> {
     bookId: widget.expense.bookId,
     type: EntryType.refund,
     amount: _amount.clamp(0.0, _maxRefund).toDouble(),
+    currencyCode: widget.expense.currencyCode,
+    accountAmount: _accountId.isEmpty ? null : _accountAmount,
+    baseAmount: _baseAmount,
+    conversionSource: _conversionSource,
     categoryId: widget.expense.categoryId,
     accountId: _accountId,
     note: _note.trim(),
@@ -418,7 +559,10 @@ class _RefundSheetState extends State<_RefundSheet> {
   );
 
   Future<bool> _save() async {
-    if (_amount <= 0 || _maxRefund <= 0) {
+    if (_amount <= 0 ||
+        _maxRefund <= 0 ||
+        _baseAmount <= 0 ||
+        (_accountId.isNotEmpty && (_accountAmount ?? 0) <= 0)) {
       return false;
     }
     _result = RefundEditResult.saved(_buildRefund());
@@ -457,7 +601,13 @@ class _RefundSheetState extends State<_RefundSheet> {
       _accountId,
       l10n.commonNoneShort,
     );
-    final canSave = _amount > 0 && (widget.existing == null || _isDirty);
+    final account = _selectedAccount;
+    final baseCode = controller.activeBook.baseCurrencyCode;
+    final canSave =
+        _amount > 0 &&
+        _baseAmount > 0 &&
+        (_accountId.isEmpty || (_accountAmount ?? 0) > 0) &&
+        (widget.existing == null || _isDirty);
 
     return UnsavedChangesGuard(
       isDirty: _isDirty,
@@ -507,14 +657,16 @@ class _RefundSheetState extends State<_RefundSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text(
-                        '+${formatAmount(_amount)}',
+                        '+${formatMoney(_amount, widget.expense.currencyCode)}',
                         style: theme.textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.w800,
                           color: veriIncome,
                         ),
                       ),
                       Text(
-                        l10n.refundRemainingLabel(formatAmount(_maxRefund)),
+                        l10n.refundRemainingLabel(
+                          formatMoney(_maxRefund, widget.expense.currencyCode),
+                        ),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurface.withValues(
                             alpha: 0.6,
@@ -526,10 +678,33 @@ class _RefundSheetState extends State<_RefundSheet> {
                 ),
               ),
               const SizedBox(height: 6),
+              Text(
+                l10n.refundCurrencyLockedHint,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+                ),
+              ),
               DetailInfoRow(
                 label: l10n.refundToAccountLabel,
                 value: accountName,
                 onTap: _pickAccount,
+              ),
+              if (account != null)
+                CurrencyAmountField(
+                  key: const Key('refund_account_amount'),
+                  label: l10n.refundAccountAmountLabel,
+                  currencyCode: account.currencyCode,
+                  amount: _accountAmount,
+                  missingText: l10n.exchangeRateNotSet,
+                  onTap: () => _editAccountAmount(account.currencyCode),
+                ),
+              CurrencyAmountField(
+                key: const Key('refund_base_amount'),
+                label: l10n.refundBaseAmountLabel,
+                currencyCode: baseCode,
+                amount: _baseAmount > 0 ? _baseAmount : null,
+                missingText: l10n.exchangeRateNotSet,
+                onTap: () => _editBaseAmount(baseCode),
               ),
               CompactSwitchRow(
                 icon: Icons.check_circle_outline,

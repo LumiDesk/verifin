@@ -7393,6 +7393,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'立即补记'**
   String get recurringRetryNow;
+
+  /// No description provided for @recurringGeneratedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'已补记 {count} 笔交易'**
+  String recurringGeneratedCount(int count);
 }
 
 class _AppLocalizationsDelegate
