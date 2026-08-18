@@ -13,13 +13,13 @@ double signedAmount(LedgerEntry entry) {
   switch (entry.type) {
     case EntryType.expense:
       // 退款/报销回款冲抵后的净支出。
-      return -entry.netAmount;
+      return -entry.netBaseAmount;
     case EntryType.income:
-      return entry.amount;
+      return entry.baseAmount;
     case EntryType.transfer:
       return 0;
     case EntryType.refund:
-      // 退款不计入收支：冲减已体现在原支出的净额（netAmount）里，若再计一次即重复。
+      // 退款不计入收支：冲减已体现在原支出的本位币净额里，若再计一次即重复。
       return 0;
   }
 }
@@ -29,24 +29,24 @@ double accountDeltaForEntry(LedgerEntry entry, String accountId) {
     case EntryType.expense:
       // 支出按「全额」扣原账户；退款的回款由独立的退款条目（refund）单独入到账账户，
       // 故此处不再扣净额——否则退款会被重复计（尤其退到不同账户时）。
-      return entry.accountId == accountId ? -entry.amount : 0;
+      return entry.accountId == accountId ? -(entry.accountAmount ?? 0) : 0;
     case EntryType.income:
-      return entry.accountId == accountId ? entry.amount : 0;
+      return entry.accountId == accountId ? (entry.accountAmount ?? 0) : 0;
     case EntryType.transfer:
       var delta = 0.0;
       // 用累加而非 if/else return：兼容「转出=转入」的同账户转账（净额应为 −手续费，
       // 而非把入账吞掉）。
       if (entry.accountId == accountId) {
-        delta -= entry.amount + entry.fee; // 转出账户额外扣手续费
+        delta -= (entry.accountAmount ?? 0) + entry.fee; // 转出账户额外扣手续费
       }
       if (entry.toAccountId == accountId) {
-        delta += entry.amount;
+        delta += entry.toAccountAmount ?? 0;
       }
       return delta;
     case EntryType.refund:
       // 只有「已到账」退款影响余额，钱进到账账户（accountId）；待到账不动余额。
       if (entry.settledAt == null) return 0;
-      return entry.accountId == accountId ? entry.amount : 0;
+      return entry.accountId == accountId ? (entry.accountAmount ?? 0) : 0;
   }
 }
 
@@ -72,7 +72,14 @@ double sumByType(Iterable<LedgerEntry> entries, EntryType type) {
   return entries
       .where((entry) => entry.type == type)
       // 支出按净额（扣除退款/报销回款）统计。
-      .fold<double>(0, (sum, entry) => sum + entry.netAmount);
+      .fold<double>(
+        0,
+        (sum, entry) =>
+            sum +
+            (entry.type == EntryType.expense
+                ? entry.netBaseAmount
+                : entry.baseAmount),
+      );
 }
 
 bool isZeroAmount(num value) => value.abs() < 0.005;
@@ -167,7 +174,9 @@ List<double> monthlyNetValuesForType(
   final values = List<double>.filled(12, 0);
   for (final entry in entries) {
     if (entry.type == type && entry.occurredAt.year == year) {
-      values[entry.occurredAt.month - 1] += entry.netAmount;
+      values[entry.occurredAt.month - 1] += entry.type == EntryType.expense
+          ? entry.netBaseAmount
+          : entry.baseAmount;
     }
   }
   return values;
@@ -198,7 +207,9 @@ List<double> valuesForTypeInWindow(
     }
     for (var i = 0; i < days.length; i += 1) {
       if (DateUtils.isSameDay(entry.occurredAt, days[i])) {
-        values[i] += entry.netAmount;
+        values[i] += entry.type == EntryType.expense
+            ? entry.netBaseAmount
+            : entry.baseAmount;
         break;
       }
     }
@@ -233,7 +244,7 @@ List<double> dailyExpenseValues(Iterable<LedgerEntry> entries, DateTime now) {
     if (entry.type == EntryType.expense &&
         entry.occurredAt.year == now.year &&
         entry.occurredAt.month == now.month) {
-      values[entry.occurredAt.day - 1] += entry.netAmount;
+      values[entry.occurredAt.day - 1] += entry.netBaseAmount;
     }
   }
   return values;
@@ -247,7 +258,7 @@ double dayExpenseTotal(Iterable<LedgerEntry> entries, DateTime day) {
             entry.type == EntryType.expense &&
             DateUtils.isSameDay(entry.occurredAt, day),
       )
-      .fold<double>(0, (sum, entry) => sum + entry.netAmount);
+      .fold<double>(0, (sum, entry) => sum + entry.netBaseAmount);
 }
 
 List<double> monthlyExpenseValues(Iterable<LedgerEntry> entries) {
@@ -255,7 +266,7 @@ List<double> monthlyExpenseValues(Iterable<LedgerEntry> entries) {
   final values = List<double>.filled(12, 0);
   for (final entry in entries) {
     if (entry.type == EntryType.expense && entry.occurredAt.year == now.year) {
-      values[entry.occurredAt.month - 1] += entry.netAmount;
+      values[entry.occurredAt.month - 1] += entry.netBaseAmount;
     }
   }
   return values;

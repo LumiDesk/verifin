@@ -39,6 +39,7 @@ mixin _ControllerState on ChangeNotifier {
   final List<AccountGroup> _accountGroups = <AccountGroup>[];
   final List<Category> _categories = <Category>[];
   final List<Tag> _tags = <Tag>[];
+  final List<ExchangeRate> _exchangeRates = <ExchangeRate>[];
 
   // 派生视图缓存：按当前账本过滤（并排序/回退种子）后的不可变列表。原本每个
   // getter 每次调用都做一次 O(n) 过滤 + 拷贝，一帧内多个 widget 反复读取会放大
@@ -51,12 +52,14 @@ mixin _ControllerState on ChangeNotifier {
   List<Account>? _accountsView;
   List<AccountGroup>? _accountGroupsView;
   List<Category>? _categoriesView;
+  List<ExchangeRate>? _exchangeRatesView;
 
   void _invalidateDerivedViews() {
     _entriesView = null;
     _accountsView = null;
     _accountGroupsView = null;
     _categoriesView = null;
+    _exchangeRatesView = null;
   }
 
   @override
@@ -274,6 +277,9 @@ mixin _ControllerState on ChangeNotifier {
     _recurringRules
       ..clear()
       ..addAll(await _repository.loadRecurringRules());
+    _exchangeRates
+      ..clear()
+      ..addAll(await _repository.loadExchangeRates());
     _monthlyBudgets
       ..clear()
       ..addAll(_bookScopedBudgets(await _repository.loadMonthlyBudgets()));
@@ -461,7 +467,7 @@ mixin _ControllerState on ChangeNotifier {
     return changed;
   }
 
-  /// 历史迁移：把旧版单标量退款（支出 `refundedAmount > 0` 却没有任何关联退款条目）
+  /// 历史迁移：把旧版单标量退款（支出 `refundedBaseAmount > 0` 却没有关联退款条目）
   /// 合成为一条「已到账」退款条目（金额=标量、日期/账户取原支出、备注空），让旧数据
   /// 平滑升级到新模型并使历史退款可见。迁移后余额与净额恒等不变（支出改扣全额、退款
   /// 条目补回同额），只是把「一个数」变成「一条可见事件」。返回是否合成了条目。
@@ -476,9 +482,9 @@ mixin _ControllerState on ChangeNotifier {
     final synthesized = <LedgerEntry>[];
     for (final e in _entries) {
       if (e.type == EntryType.expense &&
-          e.refundedAmount > 0 &&
+          e.refundedBaseAmount > 0 &&
           !expensesWithRefundEntry.contains(e.id)) {
-        final amount = e.refundedAmount.clamp(0.0, e.amount).toDouble();
+        final amount = e.refundedBaseAmount.clamp(0.0, e.baseAmount).toDouble();
         if (amount <= 0) continue;
         synthesized.add(
           LedgerEntry(
@@ -486,6 +492,10 @@ mixin _ControllerState on ChangeNotifier {
             bookId: e.bookId,
             type: EntryType.refund,
             amount: amount,
+            currencyCode: e.currencyCode,
+            accountAmount: e.accountId.isEmpty ? null : amount,
+            baseAmount: amount,
+            conversionSource: ConversionSource.legacy,
             categoryId: e.categoryId,
             accountId: e.accountId,
             note: '',
@@ -501,8 +511,9 @@ mixin _ControllerState on ChangeNotifier {
     return true;
   }
 
-  /// 重算每笔支出的净额缓存 [LedgerEntry.refundedAmount] = 「挂它的·已到账·退款金额之和」
-  /// （钳到 `[0, amount]`）；无到账退款则归零。该缓存只驱动统计净额（[LedgerEntry.netAmount]），
+  /// 重算每笔支出的本位币净额缓存 [LedgerEntry.refundedBaseAmount] =
+  /// 「挂它的·已到账·退款 baseAmount 之和」（钳到 `[0, baseAmount]`）；无到账退款归零。
+  /// 该缓存只驱动统计净额（[LedgerEntry.netBaseAmount]），
   /// 账户余额不读它。**待到账**退款（`settledAt == null`）不计入（cash basis）。
   /// 每次退款增删改后调用；返回是否有改动。
   bool _syncRefundCache() {
@@ -512,7 +523,7 @@ mixin _ControllerState on ChangeNotifier {
           e.settledAt != null &&
           e.refundOf != null) {
         settledByExpense[e.refundOf!] =
-            (settledByExpense[e.refundOf!] ?? 0) + e.amount;
+            (settledByExpense[e.refundOf!] ?? 0) + e.baseAmount;
       }
     }
     var changed = false;
@@ -520,10 +531,17 @@ mixin _ControllerState on ChangeNotifier {
       final e = _entries[i];
       if (e.type != EntryType.expense) continue;
       final target = (settledByExpense[e.id] ?? 0)
-          .clamp(0.0, e.amount)
+          .clamp(0.0, e.baseAmount)
           .toDouble();
-      if ((e.refundedAmount - target).abs() > 0.0001) {
-        _entries[i] = e.copyWith(refundedAmount: target);
+      final baseCode = _ledgerBooks
+          .where((book) => book.id == e.bookId)
+          .firstOrNull
+          ?.baseCurrencyCode;
+      final tolerance = CurrencyCatalog.isSupported(baseCode)
+          ? currencyAmountTolerance(baseCode!)
+          : 0.005;
+      if ((e.refundedBaseAmount - target).abs() >= tolerance) {
+        _entries[i] = e.copyWith(refundedBaseAmount: target);
         changed = true;
       }
     }
@@ -727,27 +745,34 @@ mixin _ControllerState on ChangeNotifier {
     );
   }
 
+  LedgerDataSnapshot _ledgerDataSnapshot({
+    List<LedgerBook>? books,
+    List<Account>? accounts,
+    List<LedgerEntry>? entries,
+    List<RecurringRule>? recurringRules,
+    List<ExchangeRate>? exchangeRates,
+  }) {
+    return LedgerDataSnapshot(
+      books: books ?? List<LedgerBook>.of(_ledgerBooks),
+      accounts: accounts ?? List<Account>.of(_accounts),
+      accountGroups: List<AccountGroup>.of(_accountGroups),
+      categories: List<Category>.of(_categories),
+      tags: List<Tag>.of(_tags),
+      attachments: List<Attachment>.of(_attachments),
+      entries: entries ?? List<LedgerEntry>.of(_entries),
+      recurringRules: recurringRules ?? List<RecurringRule>.of(_recurringRules),
+      monthlyBudgets: Map<String, double>.of(_monthlyBudgets),
+      categoryBudgets: Map<String, double>.of(_categoryBudgets),
+      dailyBudgets: Map<String, double>.of(_dailyBudgets),
+      exchangeRates: exchangeRates ?? List<ExchangeRate>.of(_exchangeRates),
+    );
+  }
+
   /// 一次性原子替换全部账目类表（导入/恢复/重置/删账本用）。相比逐表 `_persistX`，
   /// 这些跨多表的整体操作若中途失败会整体回滚，不留孤儿引用（如 entries 已换但
   /// accounts 还是旧的）。KV 偏好类写入不在事务内，另行处理。
   void _persistAllLedgerData() {
-    _trackWrite(
-      _repository.replaceAllLedgerData(
-        LedgerDataSnapshot(
-          books: List<LedgerBook>.of(_ledgerBooks),
-          accounts: List<Account>.of(_accounts),
-          accountGroups: List<AccountGroup>.of(_accountGroups),
-          categories: List<Category>.of(_categories),
-          tags: List<Tag>.of(_tags),
-          attachments: List<Attachment>.of(_attachments),
-          entries: List<LedgerEntry>.of(_entries),
-          recurringRules: List<RecurringRule>.of(_recurringRules),
-          monthlyBudgets: Map<String, double>.of(_monthlyBudgets),
-          categoryBudgets: Map<String, double>.of(_categoryBudgets),
-          dailyBudgets: Map<String, double>.of(_dailyBudgets),
-        ),
-      ),
-    );
+    _trackWrite(_repository.replaceAllLedgerData(_ledgerDataSnapshot()));
   }
 
   void _persistAssetSectionCollapsed() {

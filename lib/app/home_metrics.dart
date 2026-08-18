@@ -316,15 +316,12 @@ double computeHomeMetric(HomeMetric metric, HomeMetricContext ctx) {
       // 待报销：标记为待报销的支出中尚未被冲抵的部分之和。
       return ctx.entries
           .where((e) => e.type == EntryType.expense && e.reimbursable)
-          .fold<double>(
-            0,
-            (sum, e) => sum + (e.amount - e.refundedAmount).clamp(0, e.amount),
-          );
+          .fold<double>(0, (sum, e) => sum + e.netBaseAmount);
     case HomeMetric.reimbursed:
       // 已报销：待报销支出里已经回款/冲抵的金额之和。
       return ctx.entries
           .where((e) => e.type == EntryType.expense && e.reimbursable)
-          .fold<double>(0, (sum, e) => sum + e.refundedAmount);
+          .fold<double>(0, (sum, e) => sum + e.refundedBaseAmount);
   }
 }
 
