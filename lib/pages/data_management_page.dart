@@ -1363,26 +1363,18 @@ class _DataManagementPageState extends State<DataManagementPage> {
 
     final overrides = <String, double>{};
     for (final code in unresolvedCodes) {
-      while (context.mounted) {
-        final l10n = AppLocalizations.of(context);
-        final input = await showTextInputDialog(
-          context: context,
-          title: l10n.exchangeRateInputTitle(
-            code,
-            controller.activeBook.baseCurrencyCode,
-          ),
-          label: l10n.importRateInputLabel,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        );
-        if (input == null || !context.mounted) break;
-        final rate = double.tryParse(input.replaceAll(',', '.'));
-        if (rate != null && isValidExchangeRate(rate)) {
-          overrides[code] = rate;
-          break;
-        }
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.importRateInvalid)));
+      if (!context.mounted) break;
+      final l10n = AppLocalizations.of(context);
+      final rate = await showNumberPadSheet(
+        context,
+        title: l10n.exchangeRateInputTitle(
+          code,
+          controller.activeBook.baseCurrencyCode,
+        ),
+        maxFractionDigits: 10,
+      );
+      if (rate != null && isValidExchangeRate(rate)) {
+        overrides[code] = rate;
       }
     }
     return overrides;

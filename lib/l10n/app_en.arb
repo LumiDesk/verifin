@@ -1651,8 +1651,6 @@
   "@baseCurrencyAmountLabel": {
     "placeholders": {"currency": {"type": "String"}}
   },
-  "importRateInputLabel": "Rate (1 original currency = X base currency)",
-  "importRateInvalid": "The rate must be a number greater than zero",
   "importSaveExchangeRates": "Save imported rates",
   "importSaveExchangeRatesHint": "Off by default. When enabled, only rates used by included transactions are saved."
 }

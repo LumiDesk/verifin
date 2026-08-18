@@ -4197,13 +4197,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get importRateInputLabel =>
-      'Rate (1 original currency = X base currency)';
-
-  @override
-  String get importRateInvalid => 'The rate must be a number greater than zero';
-
-  @override
   String get importSaveExchangeRates => 'Save imported rates';
 
   @override

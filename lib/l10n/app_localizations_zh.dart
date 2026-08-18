@@ -4083,12 +4083,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get importRateInputLabel => '汇率（1 原币 = X 本位币）';
-
-  @override
-  String get importRateInvalid => '汇率必须是大于 0 的数字';
-
-  @override
   String get importSaveExchangeRates => '保存导入汇率';
 
   @override

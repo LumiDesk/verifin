@@ -2587,8 +2587,6 @@
   "@baseCurrencyAmountLabel": {
     "placeholders": {"currency": {"type": "String"}}
   },
-  "importRateInputLabel": "汇率（1 原币 = X 本位币）",
-  "importRateInvalid": "汇率必须是大于 0 的数字",
   "importSaveExchangeRates": "保存导入汇率",
   "importSaveExchangeRatesHint": "默认关闭；开启后只保存最终纳入交易使用的当日汇率。"
 }

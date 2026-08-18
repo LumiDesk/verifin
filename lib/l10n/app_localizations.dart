@@ -7454,18 +7454,6 @@ abstract class AppLocalizations {
   /// **'本位币 {currency}'**
   String baseCurrencyAmountLabel(String currency);
 
-  /// No description provided for @importRateInputLabel.
-  ///
-  /// In zh, this message translates to:
-  /// **'汇率（1 原币 = X 本位币）'**
-  String get importRateInputLabel;
-
-  /// No description provided for @importRateInvalid.
-  ///
-  /// In zh, this message translates to:
-  /// **'汇率必须是大于 0 的数字'**
-  String get importRateInvalid;
-
   /// No description provided for @importSaveExchangeRates.
   ///
   /// In zh, this message translates to:
