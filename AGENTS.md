@@ -18,7 +18,7 @@
 - `docs/dev/known-limitations.md`：已接受技术债及触发整改的阈值。
 - `docs/dev/ai-tools.md`：AI 账目查询工具的注册和维护约定。
 - `docs/dev/category-budget-override-design.md`：分类默认预算与单期覆盖的职责、Issue #28 兼容方案和验收范围。
-- `docs/dev/multi-currency-design.md`：多币种、离线汇率、跨币种交易/退款、迁移与验收的开发依据；功能尚未实现时不得把方案描述成当前能力。
+- `docs/dev/multi-currency-design.md`：已落地的多币种、离线汇率、跨币种交易/退款、迁移与验收依据；后续修改须保持三层金额和历史冻结口径。
 - `docs/dev/refund-design.md`、`docs/dev/auto-capture-plan.md`、`docs/dev/i18n-verification.md`、`docs/automation.md`：对应领域的设计与验收资料。`refund-design.md` 含历史方案，退款当前行为以源码、测试和 `docs/dev/known-limitations.md` 为准。
 - `README.md`、`docs/product.md`、`docs/acceptance-checklist.md`：用于理解产品和验收范围；其中少量历史描述可能落后，必须与当前实现交叉核对。
 
@@ -61,7 +61,7 @@
 - `LedgerEntry.accountId == ''` 表示“无账户”。展示名称用 `accountDisplayName`；不要用会回退首账户的 `accountById` 解释空 id。
 - 账户能力只通过 `supportsCardLast4`、`supportsCredit` 判断，禁止散落硬编码账户类型。`cardLast4Follows` 是持久化字段，不能从卡号和后四位反推用户选择。
 - 转账不计入收支，手续费由转出账户承担；转账分类不得留空。
-- 退款是关联原支出的独立条目；只有已到账退款影响余额和净额，`refundedAmount` 是派生缓存。修改退款逻辑前必须阅读 `docs/dev/refund-design.md` 并以当前代码/测试为准。
+- 退款是关联原支出的独立条目；只有已到账退款影响余额和净额，原支出的 `refundedBaseAmount` 是已到账退款 `baseAmount` 之和的派生缓存。修改退款逻辑前必须阅读 `docs/dev/refund-design.md` 和 `docs/dev/multi-currency-design.md` 并以当前代码/测试为准。
 - 自定义预算周期只改变预算体系口径，统计报表仍按自然月。默认预算使用哨兵键，单月覆盖优先于默认值。
 
 ## 开发、测试与预览命令
