@@ -101,7 +101,8 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
                 VeriHeader(
                   title: l10n.budgetSettingsTitle,
                   subtitle:
-                      '${controller.activeBook.name} · ${controller.activeBook.baseCurrencyCode}',
+                      '${controller.activeBook.name} · '
+                      '${l10n.moneyUnitLabel(displayCurrencyUnit(controller.activeBook.baseCurrencyCode))}',
                   showBack: true,
                   actions: <Widget>[
                     SaveHeaderAction(onPressed: _isDirty ? _saveAndExit : null),

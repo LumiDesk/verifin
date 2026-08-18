@@ -247,7 +247,7 @@ class _RecurringRow extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    '${rule.frequency.label(AppLocalizations.of(context))} · $sign${formatMoney(rule.amount, rule.currencyCode)}'
+                    '${rule.frequency.label(AppLocalizations.of(context))} · $sign${formatUserMoney(rule.amount, rule.currencyCode)}'
                     ' · ${AppLocalizations.of(context).nextRun(AppLocalizations.of(context).dateMonthDay(rule.nextRunDate))}',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: Theme.of(
@@ -547,7 +547,7 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
                       DetailInfoRow(
                         label: AppLocalizations.of(context).amountLabel,
                         value: _amount > 0
-                            ? formatMoney(_amount, _currencyCode)
+                            ? formatUserMoney(_amount, _currencyCode)
                             : AppLocalizations.of(context).tapToFill,
                         placeholder: _amount <= 0,
                         onTap: _editAmount,

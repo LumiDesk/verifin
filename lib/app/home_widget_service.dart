@@ -41,23 +41,23 @@ Future<void> pushWidgetData(VeriFinController controller) async {
   String two(int n) => n.toString().padLeft(2, '0');
 
   await AppWidgetBridge.updateWidgetData(
-    todayAmount: formatMoney(todayTotal, baseCurrencyCode),
+    todayAmount: formatUserMoney(todayTotal, baseCurrencyCode),
     todayLabel: l10n.widgetTodayExpense,
-    budgetAmount: formatMoney(remaining.abs(), baseCurrencyCode),
+    budgetAmount: formatUserMoney(remaining.abs(), baseCurrencyCode),
     budgetLabel: remaining < 0 ? overspentLabel : availableLabel,
     netWorthAmount: accountValuation.completeTotal == null
         ? '—'
-        : formatMoney(accountValuation.completeTotal!, baseCurrencyCode),
+        : formatUserMoney(accountValuation.completeTotal!, baseCurrencyCode),
     netWorthLabel: accountValuation.completeTotal == null
         ? '${l10n.widgetNetWorth} · ${l10n.widgetRateMissing}'
         : l10n.widgetNetWorth,
     // 跨天/跨期锚点：原生据此判断展示值是否过期。跨天后「今日支出」归零，
     // 过了预算周期截止日后「可用预算」回到整期预算（新周期尚无支出）。
     todayDate: '${now.year}-${two(now.month)}-${two(now.day)}',
-    todayZeroAmount: formatMoney(0, baseCurrencyCode),
+    todayZeroAmount: formatUserMoney(0, baseCurrencyCode),
     budgetExpiry:
         '${budgetWindow.end.year}-${two(budgetWindow.end.month)}-${two(budgetWindow.end.day)}',
-    budgetFullAmount: formatMoney(monthBudget, baseCurrencyCode),
+    budgetFullAmount: formatUserMoney(monthBudget, baseCurrencyCode),
     budgetFullLabel: availableLabel,
   );
 }

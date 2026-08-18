@@ -176,6 +176,6 @@ void main() {
     await tester.pumpAndSettle();
 
     // 新的账户选择器每行显示余额（旧的扁平弹窗只有账户名）。
-    expect(find.text('CNY 12340'), findsOneWidget);
+    expect(find.text('12340'), findsOneWidget);
   });
 }

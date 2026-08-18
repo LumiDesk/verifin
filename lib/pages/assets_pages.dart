@@ -174,7 +174,7 @@ class _AssetsPageState extends State<AssetsPage> {
             title: AppLocalizations.of(context).tabAssets,
             subtitle: AppLocalizations.of(
               context,
-            ).baseCurrencyAmountLabel(baseCurrencyCode),
+            ).baseCurrencyAmountLabel(displayCurrencyUnit(baseCurrencyCode)),
             trailing: HeaderAction(
               icon: Icons.add,
               tooltip: AppLocalizations.of(context).assetsActions,
@@ -257,7 +257,7 @@ class _AssetsPageState extends State<AssetsPage> {
                       Text(
                         assets == null || liabilities == null
                             ? '—'
-                            : formatMoney(
+                            : formatUserMoney(
                                 assets + liabilities,
                                 baseCurrencyCode,
                               ),
@@ -275,7 +275,7 @@ class _AssetsPageState extends State<AssetsPage> {
                             AppLocalizations.of(context).assetsAmount(
                               assets == null
                                   ? '—'
-                                  : formatMoney(assets, baseCurrencyCode),
+                                  : formatUserMoney(assets, baseCurrencyCode),
                             ),
                             style: TextStyle(color: assetCardTextColor),
                           ),
@@ -283,7 +283,7 @@ class _AssetsPageState extends State<AssetsPage> {
                             AppLocalizations.of(context).liabilitiesAmount(
                               liabilities == null
                                   ? '—'
-                                  : formatMoney(
+                                  : formatUserMoney(
                                       liabilities.abs(),
                                       baseCurrencyCode,
                                     ),
@@ -323,7 +323,7 @@ class _AssetsPageState extends State<AssetsPage> {
                                 ChartTooltipLine(
                                   text: AppLocalizations.of(context)
                                       .netAssetsAmount(
-                                        formatMoney(
+                                        formatUserMoney(
                                           assetTrendValues[index],
                                           baseCurrencyCode,
                                         ),
@@ -589,7 +589,7 @@ String _assetSectionTotalText({
     if (value == null) return '—';
     total += value;
   }
-  return formatMoney(total, baseCurrencyCode);
+  return formatUserMoney(total, baseCurrencyCode);
 }
 
 class _AssetCoverPreset {

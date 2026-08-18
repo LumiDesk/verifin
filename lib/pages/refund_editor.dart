@@ -104,7 +104,7 @@ class RefundSection extends StatelessWidget {
               if (refunds.isNotEmpty)
                 Text(
                   l10n.refundNetLabel(
-                    formatMoney(
+                    formatUserMoney(
                       netBaseAmount,
                       controller.activeBook.baseCurrencyCode,
                     ),
@@ -122,7 +122,7 @@ class RefundSection extends StatelessWidget {
               padding: const EdgeInsets.only(top: 2),
               child: Text(
                 l10n.refundPendingTotal(
-                  formatMoney(pendingTotal, expense.currencyCode),
+                  formatUserMoney(pendingTotal, expense.currencyCode),
                 ),
                 style: Theme.of(
                   context,
@@ -204,7 +204,7 @@ class _RefundRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    '+${formatMoney(refund.amount, refund.currencyCode)} · $accountName',
+                    '+${formatUserMoney(refund.amount, refund.currencyCode)} · $accountName',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -657,7 +657,7 @@ class _RefundSheetState extends State<_RefundSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text(
-                        '+${formatMoney(_amount, widget.expense.currencyCode)}',
+                        '+${formatUserMoney(_amount, widget.expense.currencyCode)}',
                         style: theme.textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.w800,
                           color: veriIncome,
@@ -665,7 +665,10 @@ class _RefundSheetState extends State<_RefundSheet> {
                       ),
                       Text(
                         l10n.refundRemainingLabel(
-                          formatMoney(_maxRefund, widget.expense.currencyCode),
+                          formatUserMoney(
+                            _maxRefund,
+                            widget.expense.currencyCode,
+                          ),
                         ),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurface.withValues(

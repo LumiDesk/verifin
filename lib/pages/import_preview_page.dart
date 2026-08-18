@@ -591,7 +591,7 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
                               keptNew: !_accountMapTo.containsKey(account.id),
                               // 携带余额的来源（Tally）展示每个账户导入后的余额，便于核对。
                               amountText: _hasAccountBalances
-                                  ? formatMoney(
+                                  ? formatUserMoney(
                                       _accountResultingBalance(account),
                                       account.currencyCode,
                                     )

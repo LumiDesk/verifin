@@ -5,6 +5,7 @@ import '../app/amount_format.dart' as amount_format;
 import '../app/app_theme.dart';
 import '../app/category_tree.dart';
 import '../app/common_widgets.dart';
+import '../app/currency_math.dart';
 import '../app/model_lookup.dart';
 import '../app/entry_sheets.dart';
 import '../app/ledger_math.dart';
@@ -294,8 +295,17 @@ class _TransactionsPageState extends State<TransactionsPage> {
                           subtitle: _selectionMode
                               ? null
                               : (_dateMode
-                                    ? '${_visibleDate.month}.${_visibleDate.day}'
-                                    : null),
+                                    ? '${_visibleDate.month}.${_visibleDate.day} · '
+                                          '${AppLocalizations.of(context).moneyUnitLabel(displayCurrencyUnit(controller.activeBook.baseCurrencyCode))}'
+                                    : AppLocalizations.of(
+                                        context,
+                                      ).moneyUnitLabel(
+                                        displayCurrencyUnit(
+                                          controller
+                                              .activeBook
+                                              .baseCurrencyCode,
+                                        ),
+                                      )),
                           showBack: true,
                           actions: <Widget>[
                             if (_selectionMode)

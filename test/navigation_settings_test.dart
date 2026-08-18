@@ -14,13 +14,13 @@ void main() {
   ) async {
     await pumpApp(tester);
 
-    expect(find.text('日常账本 · CNY'), findsOneWidget);
+    expect(find.text('日常账本 · 单位：¥'), findsOneWidget);
 
     await tapBottomTab(tester, 1);
     expect(find.text('净资产'), findsAtLeastNWidgets(1));
 
     await tapBottomTab(tester, 2);
-    expect(find.text('数据看板 · CNY'), findsOneWidget);
+    expect(find.text('数据看板 · 单位：¥'), findsOneWidget);
 
     await tapBottomTab(tester, 3);
     expect(find.text('我的'), findsOneWidget);

@@ -219,7 +219,7 @@ class _AccountGroupsPageState extends State<AccountGroupsPage> {
                                       Text(
                                         valuation.completeTotal == null
                                             ? '—'
-                                            : formatMoney(
+                                            : formatUserMoney(
                                                 valuation.completeTotal!,
                                                 controller
                                                     .activeBook
