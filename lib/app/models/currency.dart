@@ -87,6 +87,22 @@ enum CurrencyFractionStyle {
   }
 }
 
+/// 用户可选的金额货币单位样式。
+///
+/// [symbol] 使用紧凑的后置符号（如 `100 ¥`），[code] 使用无歧义的前置 ISO
+/// 代码（如 `CNY 100`）。是否在单币种账本隐藏单位由独立偏好控制。
+enum MoneyUnitStyle {
+  symbol,
+  code;
+
+  static MoneyUnitStyle fromStorage(String? value) {
+    return MoneyUnitStyle.values.firstWhere(
+      (style) => style.name == value,
+      orElse: () => MoneyUnitStyle.symbol,
+    );
+  }
+}
+
 enum MoneyCodeDisplay { none, code, symbol }
 
 class ExchangeRate {

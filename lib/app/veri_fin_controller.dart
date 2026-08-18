@@ -77,6 +77,9 @@ const String _fabActionKey = 'verifin.fab_action.v1';
 const String _defaultAccountKey = 'verifin.default_account.v1';
 const String _budgetCycleKey = 'verifin.budget_cycle.v1';
 const String _amountFormatKey = 'verifin.amount_format.v1';
+const String _moneyUnitStyleKey = 'verifin.money_unit_style.v1';
+const String _hideSingleCurrencyUnitKey =
+    'verifin.hide_single_currency_unit.v1';
 const String _autoSuggestKey = 'verifin.auto_suggest.v1';
 const String _aiSettingsKey = 'verifin.ai.v1';
 const String _aiCapabilitiesKey = 'verifin.ai_capabilities.v1';
@@ -143,6 +146,7 @@ class VeriFinController extends ChangeNotifier
       systemIsEnglish: systemIsEnglish,
     );
     await controller._loadFromRepository();
+    controller._syncAmountFormatContext();
     return controller;
   }
 

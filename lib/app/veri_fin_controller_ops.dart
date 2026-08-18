@@ -1145,6 +1145,25 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
+  MoneyUnitStyle get moneyUnitStyle => _moneyUnitStyle;
+
+  bool get hideUnitInSingleCurrency => _hideUnitInSingleCurrency;
+
+  void setMoneyDisplayPreferences({
+    required MoneyUnitStyle unitStyle,
+    required bool hideInSingleCurrency,
+  }) {
+    if (_moneyUnitStyle == unitStyle &&
+        _hideUnitInSingleCurrency == hideInSingleCurrency) {
+      return;
+    }
+    _moneyUnitStyle = unitStyle;
+    _hideUnitInSingleCurrency = hideInSingleCurrency;
+    _store.write(_moneyUnitStyleKey, unitStyle.name);
+    _store.write(_hideSingleCurrencyUnitKey, hideInSingleCurrency.toString());
+    notifyListeners();
+  }
+
   /// 记账自动识别（`category_suggest.dart` 的 `suggestEntry`）总开关：关闭后手动记账
   /// 页不再按历史自动填充类型/分类/标签/备注。全局偏好（不分账本），**默认开**，
   /// 进 JSON 备份、初始化保留。AI 草稿与导入草稿本就不走自动识别，不受此开关影响。
@@ -1165,6 +1184,8 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     required LocalePreference localePreference,
     required bool hapticsEnabled,
     required bool amountForceTwoDecimals,
+    required MoneyUnitStyle moneyUnitStyle,
+    required bool hideUnitInSingleCurrency,
     required FabActionMode fabActionMode,
     required String? defaultAccountId,
     required bool autoSuggestEnabled,
@@ -1182,6 +1203,11 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       await _store.writeAndFlush(
         _amountFormatKey,
         amountForceTwoDecimals.toString(),
+      );
+      await _store.writeAndFlush(_moneyUnitStyleKey, moneyUnitStyle.name);
+      await _store.writeAndFlush(
+        _hideSingleCurrencyUnitKey,
+        hideUnitInSingleCurrency.toString(),
       );
       await _store.writeAndFlush(_fabActionKey, fabActionMode.name);
       await _store.writeAndFlush(
@@ -1202,6 +1228,8 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _hapticsEnabled = hapticsEnabled;
     _amountForceTwoDecimals = amountForceTwoDecimals;
     amount_format.amountForceTwoDecimals = amountForceTwoDecimals;
+    _moneyUnitStyle = moneyUnitStyle;
+    _hideUnitInSingleCurrency = hideUnitInSingleCurrency;
     _fabActionMode = fabActionMode;
     _defaultAccountIds
       ..clear()
@@ -3505,6 +3533,8 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         'fabActionMode': _fabActionMode.name,
         'amountForceTwoDecimals': _amountForceTwoDecimals,
         'currencyFractionStyle': amount_format.currencyFractionStyle.name,
+        'moneyUnitStyle': _moneyUnitStyle.name,
+        'hideUnitInSingleCurrency': _hideUnitInSingleCurrency,
         'autoSuggestEnabled': _autoSuggestEnabled,
         'homeTrendConfig': _homeTrendConfig.toJson(),
       },
@@ -3674,6 +3704,11 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         : CurrencyFractionStyle.compact;
     final nextAmountForceTwoDecimals =
         nextCurrencyFractionStyle == CurrencyFractionStyle.standard;
+    final nextMoneyUnitStyle = MoneyUnitStyle.fromStorage(
+      data['moneyUnitStyle'] as String?,
+    );
+    final nextHideUnitInSingleCurrency =
+        data['hideUnitInSingleCurrency'] as bool? ?? true;
     // 旧备份没有这个键：按「功能一直是开着的」还原，不因恢复备份而静默关掉。
     final nextAutoSuggestEnabled = data['autoSuggestEnabled'] as bool? ?? true;
     final homeTrendValue = data['homeTrendConfig'];
@@ -3755,6 +3790,8 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _fabActionMode = nextFabActionMode;
     _amountForceTwoDecimals = nextAmountForceTwoDecimals;
     amount_format.amountForceTwoDecimals = nextAmountForceTwoDecimals;
+    _moneyUnitStyle = nextMoneyUnitStyle;
+    _hideUnitInSingleCurrency = nextHideUnitInSingleCurrency;
     _autoSuggestEnabled = nextAutoSuggestEnabled;
     _homeTrendConfig = nextHomeTrendConfig;
 
@@ -3779,6 +3816,11 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _persistBudgetCycleStartDays();
     _store.write(_fabActionKey, _fabActionMode.name);
     _store.write(_amountFormatKey, _amountForceTwoDecimals.toString());
+    _store.write(_moneyUnitStyleKey, _moneyUnitStyle.name);
+    _store.write(
+      _hideSingleCurrencyUnitKey,
+      _hideUnitInSingleCurrency.toString(),
+    );
     _store.write(_autoSuggestKey, _autoSuggestEnabled.toString());
     _store.write(_homeTrendKey, _homeTrendConfig.encode());
     if (_assetCoverUrl.isEmpty) {

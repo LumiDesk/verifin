@@ -101,6 +101,46 @@ void main() {
     expect(find.byTooltip('Home'), findsOneWidget);
   });
 
+  testWidgets('changes currency unit style and single-currency visibility', (
+    WidgetTester tester,
+  ) async {
+    final store = LocalKeyValueStore();
+    final controller = await pumpApp(tester, store);
+
+    await tapBottomTab(tester, 3);
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('货币单位样式'));
+
+    expect(find.text('符号后置（100 ¥）'), findsOneWidget);
+    await tester.tap(find.text('货币单位样式'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('代码前置（CNY 100）'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('hide_single_currency_unit')),
+        matching: find.byType(Switch),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 设置页先维护草稿，保存前不修改 Controller。
+    expect(controller.moneyUnitStyle, MoneyUnitStyle.symbol);
+    expect(controller.hideUnitInSingleCurrency, isTrue);
+    await tester.fling(firstVerticalScrollable(), const Offset(0, 1200), 1000);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+    expect(controller.moneyUnitStyle, MoneyUnitStyle.code);
+    expect(controller.hideUnitInSingleCurrency, isFalse);
+
+    final restarted = await makeController(store);
+    expect(restarted.moneyUnitStyle, MoneyUnitStyle.code);
+    expect(restarted.hideUnitInSingleCurrency, isFalse);
+    restarted.dispose();
+  });
+
   testWidgets('requires double confirmation before resetting data', (
     WidgetTester tester,
   ) async {

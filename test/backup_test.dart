@@ -136,6 +136,10 @@ void main() {
       ..setDefaultAccountId('cash-test')
       ..setFabActionMode(FabActionMode.ai)
       ..setAmountForceTwoDecimals(true)
+      ..setMoneyDisplayPreferences(
+        unitStyle: MoneyUnitStyle.code,
+        hideInSingleCurrency: false,
+      )
       ..setAutoSuggestEnabled(false)
       ..setHomeTrendConfig(
         HomeTrendConfig.defaults.copyWith(
@@ -165,6 +169,8 @@ void main() {
     expect(target.defaultAccountId, 'cash-test');
     expect(target.fabActionMode, FabActionMode.ai);
     expect(target.amountForceTwoDecimals, isTrue);
+    expect(target.moneyUnitStyle, MoneyUnitStyle.code);
+    expect(target.hideUnitInSingleCurrency, isFalse);
     expect(target.autoSuggestEnabled, isFalse);
     expect(target.homeTrendConfig.title, '概览测试');
     expect(target.homeTrendConfig.series, HomeTrendSeries.income);
@@ -236,6 +242,8 @@ void main() {
       final data = root['data'] as Map<String, dynamic>;
       expect(data['exchangeRates'], hasLength(1));
       expect(data['currencyFractionStyle'], isNotNull);
+      expect(data['moneyUnitStyle'], 'symbol');
+      expect(data['hideUnitInSingleCurrency'], isTrue);
 
       final target = await makeController();
       target.importDataJson(backup);

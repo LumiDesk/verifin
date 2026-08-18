@@ -64,6 +64,7 @@ mixin _ControllerState on ChangeNotifier {
 
   @override
   void notifyListeners() {
+    _syncAmountFormatContext();
     _invalidateDerivedViews();
     super.notifyListeners();
   }
@@ -115,6 +116,8 @@ mixin _ControllerState on ChangeNotifier {
   FabActionMode _fabActionMode = FabActionMode.manual;
   HomeTrendConfig _homeTrendConfig = HomeTrendConfig.defaults;
   bool _amountForceTwoDecimals = false;
+  MoneyUnitStyle _moneyUnitStyle = MoneyUnitStyle.symbol;
+  bool _hideUnitInSingleCurrency = true;
   bool _autoSuggestEnabled = true;
   AiSettings _aiSettings = const AiSettings();
   AiCapabilityProfile? _aiCapabilityProfile;
@@ -205,6 +208,12 @@ mixin _ControllerState on ChangeNotifier {
     _loadBudgetCycleStartDays();
     _amountForceTwoDecimals = _store.read(_amountFormatKey) == 'true';
     amount_format.amountForceTwoDecimals = _amountForceTwoDecimals;
+    _moneyUnitStyle = MoneyUnitStyle.fromStorage(
+      _store.read(_moneyUnitStyleKey),
+    );
+    _hideUnitInSingleCurrency =
+        _store.read(_hideSingleCurrencyUnitKey) != 'false';
+    _syncAmountFormatContext();
     // 默认开启：老用户升级后行为不变，只有显式关过才为 false。
     _autoSuggestEnabled = _store.read(_autoSuggestKey) != 'false';
     _aiSettings = AiSettings.decode(_store.read(_aiSettingsKey));
@@ -217,6 +226,36 @@ mixin _ControllerState on ChangeNotifier {
     }
     _aiChatHistory = _decodeChatHistory(_store.read(_aiChatHistoryKey));
     _homeTrendConfig = HomeTrendConfig.decode(_store.read(_homeTrendKey));
+  }
+
+  /// 当前活动账本是否实际涉及多个币种。账户、历史交易、周期规则或已维护汇率中
+  /// 任一出现非本位币即视为多币种；这样删除/新增实体、切换账本后展示会自动更新。
+  bool get activeBookUsesMultipleCurrencies {
+    final book = _ledgerBooks
+        .where((item) => item.id == _activeBookId)
+        .firstOrNull;
+    if (book == null) return false;
+    final base = book.baseCurrencyCode;
+    return _accounts.any(
+          (account) =>
+              account.bookId == book.id && account.currencyCode != base,
+        ) ||
+        _entries.any(
+          (entry) => entry.bookId == book.id && entry.currencyCode != base,
+        ) ||
+        _recurringRules.any(
+          (rule) => rule.bookId == book.id && rule.currencyCode != base,
+        ) ||
+        _exchangeRates.any(
+          (rate) => rate.bookId == book.id && rate.currencyCode != base,
+        );
+  }
+
+  void _syncAmountFormatContext() {
+    amount_format.moneyUnitStyle = _moneyUnitStyle;
+    amount_format.hideUnitInSingleCurrency = _hideUnitInSingleCurrency;
+    amount_format.activeBookUsesMultipleCurrencies =
+        activeBookUsesMultipleCurrencies;
   }
 
   /// 从 SQLite 载入账目类数据；全新数据库首启动写入默认账本/账户/分组/分类。

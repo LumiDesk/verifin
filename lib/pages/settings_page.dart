@@ -33,6 +33,10 @@ class _SettingsPageState extends State<SettingsPage> {
   late bool _haptics;
   late bool _initialTwoDecimals;
   late bool _twoDecimals;
+  late MoneyUnitStyle _initialMoneyUnitStyle;
+  late MoneyUnitStyle _moneyUnitStyle;
+  late bool _initialHideSingleCurrencyUnit;
+  late bool _hideSingleCurrencyUnit;
   late FabActionMode _initialFabAction;
   late FabActionMode _fabAction;
   String? _initialDefaultAccountId;
@@ -52,6 +56,9 @@ class _SettingsPageState extends State<SettingsPage> {
     _initialLocale = _locale = controller.localePreference;
     _initialHaptics = _haptics = controller.hapticsEnabled;
     _initialTwoDecimals = _twoDecimals = controller.amountForceTwoDecimals;
+    _initialMoneyUnitStyle = _moneyUnitStyle = controller.moneyUnitStyle;
+    _initialHideSingleCurrencyUnit = _hideSingleCurrencyUnit =
+        controller.hideUnitInSingleCurrency;
     _initialFabAction = _fabAction = controller.fabActionMode;
     _initialDefaultAccountId = _defaultAccountId = controller.defaultAccountId;
     _initialAutoSuggest = _autoSuggest = controller.autoSuggestEnabled;
@@ -121,6 +128,35 @@ class _SettingsPageState extends State<SettingsPage> {
                         value: _twoDecimals,
                         onChanged: (value) =>
                             setState(() => _twoDecimals = value),
+                      ),
+                      const Divider(height: 1),
+                      SettingsRow(
+                        icon: Icons.currency_exchange_outlined,
+                        title: AppLocalizations.of(context).moneyUnitStyleLabel,
+                        trailing: _moneyUnitStyleLabel(
+                          AppLocalizations.of(context),
+                          _moneyUnitStyle,
+                        ),
+                        trailingIcon: Icons.chevron_right,
+                        onTap: _pickMoneyUnitStyle,
+                      ),
+                      const Divider(height: 1),
+                      CompactSwitchRow(
+                        key: const Key('hide_single_currency_unit'),
+                        icon: Icons.visibility_off_outlined,
+                        title: Text(
+                          AppLocalizations.of(
+                            context,
+                          ).hideSingleCurrencyUnitLabel,
+                        ),
+                        subtitle: Text(
+                          AppLocalizations.of(
+                            context,
+                          ).hideSingleCurrencyUnitDesc,
+                        ),
+                        value: _hideSingleCurrencyUnit,
+                        onChanged: (value) =>
+                            setState(() => _hideSingleCurrencyUnit = value),
                       ),
                       const Divider(height: 1),
                       SettingsRow(
@@ -304,6 +340,26 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _pickMoneyUnitStyle() async {
+    final l10n = AppLocalizations.of(context);
+    final selected = await showOptionSheet<MoneyUnitStyle>(
+      context: context,
+      title: l10n.moneyUnitStyleLabel,
+      values: MoneyUnitStyle.values,
+      selected: _moneyUnitStyle,
+      labelOf: (value) => _moneyUnitStyleLabel(l10n, value),
+    );
+    if (selected != null && mounted) {
+      setState(() => _moneyUnitStyle = selected);
+    }
+  }
+
+  String _moneyUnitStyleLabel(AppLocalizations l10n, MoneyUnitStyle style) =>
+      switch (style) {
+        MoneyUnitStyle.symbol => l10n.moneyUnitStyleSymbol,
+        MoneyUnitStyle.code => l10n.moneyUnitStyleCode,
+      };
+
   Future<void> _pickFabActionMode() async {
     final l10n = AppLocalizations.of(context);
     final selected = await showOptionSheet<FabActionMode>(
@@ -378,6 +434,8 @@ class _SettingsPageState extends State<SettingsPage> {
       _locale != _initialLocale ||
       _haptics != _initialHaptics ||
       _twoDecimals != _initialTwoDecimals ||
+      _moneyUnitStyle != _initialMoneyUnitStyle ||
+      _hideSingleCurrencyUnit != _initialHideSingleCurrencyUnit ||
       _fabAction != _initialFabAction ||
       _defaultAccountId != _initialDefaultAccountId ||
       _autoSuggest != _initialAutoSuggest;
@@ -389,6 +447,8 @@ class _SettingsPageState extends State<SettingsPage> {
         _initialLocale = _locale;
         _initialHaptics = _haptics;
         _initialTwoDecimals = _twoDecimals;
+        _initialMoneyUnitStyle = _moneyUnitStyle;
+        _initialHideSingleCurrencyUnit = _hideSingleCurrencyUnit;
         _initialFabAction = _fabAction;
         _initialDefaultAccountId = _defaultAccountId;
         _initialAutoSuggest = _autoSuggest;
@@ -403,6 +463,8 @@ class _SettingsPageState extends State<SettingsPage> {
       localePreference: _locale,
       hapticsEnabled: _haptics,
       amountForceTwoDecimals: _twoDecimals,
+      moneyUnitStyle: _moneyUnitStyle,
+      hideUnitInSingleCurrency: _hideSingleCurrencyUnit,
       fabActionMode: _fabAction,
       defaultAccountId: _defaultAccountId,
       autoSuggestEnabled: _autoSuggest,

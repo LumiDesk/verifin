@@ -160,7 +160,7 @@ String transactionCsvExport({
               accountsById[entry.toAccountId]?.currencyCode ??
                   entry.currencyCode,
             ),
-      derivedRate == null ? '' : formatRateValue(derivedRate),
+      derivedRate == null ? '' : formatRateValueExact(derivedRate),
       accountsById[entry.accountId]?.currencyCode ?? '',
       accountsById[entry.toAccountId]?.currencyCode ?? '',
     ]);

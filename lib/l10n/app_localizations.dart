@@ -4346,6 +4346,42 @@ abstract class AppLocalizations {
   /// **'开启后金额始终显示两位小数（如 12 显示为 12.00）'**
   String get amountTwoDecimalsDesc;
 
+  /// No description provided for @moneyUnitStyleLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'货币单位样式'**
+  String get moneyUnitStyleLabel;
+
+  /// No description provided for @moneyUnitStyleSymbol.
+  ///
+  /// In zh, this message translates to:
+  /// **'符号后置（100 ¥）'**
+  String get moneyUnitStyleSymbol;
+
+  /// No description provided for @moneyUnitStyleCode.
+  ///
+  /// In zh, this message translates to:
+  /// **'代码前置（CNY 100）'**
+  String get moneyUnitStyleCode;
+
+  /// No description provided for @hideSingleCurrencyUnitLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'单币种隐藏单位'**
+  String get hideSingleCurrencyUnitLabel;
+
+  /// No description provided for @hideSingleCurrencyUnitDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'账本只使用一种货币时，不在每个金额旁重复显示单位'**
+  String get hideSingleCurrencyUnitDesc;
+
+  /// No description provided for @moneyUnitLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'单位：{unit}'**
+  String moneyUnitLabel(String unit);
+
   /// Settings toggle: auto-fill new entries from history
   ///
   /// In zh, this message translates to:
