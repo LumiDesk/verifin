@@ -68,6 +68,20 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     );
   }
 
+  ConvertedAccountBalances accountBalancesInBase({
+    Iterable<Account>? accounts,
+    DateTime? date,
+  }) {
+    return convertAccountBalancesToBase(
+      accounts: accounts ?? this.accounts,
+      balanceOf: accountBalance,
+      bookId: _activeBookId,
+      baseCurrencyCode: activeBook.baseCurrencyCode,
+      date: date ?? DateTime.now(),
+      rates: _exchangeRates,
+    );
+  }
+
   bool ledgerBookHasFinancialData(String bookId) {
     bool hasBudget(Map<String, double> budgets) => budgets.entries.any(
       (entry) => entry.key.startsWith('$bookId:') && entry.value != 0,

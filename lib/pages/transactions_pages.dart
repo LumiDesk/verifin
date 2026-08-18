@@ -506,6 +506,8 @@ class _TransactionsPageState extends State<TransactionsPage> {
                             DateGroupHeader(
                               entries: group.entries,
                               date: group.date,
+                              baseCurrencyCode:
+                                  controller.activeBook.baseCurrencyCode,
                             ),
                             const SizedBox(height: 8),
                             TransactionListCard(
@@ -513,6 +515,8 @@ class _TransactionsPageState extends State<TransactionsPage> {
                               accounts: controller.accounts,
                               categories: controller.categories,
                               tags: controller.tags,
+                              baseCurrencyCode:
+                                  controller.activeBook.baseCurrencyCode,
                               selectionMode: _selectionMode,
                               selectedIds: _selectedIds,
                               onEntryTap: (entry) {

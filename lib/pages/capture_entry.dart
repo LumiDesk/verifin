@@ -63,7 +63,13 @@ AiEntryContext buildAiEntryContext(VeriFinController controller) {
       .toList();
   final accounts = controller.accounts
       .where((account) => !account.hidden)
-      .map((account) => AiOption(id: account.id, label: account.name))
+      .map(
+        (account) => AiOption(
+          id: account.id,
+          label: account.name,
+          currencyCode: account.currencyCode,
+        ),
+      )
       .toList();
   return AiEntryContext(
     expenseCategories: optionsFor(EntryType.expense),
@@ -71,6 +77,7 @@ AiEntryContext buildAiEntryContext(VeriFinController controller) {
     accounts: accounts,
     today: DateTime.now(),
     bookId: controller.activeBook.id,
+    baseCurrencyCode: controller.activeBook.baseCurrencyCode,
   );
 }
 

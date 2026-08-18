@@ -190,10 +190,13 @@ class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
         )
         .toList();
     final trendEntries = entriesInWindow(monthEntries, window);
+    final accountValuation = controller.accountBalancesInBase(date: now);
     final metricContext = HomeMetricContext(
       entries: controller.entries,
       accounts: controller.accounts,
       balanceOf: controller.accountBalance,
+      balanceInBaseOf: (account) =>
+          accountValuation.amountsByAccountId[account.id],
       now: now,
     );
 

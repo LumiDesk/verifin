@@ -143,10 +143,8 @@ class _AccountGroupsPageState extends State<AccountGroupsPage> {
                                       _effectiveGroupId(account) == group.id,
                                 )
                                 .toList();
-                            final total = groupAccounts.fold<double>(
-                              0,
-                              (sum, account) =>
-                                  sum + controller.accountBalance(account),
+                            final valuation = controller.accountBalancesInBase(
+                              accounts: groupAccounts,
                             );
                             final selected = _selectedGroupId == group.id;
 
@@ -219,7 +217,14 @@ class _AccountGroupsPageState extends State<AccountGroupsPage> {
                                         ),
                                       ),
                                       Text(
-                                        formatAmount(total),
+                                        valuation.completeTotal == null
+                                            ? '—'
+                                            : formatMoney(
+                                                valuation.completeTotal!,
+                                                controller
+                                                    .activeBook
+                                                    .baseCurrencyCode,
+                                              ),
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleMedium

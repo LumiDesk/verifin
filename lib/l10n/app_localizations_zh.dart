@@ -3052,6 +3052,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiWarningAccountUnmatched => '账户未匹配，已置为无账户，请确认';
 
   @override
+  String get aiWarningCurrencyUnmatched => '币种未识别，已回退到账户币种或本位币，请确认';
+
+  @override
   String get screenshotEntryButton => '截图识账';
 
   @override
@@ -4047,5 +4050,26 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String recurringGeneratedCount(int count) {
     return '已补记 $count 笔交易';
+  }
+
+  @override
+  String assetValuationMissing(int count) {
+    return '有 $count 个账户待设置汇率';
+  }
+
+  @override
+  String assetValuationMissingDesc(String currencies) {
+    return '缺少 $currencies 对本位币的汇率，暂不显示不完整的资产总额。';
+  }
+
+  @override
+  String get assetTrendMissingRate => '历史资产走势缺少汇率，补齐相应日期的本地汇率后显示。';
+
+  @override
+  String get widgetRateMissing => '汇率缺失';
+
+  @override
+  String baseCurrencyAmountLabel(String currency) {
+    return '本位币 $currency';
   }
 }

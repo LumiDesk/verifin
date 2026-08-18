@@ -335,6 +335,60 @@ void main() {
     expect(signedAmount(transfer), 0);
   });
 
+  test('混合币种资产缺汇率时不返回部分总额，补齐后按本位币估值', () async {
+    final controller = await controllerWith(InMemoryLedgerRepository());
+    final bookId = controller.activeBook.id;
+    const cnyAccount = Account(
+      id: 'cny-account',
+      bookId: defaultLedgerBookId,
+      name: '人民币账户',
+      type: AccountType.cash,
+      groupId: null,
+      initialBalance: 100,
+      iconCode: 'cash',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+      currencyCode: 'CNY',
+    );
+    const usdAccount = Account(
+      id: 'usd-account',
+      bookId: defaultLedgerBookId,
+      name: '美元账户',
+      type: AccountType.cash,
+      groupId: null,
+      initialBalance: 10,
+      iconCode: 'cash',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+      currencyCode: 'USD',
+    );
+    controller.addAccount(cnyAccount);
+    controller.addAccount(usdAccount);
+
+    final missing = controller.accountBalancesInBase();
+    expect(missing.completeTotal, isNull);
+    expect(missing.missingCurrencyCodes, <String>{'USD'});
+    expect(missing.affectedAccountIds, <String>{'usd-account'});
+    expect(missing.amountsByAccountId['cny-account'], 100);
+
+    expect(
+      await controller.saveExchangeRateDraft(
+        currencyCode: 'USD',
+        effectiveDate: DateTime(2020),
+        rateToBase: 7.2,
+      ),
+      isTrue,
+    );
+    final complete = controller.accountBalancesInBase();
+    expect(complete.isComplete, isTrue);
+    expect(complete.amountsByAccountId['usd-account'], 72);
+    expect(complete.completeTotal, 172);
+    expect(controller.activeBook.id, bookId);
+    controller.dispose();
+  });
+
   test('退款原币限额与本位币净额缓存分开计算', () async {
     final controller = await controllerWith(InMemoryLedgerRepository());
     final expense = LedgerEntry(

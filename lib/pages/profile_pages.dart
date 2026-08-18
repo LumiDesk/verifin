@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
-import '../app/ledger_math.dart';
+import '../app/currency_math.dart';
 import '../l10n/app_localizations.dart';
 import '../app/models.dart';
 import '../app/series_math.dart';
@@ -41,12 +41,12 @@ class ProfilePage extends StatelessWidget {
       profile,
       AppLocalizations.of(context),
     );
-    final netAssets = controller.accounts
-        .where((account) => account.includeInAssets && !account.hidden)
-        .fold<double>(
-          0,
-          (sum, account) => sum + controller.accountBalance(account),
-        );
+    final valuedAccounts = controller.accounts.where(
+      (account) => account.includeInAssets && !account.hidden,
+    );
+    final accountValuation = controller.accountBalancesInBase(
+      accounts: valuedAccounts,
+    );
 
     return VeriPage(
       child: ListView(
@@ -140,7 +140,12 @@ class ProfilePage extends StatelessWidget {
                       Expanded(
                         child: ProfileStat(
                           label: AppLocalizations.of(context).netAssets,
-                          value: formatAmount(netAssets),
+                          value: accountValuation.completeTotal == null
+                              ? '—'
+                              : formatMoney(
+                                  accountValuation.completeTotal!,
+                                  controller.activeBook.baseCurrencyCode,
+                                ),
                         ),
                       ),
                     ],

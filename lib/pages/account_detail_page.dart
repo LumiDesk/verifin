@@ -289,6 +289,8 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                                 categories: controller.categories,
                                 tags: controller.tags,
                                 showDate: true,
+                                baseCurrencyCode:
+                                    controller.activeBook.baseCurrencyCode,
                                 onTap: () => openEntryDetail(context, entry),
                               ),
                             ),
@@ -1109,6 +1111,8 @@ class AccountReportPage extends StatelessWidget {
                               categories: controller.categories,
                               tags: controller.tags,
                               showDate: true,
+                              baseCurrencyCode:
+                                  controller.activeBook.baseCurrencyCode,
                               onTap: () => openEntryDetail(context, entry),
                             ),
                           ),

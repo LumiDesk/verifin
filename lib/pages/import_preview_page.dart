@@ -626,7 +626,12 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
                       ),
                     ),
                     for (final group in displayGroups) ...<Widget>[
-                      DateGroupHeader(date: group.date, entries: group.entries),
+                      DateGroupHeader(
+                        date: group.date,
+                        entries: group.entries,
+                        baseCurrencyCode:
+                            controller.activeBook.baseCurrencyCode,
+                      ),
                       const SizedBox(height: 8),
                       Opacity(
                         // 全组被排除时整体淡化。
@@ -638,6 +643,8 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
                           entries: group.entries,
                           accounts: accounts,
                           categories: categories,
+                          baseCurrencyCode:
+                              controller.activeBook.baseCurrencyCode,
                           // 草稿交易可能引用「待新建标签」的临时 id，合并现有 + 候选才能显示名字。
                           tags: <Tag>[
                             ...controller.tags,

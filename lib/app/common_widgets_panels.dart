@@ -8,6 +8,7 @@ class AccountGroupCard extends StatelessWidget {
     required this.title,
     required this.accounts,
     required this.balances,
+    this.totalText,
     this.collapsed = false,
     this.sectionDragIndex,
     this.sectionDragImmediate = false,
@@ -20,6 +21,7 @@ class AccountGroupCard extends StatelessWidget {
   final String title;
   final List<Account> accounts;
   final Map<Account, double> balances;
+  final String? totalText;
   final bool collapsed;
   final int? sectionDragIndex;
   final bool sectionDragImmediate;
@@ -35,6 +37,17 @@ class AccountGroupCard extends StatelessWidget {
       (sum, account) =>
           account.includeInAssets ? sum + (balances[account] ?? 0) : sum,
     );
+    final currencies = accounts
+        .where((account) => account.includeInAssets)
+        .map((account) => account.currencyCode)
+        .toSet();
+    final resolvedTotalText =
+        totalText ??
+        (currencies.length == 1
+            ? formatMoney(total, currencies.single)
+            : currencies.isEmpty
+            ? formatMoney(0, defaultCurrencyCode)
+            : '—');
 
     return VeriCard(
       child: Column(
@@ -68,7 +81,7 @@ class AccountGroupCard extends StatelessWidget {
                   ],
                   const SizedBox(width: 4),
                   Text(
-                    formatAmount(total),
+                    resolvedTotalText,
                     key: Key('account_group_total_$title'),
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: Theme.of(
@@ -272,7 +285,7 @@ class _AccountRow extends StatelessWidget {
                         account.creditLimit != null)
                       Text(
                         '${AppLocalizations.of(context).creditAvailableLabel} '
-                        '${formatAmount(availableCredit(account.creditLimit, balance) ?? 0)}',
+                        '${formatMoney(availableCredit(account.creditLimit, balance) ?? 0, account.currencyCode)}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -286,7 +299,7 @@ class _AccountRow extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Text(
-                formatAmount(balance),
+                formatMoney(balance, account.currencyCode),
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: accountBalanceColor(context, account, balance),
                   fontWeight: FontWeight.w800,

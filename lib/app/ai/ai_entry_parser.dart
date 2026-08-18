@@ -1,15 +1,17 @@
 import 'dart:convert';
 
+import '../currency_catalog.dart';
 import '../models.dart';
 import 'ai_client.dart';
 import 'ai_settings.dart';
 
 /// 一个可选项（分类或账户），供 AI 从中挑选并回传 id。
 class AiOption {
-  const AiOption({required this.id, required this.label});
+  const AiOption({required this.id, required this.label, this.currencyCode});
 
   final String id;
   final String label;
+  final String? currencyCode;
 }
 
 /// 喂给 AI 的账本上下文：可选的分类/账户清单、今天日期、当前账本。
@@ -21,6 +23,7 @@ class AiEntryContext {
     required this.accounts,
     required this.today,
     required this.bookId,
+    required this.baseCurrencyCode,
   });
 
   final List<AiOption> expenseCategories;
@@ -28,10 +31,11 @@ class AiEntryContext {
   final List<AiOption> accounts;
   final DateTime today;
   final String bookId;
+  final String baseCurrencyCode;
 }
 
 /// 解析降级提示的类型（UI 侧本地化展示）。
-enum AiDraftWarning { categoryUnmatched, accountUnmatched }
+enum AiDraftWarning { categoryUnmatched, accountUnmatched, currencyUnmatched }
 
 /// 解析失败的可预期原因（UI 侧本地化展示）。
 enum AiEntryError { emptyResult, noAmount }
@@ -51,6 +55,7 @@ class AiEntryDraft {
   const AiEntryDraft({
     required this.type,
     required this.amount,
+    required this.currencyCode,
     required this.categoryId,
     required this.accountId,
     required this.toAccountId,
@@ -61,6 +66,7 @@ class AiEntryDraft {
 
   final EntryType type;
   final double amount;
+  final String currencyCode;
   final String categoryId;
 
   /// 空串表示「无账户」。
@@ -98,7 +104,12 @@ String buildAiEntryPrompt(AiEntryContext context) {
 
   final accountsBlock = context.accounts.isEmpty
       ? '（无）'
-      : context.accounts.map((o) => '- ${o.id} | ${o.label}').join('\n');
+      : context.accounts
+            .map(
+              (o) =>
+                  '- ${o.id} | ${o.label} | ${o.currencyCode ?? context.baseCurrencyCode}',
+            )
+            .join('\n');
 
   return '''
 你是一个记账助手。请把用户用自然语言描述的一笔账，解析成一个 JSON 对象。
@@ -118,6 +129,7 @@ $accountsBlock
 判断规则：
 - type：支出用 "expense"，收入用 "income"，账户间转账用 "transfer"。默认为 "expense"。
 - amount：正数金额（不带货币符号）。无法识别金额时置为 0。
+- currencyCode：金额原币的 ISO 4217 三位代码。用户明确提到美元、日元、货币符号或代码时据此判断；否则使用所选账户币种，没有账户则使用账本本位币 ${context.baseCurrencyCode}。
 - categoryId：按 type 从对应清单里选最贴切的一项；转账可留空字符串。
 - accountId：从账户清单选最贴切的；用户没提到账户就留空字符串 ""（表示无账户）。
 - toAccountId：仅转账时填转入账户 id，否则为 null。
@@ -126,7 +138,7 @@ $accountsBlock
 - time：形如 "HH:MM"（24 小时制）。仅当用户明确提到具体时间（如「晚上八点」记 "20:00"、「中午」记 "12:00"、「刚刚」用当前时间）时才填；用户没提时间就置为 null。
 
 只输出一个 JSON 对象，不要任何解释、不要 Markdown 代码块。格式：
-{"type":"expense","amount":32,"categoryId":"transport","accountId":"","toAccountId":null,"note":"打车","date":"${_dateKey(context.today)}","time":null}
+{"type":"expense","amount":32,"currencyCode":"${context.baseCurrencyCode}","categoryId":"transport","accountId":"","toAccountId":null,"note":"打车","date":"${_dateKey(context.today)}","time":null}
 ''';
 }
 
@@ -264,6 +276,19 @@ AiEntryDraft parseAiEntryDraft(String content, AiEntryContext context) {
     accountId = '';
   }
 
+  final accountCurrencyCode = context.accounts
+      .where((option) => option.id == accountId)
+      .firstOrNull
+      ?.currencyCode;
+  final rawCurrencyCode = _parseString(json['currencyCode']).toUpperCase();
+  var currencyCode = rawCurrencyCode.isEmpty
+      ? accountCurrencyCode ?? context.baseCurrencyCode
+      : rawCurrencyCode;
+  if (CurrencyCatalog.find(currencyCode) == null) {
+    warnings.add(AiDraftWarning.currencyUnmatched);
+    currencyCode = accountCurrencyCode ?? context.baseCurrencyCode;
+  }
+
   String? toAccountId;
   if (type == EntryType.transfer) {
     final raw = _parseString(json['toAccountId']);
@@ -280,6 +305,7 @@ AiEntryDraft parseAiEntryDraft(String content, AiEntryContext context) {
   return AiEntryDraft(
     type: type,
     amount: amount,
+    currencyCode: currencyCode,
     categoryId: categoryId,
     accountId: accountId,
     toAccountId: toAccountId,

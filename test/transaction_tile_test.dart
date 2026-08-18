@@ -63,6 +63,7 @@ void main() {
     WidgetTester tester,
     LedgerEntry e, {
     bool showDate = false,
+    String? baseCurrencyCode,
   }) async {
     await tester.pumpWidget(
       zhMaterialApp(
@@ -73,6 +74,7 @@ void main() {
             categories: categories,
             tags: tags,
             showDate: showDate,
+            baseCurrencyCode: baseCurrencyCode,
           ),
         ),
       ),
@@ -120,5 +122,30 @@ void main() {
     await pumpTile(tester, entry(occurredAt: DateTime(2020, 1, 15, 9, 0)));
     expect(find.text('09:00'), findsOneWidget);
     expect(find.textContaining('2020/01/15'), findsNothing);
+  });
+
+  testWidgets('跨币种交易以原币为主金额并显示账户实际金额', (tester) async {
+    await pumpTile(
+      tester,
+      LedgerEntry(
+        id: 'foreign',
+        bookId: 'b1',
+        type: EntryType.expense,
+        amount: 10,
+        currencyCode: 'USD',
+        accountAmount: 72,
+        baseAmount: 72,
+        conversionSource: ConversionSource.manual,
+        categoryId: 'lunch',
+        accountId: account.id,
+        note: '',
+        occurredAt: DateTime(2026, 8, 1),
+      ),
+      baseCurrencyCode: 'CNY',
+    );
+
+    expect(find.text('-USD 10'), findsOneWidget);
+    expect(find.text('CNY 72'), findsOneWidget);
+    expect(find.text('-72'), findsNothing);
   });
 }

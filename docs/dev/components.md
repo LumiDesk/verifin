@@ -73,8 +73,9 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `showCurrencyPickerSheet` | Sheet 函数 | `sheets.dart` | 可搜索的离线 ISO 4217 法定货币选择器（代码/中英文名/符号，支持常用/业务优先币种与排除项）；取消返回 `null` |
 | `evaluateAmountExpression` / `amountExpressionHasOperator` | 纯函数 | `calc_expression.dart` | 算式求值（不完整返回 null，结果已规整到分）/ 是否含运算符 |
 | `CurrencyCatalog` | 静态目录 | `currency_catalog.dart` | 离线 ISO 4217 法定货币定义、常用币种排序与中英文搜索；业务层不得另建货币清单 |
-| `normalizeCurrencyAmount` / `formatCurrencyNumber` / `formatMoney` / `formatRateValue` | 纯函数 | `currency_math.dart` | 按币种 minor unit 规整与格式化；`formatMoney` 可选择代码/符号/无标识；汇率最多显示 10 位小数且不走金额舍入 |
+| `normalizeCurrencyAmount` / `formatCurrencyNumber` / `formatMoney` / `formatSignedMoney` / `formatRateValue` | 纯函数 | `currency_math.dart` | 按币种 minor unit 规整与格式化；金额可选择代码/符号/无标识，`formatSignedMoney` 保留正负号；汇率最多显示 10 位小数且不走金额舍入 |
 | `exchangeRateAt` / `rateToBaseAt` / `convertCurrencyAmount` | 纯函数 | `currency_math.dart` | 按交易日取最近历史汇率（不使用未来值）/ 经本位币交叉换算；缺汇率返回强类型结果 |
+| `convertAccountBalancesToBase` / `ConvertedAccountBalances` | 纯函数 / 结果类型 | `currency_math.dart` | 把账户原币余额完整折算到本位币；任一账户缺率时 `completeTotal == null`，并返回缺失币种和受影响账户，禁止展示部分总额 |
 
 ## 族 6 — 交易展示
 

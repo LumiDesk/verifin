@@ -26,6 +26,7 @@ AiToolContext _context() {
     categories: const <Category>[],
     tags: const <Tag>[],
     balanceOf: (_) => 0,
+    baseCurrencyCode: 'CNY',
     now: DateTime(2026, 6, 20),
   );
 }

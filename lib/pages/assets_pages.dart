@@ -10,10 +10,10 @@ import '../app/avatar_picker.dart';
 import '../app/chart_painters.dart';
 import '../app/common_widgets.dart';
 import '../app/currency_catalog.dart';
+import '../app/currency_math.dart';
 import '../app/icon_catalog.dart';
 import '../app/image_cropper.dart';
 import '../app/image_sources.dart';
-import '../app/ledger_math.dart';
 import '../app/models.dart';
 import '../app/series_math.dart';
 import '../app/veri_fin_controller.dart';
@@ -75,18 +75,35 @@ class _AssetsPageState extends State<AssetsPage> {
       for (final account in accounts)
         account: controller.accountBalance(account),
     };
-    final assetBalances = balances.entries
-        .where((entry) => entry.key.includeInAssets && !entry.key.hidden)
-        .map((entry) => entry.value);
-    final assets = assetBalances
-        .where((value) => value > 0)
-        .fold<double>(0, (sum, value) => sum + value);
-    final liabilities = assetBalances
-        .where((value) => value < 0)
-        .fold<double>(0, (sum, value) => sum + value);
-    final assetTrendValues = monthlyNetAssetSeries(
-      accounts,
-      controller.entries,
+    final valuedAccounts = accounts
+        .where((account) => account.includeInAssets && !account.hidden)
+        .toList(growable: false);
+    final valuation = controller.accountBalancesInBase(
+      accounts: valuedAccounts,
+    );
+    final baseCurrencyCode = controller.activeBook.baseCurrencyCode;
+    final assets = valuation.isComplete
+        ? valuedAccounts
+              .map((account) => valuation.amountsByAccountId[account.id] ?? 0)
+              .where((value) => value > 0)
+              .fold<double>(0, (sum, value) => sum + value)
+        : null;
+    final liabilities = valuation.isComplete
+        ? valuedAccounts
+              .map((account) => valuation.amountsByAccountId[account.id] ?? 0)
+              .where((value) => value < 0)
+              .fold<double>(0, (sum, value) => sum + value)
+        : null;
+    final assetTrendValues = _baseCurrencyAssetTrend(
+      accounts: valuedAccounts,
+      entries: controller.entries,
+      convert: ({required amount, required currencyCode, required date}) =>
+          controller.convertAmount(
+            amount: amount,
+            sourceCurrencyCode: currencyCode,
+            targetCurrencyCode: baseCurrencyCode,
+            date: date,
+          ),
     );
     final hasAssetCover = controller.assetCoverUrl.isNotEmpty;
     final assetCardTextColor = hasAssetCover
@@ -155,7 +172,9 @@ class _AssetsPageState extends State<AssetsPage> {
         children: <Widget>[
           PageHeader(
             title: AppLocalizations.of(context).tabAssets,
-            subtitle: AppLocalizations.of(context).netAssets,
+            subtitle: AppLocalizations.of(
+              context,
+            ).baseCurrencyAmountLabel(baseCurrencyCode),
             trailing: HeaderAction(
               icon: Icons.add,
               tooltip: AppLocalizations.of(context).assetsActions,
@@ -236,7 +255,12 @@ class _AssetsPageState extends State<AssetsPage> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        formatAmount(assets + liabilities),
+                        assets == null || liabilities == null
+                            ? '—'
+                            : formatMoney(
+                                assets + liabilities,
+                                baseCurrencyCode,
+                              ),
                         style: Theme.of(context).textTheme.displaySmall
                             ?.copyWith(
                               color: assetCardTextColor,
@@ -248,42 +272,67 @@ class _AssetsPageState extends State<AssetsPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: <Widget>[
                           Text(
-                            AppLocalizations.of(
-                              context,
-                            ).assetsAmount(formatAmount(assets)),
+                            AppLocalizations.of(context).assetsAmount(
+                              assets == null
+                                  ? '—'
+                                  : formatMoney(assets, baseCurrencyCode),
+                            ),
                             style: TextStyle(color: assetCardTextColor),
                           ),
                           Text(
                             AppLocalizations.of(context).liabilitiesAmount(
-                              formatAmount(liabilities.abs()),
+                              liabilities == null
+                                  ? '—'
+                                  : formatMoney(
+                                      liabilities.abs(),
+                                      baseCurrencyCode,
+                                    ),
                             ),
                             style: TextStyle(color: assetCardTextColor),
                           ),
                         ],
                       ),
                       const SizedBox(height: 14),
-                      SizedBox(
-                        height: 112,
-                        child: InteractiveTrendChart(
-                          color: assetCardTextColor,
-                          values: assetTrendValues,
-                          xLabels: evenMonthAxisLabels(),
-                          labelColor: assetCardMutedColor,
-                          tooltipOf: (index) => ChartTooltip(
-                            title: AppLocalizations.of(
-                              context,
-                            ).monthNumber(index + 1),
-                            lines: <ChartTooltipLine>[
-                              ChartTooltipLine(
-                                text: AppLocalizations.of(context)
-                                    .netAssetsAmount(
-                                      formatAmount(assetTrendValues[index]),
-                                    ),
-                              ),
-                            ],
+                      if (assetTrendValues == null)
+                        SizedBox(
+                          height: 112,
+                          child: Center(
+                            child: Text(
+                              AppLocalizations.of(
+                                context,
+                              ).assetTrendMissingRate,
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: assetCardMutedColor),
+                            ),
+                          ),
+                        )
+                      else
+                        SizedBox(
+                          height: 112,
+                          child: InteractiveTrendChart(
+                            color: assetCardTextColor,
+                            values: assetTrendValues,
+                            xLabels: evenMonthAxisLabels(),
+                            labelColor: assetCardMutedColor,
+                            tooltipOf: (index) => ChartTooltip(
+                              title: AppLocalizations.of(
+                                context,
+                              ).monthNumber(index + 1),
+                              lines: <ChartTooltipLine>[
+                                ChartTooltipLine(
+                                  text: AppLocalizations.of(context)
+                                      .netAssetsAmount(
+                                        formatMoney(
+                                          assetTrendValues[index],
+                                          baseCurrencyCode,
+                                        ),
+                                      ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -291,6 +340,47 @@ class _AssetsPageState extends State<AssetsPage> {
             ),
           ),
           const SizedBox(height: 12),
+          if (!valuation.isComplete) ...<Widget>[
+            VeriCard(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Icon(Icons.currency_exchange, color: veriWarning),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          AppLocalizations.of(context).assetValuationMissing(
+                            valuation.affectedAccountIds.length,
+                          ),
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          AppLocalizations.of(
+                            context,
+                          ).assetValuationMissingDesc(
+                            (valuation.missingCurrencyCodes.toList()..sort())
+                                .join(', '),
+                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.62),
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           if (visibleAssetSections.isEmpty) ...[
             VeriCard(
               child: EmptyState(
@@ -310,6 +400,11 @@ class _AssetsPageState extends State<AssetsPage> {
                   title: section.title,
                   accounts: section.accounts,
                   balances: balances,
+                  totalText: _assetSectionTotalText(
+                    accounts: section.accounts,
+                    valuation: valuation,
+                    baseCurrencyCode: baseCurrencyCode,
+                  ),
                   collapsed: _collapsedSections.contains(
                     '${viewMode.name}:${section.id}',
                   ),
@@ -446,6 +541,55 @@ class _AssetAccountSection {
   final String id;
   final String title;
   final List<Account> accounts;
+}
+
+typedef _AssetCurrencyConverter =
+    CurrencyConversionResult Function({
+      required num amount,
+      required String currencyCode,
+      required DateTime date,
+    });
+
+List<double>? _baseCurrencyAssetTrend({
+  required List<Account> accounts,
+  required List<LedgerEntry> entries,
+  required _AssetCurrencyConverter convert,
+}) {
+  final nativeSeries = <Account, List<double>>{
+    for (final account in accounts)
+      account: accountMonthlyBalanceSeries(account, entries),
+  };
+  final now = DateTime.now();
+  final result = <double>[];
+  for (var monthIndex = 0; monthIndex < 12; monthIndex += 1) {
+    final monthEnd = DateTime(now.year, monthIndex + 2, 0);
+    var total = 0.0;
+    for (final account in accounts) {
+      final conversion = convert(
+        amount: nativeSeries[account]![monthIndex],
+        currencyCode: account.currencyCode,
+        date: monthEnd,
+      );
+      if (conversion is! ConvertedCurrencyAmount) return null;
+      total += conversion.amount;
+    }
+    result.add(total);
+  }
+  return result;
+}
+
+String _assetSectionTotalText({
+  required List<Account> accounts,
+  required ConvertedAccountBalances valuation,
+  required String baseCurrencyCode,
+}) {
+  var total = 0.0;
+  for (final account in accounts.where((account) => account.includeInAssets)) {
+    final value = valuation.amountsByAccountId[account.id];
+    if (value == null) return '—';
+    total += value;
+  }
+  return formatMoney(total, baseCurrencyCode);
 }
 
 class _AssetCoverPreset {

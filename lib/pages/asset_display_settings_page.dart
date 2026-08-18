@@ -148,6 +148,11 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
       for (final account in controller.accounts)
         account: controller.accountBalance(account),
     };
+    final valuation = controller.accountBalancesInBase(
+      accounts: controller.accounts.where(
+        (account) => account.includeInAssets && !account.hidden,
+      ),
+    );
 
     return UnsavedChangesGuard(
       isDirty: _isDirty,
@@ -224,6 +229,12 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
                           title: section.title,
                           accounts: section.accounts,
                           balances: balances,
+                          totalText: _assetSectionTotalText(
+                            accounts: section.accounts,
+                            valuation: valuation,
+                            baseCurrencyCode:
+                                controller.activeBook.baseCurrencyCode,
+                          ),
                           collapsed: _collapsedSections.contains(section.id),
                           sectionDragIndex: index,
                           sectionDragImmediate: true,

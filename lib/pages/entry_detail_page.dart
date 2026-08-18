@@ -177,6 +177,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       }
       _toAccountId = draft.toAccountId;
       _occurredAt = draft.occurredAt;
+      _currencyCode = draft.currencyCode;
       _applyingSuggestion = true;
       _noteController.text = draft.note;
       _applyingSuggestion = false;
@@ -1631,6 +1632,8 @@ String aiDraftWarningLabel(AppLocalizations l10n, AiDraftWarning warning) {
       return l10n.aiWarningCategoryUnmatched;
     case AiDraftWarning.accountUnmatched:
       return l10n.aiWarningAccountUnmatched;
+    case AiDraftWarning.currencyUnmatched:
+      return l10n.aiWarningCurrencyUnmatched;
   }
 }
 

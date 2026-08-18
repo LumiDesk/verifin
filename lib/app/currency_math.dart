@@ -61,6 +61,20 @@ String formatMoney(
   };
 }
 
+String formatSignedMoney(
+  num value,
+  String currencyCode, {
+  MoneyCodeDisplay display = MoneyCodeDisplay.code,
+  CurrencyFractionStyle? style,
+}) {
+  if (!value.isFinite) return '—';
+  if (isZeroCurrencyAmount(value, currencyCode)) {
+    return formatMoney(0, currencyCode, display: display, style: style);
+  }
+  final prefix = value > 0 ? '+' : '-';
+  return '$prefix${formatMoney(value.abs(), currencyCode, display: display, style: style)}';
+}
+
 /// Formats a rate with up to ten decimal places without amount rounding.
 String formatRateValue(num value) {
   if (!value.isFinite) return '—';
@@ -207,4 +221,64 @@ bool isExchangeRateStale(
     throw ArgumentError.value(thresholdDays, 'thresholdDays', '不能小于零');
   }
   return calendarDaysBetween(rate.effectiveDate, asOf) > thresholdDays;
+}
+
+class ConvertedAccountBalances {
+  const ConvertedAccountBalances({
+    required this.amountsByAccountId,
+    required this.missingCurrencyCodes,
+    required this.affectedAccountIds,
+  });
+
+  final Map<String, double> amountsByAccountId;
+  final Set<String> missingCurrencyCodes;
+  final Set<String> affectedAccountIds;
+
+  bool get isComplete => missingCurrencyCodes.isEmpty;
+
+  double? get completeTotal => isComplete
+      ? amountsByAccountId.values.fold<double>(0, (sum, value) => sum + value)
+      : null;
+}
+
+/// Converts account-native balances to one ledger base currency. If any rate
+/// is missing, [completeTotal] is null; callers must not display a partial sum.
+ConvertedAccountBalances convertAccountBalancesToBase({
+  required Iterable<Account> accounts,
+  required double Function(Account account) balanceOf,
+  required String bookId,
+  required String baseCurrencyCode,
+  required DateTime date,
+  required Iterable<ExchangeRate> rates,
+}) {
+  final amounts = <String, double>{};
+  final missingCodes = <String>{};
+  final affectedIds = <String>{};
+  for (final account in accounts) {
+    final balance = balanceOf(account);
+    if (isZeroCurrencyAmount(balance, account.currencyCode)) {
+      amounts[account.id] = 0;
+      continue;
+    }
+    final result = convertCurrencyAmount(
+      amount: balance,
+      sourceCurrencyCode: account.currencyCode,
+      targetCurrencyCode: baseCurrencyCode,
+      baseCurrencyCode: baseCurrencyCode,
+      bookId: bookId,
+      date: date,
+      rates: rates,
+    );
+    if (result is ConvertedCurrencyAmount) {
+      amounts[account.id] = result.amount;
+    } else if (result is MissingCurrencyRate) {
+      missingCodes.addAll(result.currencyCodes);
+      affectedIds.add(account.id);
+    }
+  }
+  return ConvertedAccountBalances(
+    amountsByAccountId: Map<String, double>.unmodifiable(amounts),
+    missingCurrencyCodes: Set<String>.unmodifiable(missingCodes),
+    affectedAccountIds: Set<String>.unmodifiable(affectedIds),
+  );
 }

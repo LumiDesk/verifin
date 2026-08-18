@@ -3121,6 +3121,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Account not matched — set to no account, please confirm';
 
   @override
+  String get aiWarningCurrencyUnmatched =>
+      'Currency not recognized — using the account or base currency, please confirm';
+
+  @override
   String get screenshotEntryButton => 'Scan a screenshot';
 
   @override
@@ -4157,5 +4161,27 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String recurringGeneratedCount(int count) {
     return 'Posted $count due transactions';
+  }
+
+  @override
+  String assetValuationMissing(int count) {
+    return '$count accounts need an exchange rate';
+  }
+
+  @override
+  String assetValuationMissingDesc(String currencies) {
+    return 'A rate from $currencies to the base currency is missing, so an incomplete asset total is not shown.';
+  }
+
+  @override
+  String get assetTrendMissingRate =>
+      'Historical asset trend needs exchange rates. Add local rates for the affected dates to show it.';
+
+  @override
+  String get widgetRateMissing => 'Rate missing';
+
+  @override
+  String baseCurrencyAmountLabel(String currency) {
+    return 'Base currency $currency';
   }
 }

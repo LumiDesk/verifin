@@ -35,10 +35,13 @@ class HomePage extends StatelessWidget {
     final trendWindow = cumulativeWeekWindowFor(now);
     final trendEntries = entriesInWindow(monthEntries, trendWindow);
     final trendConfig = controller.homeTrendConfig;
+    final accountValuation = controller.accountBalancesInBase(date: now);
     final metricContext = HomeMetricContext(
       entries: entries,
       accounts: controller.accounts,
       balanceOf: controller.accountBalance,
+      balanceInBaseOf: (account) =>
+          accountValuation.amountsByAccountId[account.id],
       now: now,
     );
     final trendChartValues = trendSeriesValues(
@@ -120,6 +123,7 @@ class HomePage extends StatelessWidget {
                       categories: controller.categories,
                       tags: controller.tags,
                       showDate: true,
+                      baseCurrencyCode: controller.activeBook.baseCurrencyCode,
                       onTap: () => openEntryDetail(context, item.$2),
                     ),
                     if (item.$1 != recentEntries.length - 1)
@@ -171,8 +175,8 @@ class HomePage extends StatelessWidget {
         children: <Widget>[
           PageHeader(
             title: AppLocalizations.of(context).tabHome,
-            // 副标题展示当前账本名（此前误为固定文案）。
-            subtitle: controller.activeBook.name,
+            subtitle:
+                '${controller.activeBook.name} · ${controller.activeBook.baseCurrencyCode}',
           ),
           for (final id in panelIds) ...<Widget>[
             const SizedBox(height: 10),

@@ -5654,6 +5654,12 @@ abstract class AppLocalizations {
   /// **'账户未匹配，已置为无账户，请确认'**
   String get aiWarningAccountUnmatched;
 
+  /// No description provided for @aiWarningCurrencyUnmatched.
+  ///
+  /// In zh, this message translates to:
+  /// **'币种未识别，已回退到账户币种或本位币，请确认'**
+  String get aiWarningCurrencyUnmatched;
+
   /// No description provided for @screenshotEntryButton.
   ///
   /// In zh, this message translates to:
@@ -7399,6 +7405,36 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'已补记 {count} 笔交易'**
   String recurringGeneratedCount(int count);
+
+  /// No description provided for @assetValuationMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'有 {count} 个账户待设置汇率'**
+  String assetValuationMissing(int count);
+
+  /// No description provided for @assetValuationMissingDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'缺少 {currencies} 对本位币的汇率，暂不显示不完整的资产总额。'**
+  String assetValuationMissingDesc(String currencies);
+
+  /// No description provided for @assetTrendMissingRate.
+  ///
+  /// In zh, this message translates to:
+  /// **'历史资产走势缺少汇率，补齐相应日期的本地汇率后显示。'**
+  String get assetTrendMissingRate;
+
+  /// No description provided for @widgetRateMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'汇率缺失'**
+  String get widgetRateMissing;
+
+  /// No description provided for @baseCurrencyAmountLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'本位币 {currency}'**
+  String baseCurrencyAmountLabel(String currency);
 }
 
 class _AppLocalizationsDelegate

@@ -14,6 +14,7 @@ class TransactionTile extends StatelessWidget {
     this.selectionMode = false,
     this.selected = false,
     this.showDate = false,
+    this.baseCurrencyCode,
   });
 
   final LedgerEntry entry;
@@ -33,6 +34,7 @@ class TransactionTile extends StatelessWidget {
   /// 仅平铺、无日期分组头的列表（如首页「最近交易」）需要开；带分组头的列表
   /// 日期已在头部，保持关（默认）。
   final bool showDate;
+  final String? baseCurrencyCode;
 
   /// 把 [LedgerEntry.tagIds] 按顺序解析成标签名（跳过找不到的）。
   List<String> _tagLabels() {
@@ -60,14 +62,43 @@ class TransactionTile extends StatelessWidget {
     final category = categoryById(entry.categoryId, categories);
     final noneLabel = AppLocalizations.of(context).noAccountLabel;
     final amountColor = colorForType(entry.type);
-    final amountText = entry.type == EntryType.transfer
-        ? formatAmount(entry.amount)
-        : formatSignedAmount(signedAmount(entry));
+    final amountText = switch (entry.type) {
+      EntryType.expense => formatSignedMoney(-entry.amount, entry.currencyCode),
+      EntryType.income ||
+      EntryType.refund => formatSignedMoney(entry.amount, entry.currencyCode),
+      EntryType.transfer => formatMoney(entry.amount, entry.currencyCode),
+    };
     // 空 accountId / null toAccountId 表示「无账户」，不能用 accountById（会误回退首个账户）。
     final fromName = accountDisplayName(accounts, entry.accountId, noneLabel);
     final accountLabel = entry.type == EntryType.transfer
         ? '$fromName → ${accountDisplayName(accounts, entry.toAccountId ?? '', noneLabel)}'
         : fromName;
+    final fromAccount = _accountByExactId(accounts, entry.accountId);
+    final toAccount = _accountByExactId(accounts, entry.toAccountId ?? '');
+    final accountAmountText = entry.type == EntryType.transfer
+        ? switch ((fromAccount, toAccount)) {
+            (final from?, final to?)
+                when entry.accountAmount != null &&
+                    entry.toAccountAmount != null =>
+              '${formatMoney(entry.accountAmount!, from.currencyCode)} → ${formatMoney(entry.toAccountAmount!, to.currencyCode)}',
+            _ => null,
+          }
+        : fromAccount != null &&
+              entry.accountAmount != null &&
+              fromAccount.currencyCode != entry.currencyCode
+        ? formatMoney(entry.accountAmount!, fromAccount.currencyCode)
+        : null;
+    final baseAmountText =
+        entry.type != EntryType.transfer &&
+            baseCurrencyCode != null &&
+            baseCurrencyCode != entry.currencyCode &&
+            baseCurrencyCode != fromAccount?.currencyCode
+        ? formatMoney(entry.baseAmount, baseCurrencyCode!)
+        : null;
+    final conversionText = <String>[
+      ?accountAmountText,
+      ?baseAmountText,
+    ].join(' · ');
     // 分类层级：父级链（由近及远反转成「祖 · 父」）作淡色前缀，末级加粗单独渲染。
     // 无父（顶级 / 转账 / 悬空占位）时 ancestors 为空、不加前缀。
     final parentPrefix = ancestorIds(
@@ -242,6 +273,19 @@ class TransactionTile extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (conversionText.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: 3),
+                    Text(
+                      conversionText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.42),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ],
@@ -319,10 +363,16 @@ String relativeDay(AppLocalizations l10n, DateTime date) {
 
 /// 交易列表的日期分组小标题（日期 + 今天/昨天 + 当日合计）。
 class DateGroupHeader extends StatelessWidget {
-  const DateGroupHeader({super.key, required this.date, required this.entries});
+  const DateGroupHeader({
+    super.key,
+    required this.date,
+    required this.entries,
+    this.baseCurrencyCode,
+  });
 
   final DateTime date;
   final List<LedgerEntry> entries;
+  final String? baseCurrencyCode;
 
   @override
   Widget build(BuildContext context) {
@@ -346,7 +396,9 @@ class DateGroupHeader extends StatelessWidget {
             ),
           ),
           Text(
-            formatSignedAmount(dayTotal),
+            baseCurrencyCode == null
+                ? formatSignedAmount(dayTotal)
+                : formatSignedMoney(dayTotal, baseCurrencyCode!),
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               color: Theme.of(
                 context,
@@ -371,6 +423,7 @@ class TransactionListCard extends StatelessWidget {
     this.onEntryLongPress,
     this.selectionMode = false,
     this.selectedIds = const <String>{},
+    this.baseCurrencyCode,
   });
 
   final List<LedgerEntry> entries;
@@ -383,6 +436,7 @@ class TransactionListCard extends StatelessWidget {
   final ValueChanged<LedgerEntry>? onEntryLongPress;
   final bool selectionMode;
   final Set<String> selectedIds;
+  final String? baseCurrencyCode;
 
   @override
   Widget build(BuildContext context) {
@@ -397,6 +451,7 @@ class TransactionListCard extends StatelessWidget {
               tags: tags,
               selectionMode: selectionMode,
               selected: selectedIds.contains(item.$2.id),
+              baseCurrencyCode: baseCurrencyCode,
               onTap: onEntryTap == null ? null : () => onEntryTap!(item.$2),
               onLongPress: onEntryLongPress == null
                   ? null
@@ -414,4 +469,11 @@ class TransactionListCard extends StatelessWidget {
       ),
     );
   }
+}
+
+Account? _accountByExactId(List<Account> accounts, String id) {
+  for (final account in accounts) {
+    if (account.id == id) return account;
+  }
+  return null;
 }

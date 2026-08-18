@@ -251,7 +251,8 @@ class ReportsPage extends StatelessWidget {
         children: <Widget>[
           PageHeader(
             title: AppLocalizations.of(context).tabReports,
-            subtitle: AppLocalizations.of(context).reportsSubtitle,
+            subtitle:
+                '${AppLocalizations.of(context).reportsSubtitle} · ${controller.activeBook.baseCurrencyCode}',
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[

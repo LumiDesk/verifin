@@ -156,6 +156,24 @@ void main() {
       expect(computeHomeMetric(HomeMetric.netAssets, ctx), 700);
     });
 
+    test('资产指标缺本位币汇率时不显示部分值', () {
+      final missingRateContext = HomeMetricContext(
+        entries: entries,
+        accounts: accounts,
+        balanceOf: (account) => balances[account.id] ?? 0,
+        balanceInBaseOf: (account) =>
+            account.id == 'debt' ? null : balances[account.id],
+        now: now,
+      );
+      final value = computeHomeMetric(HomeMetric.netAssets, missingRateContext);
+      expect(value.isNaN, isTrue);
+      expect(formatHomeMetric(HomeMetric.netAssets, value), '—');
+      expect(
+        homeMetricColor(HomeMetric.netAssets, value, Colors.grey),
+        Colors.grey,
+      );
+    });
+
     test('待报销 / 已报销', () {
       expect(computeHomeMetric(HomeMetric.reimbursablePending, ctx), 150);
       expect(computeHomeMetric(HomeMetric.reimbursed, ctx), 50);

@@ -36,6 +36,7 @@ AiToolContext _ctx(
     categories: categories,
     tags: tags,
     balanceOf: (_) => 0,
+    baseCurrencyCode: 'CNY',
     now: now ?? DateTime(2026, 6, 20),
   );
 }

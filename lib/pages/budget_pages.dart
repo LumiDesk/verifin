@@ -129,7 +129,8 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
             children: <Widget>[
               VeriHeader(
                 title: AppLocalizations.of(context).budgetTitle,
-                subtitle: cycleLabel,
+                subtitle:
+                    '$cycleLabel · ${controller.activeBook.baseCurrencyCode}',
                 showBack: true,
                 actions: <Widget>[
                   HeaderAction(
@@ -569,7 +570,8 @@ class BudgetHistoryPage extends StatelessWidget {
             children: <Widget>[
               VeriHeader(
                 title: AppLocalizations.of(context).budgetHistoryTitle,
-                subtitle: AppLocalizations.of(context).last12MonthsSub,
+                subtitle:
+                    '${AppLocalizations.of(context).last12MonthsSub} · ${controller.activeBook.baseCurrencyCode}',
                 showBack: true,
               ),
               const SizedBox(height: 10),

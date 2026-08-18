@@ -1912,6 +1912,7 @@
   "aiEntryNoAmount": "未能识别金额，请在描述中说明金额，例如「打车 32」",
   "aiWarningCategoryUnmatched": "分类未匹配，已用默认分类，请确认",
   "aiWarningAccountUnmatched": "账户未匹配，已置为无账户，请确认",
+  "aiWarningCurrencyUnmatched": "币种未识别，已回退到账户币种或本位币，请确认",
   "screenshotEntryButton": "截图识账",
   "screenshotEntryUnsupported": "当前设备不支持图片文字识别",
   "screenshotEntryNoText": "没有从图片里识别到文字，请换一张更清晰的截图",
@@ -2568,5 +2569,19 @@
   "recurringGeneratedCount": "已补记 {count} 笔交易",
   "@recurringGeneratedCount": {
     "placeholders": {"count": {"type": "int"}}
+  },
+  "assetValuationMissing": "有 {count} 个账户待设置汇率",
+  "@assetValuationMissing": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "assetValuationMissingDesc": "缺少 {currencies} 对本位币的汇率，暂不显示不完整的资产总额。",
+  "@assetValuationMissingDesc": {
+    "placeholders": {"currencies": {"type": "String"}}
+  },
+  "assetTrendMissingRate": "历史资产走势缺少汇率，补齐相应日期的本地汇率后显示。",
+  "widgetRateMissing": "汇率缺失",
+  "baseCurrencyAmountLabel": "本位币 {currency}",
+  "@baseCurrencyAmountLabel": {
+    "placeholders": {"currency": {"type": "String"}}
   }
 }
