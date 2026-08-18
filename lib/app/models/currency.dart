@@ -147,6 +147,10 @@ class ExchangeRate {
 
   static ExchangeRate fromJson(Map<String, Object?> json) {
     final now = DateTime.now();
+    final effectiveDate = parseCurrencyDateKey(json['effectiveDate']);
+    if (effectiveDate == null) {
+      throw const FormatException('汇率生效日期格式不正确');
+    }
     return ExchangeRate(
       id: json['id'] as String? ?? '',
       bookId: json['bookId'] as String? ?? 'default',
@@ -155,9 +159,7 @@ class ExchangeRate {
               .toUpperCase(),
       currencyCode: (json['currencyCode'] as String? ?? defaultCurrencyCode)
           .toUpperCase(),
-      effectiveDate:
-          parseCurrencyDateKey(json['effectiveDate']) ??
-          DateTime(now.year, now.month, now.day),
+      effectiveDate: effectiveDate,
       rateToBase: (json['rateToBase'] as num? ?? 0).toDouble(),
       source: ExchangeRateSource.fromStorage(json['source'] as String?),
       createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? now,

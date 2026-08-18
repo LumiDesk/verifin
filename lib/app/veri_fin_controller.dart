@@ -41,6 +41,7 @@ const Set<String> _knownBackupDataKeys = <String>{
   'tags',
   'attachments',
   'recurringRules',
+  'exchangeRates',
   'monthlyBudgets',
   'categoryBudgets',
   'dailyBudgets',

@@ -1,6 +1,6 @@
 {
   "app": "verifin",
-  "version": 1,
+  "version": 2,
   "exportedAt": "2026-07-03T16:00:00.000",
   "data": {
     "ledgerBooks": [
@@ -8,13 +8,17 @@
         "id": "default",
         "name": "日常账本",
         "createdAt": "2026-01-01T00:00:00.000",
-        "isDefault": true
+        "isDefault": true,
+        "baseCurrencyCode": "CNY",
+        "currencySetupStatus": "confirmed"
       },
       {
         "id": "book_travel",
         "name": "旅行测试账本",
         "createdAt": "2026-06-01T09:00:00.000",
-        "isDefault": false
+        "isDefault": false,
+        "baseCurrencyCode": "CNY",
+        "currencySetupStatus": "confirmed"
       }
     ],
     "activeBookId": "default",
@@ -309,9 +313,71 @@
         "toAccountId": null,
         "note": "旅行晚餐",
         "occurredAt": "2026-06-11T20:10:00.000"
+      },
+      {
+        "id": "entry_usd_expense_001",
+        "bookId": "default",
+        "type": "expense",
+        "amount": 10.0,
+        "currencyCode": "USD",
+        "accountAmount": 10.0,
+        "baseAmount": 72.0,
+        "conversionSource": "rateTable",
+        "categoryId": "dining",
+        "accountId": "acc_usd_cash",
+        "toAccountId": null,
+        "note": "美元午餐",
+        "occurredAt": "2026-07-08T12:00:00.000",
+        "refundedBaseAmount": 14.4
+      },
+      {
+        "id": "entry_usd_refund_001",
+        "bookId": "default",
+        "type": "refund",
+        "amount": 2.0,
+        "currencyCode": "USD",
+        "accountAmount": 2.0,
+        "baseAmount": 14.4,
+        "conversionSource": "rateTable",
+        "categoryId": "dining",
+        "accountId": "acc_usd_cash",
+        "toAccountId": null,
+        "note": "美元消费部分退款",
+        "occurredAt": "2026-07-09T09:00:00.000",
+        "refundOf": "entry_usd_expense_001",
+        "settledAt": "2026-07-10T10:00:00.000"
+      },
+      {
+        "id": "entry_cross_transfer_001",
+        "bookId": "default",
+        "type": "transfer",
+        "amount": 720.0,
+        "currencyCode": "CNY",
+        "accountAmount": 720.0,
+        "toAccountAmount": 100.0,
+        "baseAmount": 0.0,
+        "conversionSource": "manual",
+        "categoryId": "transfer_out",
+        "accountId": "acc_debit",
+        "toAccountId": "acc_usd_cash",
+        "note": "人民币兑换美元现金",
+        "occurredAt": "2026-07-07T18:00:00.000"
       }
     ],
     "accounts": [
+      {
+        "id": "acc_usd_cash",
+        "bookId": "default",
+        "name": "美元现金",
+        "type": "cash",
+        "groupId": "group_daily",
+        "initialBalance": 100.0,
+        "iconCode": "cash",
+        "note": "旅行备用美元",
+        "includeInAssets": true,
+        "hidden": false,
+        "currencyCode": "USD"
+      },
       {
         "id": "acc_alipay",
         "bookId": "default",
@@ -649,6 +715,10 @@
         "bookId": "default",
         "type": "expense",
         "amount": 2600.0,
+        "currencyCode": "CNY",
+        "accountAmount": 2600.0,
+        "baseAmount": 2600.0,
+        "ratePolicy": "fixedAmounts",
         "categoryId": "housing",
         "accountId": "acc_debit",
         "toAccountId": null,
@@ -657,6 +727,19 @@
         "startDate": "2026-01-01T00:00:00.000",
         "nextRunDate": "2026-08-01T00:00:00.000",
         "active": true
+      }
+    ],
+    "exchangeRates": [
+      {
+        "id": "rate_usd_20260701",
+        "bookId": "default",
+        "baseCurrencyCode": "CNY",
+        "currencyCode": "USD",
+        "effectiveDate": "2026-07-01",
+        "rateToBase": 7.2,
+        "source": "manual",
+        "createdAt": "2026-07-01T09:00:00.000",
+        "updatedAt": "2026-07-01T09:00:00.000"
       }
     ],
     "monthlyBudgets": {
@@ -775,6 +858,7 @@
     },
     "fabActionMode": "manualTapAiLongPress",
     "amountForceTwoDecimals": true,
+    "currencyFractionStyle": "standard",
     "autoSuggestEnabled": false,
     "homeTrendConfig": {
       "title": "本月概览",

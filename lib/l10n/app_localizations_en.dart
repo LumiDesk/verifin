@@ -2556,7 +2556,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get csvTemplateImportGuide =>
-      'First use \"Download CSV template\" on this page, fill it in following the template columns, then import. The header may only use template columns (Date, Type, Amount, Category, Account, Transfer-in account, Note; optional Subcategory, Tags); columns from other apps will fail the import. For other apps, pick the matching entry above.';
+      'Download the CSV template first. For a foreign-currency transaction, provide its currency plus either the base amount or rate; cross-currency transfers also need the actual amount at both ends. Columns from other apps are rejected.';
 
   @override
   String get billImportCommonNote =>
@@ -3208,6 +3208,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get csvTemplateSaveFailed =>
       'Failed to save the template; try again later';
+
+  @override
+  String get exportTransactionsCsv => 'Export transactions CSV';
+
+  @override
+  String get transactionsCsvExported =>
+      'Transactions CSV exported to Downloads';
+
+  @override
+  String get transactionsCsvExportFailed =>
+      'Failed to export transactions CSV; try again later';
 
   @override
   String get chooseFile => 'Choose file';
@@ -4184,4 +4195,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String baseCurrencyAmountLabel(String currency) {
     return 'Base currency $currency';
   }
+
+  @override
+  String get importRateInputLabel =>
+      'Rate (1 original currency = X base currency)';
+
+  @override
+  String get importRateInvalid => 'The rate must be a number greater than zero';
+
+  @override
+  String get importSaveExchangeRates => 'Save imported rates';
+
+  @override
+  String get importSaveExchangeRatesHint =>
+      'Off by default. When enabled, only rates used by included transactions are saved.';
 }

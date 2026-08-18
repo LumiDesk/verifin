@@ -5,8 +5,14 @@ import 'import/plan_builder.dart';
 // 导入子系统的公共 facade（历史入口，外部只 import 本文件与 payment_import.dart）：
 // 类型与实现拆在 import/ 子目录，这里统一 re-export，并保留 CSV 行→计划的兼容入口。
 export 'import/csv_template.dart'
-    show csvTemplateColumns, transactionCsvTemplate, validateCsvTemplateHeader;
-export 'import/plan_builder.dart' show ImportPlan;
+    show
+        csvTemplateColumns,
+        transactionCsvTemplate,
+        transactionCsvExport,
+        transactionCsvExportColumns,
+        validateCsvTemplateHeader;
+export 'import/plan_builder.dart'
+    show ImportConversionIssue, ImportExchangeRateCandidate, ImportPlan;
 export 'import/raw_import.dart' show ImportRowError;
 export 'import/text_format.dart' show parseCsv;
 
@@ -20,6 +26,8 @@ ImportPlan buildImportPlan({
   required List<Account> existingAccounts,
   required List<Category> existingCategories,
   required DateTime now,
+  String baseCurrencyCode = defaultCurrencyCode,
+  List<ExchangeRate> exchangeRates = const <ExchangeRate>[],
   List<Tag> existingTags = const <Tag>[],
   bool seedEnglish = false,
 }) {
@@ -29,6 +37,8 @@ ImportPlan buildImportPlan({
     existingAccounts: existingAccounts,
     existingCategories: existingCategories,
     now: now,
+    baseCurrencyCode: baseCurrencyCode,
+    exchangeRates: exchangeRates,
     existingTags: existingTags,
     seedEnglish: seedEnglish,
   );

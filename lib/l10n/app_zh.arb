@@ -1658,7 +1658,7 @@
   "yimuTransferImportGuide": "一木记账 App →「我的」→「导入/导出」→「数据导出」→「转账还款导出」，选择 Excel（.xls）保存到本机后在此选择。\n\n导入转账记录，保留转出/转入账户与手续费。收支账单请用另一个入口「一木记账 · 账单」。菜单以实际 App 版本为准。",
   "qianjiImportGuide": "钱迹 App →「我的」→「设置」→「备份与导出」→「导出账单」→ 选择「CSV」格式（明细）、时间范围为「全部」，得到 QianJi 开头的 .csv 文件，保存到本机后在此选择。\n\n支出、收入、转账、信用卡还款、退款、报销都会导入：退款按「关联账单」自动冲抵原支出（净额=原额−退款），分类按二级分类还原层级、标签一并导入。钱迹的「债务 / 借贷」记录（借出、收款、利息等）不会导入——本应用没有债务功能、无法忠实表达；这类多是「垫钱再收回」的一进一出，跳过不影响你的真实收支。菜单以实际 App 版本为准。",
   "tallyImportGuide": "Tally 记账 App →「设置」→ 数据备份与恢复 →「导出备份」，得到 Tally 开头的 .zip 文件，保存到本机后在此选择。\n\n请选「备份 zip」而非 CSV「账单」导出：备份保留精确到秒的交易时间，收入/支出/转账、一级/二级分类、账户与备注都会一并导入（分类按二级分类）。菜单以实际 App 版本为准。",
-  "csvTemplateImportGuide": "请先用本页「下载 CSV 模板」，按模板列填写后再导入。表头只能用模板列（日期、类型、金额、分类、账户、转入账户、备注，可选 子分类、标签），含其他软件的列会导入失败。其他记账软件请在上方选择对应入口。",
+  "csvTemplateImportGuide": "请先用本页「下载 CSV 模板」，按模板列填写后再导入。外币交易需填写币种，并提供本位币金额或汇率；跨币转账还需提供两端实际金额。含其他软件的列会导入失败。",
   "billImportCommonNote": "交易会追加到当前账本，匹配不到的账户与分类按名称自动新建，不会删除现有数据。",
   "backupToLocalDir": "备份到本地目录",
   "backupDirLabel": "备份目录",
@@ -1971,6 +1971,9 @@
   "clearWebdavMessage": "清除后将停止自动上传，服务器上已有的备份文件不会被删除。",
   "csvTemplateSaved": "已保存 CSV 模板，位置：下载目录",
   "csvTemplateSaveFailed": "保存模板失败，请稍后再试",
+  "exportTransactionsCsv": "导出交易 CSV",
+  "transactionsCsvExported": "已导出交易 CSV，位置：下载目录",
+  "transactionsCsvExportFailed": "导出交易 CSV 失败，请稍后再试",
   "chooseFile": "选择文件",
   "importedEntries": "已导入 {count} 笔交易",
   "@importedEntries": {
@@ -2583,5 +2586,9 @@
   "baseCurrencyAmountLabel": "本位币 {currency}",
   "@baseCurrencyAmountLabel": {
     "placeholders": {"currency": {"type": "String"}}
-  }
+  },
+  "importRateInputLabel": "汇率（1 原币 = X 本位币）",
+  "importRateInvalid": "汇率必须是大于 0 的数字",
+  "importSaveExchangeRates": "保存导入汇率",
+  "importSaveExchangeRatesHint": "默认关闭；开启后只保存最终纳入交易使用的当日汇率。"
 }

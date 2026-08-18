@@ -907,7 +907,7 @@
   "yimuTransferImportGuide": "In YiMu (一木记账): Me → Import/Export → Export data → Export transfers, choose Excel (.xls) and save it to your phone, then choose it here.\n\nImports transfer records, keeping both accounts and the fee. For income/expense bills, use the separate \"YiMu · Bills\" entry. Menu paths may vary by app version.",
   "qianjiImportGuide": "In Qianji (钱迹): Me → Settings → Backup & export → Export bills → choose the \"CSV\" (detail) format with the \"All\" time range. You get a .csv file starting with \"QianJi\"; save it to your phone, then choose it here.\n\nExpense, income, transfer, credit-card repayment, refund and reimbursement are all imported: refunds offset the original expense via their linked bill (net = original − refund); categories restore the two-level hierarchy and tags are imported too. Qianji's debt/loan records (lend, collect, interest, etc.) are NOT imported — this app has no debt feature and can't represent them faithfully; they are mostly \"pay then get repaid\" round-trips, so skipping them doesn't affect your real income/expense. Menu paths may vary by app version.",
   "tallyImportGuide": "In Tally (记账): Settings → Data backup & restore → Export backup, which produces a .zip file starting with \"Tally\". Save it to your phone, then choose it here.\n\nPick the backup zip rather than the CSV bill export: the backup keeps exact transaction times, and income/expense/transfers, first- and second-level categories, accounts and notes are all imported (categories use the second-level category). Menu paths may vary by app version.",
-  "csvTemplateImportGuide": "First use \"Download CSV template\" on this page, fill it in following the template columns, then import. The header may only use template columns (Date, Type, Amount, Category, Account, Transfer-in account, Note; optional Subcategory, Tags); columns from other apps will fail the import. For other apps, pick the matching entry above.",
+  "csvTemplateImportGuide": "Download the CSV template first. For a foreign-currency transaction, provide its currency plus either the base amount or rate; cross-currency transfers also need the actual amount at both ends. Columns from other apps are rejected.",
   "billImportCommonNote": "Transactions are appended to the current ledger; unmatched accounts and categories are created by name. Nothing is deleted.",
   "backupToLocalDir": "Back up to local folder",
   "backupDirLabel": "Backup folder",
@@ -1101,6 +1101,9 @@
   "clearWebdavMessage": "Auto-upload will stop; backups already on the server are not deleted.",
   "csvTemplateSaved": "CSV template saved to the Downloads folder",
   "csvTemplateSaveFailed": "Failed to save the template; try again later",
+  "exportTransactionsCsv": "Export transactions CSV",
+  "transactionsCsvExported": "Transactions CSV exported to Downloads",
+  "transactionsCsvExportFailed": "Failed to export transactions CSV; try again later",
   "chooseFile": "Choose file",
   "importedEntries": "Imported {count} transactions",
   "skippedRows": ", {count} rows skipped",
@@ -1647,5 +1650,9 @@
   "baseCurrencyAmountLabel": "Base currency {currency}",
   "@baseCurrencyAmountLabel": {
     "placeholders": {"currency": {"type": "String"}}
-  }
+  },
+  "importRateInputLabel": "Rate (1 original currency = X base currency)",
+  "importRateInvalid": "The rate must be a number greater than zero",
+  "importSaveExchangeRates": "Save imported rates",
+  "importSaveExchangeRatesHint": "Off by default. When enabled, only rates used by included transactions are saved."
 }

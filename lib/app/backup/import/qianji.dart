@@ -17,7 +17,8 @@ import 'text_format.dart';
 ///
 /// 债务类（多为「垫钱→收回」的一进一出）跳过：硬记成收支会污染统计、凭空造「人/店」账户又
 /// 打乱资产列表，且不影响真实收支与余额。币种（均 CNY）、优惠券（金额已是实付净额故不加回）、
-/// 账单图片、记账者、0 元「心愿单」占位记录均不导入。
+/// 账单图片、记账者、0 元「心愿单」占位记录均不导入；币种代码进入强类型中间层，
+/// 未知代码由共享 plan builder 逐行拒绝。
 ParsedImport parseQianji(Uint8List bytes) {
   final rows = parseCsv(decodeUtf8Bytes(bytes));
   final headerIndex = findHeaderRow(
@@ -83,6 +84,7 @@ ParsedImport parseQianji(Uint8List bytes) {
           account: cell(row, '账户1'),
           note: cell(row, '备注'),
           refunded: refund == null ? '' : refund.toStringAsFixed(2),
+          currencyCode: cell(row, '币种'),
           tags: splitTagLabels(cell(row, '标签')),
           sourceLine: line,
           onError: onError,
@@ -96,6 +98,7 @@ ParsedImport parseQianji(Uint8List bytes) {
           subCategory: cell(row, '二级分类'),
           account: cell(row, '账户1'),
           note: cell(row, '备注'),
+          currencyCode: cell(row, '币种'),
           tags: splitTagLabels(cell(row, '标签')),
           sourceLine: line,
           onError: onError,
@@ -109,6 +112,7 @@ ParsedImport parseQianji(Uint8List bytes) {
           toAccount: cell(row, '账户2'),
           note: cell(row, '备注'),
           fee: cell(row, '手续费'),
+          currencyCode: cell(row, '币种'),
           sourceLine: line,
           onError: onError,
         );
@@ -127,6 +131,7 @@ ParsedImport parseQianji(Uint8List bytes) {
           subCategory: cell(row, '二级分类'),
           account: cell(row, '账户1'),
           note: cell(row, '备注'),
+          currencyCode: cell(row, '币种'),
           sourceLine: line,
           onError: onError,
         );

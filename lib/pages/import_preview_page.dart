@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 import '../app/backup/transaction_import.dart';
 import '../app/common_widgets.dart';
+import '../app/currency_math.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
 import '../app/veri_fin_scope.dart';
@@ -21,6 +22,7 @@ class ImportPreviewResult {
     required this.candidateCategories,
     this.candidateTags = const <Tag>[],
     this.alwaysCreateAccountIds = const <String>{},
+    this.candidateExchangeRates = const <ExchangeRate>[],
   });
 
   final List<LedgerEntry> entries;
@@ -34,6 +36,7 @@ class ImportPreviewResult {
   /// 即便没有交易引用也要创建的候选账户 id（Tally 携带余额的账户）；已被用户映射到
   /// 现有账户的不在其中。
   final Set<String> alwaysCreateAccountIds;
+  final List<ExchangeRate> candidateExchangeRates;
 }
 
 /// 账单导入预览页：解析后、落库前展示即将导入的交易（按日期分组），用户可逐条排除
@@ -87,6 +90,7 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
     (category) => isUncategorizedCategoryId(category.id),
   );
   bool _tagsExpanded = false;
+  bool _saveImportedRates = false;
 
   @override
   void initState() {
@@ -246,6 +250,15 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
       alwaysCreateAccountIds: widget.plan.standaloneAccountIds
           .where((id) => !_accountMapTo.containsKey(id))
           .toSet(),
+      candidateExchangeRates: _saveImportedRates
+          ? <ExchangeRate>[
+              for (final candidate in widget.plan.exchangeRateCandidates)
+                if (candidate.entryIds.any(
+                  (entryId) => included.any((entry) => entry.id == entryId),
+                ))
+                  candidate.rate,
+            ]
+          : const <ExchangeRate>[],
     );
   }
 
@@ -265,6 +278,7 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
       'accountMapTo': _sortedMap(_accountMapTo),
       'categoryMapTo': _sortedMap(_categoryMapTo),
       'tagMapTo': _sortedMap(_tagMapTo),
+      'saveImportedRates': _saveImportedRates,
     });
   }
 
@@ -287,7 +301,13 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
 
   Future<void> _showSkippedRows() {
     final l10n = AppLocalizations.of(context);
-    final lines = widget.plan.errors
+    final skipped = <({int line, String message})>[
+      for (final error in widget.plan.errors)
+        (line: error.line, message: error.message),
+      for (final issue in widget.plan.conversionIssues)
+        (line: issue.line, message: issue.message),
+    ];
+    final lines = skipped
         .take(20)
         .map((error) => l10n.lineError(error.line, error.message))
         .join('\n');
@@ -538,6 +558,22 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
                         skipped: widget.plan.errorCount,
                         onViewSkipped: _showSkippedRows,
                       ),
+                    if (widget
+                        .plan
+                        .exchangeRateCandidates
+                        .isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 10),
+                      Card(
+                        margin: EdgeInsets.zero,
+                        child: SwitchListTile(
+                          value: _saveImportedRates,
+                          onChanged: (value) =>
+                              setState(() => _saveImportedRates = value),
+                          title: Text(l10n.importSaveExchangeRates),
+                          subtitle: Text(l10n.importSaveExchangeRatesHint),
+                        ),
+                      ),
+                    ],
                     if (widget.plan.newAccounts.isNotEmpty) ...<Widget>[
                       const SizedBox(height: 10),
                       _MappingCard(
@@ -555,8 +591,9 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
                               keptNew: !_accountMapTo.containsKey(account.id),
                               // 携带余额的来源（Tally）展示每个账户导入后的余额，便于核对。
                               amountText: _hasAccountBalances
-                                  ? formatAmount(
+                                  ? formatMoney(
                                       _accountResultingBalance(account),
+                                      account.currencyCode,
                                     )
                                   : null,
                               onRename: () => _renameAccount(account),

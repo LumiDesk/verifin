@@ -209,9 +209,56 @@ void main() {
       expect(controller.tags.length, beforeTags + 1);
       expect(controller.tags.where((t) => t.label == '客户'), hasLength(1));
     });
+
+    test('确认保存的导入汇率随交易落库', () async {
+      final controller = await makeController();
+      const csv =
+          '日期,类型,金额,分类,账户,币种,账户金额,本位币金额,汇率（1原币=X本位币）\n'
+          '2026-02-01,支出,10,餐饮,美元现金,USD,10,72,7.2\n';
+      final plan = controller.parsePlatformImport(
+        ImportPlatform.csvTemplate,
+        _csvBytes(csv),
+      );
+      controller.applyImportEntries(
+        entries: plan.entries,
+        candidateAccounts: plan.newAccounts,
+        candidateCategories: plan.newCategories,
+        candidateExchangeRates: <ExchangeRate>[
+          plan.exchangeRateCandidates.single.rate,
+        ],
+      );
+      await controller.waitForPendingWrites();
+
+      expect(controller.exchangeRates.single.currencyCode, 'USD');
+      expect(controller.exchangeRates.single.rateToBase, 7.2);
+    });
   });
 
   group('ImportPreviewPage', () {
+    testWidgets('导入汇率默认不保存，用户开启后仅随确认结果返回', (tester) async {
+      final controller = await makeController();
+      const csv =
+          '日期,类型,金额,分类,账户,币种,账户金额,本位币金额,汇率（1原币=X本位币）\n'
+          '2026-02-01,支出,10,餐饮,美元现金,USD,10,72,7.2\n';
+      final plan = controller.parsePlatformImport(
+        ImportPlatform.csvTemplate,
+        _csvBytes(csv),
+      );
+      final holder = await _openPreview(tester, controller, plan);
+
+      expect(find.text('保存导入汇率'), findsOneWidget);
+      await tester.tap(find.byType(Switch));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('确认导入（1）'));
+      await tester.tap(find.text('确认导入（1）'));
+      await tester.pumpAndSettle();
+
+      expect(holder.result, isNotNull);
+      expect(holder.result!.candidateExchangeRates, hasLength(1));
+      expect(holder.result!.candidateExchangeRates.single.rateToBase, 7.2);
+      expect(controller.exchangeRates, isEmpty);
+    });
+
     testWidgets('渲染待导入交易，可排除后确认返回子集', (tester) async {
       final controller = await makeController();
       final plan = controller.parsePlatformImport(

@@ -1926,6 +1926,8 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       existingAccounts: accounts,
       existingCategories: categories,
       now: DateTime.now(),
+      baseCurrencyCode: activeBook.baseCurrencyCode,
+      exchangeRates: exchangeRates,
       existingTags: tags,
       seedEnglish: _seedEnglish,
     );
@@ -1963,7 +1965,11 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
 
   /// 仅解析所选平台账单为导入计划，**不落库**——供导入预览页展示、让用户
   /// 排除/编辑后再确认。解析失败抛 [FormatException]。
-  ImportPlan parsePlatformImport(ImportPlatform platform, Uint8List bytes) {
+  ImportPlan parsePlatformImport(
+    ImportPlatform platform,
+    Uint8List bytes, {
+    Map<String, double> rateOverrides = const <String, double>{},
+  }) {
     return buildPlatformImportPlan(
       platform: platform,
       bytes: bytes,
@@ -1971,6 +1977,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       existingAccounts: accounts,
       existingCategories: categories,
       now: DateTime.now(),
+      baseCurrencyCode: activeBook.baseCurrencyCode,
+      exchangeRates: exchangeRates,
+      rateOverrides: rateOverrides,
       seedEnglish: _seedEnglish,
     );
   }
@@ -1985,6 +1994,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     required List<Category> candidateCategories,
     List<Tag> candidateTags = const <Tag>[],
     Set<String> alwaysCreateAccountIds = const <String>{},
+    List<ExchangeRate> candidateExchangeRates = const <ExchangeRate>[],
   }) {
     if (entries.isEmpty && alwaysCreateAccountIds.isEmpty) {
       return;
@@ -2050,6 +2060,25 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
               !existingTagIds.contains(tag.id),
         )
         .toList();
+    final existingRateKeys = _exchangeRates
+        .map(
+          (rate) =>
+              '${rate.bookId}:${rate.currencyCode}:${currencyDateKey(rate.effectiveDate)}',
+        )
+        .toSet();
+    final newRates = <ExchangeRate>[];
+    for (final rate in candidateExchangeRates) {
+      final key =
+          '${rate.bookId}:${rate.currencyCode}:${currencyDateKey(rate.effectiveDate)}';
+      if (rate.bookId == _activeBookId &&
+          rate.baseCurrencyCode == activeBook.baseCurrencyCode &&
+          rate.currencyCode != rate.baseCurrencyCode &&
+          CurrencyCatalog.isSupported(rate.currencyCode) &&
+          isValidExchangeRate(rate.rateToBase) &&
+          existingRateKeys.add(key)) {
+        newRates.add(rate);
+      }
+    }
 
     // 名称去首尾空格：候选账户经预览页改名后可能带空格，与 addAccount 同规则。
     _accounts.addAll(
@@ -2065,6 +2094,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     if (newTags.isNotEmpty) {
       _tags.addAll(newTags);
     }
+    if (newRates.isNotEmpty) {
+      _exchangeRates.addAll(newRates);
+    }
     _entries.addAll(entries);
     _entries.sort(_compareEntriesLatestFirst);
     // 导入数据里的旧式单标量退款（如一木账单的「退款」列）迁成关联退款条目、
@@ -2074,6 +2106,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _persistCategories();
     if (newTags.isNotEmpty) {
       _persistTags();
+    }
+    if (newRates.isNotEmpty) {
+      _persistExchangeRates();
     }
     _persistEntries();
     notifyListeners();
@@ -3435,7 +3470,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   String exportDataJson() {
     final payload = <String, Object?>{
       'app': 'verifin',
-      'version': 1,
+      'version': 2,
       'exportedAt': DateTime.now().toIso8601String(),
       'data': <String, Object?>{
         'ledgerBooks': _ledgerBooks.map((book) => book.toJson()).toList(),
@@ -3447,6 +3482,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         'tags': _tags.map((tag) => tag.toJson()).toList(),
         'attachments': _attachments.map((a) => a.toJson()).toList(),
         'recurringRules': _recurringRules.map((r) => r.toJson()).toList(),
+        'exchangeRates': _exchangeRates.map((rate) => rate.toJson()).toList(),
         'monthlyBudgets': Map<String, double>.from(_monthlyBudgets),
         'categoryBudgets': Map<String, double>.from(_categoryBudgets),
         'dailyBudgets': Map<String, double>.from(_dailyBudgets),
@@ -3468,6 +3504,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         'defaultAccountIds': Map<String, String>.from(_defaultAccountIds),
         'fabActionMode': _fabActionMode.name,
         'amountForceTwoDecimals': _amountForceTwoDecimals,
+        'currencyFractionStyle': amount_format.currencyFractionStyle.name,
         'autoSuggestEnabled': _autoSuggestEnabled,
         'homeTrendConfig': _homeTrendConfig.toJson(),
       },
@@ -3484,6 +3521,15 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       throw const FormatException('备份文件格式不正确');
     }
     final root = Map<String, Object?>.from(decoded);
+
+    final rawVersion = root['version'];
+    if (rawVersion != null && rawVersion is! num) {
+      throw const FormatException('备份版本格式不正确');
+    }
+    final version = (rawVersion as num?)?.toInt() ?? 1;
+    if (version < 1 || version > 2) {
+      throw FormatException('不支持的备份版本：$version');
+    }
 
     // 防御性拦截加密信封：它带 `app:'verifin'` 但只有密文、无任何数据键，若直接
     // 往下走会被当成「空备份」用默认数据覆盖并清库。加密备份必须先解密再导入。
@@ -3550,6 +3596,10 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       data['recurringRules'],
       RecurringRule.fromJson,
     );
+    final nextExchangeRates = _decodeModelList<ExchangeRate>(
+      data['exchangeRates'],
+      ExchangeRate.fromJson,
+    );
     final nextMonthlyBudgets = _bookScopedBudgets(
       _decodeBudgets(data['monthlyBudgets']),
     );
@@ -3615,14 +3665,32 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     final nextFabActionMode = FabActionMode.fromStorage(
       data['fabActionMode'] as String?,
     );
+    final nextCurrencyFractionStyle = data.containsKey('currencyFractionStyle')
+        ? CurrencyFractionStyle.fromStorage(
+            data['currencyFractionStyle'] as String?,
+          )
+        : (data['amountForceTwoDecimals'] as bool? ?? false)
+        ? CurrencyFractionStyle.standard
+        : CurrencyFractionStyle.compact;
     final nextAmountForceTwoDecimals =
-        data['amountForceTwoDecimals'] as bool? ?? false;
+        nextCurrencyFractionStyle == CurrencyFractionStyle.standard;
     // 旧备份没有这个键：按「功能一直是开着的」还原，不因恢复备份而静默关掉。
     final nextAutoSuggestEnabled = data['autoSuggestEnabled'] as bool? ?? true;
     final homeTrendValue = data['homeTrendConfig'];
     final nextHomeTrendConfig = homeTrendValue is Map
         ? HomeTrendConfig.fromJson(Map<String, dynamic>.from(homeTrendValue))
         : HomeTrendConfig.defaults;
+
+    _validateImportedCurrencyData(
+      books: nextLedgerBooks,
+      accounts: nextAccounts,
+      entries: nextEntries,
+      recurringRules: nextRecurringRules,
+      exchangeRates: nextExchangeRates,
+      monthlyBudgets: nextMonthlyBudgets,
+      categoryBudgets: nextCategoryBudgets,
+      dailyBudgets: nextDailyBudgets,
+    );
 
     _ledgerBooks
       ..clear()
@@ -3650,6 +3718,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _recurringRules
       ..clear()
       ..addAll(nextRecurringRules);
+    _exchangeRates
+      ..clear()
+      ..addAll(nextExchangeRates);
     _monthlyBudgets
       ..clear()
       ..addAll(nextMonthlyBudgets);
@@ -3717,6 +3788,141 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     }
     themePreferenceListenable.value = _themePreference;
     notifyListeners();
+  }
+
+  void _validateImportedCurrencyData({
+    required List<LedgerBook> books,
+    required List<Account> accounts,
+    required List<LedgerEntry> entries,
+    required List<RecurringRule> recurringRules,
+    required List<ExchangeRate> exchangeRates,
+    required Map<String, double> monthlyBudgets,
+    required Map<String, double> categoryBudgets,
+    required Map<String, double> dailyBudgets,
+  }) {
+    void requireCurrency(String code, String field) {
+      if (!CurrencyCatalog.isSupported(code)) {
+        throw FormatException('$field 使用了不支持的币种：$code');
+      }
+    }
+
+    void requireFinite(
+      num? value,
+      String field, {
+      bool positive = false,
+      bool nonNegative = false,
+    }) {
+      if (value == null) return;
+      if (!value.isFinite ||
+          (positive && value <= 0) ||
+          (nonNegative && value < 0)) {
+        throw FormatException('$field 金额不合法');
+      }
+    }
+
+    final booksById = <String, LedgerBook>{};
+    for (final book in books) {
+      if (book.id.isEmpty || booksById.containsKey(book.id)) {
+        throw const FormatException('账本 id 为空或重复');
+      }
+      requireCurrency(book.baseCurrencyCode, '账本 ${book.id}');
+      booksById[book.id] = book;
+    }
+
+    for (final account in accounts) {
+      if (!booksById.containsKey(account.bookId)) {
+        throw FormatException('账户 ${account.id} 引用了不存在的账本');
+      }
+      requireCurrency(account.currencyCode, '账户 ${account.id}');
+      requireFinite(account.initialBalance, '账户 ${account.id} 初始余额');
+      requireFinite(
+        account.creditLimit,
+        '账户 ${account.id} 信用额度',
+        nonNegative: true,
+      );
+    }
+
+    for (final entry in entries) {
+      if (!booksById.containsKey(entry.bookId)) {
+        throw FormatException('交易 ${entry.id} 引用了不存在的账本');
+      }
+      requireCurrency(entry.currencyCode, '交易 ${entry.id}');
+      requireFinite(entry.amount, '交易 ${entry.id} 原币金额', positive: true);
+      requireFinite(
+        entry.accountAmount,
+        '交易 ${entry.id} 账户金额',
+        nonNegative: true,
+      );
+      requireFinite(
+        entry.toAccountAmount,
+        '交易 ${entry.id} 转入金额',
+        nonNegative: true,
+      );
+      requireFinite(
+        entry.baseAmount,
+        '交易 ${entry.id} 本位币金额',
+        nonNegative: true,
+      );
+      requireFinite(
+        entry.refundedBaseAmount,
+        '交易 ${entry.id} 已退款金额',
+        nonNegative: true,
+      );
+      requireFinite(entry.fee, '交易 ${entry.id} 手续费', nonNegative: true);
+    }
+
+    for (final rule in recurringRules) {
+      if (!booksById.containsKey(rule.bookId)) {
+        throw FormatException('周期规则 ${rule.id} 引用了不存在的账本');
+      }
+      requireCurrency(rule.currencyCode, '周期规则 ${rule.id}');
+      requireFinite(rule.amount, '周期规则 ${rule.id} 原币金额', positive: true);
+      requireFinite(
+        rule.accountAmount,
+        '周期规则 ${rule.id} 账户金额',
+        nonNegative: true,
+      );
+      requireFinite(
+        rule.toAccountAmount,
+        '周期规则 ${rule.id} 转入金额',
+        nonNegative: true,
+      );
+      requireFinite(
+        rule.baseAmount,
+        '周期规则 ${rule.id} 本位币金额',
+        nonNegative: true,
+      );
+    }
+
+    final rateKeys = <String>{};
+    for (final rate in exchangeRates) {
+      final book = booksById[rate.bookId];
+      if (book == null) {
+        throw FormatException('汇率 ${rate.id} 引用了不存在的账本');
+      }
+      requireCurrency(rate.baseCurrencyCode, '汇率 ${rate.id} 本位币');
+      requireCurrency(rate.currencyCode, '汇率 ${rate.id} 外币');
+      if (rate.baseCurrencyCode != book.baseCurrencyCode ||
+          rate.currencyCode == rate.baseCurrencyCode) {
+        throw FormatException('汇率 ${rate.id} 的币种方向不合法');
+      }
+      requireFinite(rate.rateToBase, '汇率 ${rate.id}', positive: true);
+      final key =
+          '${rate.bookId}:${rate.currencyCode}:${currencyDateKey(rate.effectiveDate)}';
+      if (rate.id.isEmpty || !rateKeys.add(key)) {
+        throw const FormatException('汇率 id 为空或同日记录重复');
+      }
+    }
+
+    for (final item in <Map<String, double>>[
+      monthlyBudgets,
+      categoryBudgets,
+      dailyBudgets,
+    ]) {
+      for (final entry in item.entries) {
+        requireFinite(entry.value, '预算 ${entry.key}', nonNegative: true);
+      }
+    }
   }
 
   double accountBalance(Account account) {

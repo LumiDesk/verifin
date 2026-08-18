@@ -2514,7 +2514,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get csvTemplateImportGuide =>
-      '请先用本页「下载 CSV 模板」，按模板列填写后再导入。表头只能用模板列（日期、类型、金额、分类、账户、转入账户、备注，可选 子分类、标签），含其他软件的列会导入失败。其他记账软件请在上方选择对应入口。';
+      '请先用本页「下载 CSV 模板」，按模板列填写后再导入。外币交易需填写币种，并提供本位币金额或汇率；跨币转账还需提供两端实际金额。含其他软件的列会导入失败。';
 
   @override
   String get billImportCommonNote => '交易会追加到当前账本，匹配不到的账户与分类按名称自动新建，不会删除现有数据。';
@@ -3133,6 +3133,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get csvTemplateSaveFailed => '保存模板失败，请稍后再试';
+
+  @override
+  String get exportTransactionsCsv => '导出交易 CSV';
+
+  @override
+  String get transactionsCsvExported => '已导出交易 CSV，位置：下载目录';
+
+  @override
+  String get transactionsCsvExportFailed => '导出交易 CSV 失败，请稍后再试';
 
   @override
   String get chooseFile => '选择文件';
@@ -4072,4 +4081,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String baseCurrencyAmountLabel(String currency) {
     return '本位币 $currency';
   }
+
+  @override
+  String get importRateInputLabel => '汇率（1 原币 = X 本位币）';
+
+  @override
+  String get importRateInvalid => '汇率必须是大于 0 的数字';
+
+  @override
+  String get importSaveExchangeRates => '保存导入汇率';
+
+  @override
+  String get importSaveExchangeRatesHint => '默认关闭；开启后只保存最终纳入交易使用的当日汇率。';
 }

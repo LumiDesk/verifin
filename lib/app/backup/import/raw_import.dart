@@ -20,6 +20,15 @@ class RawImportRecord {
     required this.date,
     required this.type,
     required this.amount,
+    this.currencyCode,
+    this.accountCurrencyCode,
+    this.toAccountCurrencyCode,
+    this.accountAmount,
+    this.toAccountAmount,
+    this.baseAmount,
+    this.rateToBase,
+    this.rateSource,
+    this.rateDate,
     this.category = '',
     this.subCategory = '',
     this.account = '',
@@ -36,6 +45,24 @@ class RawImportRecord {
 
   /// 恒 > 0：方向由 [type] 表达，各 parser 已取绝对值。
   final double amount;
+
+  /// 原币 ISO 4217 代码；null 表示来源没有币种字段，由导入时回退当前账本本位币。
+  final String? currencyCode;
+
+  /// 来源/转入账户的 ISO 4217 代码；来源文件未提供时由账户匹配或原币推断。
+  final String? accountCurrencyCode;
+  final String? toAccountCurrencyCode;
+
+  /// 来源账户真实扣款、转入账户真实到账和冻结本位币金额。来源未提供时为 null，
+  /// plan builder 只在币种相同时安全回退 [amount]，不会猜 1:1。
+  final double? accountAmount;
+  final double? toAccountAmount;
+  final double? baseAmount;
+
+  /// `1 原币 = X 本位币`；仅作为来源提供的换算依据。
+  final double? rateToBase;
+  final ExchangeRateSource? rateSource;
+  final DateTime? rateDate;
 
   /// 一级分类名（'' = 无）。
   final String category;
@@ -61,6 +88,32 @@ class RawImportRecord {
 
   /// 源文件行号，供 CSV 模板逐行报错定位；二进制来源可为 null。
   final int? sourceLine;
+
+  RawImportRecord withImportedRate(double rate) {
+    return RawImportRecord(
+      date: date,
+      type: type,
+      amount: amount,
+      currencyCode: currencyCode,
+      accountCurrencyCode: accountCurrencyCode,
+      toAccountCurrencyCode: toAccountCurrencyCode,
+      accountAmount: accountAmount,
+      toAccountAmount: toAccountAmount,
+      baseAmount: baseAmount,
+      rateToBase: rate,
+      rateSource: ExchangeRateSource.imported,
+      rateDate: date,
+      category: category,
+      subCategory: subCategory,
+      account: account,
+      toAccount: toAccount,
+      note: note,
+      fee: fee,
+      refunded: refunded,
+      tags: tags,
+      sourceLine: sourceLine,
+    );
+  }
 }
 
 /// 携带余额 / 类型的账户元数据（目前仅 Tally 备份提供）。plan_builder 用它把本次导入
@@ -71,6 +124,7 @@ class RawImportAccount {
     required this.signedBalance,
     required this.includeInAssets,
     required this.type,
+    this.currencyCode,
   });
 
   final String name;
@@ -79,6 +133,9 @@ class RawImportAccount {
   final double signedBalance;
   final bool includeInAssets;
   final AccountType type;
+
+  /// null 表示来源无币种字段，导入时使用当前账本本位币。
+  final String? currencyCode;
 }
 
 /// 单个来源 parser 的产物：强类型记录 + 逐行错误 + 可选账户元数据。各平台 parser
@@ -123,6 +180,13 @@ EntryType? parseImportType(String raw) {
 
 /// 金额：去币种符号/千分位/空白，取绝对值（方向由类型定）。0、空或非数字返回 null。
 double? parseImportAmount(String raw) {
+  final value = parseImportAmountAllowZero(raw);
+  if (value == null || value == 0) return null;
+  return value;
+}
+
+/// 与 [parseImportAmount] 相同，但允许 0；供转账 `baseAmount = 0` 等可选字段使用。
+double? parseImportAmountAllowZero(String raw) {
   final cleaned = raw
       .trim()
       .replaceAll(RegExp(r'[¥$,\s]'), '')
@@ -134,8 +198,7 @@ double? parseImportAmount(String raw) {
   if (value == null || value.isNaN || value.isInfinite) {
     return null;
   }
-  final magnitude = value.abs();
-  return magnitude == 0 ? null : magnitude;
+  return value.abs();
 }
 
 /// 手续费/退款额：可空/可为 0，非法或负数按 0 处理（不像金额那样使整行失败）。
@@ -218,6 +281,13 @@ RawImportRecord? buildRecordFromStrings({
   String note = '',
   String fee = '',
   String refunded = '',
+  String currencyCode = '',
+  String accountCurrencyCode = '',
+  String toAccountCurrencyCode = '',
+  String accountAmount = '',
+  String toAccountAmount = '',
+  String baseAmount = '',
+  String rateToBase = '',
   List<String> tags = const <String>[],
   int? sourceLine,
   void Function(String message)? onError,
@@ -241,6 +311,21 @@ RawImportRecord? buildRecordFromStrings({
     date: parsedDate,
     type: parsedType,
     amount: parsedAmount,
+    currencyCode: currencyCode.trim().isEmpty
+        ? null
+        : currencyCode.trim().toUpperCase(),
+    accountCurrencyCode: accountCurrencyCode.trim().isEmpty
+        ? null
+        : accountCurrencyCode.trim().toUpperCase(),
+    toAccountCurrencyCode: toAccountCurrencyCode.trim().isEmpty
+        ? null
+        : toAccountCurrencyCode.trim().toUpperCase(),
+    accountAmount: _parseOptionalImportAmount(accountAmount),
+    toAccountAmount: _parseOptionalImportAmount(toAccountAmount),
+    baseAmount: _parseOptionalImportAmount(baseAmount),
+    rateToBase: _parseOptionalImportAmount(rateToBase),
+    rateSource: rateToBase.trim().isEmpty ? null : ExchangeRateSource.imported,
+    rateDate: rateToBase.trim().isEmpty ? null : parsedDate,
     category: category,
     subCategory: subCategory,
     account: account,
@@ -251,4 +336,9 @@ RawImportRecord? buildRecordFromStrings({
     tags: tags,
     sourceLine: sourceLine,
   );
+}
+
+double? _parseOptionalImportAmount(String raw) {
+  if (raw.trim().isEmpty) return null;
+  return parseImportAmountAllowZero(raw);
 }
