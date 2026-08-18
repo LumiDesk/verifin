@@ -2556,7 +2556,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get csvTemplateImportGuide =>
-      'First use \"Download CSV template\" on this page, fill it in following the template columns, then import. The header may only use template columns (Date, Type, Amount, Category, Account, Transfer-in account, Note; optional Subcategory, Tags); columns from other apps will fail the import. For other apps, pick the matching entry above.';
+      'Download the CSV template first. For a foreign-currency transaction, provide its currency plus either the base amount or rate; cross-currency transfers also need the actual amount at both ends. Columns from other apps are rejected.';
 
   @override
   String get billImportCommonNote =>
@@ -3121,6 +3121,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Account not matched — set to no account, please confirm';
 
   @override
+  String get aiWarningCurrencyUnmatched =>
+      'Currency not recognized — using the account or base currency, please confirm';
+
+  @override
   String get screenshotEntryButton => 'Scan a screenshot';
 
   @override
@@ -3204,6 +3208,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get csvTemplateSaveFailed =>
       'Failed to save the template; try again later';
+
+  @override
+  String get exportTransactionsCsv => 'Export transactions CSV';
+
+  @override
+  String get transactionsCsvExported =>
+      'Transactions CSV exported to Downloads';
+
+  @override
+  String get transactionsCsvExportFailed =>
+      'Failed to export transactions CSV; try again later';
 
   @override
   String get chooseFile => 'Choose file';
@@ -3873,4 +3888,318 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get budgetCycleNotSet => 'Not set';
+
+  @override
+  String get commonClear => 'Clear';
+
+  @override
+  String get currencySearchHint => 'Search by code, name, or symbol';
+
+  @override
+  String get currencySearchEmpty => 'No currency found';
+
+  @override
+  String get currencySearchEmptyDesc =>
+      'Try an ISO code or another currency name.';
+
+  @override
+  String currencyPickerMeta(String symbol, int digits) {
+    return 'Symbol $symbol · $digits decimal places';
+  }
+
+  @override
+  String get ledgerBaseCurrency => 'Ledger base currency';
+
+  @override
+  String get ledgerBaseCurrencyDesc =>
+      'Budgets, reports, and total assets use this currency.';
+
+  @override
+  String get selectBaseCurrency => 'Select ledger base currency';
+
+  @override
+  String get selectAccountCurrency => 'Select account currency';
+
+  @override
+  String get selectRateCurrency => 'Select a currency for exchange rates';
+
+  @override
+  String get ledgerCurrencyLocked =>
+      'This ledger contains financial data, so its base currency is locked. Create another ledger to use a different base currency.';
+
+  @override
+  String get ledgerCurrencyChangeTitle => 'Change base currency?';
+
+  @override
+  String ledgerCurrencyChangeMessage(String code, String name) {
+    return 'This empty ledger will use $code ($name); its zero-balance accounts will change to the same currency.';
+  }
+
+  @override
+  String get legacyCurrencySetupTitle =>
+      'Confirm the currency of existing amounts';
+
+  @override
+  String get legacyCurrencySetupDesc =>
+      'This ledger was created before multi-currency support. Confirm what its existing numbers represent before adding foreign-currency accounts or rates.';
+
+  @override
+  String get legacyCurrencyStart => 'Confirm currency';
+
+  @override
+  String legacyCurrencyConfirmCurrent(String code) {
+    return 'Existing amounts are $code';
+  }
+
+  @override
+  String get legacyCurrencyChooseAnother =>
+      'Existing amounts are another currency';
+
+  @override
+  String legacyCurrencyConfirmTitle(String code) {
+    return 'Interpret existing amounts as $code?';
+  }
+
+  @override
+  String legacyCurrencyConfirmMessage(
+    int accounts,
+    int entries,
+    int rules,
+    int budgets,
+    String code,
+  ) {
+    return 'This updates $accounts accounts, $entries transactions, $rules recurring rules, and $budgets budget settings. Every number stays unchanged; only its currency is interpreted as $code. This cannot be reinterpreted again.';
+  }
+
+  @override
+  String get legacyCurrencyApply => 'Confirm and apply';
+
+  @override
+  String legacyCurrencySaved(String code) {
+    return 'Existing amounts are now interpreted as $code';
+  }
+
+  @override
+  String accountBalanceCurrencyLabel(String code) {
+    return 'Opening balance ($code)';
+  }
+
+  @override
+  String get accountCurrencyLocked =>
+      'The account currency is locked because it has a balance, credit limit, or transaction history.';
+
+  @override
+  String balanceAdjustMissingRate(String code) {
+    return 'No valid $code-to-base exchange rate is available, so the balance adjustment transaction cannot be created.';
+  }
+
+  @override
+  String get currencyRatesTitle => 'Currencies & rates';
+
+  @override
+  String get currencyRatesOfflineDesc =>
+      'Rates are stored on this device and maintained by you. The app never downloads or refreshes them, and changing a rate does not rewrite historical transaction reports.';
+
+  @override
+  String get exchangeRateCurrencies => 'Foreign currency rates';
+
+  @override
+  String get exchangeRateAdd => 'Add exchange rate';
+
+  @override
+  String get exchangeRateEmpty => 'No foreign exchange rates yet';
+
+  @override
+  String get exchangeRateEmptyDesc =>
+      'Add a currency and maintain its rate against the ledger base currency by date.';
+
+  @override
+  String exchangeRateEquation(String currency, String rate, String base) {
+    return '1 $currency = $rate $base';
+  }
+
+  @override
+  String get exchangeRateNotSet => 'No rate set';
+
+  @override
+  String exchangeRateDateAndStatus(String date, String status) {
+    return '$date · $status';
+  }
+
+  @override
+  String get exchangeRateStale => 'May be outdated';
+
+  @override
+  String get exchangeRateSourceManual => 'Manual';
+
+  @override
+  String get exchangeRateSourceImported => 'Imported';
+
+  @override
+  String exchangeRateHistory(String currency) {
+    return '$currency rate history';
+  }
+
+  @override
+  String exchangeRateAgainst(String base) {
+    return 'Against $base';
+  }
+
+  @override
+  String get exchangeRateHistoryEmpty => 'No rate history yet';
+
+  @override
+  String get exchangeRateHistoryEmptyDesc =>
+      'Use the add button to create the first effective rate.';
+
+  @override
+  String get exchangeRateDeleteTitle => 'Delete this exchange rate?';
+
+  @override
+  String get exchangeRateDeleteMessage =>
+      'Saved transactions will not change, but asset valuation or pending recurring transactions may later be missing a rate.';
+
+  @override
+  String get exchangeRateEffectiveDate => 'Select effective date';
+
+  @override
+  String exchangeRateInputTitle(String currency, String base) {
+    return 'How many $base equal 1 $currency?';
+  }
+
+  @override
+  String get exchangeRateSaved => 'Exchange rate saved';
+
+  @override
+  String get entryCurrencyLabel => 'Transaction currency';
+
+  @override
+  String get entryCurrencyPickTitle => 'Choose transaction currency';
+
+  @override
+  String get entryOriginalAmountLabel => 'Original amount';
+
+  @override
+  String get entryAccountAmountExpense => 'Actual account charge';
+
+  @override
+  String get entryAccountAmountIncome => 'Actual account credit';
+
+  @override
+  String get entryLedgerAmountLabel => 'Recorded in ledger';
+
+  @override
+  String get entryTransferOutAmount => 'Amount sent';
+
+  @override
+  String get entryTransferInAmount => 'Amount received';
+
+  @override
+  String get entryRateLabel => 'Conversion rate';
+
+  @override
+  String entryRateEquation(String source, String rate, String target) {
+    return '1 $source = $rate $target';
+  }
+
+  @override
+  String entryRateEditTitle(String source, String target) {
+    return 'How many $target equal 1 $source?';
+  }
+
+  @override
+  String entryMissingRate(String currencies) {
+    return 'A local rate for $currencies is missing. Enter the actual amount or add a rate first.';
+  }
+
+  @override
+  String get entryRememberRate => 'Remember as rate for this date';
+
+  @override
+  String get entryRememberRateHint =>
+      'Off by default. When enabled, this transaction\'s rate is saved to the current ledger rate table.';
+
+  @override
+  String get entryConversionSummary => 'Amount summary';
+
+  @override
+  String get entryConversionSourceRateTable =>
+      'Calculated from a local rate. Tap an amount to adjust it.';
+
+  @override
+  String get entryConversionSourceManual =>
+      'Amounts were adjusted for this transaction and will be frozen for historical reports.';
+
+  @override
+  String entryAmountInputTitle(String label, String currency) {
+    return 'Enter $label ($currency)';
+  }
+
+  @override
+  String get entryCurrencySaveMissing =>
+      'Complete the actual amounts required for this multi-currency transaction first.';
+
+  @override
+  String get refundAccountAmountLabel => 'Actual account credit';
+
+  @override
+  String get refundBaseAmountLabel => 'Base-currency offset';
+
+  @override
+  String get refundCurrencyLockedHint =>
+      'The refund keeps the original expense currency and cannot be changed.';
+
+  @override
+  String get recurringRatePolicyLabel => 'Multi-currency conversion';
+
+  @override
+  String get recurringRatePolicyLatest => 'Use latest local rate each time';
+
+  @override
+  String get recurringRatePolicyFixed => 'Keep current amounts fixed';
+
+  @override
+  String get recurringMissingRate => 'Rate required';
+
+  @override
+  String recurringMissingRateCount(int count) {
+    return '$count rules are waiting for a rate before they can be posted';
+  }
+
+  @override
+  String get recurringRetryNow => 'Post due entries now';
+
+  @override
+  String recurringGeneratedCount(int count) {
+    return 'Posted $count due transactions';
+  }
+
+  @override
+  String assetValuationMissing(int count) {
+    return '$count accounts need an exchange rate';
+  }
+
+  @override
+  String assetValuationMissingDesc(String currencies) {
+    return 'A rate from $currencies to the base currency is missing, so an incomplete asset total is not shown.';
+  }
+
+  @override
+  String get assetTrendMissingRate =>
+      'Historical asset trend needs exchange rates. Add local rates for the affected dates to show it.';
+
+  @override
+  String get widgetRateMissing => 'Rate missing';
+
+  @override
+  String baseCurrencyAmountLabel(String currency) {
+    return 'Base currency $currency';
+  }
+
+  @override
+  String get importSaveExchangeRates => 'Save imported rates';
+
+  @override
+  String get importSaveExchangeRatesHint =>
+      'Off by default. When enabled, only rates used by included transactions are saved.';
 }

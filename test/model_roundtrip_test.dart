@@ -28,6 +28,11 @@ void main() {
     bookId: 'book-x',
     type: EntryType.refund,
     amount: 123.45,
+    currencyCode: 'USD',
+    accountAmount: 888.12,
+    toAccountAmount: 99.87,
+    baseAmount: 777.65,
+    conversionSource: ConversionSource.imported,
     categoryId: 'cat-x',
     accountId: 'acc-x',
     toAccountId: 'acc-y',
@@ -36,7 +41,7 @@ void main() {
     tagIds: const <String>['t1', 't2'],
     fee: 2.5,
     reimbursable: true,
-    refundedAmount: 11.5,
+    refundedBaseAmount: 11.5,
     refundOf: 'entry-orig',
     settledAt: DateTime(2026, 7, 13, 9, 0, 0, 456),
   );
@@ -58,6 +63,8 @@ void main() {
     name: '旅行账本',
     createdAt: DateTime(2026, 5, 1, 12, 0, 0, 789),
     isDefault: true,
+    baseCurrencyCode: 'GBP',
+    currencySetupStatus: CurrencySetupStatus.legacyUnconfirmed,
   );
 
   const accountFull = Account(
@@ -71,6 +78,7 @@ void main() {
     note: '账户备注',
     includeInAssets: false,
     hidden: true,
+    currencyCode: 'EUR',
     cardLast4: '6789',
     cardNumber: '6222 1234 5678 6789',
     cardLast4Follows: true,
@@ -115,6 +123,11 @@ void main() {
     bookId: 'book-x',
     type: EntryType.income,
     amount: 999.99,
+    currencyCode: 'HKD',
+    accountAmount: 888.88,
+    toAccountAmount: 777.77,
+    baseAmount: 666.66,
+    ratePolicy: RecurringRatePolicy.latestAvailable,
     categoryId: 'cat-x',
     accountId: 'acc-x',
     toAccountId: 'acc-y',
@@ -123,6 +136,18 @@ void main() {
     startDate: DateTime(2026, 6, 1, 8, 0, 0, 1),
     nextRunDate: DateTime(2026, 7, 1, 8, 0, 0, 2),
     active: false,
+  );
+
+  final exchangeRate = ExchangeRate(
+    id: 'rate-1',
+    bookId: 'book-x',
+    baseCurrencyCode: 'GBP',
+    currencyCode: 'USD',
+    effectiveDate: DateTime(2026, 7, 1),
+    rateToBase: 0.7345678912,
+    source: ExchangeRateSource.imported,
+    createdAt: DateTime(2026, 7, 1, 8, 0, 0, 123),
+    updatedAt: DateTime(2026, 7, 2, 9, 0, 0, 456),
   );
 
   /// 经真实 jsonEncode/jsonDecode 走一圈再 fromJson：既验证映射互逆，也验证
@@ -178,6 +203,13 @@ void main() {
       expect(restored.toJson(), rule.toJson());
     });
 
+    test('ExchangeRate', () {
+      final restored = ExchangeRate.fromJson(
+        jsonRoundTrip(exchangeRate.toJson()),
+      );
+      expect(restored.toJson(), exchangeRate.toJson());
+    });
+
     test('UserProfile', () {
       const profile = UserProfile(
         nickname: '测试昵称',
@@ -229,6 +261,7 @@ void main() {
       await repo.saveTags(<Tag>[tag]);
       await repo.saveAttachments(<Attachment>[attachment]);
       await repo.saveRecurringRules(<RecurringRule>[rule]);
+      await repo.saveExchangeRates(<ExchangeRate>[exchangeRate]);
 
       final entries = await repo.loadEntries();
       expect(
@@ -260,6 +293,10 @@ void main() {
         attachment.toJson(),
       );
       expect((await repo.loadRecurringRules()).single.toJson(), rule.toJson());
+      expect(
+        (await repo.loadExchangeRates()).single.toJson(),
+        exchangeRate.toJson(),
+      );
     });
   });
 }

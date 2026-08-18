@@ -1658,7 +1658,7 @@
   "yimuTransferImportGuide": "一木记账 App →「我的」→「导入/导出」→「数据导出」→「转账还款导出」，选择 Excel（.xls）保存到本机后在此选择。\n\n导入转账记录，保留转出/转入账户与手续费。收支账单请用另一个入口「一木记账 · 账单」。菜单以实际 App 版本为准。",
   "qianjiImportGuide": "钱迹 App →「我的」→「设置」→「备份与导出」→「导出账单」→ 选择「CSV」格式（明细）、时间范围为「全部」，得到 QianJi 开头的 .csv 文件，保存到本机后在此选择。\n\n支出、收入、转账、信用卡还款、退款、报销都会导入：退款按「关联账单」自动冲抵原支出（净额=原额−退款），分类按二级分类还原层级、标签一并导入。钱迹的「债务 / 借贷」记录（借出、收款、利息等）不会导入——本应用没有债务功能、无法忠实表达；这类多是「垫钱再收回」的一进一出，跳过不影响你的真实收支。菜单以实际 App 版本为准。",
   "tallyImportGuide": "Tally 记账 App →「设置」→ 数据备份与恢复 →「导出备份」，得到 Tally 开头的 .zip 文件，保存到本机后在此选择。\n\n请选「备份 zip」而非 CSV「账单」导出：备份保留精确到秒的交易时间，收入/支出/转账、一级/二级分类、账户与备注都会一并导入（分类按二级分类）。菜单以实际 App 版本为准。",
-  "csvTemplateImportGuide": "请先用本页「下载 CSV 模板」，按模板列填写后再导入。表头只能用模板列（日期、类型、金额、分类、账户、转入账户、备注，可选 子分类、标签），含其他软件的列会导入失败。其他记账软件请在上方选择对应入口。",
+  "csvTemplateImportGuide": "请先用本页「下载 CSV 模板」，按模板列填写后再导入。外币交易需填写币种，并提供本位币金额或汇率；跨币转账还需提供两端实际金额。含其他软件的列会导入失败。",
   "billImportCommonNote": "交易会追加到当前账本，匹配不到的账户与分类按名称自动新建，不会删除现有数据。",
   "backupToLocalDir": "备份到本地目录",
   "backupDirLabel": "备份目录",
@@ -1912,6 +1912,7 @@
   "aiEntryNoAmount": "未能识别金额，请在描述中说明金额，例如「打车 32」",
   "aiWarningCategoryUnmatched": "分类未匹配，已用默认分类，请确认",
   "aiWarningAccountUnmatched": "账户未匹配，已置为无账户，请确认",
+  "aiWarningCurrencyUnmatched": "币种未识别，已回退到账户币种或本位币，请确认",
   "screenshotEntryButton": "截图识账",
   "screenshotEntryUnsupported": "当前设备不支持图片文字识别",
   "screenshotEntryNoText": "没有从图片里识别到文字，请换一张更清晰的截图",
@@ -1970,6 +1971,9 @@
   "clearWebdavMessage": "清除后将停止自动上传，服务器上已有的备份文件不会被删除。",
   "csvTemplateSaved": "已保存 CSV 模板，位置：下载目录",
   "csvTemplateSaveFailed": "保存模板失败，请稍后再试",
+  "exportTransactionsCsv": "导出交易 CSV",
+  "transactionsCsvExported": "已导出交易 CSV，位置：下载目录",
+  "transactionsCsvExportFailed": "导出交易 CSV 失败，请稍后再试",
   "chooseFile": "选择文件",
   "importedEntries": "已导入 {count} 笔交易",
   "@importedEntries": {
@@ -2404,5 +2408,185 @@
       }
     }
   },
-  "budgetCycleNotSet": "未设置"
+  "budgetCycleNotSet": "未设置",
+  "commonClear": "清除",
+  "currencySearchHint": "搜索代码、名称或符号",
+  "currencySearchEmpty": "没有找到货币",
+  "currencySearchEmptyDesc": "请尝试输入 ISO 代码或其他名称。",
+  "currencyPickerMeta": "符号 {symbol} · {digits} 位小数",
+  "@currencyPickerMeta": {
+    "placeholders": {
+      "symbol": {"type": "String"},
+      "digits": {"type": "int"}
+    }
+  },
+  "ledgerBaseCurrency": "账本本位币",
+  "ledgerBaseCurrencyDesc": "预算、统计和总资产将统一以此货币展示。",
+  "selectBaseCurrency": "选择账本本位币",
+  "selectAccountCurrency": "选择账户币种",
+  "selectRateCurrency": "选择要维护汇率的货币",
+  "ledgerCurrencyLocked": "这个账本已有财务数据，本位币已锁定。如需其他本位币，请新建账本。",
+  "ledgerCurrencyChangeTitle": "更改本位币？",
+  "ledgerCurrencyChangeMessage": "空账本将改用 {code}（{name}）；现有零余额账户也会一并改为该币种。",
+  "@ledgerCurrencyChangeMessage": {
+    "placeholders": {
+      "code": {"type": "String"},
+      "name": {"type": "String"}
+    }
+  },
+  "legacyCurrencySetupTitle": "确认现有金额的币种",
+  "legacyCurrencySetupDesc": "这是升级前创建的账本。请先确认现有数字原本代表哪种货币，确认后才能添加外币账户和汇率。",
+  "legacyCurrencyStart": "开始确认",
+  "legacyCurrencyConfirmCurrent": "现有金额就是 {code}",
+  "@legacyCurrencyConfirmCurrent": {
+    "placeholders": {"code": {"type": "String"}}
+  },
+  "legacyCurrencyChooseAnother": "现有金额其实是其他币种",
+  "legacyCurrencyConfirmTitle": "把现有金额解释为 {code}？",
+  "@legacyCurrencyConfirmTitle": {
+    "placeholders": {"code": {"type": "String"}}
+  },
+  "legacyCurrencyConfirmMessage": "将更新 {accounts} 个账户、{entries} 笔交易、{rules} 条周期规则和 {budgets} 项预算设置。所有数值保持不变，只把币种标签解释为 {code}；确认后不可再次重解释。",
+  "@legacyCurrencyConfirmMessage": {
+    "placeholders": {
+      "accounts": {"type": "int"},
+      "entries": {"type": "int"},
+      "rules": {"type": "int"},
+      "budgets": {"type": "int"},
+      "code": {"type": "String"}
+    }
+  },
+  "legacyCurrencyApply": "确认并应用",
+  "legacyCurrencySaved": "已将现有金额解释为 {code}",
+  "@legacyCurrencySaved": {
+    "placeholders": {"code": {"type": "String"}}
+  },
+  "accountBalanceCurrencyLabel": "初始余额（{code}）",
+  "@accountBalanceCurrencyLabel": {
+    "placeholders": {"code": {"type": "String"}}
+  },
+  "accountCurrencyLocked": "账户已有余额、信用额度或交易记录，币种已锁定。",
+  "balanceAdjustMissingRate": "缺少 {code} 对本位币的有效汇率，无法生成余额调整交易。",
+  "@balanceAdjustMissingRate": {
+    "placeholders": {"code": {"type": "String"}}
+  },
+  "currencyRatesTitle": "货币与汇率",
+  "currencyRatesOfflineDesc": "汇率保存在本机并由你维护。应用不会联网获取或自动刷新汇率；修改汇率也不会改变已保存交易的历史统计。",
+  "exchangeRateCurrencies": "外币汇率",
+  "exchangeRateAdd": "添加汇率",
+  "exchangeRateEmpty": "还没有外币汇率",
+  "exchangeRateEmptyDesc": "添加外币后，按日期维护它对账本本位币的汇率。",
+  "exchangeRateEquation": "1 {currency} = {rate} {base}",
+  "@exchangeRateEquation": {
+    "placeholders": {
+      "currency": {"type": "String"},
+      "rate": {"type": "String"},
+      "base": {"type": "String"}
+    }
+  },
+  "exchangeRateNotSet": "尚未设置汇率",
+  "exchangeRateDateAndStatus": "{date} · {status}",
+  "@exchangeRateDateAndStatus": {
+    "placeholders": {
+      "date": {"type": "String"},
+      "status": {"type": "String"}
+    }
+  },
+  "exchangeRateStale": "可能已过期",
+  "exchangeRateSourceManual": "手动维护",
+  "exchangeRateSourceImported": "导入",
+  "exchangeRateHistory": "{currency} 汇率历史",
+  "@exchangeRateHistory": {
+    "placeholders": {"currency": {"type": "String"}}
+  },
+  "exchangeRateAgainst": "相对 {base}",
+  "@exchangeRateAgainst": {
+    "placeholders": {"base": {"type": "String"}}
+  },
+  "exchangeRateHistoryEmpty": "还没有历史记录",
+  "exchangeRateHistoryEmptyDesc": "点击右上角加号添加第一条生效汇率。",
+  "exchangeRateDeleteTitle": "删除这条汇率？",
+  "exchangeRateDeleteMessage": "已保存交易不会改变，但资产估值或待生成的周期交易之后可能缺少汇率。",
+  "exchangeRateEffectiveDate": "选择汇率生效日期",
+  "exchangeRateInputTitle": "1 {currency} 等于多少 {base}",
+  "@exchangeRateInputTitle": {
+    "placeholders": {
+      "currency": {"type": "String"},
+      "base": {"type": "String"}
+    }
+  },
+  "exchangeRateSaved": "汇率已保存",
+  "entryCurrencyLabel": "交易币种",
+  "entryCurrencyPickTitle": "选择交易币种",
+  "entryOriginalAmountLabel": "原币金额",
+  "entryAccountAmountExpense": "账户实际扣款",
+  "entryAccountAmountIncome": "账户实际入账",
+  "entryLedgerAmountLabel": "计入账本",
+  "entryTransferOutAmount": "转出金额",
+  "entryTransferInAmount": "转入金额",
+  "entryRateLabel": "换算汇率",
+  "entryRateEquation": "1 {source} = {rate} {target}",
+  "@entryRateEquation": {
+    "placeholders": {
+      "source": {"type": "String"},
+      "rate": {"type": "String"},
+      "target": {"type": "String"}
+    }
+  },
+  "entryRateEditTitle": "1 {source} 等于多少 {target}",
+  "@entryRateEditTitle": {
+    "placeholders": {
+      "source": {"type": "String"},
+      "target": {"type": "String"}
+    }
+  },
+  "entryMissingRate": "缺少 {currencies} 的本地汇率，请填写实际金额或先维护汇率",
+  "@entryMissingRate": {
+    "placeholders": {"currencies": {"type": "String"}}
+  },
+  "entryRememberRate": "记住为当日汇率",
+  "entryRememberRateHint": "默认关闭；开启后会把本单折算价保存到当前账本的汇率表。",
+  "entryConversionSummary": "金额摘要",
+  "entryConversionSourceRateTable": "已按本地汇率自动换算，可点击金额修改",
+  "entryConversionSourceManual": "本单金额已手动调整，历史统计将冻结保存值",
+  "entryAmountInputTitle": "填写 {label}（{currency}）",
+  "@entryAmountInputTitle": {
+    "placeholders": {
+      "label": {"type": "String"},
+      "currency": {"type": "String"}
+    }
+  },
+  "entryCurrencySaveMissing": "请先补齐跨币种交易所需的实际金额",
+  "refundAccountAmountLabel": "账户实际到账",
+  "refundBaseAmountLabel": "本位币冲抵额",
+  "refundCurrencyLockedHint": "退款原币沿用原支出，不可更改。",
+  "recurringRatePolicyLabel": "跨币种换算",
+  "recurringRatePolicyLatest": "每次使用最新本地汇率",
+  "recurringRatePolicyFixed": "固定当前金额",
+  "recurringMissingRate": "待补汇率",
+  "recurringMissingRateCount": "有 {count} 条规则因缺少汇率等待补记",
+  "@recurringMissingRateCount": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "recurringRetryNow": "立即补记",
+  "recurringGeneratedCount": "已补记 {count} 笔交易",
+  "@recurringGeneratedCount": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "assetValuationMissing": "有 {count} 个账户待设置汇率",
+  "@assetValuationMissing": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "assetValuationMissingDesc": "缺少 {currencies} 对本位币的汇率，暂不显示不完整的资产总额。",
+  "@assetValuationMissingDesc": {
+    "placeholders": {"currencies": {"type": "String"}}
+  },
+  "assetTrendMissingRate": "历史资产走势缺少汇率，补齐相应日期的本地汇率后显示。",
+  "widgetRateMissing": "汇率缺失",
+  "baseCurrencyAmountLabel": "本位币 {currency}",
+  "@baseCurrencyAmountLabel": {
+    "placeholders": {"currency": {"type": "String"}}
+  },
+  "importSaveExchangeRates": "保存导入汇率",
+  "importSaveExchangeRatesHint": "默认关闭；开启后只保存最终纳入交易使用的当日汇率。"
 }

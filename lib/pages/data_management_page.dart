@@ -12,6 +12,7 @@ import '../app/backup/transaction_import.dart';
 import '../app/backup/webdav_client.dart';
 import '../app/backup/webdav_config.dart';
 import '../app/common_widgets.dart';
+import '../app/currency_math.dart';
 import '../app/data_file_port.dart';
 import '../l10n/app_localizations.dart';
 import '../app/veri_fin_controller.dart';
@@ -306,6 +307,17 @@ class _DataManagementPageState extends State<DataManagementPage> {
                         trailing: AppLocalizations.of(context).excelHint,
                         trailingIcon: Icons.chevron_right,
                         onTap: () => _downloadCsvTemplate(context),
+                      ),
+                      const Divider(),
+                      SettingsRow(
+                        icon: Icons.table_view_outlined,
+                        title: AppLocalizations.of(
+                          context,
+                        ).exportTransactionsCsv,
+                        trailing: AppLocalizations.of(context).excelHint,
+                        trailingIcon: Icons.chevron_right,
+                        onTap: () =>
+                            _exportTransactionsCsv(context, controller),
                       ),
                     ],
                   ),
@@ -900,6 +912,43 @@ class _DataManagementPageState extends State<DataManagementPage> {
     }
   }
 
+  Future<void> _exportTransactionsCsv(
+    BuildContext context,
+    VeriFinController controller,
+  ) async {
+    try {
+      final saved = await downloadTextFile(
+        filename: 'verifin-transactions.csv',
+        content: transactionCsvExport(
+          entries: controller.entries,
+          accounts: controller.accounts,
+          categories: controller.categories,
+          tags: controller.tags,
+          baseCurrencyCode: controller.activeBook.baseCurrencyCode,
+        ),
+        mimeType: 'text/csv',
+      );
+      if (saved && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).transactionsCsvExported),
+          ),
+        );
+      }
+    } catch (error) {
+      controller.logger?.error('交易 CSV 导出失败', source: 'export', error: error);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).transactionsCsvExportFailed,
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   /// 平台优先导入流程：先选账单来源，再看导出引导，最后选文件解析。
   Future<void> _importFromPlatform(
     BuildContext context,
@@ -1204,9 +1253,24 @@ class _DataManagementPageState extends State<DataManagementPage> {
         return;
       }
       // 先只解析、不落库，进入导入预览页让用户核对 / 排除 / 编辑后再确认。
-      final plan = controller.parsePlatformImport(platform, bytes);
+      var plan = controller.parsePlatformImport(platform, bytes);
       if (!context.mounted) {
         return;
+      }
+      final rateOverrides = await _resolveImportRates(
+        context,
+        controller,
+        plan,
+      );
+      if (!context.mounted) {
+        return;
+      }
+      if (rateOverrides.isNotEmpty) {
+        plan = controller.parsePlatformImport(
+          platform,
+          bytes,
+          rateOverrides: rateOverrides,
+        );
       }
       // 既无交易、也无可创建账户（Tally 携带余额的账户）时才算空。
       if (plan.importedCount == 0 && plan.standaloneAccountIds.isEmpty) {
@@ -1243,6 +1307,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
         candidateCategories: result.candidateCategories,
         candidateTags: result.candidateTags,
         alwaysCreateAccountIds: result.alwaysCreateAccountIds,
+        candidateExchangeRates: result.candidateExchangeRates,
       );
       if (!context.mounted) {
         return;
@@ -1283,8 +1348,46 @@ class _DataManagementPageState extends State<DataManagementPage> {
     }
   }
 
+  Future<Map<String, double>> _resolveImportRates(
+    BuildContext context,
+    VeriFinController controller,
+    ImportPlan plan,
+  ) async {
+    final unresolvedCodes = <String>{
+      for (final issue in plan.conversionIssues)
+        if (issue.record.rateToBase == null &&
+            issue.currencyCode != controller.activeBook.baseCurrencyCode)
+          issue.currencyCode,
+    };
+    if (unresolvedCodes.isEmpty) return const <String, double>{};
+
+    final overrides = <String, double>{};
+    for (final code in unresolvedCodes) {
+      if (!context.mounted) break;
+      final l10n = AppLocalizations.of(context);
+      final rate = await showNumberPadSheet(
+        context,
+        title: l10n.exchangeRateInputTitle(
+          code,
+          controller.activeBook.baseCurrencyCode,
+        ),
+        maxFractionDigits: 10,
+      );
+      if (rate != null && isValidExchangeRate(rate)) {
+        overrides[code] = rate;
+      }
+    }
+    return overrides;
+  }
+
   Future<void> _showImportResult(BuildContext context, ImportPlan plan) {
-    final lines = plan.errors
+    final skipped = <({int line, String message})>[
+      for (final error in plan.errors)
+        (line: error.line, message: error.message),
+      for (final issue in plan.conversionIssues)
+        (line: issue.line, message: issue.message),
+    ];
+    final lines = skipped
         .take(10)
         .map((e) => AppLocalizations.of(context).lineError(e.line, e.message))
         .join('\n');

@@ -17,6 +17,8 @@ ImportPlan _build({
   List<Account> existingAccounts = const <Account>[],
   List<Category> existingCategories = const <Category>[],
   List<Tag> existingTags = const <Tag>[],
+  String baseCurrencyCode = defaultCurrencyCode,
+  List<ExchangeRate> exchangeRates = const <ExchangeRate>[],
 }) {
   return buildImportPlanFromRecords(
     parsed: ParsedImport(records: records, errors: errors, accounts: accounts),
@@ -25,6 +27,8 @@ ImportPlan _build({
     existingCategories: existingCategories,
     existingTags: existingTags,
     now: _now,
+    baseCurrencyCode: baseCurrencyCode,
+    exchangeRates: exchangeRates,
   );
 }
 
@@ -41,6 +45,11 @@ RawImportRecord _record({
   double refunded = 0,
   List<String> tags = const <String>[],
   int? sourceLine,
+  String? currencyCode,
+  double? accountAmount,
+  double? toAccountAmount,
+  double? baseAmount,
+  double? rateToBase,
 }) {
   return RawImportRecord(
     date: date ?? DateTime(2026, 7, 1, 9, 30),
@@ -55,10 +64,21 @@ RawImportRecord _record({
     refunded: refunded,
     tags: tags,
     sourceLine: sourceLine,
+    currencyCode: currencyCode,
+    accountAmount: accountAmount,
+    toAccountAmount: toAccountAmount,
+    baseAmount: baseAmount,
+    rateToBase: rateToBase,
+    rateSource: rateToBase == null ? null : ExchangeRateSource.imported,
+    rateDate: rateToBase == null ? null : date ?? DateTime(2026, 7, 1, 9, 30),
   );
 }
 
-Account _account(String id, String name) => Account(
+Account _account(
+  String id,
+  String name, {
+  String currencyCode = defaultCurrencyCode,
+}) => Account(
   id: id,
   bookId: _bookId,
   name: name,
@@ -69,6 +89,7 @@ Account _account(String id, String name) => Account(
   note: '',
   includeInAssets: true,
   hidden: false,
+  currencyCode: currencyCode,
 );
 
 Category _category(
@@ -812,6 +833,145 @@ void main() {
       expect(plan.newTags, isEmpty);
       // 报错行也不应新建账户。
       expect(plan.newAccounts, isEmpty);
+    });
+  });
+
+  group('多币种导入换算', () {
+    test('文件汇率生成冻结本位币金额与可选汇率候选', () {
+      final plan = _build(
+        records: <RawImportRecord>[
+          _record(
+            amount: 10,
+            account: '美元现金',
+            currencyCode: 'USD',
+            rateToBase: 7.2,
+            sourceLine: 2,
+          ),
+        ],
+      );
+
+      expect(plan.errors, isEmpty);
+      expect(plan.conversionIssues, isEmpty);
+      final entry = plan.entries.single;
+      expect(entry.currencyCode, 'USD');
+      expect(entry.accountAmount, 10);
+      expect(entry.baseAmount, 72);
+      expect(entry.conversionSource, ConversionSource.imported);
+      expect(plan.newAccounts.single.currencyCode, 'USD');
+      final candidate = plan.exchangeRateCandidates.single;
+      expect(candidate.rate.rateToBase, 7.2);
+      expect(candidate.rate.source, ExchangeRateSource.imported);
+      expect(candidate.entryIds, contains(entry.id));
+    });
+
+    test('外币缺少本位币金额与历史汇率时保留 conversion issue', () {
+      final plan = _build(
+        records: <RawImportRecord>[
+          _record(amount: 10, currencyCode: 'USD', sourceLine: 7),
+        ],
+      );
+
+      expect(plan.entries, isEmpty);
+      expect(plan.errors, isEmpty);
+      expect(plan.errorCount, 1);
+      expect(plan.conversionIssues.single.line, 7);
+      expect(plan.conversionIssues.single.currencyCode, 'USD');
+    });
+
+    test('使用交易日之前最近的本地汇率且不生成导入汇率候选', () {
+      final rate = ExchangeRate(
+        id: 'usd-rate',
+        bookId: _bookId,
+        baseCurrencyCode: 'CNY',
+        currencyCode: 'USD',
+        effectiveDate: DateTime(2026, 6, 30),
+        rateToBase: 7.1,
+        source: ExchangeRateSource.manual,
+        createdAt: _now,
+        updatedAt: _now,
+      );
+      final plan = _build(
+        records: <RawImportRecord>[_record(amount: 10, currencyCode: 'USD')],
+        exchangeRates: <ExchangeRate>[rate],
+      );
+
+      expect(plan.entries.single.baseAmount, 71);
+      expect(plan.exchangeRateCandidates, isEmpty);
+    });
+
+    test('同时提供的本位币金额与汇率不一致时逐行拒绝', () {
+      final plan = _build(
+        records: <RawImportRecord>[
+          _record(
+            amount: 10,
+            currencyCode: 'USD',
+            baseAmount: 70,
+            rateToBase: 7.2,
+            sourceLine: 4,
+          ),
+        ],
+      );
+
+      expect(plan.entries, isEmpty);
+      expect(plan.conversionIssues.single.message, contains('不一致'));
+      expect(plan.exchangeRateCandidates, isEmpty);
+    });
+
+    test('同名不同币种账户只复用币种完全匹配的一项', () {
+      final cny = _account('cash-cny', '现金');
+      final usd = _account('cash-usd', '现金', currencyCode: 'USD');
+      final plan = _build(
+        records: <RawImportRecord>[
+          _record(
+            amount: 10,
+            account: '现金',
+            currencyCode: 'USD',
+            baseAmount: 72,
+          ),
+        ],
+        existingAccounts: <Account>[cny, usd],
+      );
+
+      expect(plan.newAccounts, isEmpty);
+      expect(plan.entries.single.accountId, usd.id);
+      expect(plan.entries.single.accountAmount, 10);
+    });
+
+    test('跨币转账按唯一目标账户币种保留两端实际金额', () {
+      final cny = _account('cash-cny', '人民币账户');
+      final usd = _account('cash-usd', '美元账户', currencyCode: 'USD');
+      final plan = _build(
+        records: <RawImportRecord>[
+          _record(
+            type: EntryType.transfer,
+            amount: 720,
+            account: cny.name,
+            toAccount: usd.name,
+            currencyCode: 'CNY',
+            accountAmount: 720,
+            toAccountAmount: 100,
+          ),
+        ],
+        existingAccounts: <Account>[cny, usd],
+      );
+
+      final entry = plan.entries.single;
+      expect(entry.accountId, cny.id);
+      expect(entry.toAccountId, usd.id);
+      expect(entry.accountAmount, 720);
+      expect(entry.toAccountAmount, 100);
+      expect(entry.baseAmount, 0);
+      expect(plan.newAccounts, isEmpty);
+    });
+
+    test('未知 ISO 代码不回退本位币', () {
+      final plan = _build(
+        records: <RawImportRecord>[_record(currencyCode: 'ZZZ', sourceLine: 9)],
+      );
+
+      expect(plan.entries, isEmpty);
+      expect(plan.errors.single.line, 9);
+      expect(plan.errors.single.message, contains('ZZZ'));
     });
   });
 }

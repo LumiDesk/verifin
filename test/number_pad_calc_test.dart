@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:verifin/app/calc_expression.dart';
 import 'package:verifin/app/entry_sheets.dart';
 
 import 'support/test_harness.dart';
 
 void main() {
   useTestDatabases();
+
+  test('汇率算式可保留十位小数，普通金额仍默认两位', () {
+    expect(evaluateAmountExpression('1÷3'), 0.33);
+    expect(evaluateAmountExpression('1÷3', decimalPlaces: 10), 0.3333333333);
+  });
 
   Future<void> openNumberPad(WidgetTester tester) async {
     await pumpApp(tester);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
+import '../app/currency_math.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
 import '../app/platform_bridge.dart';
@@ -22,7 +23,11 @@ class WidgetGalleryPage extends StatelessWidget {
 
     // 预览用实时数据，让展示更贴近桌面上的真实效果。预算与桌面小组件同口径：
     // 按预算周期（键月 + 周期窗口）取数。
-    final today = formatAmount(dayExpenseTotal(entries, dateOnly(now)));
+    final baseCurrencyCode = controller.activeBook.baseCurrencyCode;
+    final today = formatMoney(
+      dayExpenseTotal(entries, dateOnly(now)),
+      baseCurrencyCode,
+    );
     final budgetKeyMonth = controller.budgetKeyMonthFor(now);
     final cycleExpense = sumByType(
       entriesInWindow(entries, controller.budgetWindow(budgetKeyMonth)),
@@ -30,14 +35,14 @@ class WidgetGalleryPage extends StatelessWidget {
     );
     final remaining = controller.monthlyBudget(budgetKeyMonth) - cycleExpense;
     final cyclic = controller.budgetCycleIsCustom;
-    final netWorth = formatAmount(
-      controller.accounts
-          .where((account) => !account.hidden)
-          .fold<double>(
-            0,
-            (sum, account) => sum + controller.accountBalance(account),
-          ),
+    final accountValuation = controller.accountBalancesInBase(
+      accounts: controller.accounts.where(
+        (account) => account.includeInAssets && !account.hidden,
+      ),
     );
+    final netWorth = accountValuation.completeTotal == null
+        ? '—'
+        : formatMoney(accountValuation.completeTotal!, baseCurrencyCode);
 
     final specs = <_WidgetSpec>[
       _WidgetSpec(
@@ -59,13 +64,15 @@ class WidgetGalleryPage extends StatelessWidget {
             : (cyclic
                   ? l10n.widgetPeriodBudgetAvailable
                   : l10n.widgetBudgetAvailable),
-        previewValue: formatAmount(remaining.abs()),
+        previewValue: formatMoney(remaining.abs(), baseCurrencyCode),
       ),
       _WidgetSpec(
         widgetKey: 'net_worth',
         name: l10n.widgetNetWorthName,
         description: l10n.widgetNetWorthDesc,
-        previewLabel: l10n.widgetNetWorth,
+        previewLabel: accountValuation.completeTotal == null
+            ? '${l10n.widgetNetWorth} · ${l10n.widgetRateMissing}'
+            : l10n.widgetNetWorth,
         previewValue: netWorth,
       ),
     ];

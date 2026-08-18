@@ -4,6 +4,7 @@ library;
 import '../../l10n/app_localizations.dart';
 
 import 'ledger_book.dart';
+import 'currency.dart';
 
 enum AccountType {
   onlinePayment,
@@ -62,6 +63,7 @@ class Account {
     required this.note,
     required this.includeInAssets,
     required this.hidden,
+    this.currencyCode = defaultCurrencyCode,
     this.cardLast4 = '',
     this.cardNumber = '',
     this.cardLast4Follows = true,
@@ -80,6 +82,7 @@ class Account {
   final String note;
   final bool includeInAssets;
   final bool hidden;
+  final String currencyCode;
   final String cardLast4;
 
   /// 完整卡号（选填，仅信用卡/储蓄卡 supportsCardLast4）。列表/首页仍只展示后四位，
@@ -111,6 +114,7 @@ class Account {
     String? note,
     bool? includeInAssets,
     bool? hidden,
+    String? currencyCode,
     String? cardLast4,
     String? cardNumber,
     bool? cardLast4Follows,
@@ -132,6 +136,7 @@ class Account {
       note: note ?? this.note,
       includeInAssets: includeInAssets ?? this.includeInAssets,
       hidden: hidden ?? this.hidden,
+      currencyCode: currencyCode ?? this.currencyCode,
       cardLast4: cardLast4 ?? this.cardLast4,
       cardNumber: cardNumber ?? this.cardNumber,
       cardLast4Follows: cardLast4Follows ?? this.cardLast4Follows,
@@ -155,6 +160,7 @@ class Account {
       'note': note,
       'includeInAssets': includeInAssets,
       'hidden': hidden,
+      'currencyCode': currencyCode,
       'cardLast4': cardLast4,
       'cardNumber': cardNumber,
       'cardLast4Follows': cardLast4Follows,
@@ -176,6 +182,8 @@ class Account {
       note: json['note'] as String? ?? '',
       includeInAssets: json['includeInAssets'] as bool? ?? true,
       hidden: json['hidden'] as bool? ?? false,
+      currencyCode: (json['currencyCode'] as String? ?? defaultCurrencyCode)
+          .toUpperCase(),
       cardLast4: json['cardLast4'] as String? ?? '',
       cardNumber: json['cardNumber'] as String? ?? '',
       // 旧备份（无此字段）默认 false：保留其手填后四位、不因跟随把它冲成空。

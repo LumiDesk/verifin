@@ -98,6 +98,66 @@ void main() {
     expect(find.text('花呗'), findsNothing);
   });
 
+  testWidgets('混合币种资产缺汇率时隐藏总额，补齐后按本位币显示', (WidgetTester tester) async {
+    final controller = await pumpApp(tester);
+    final bookId = controller.activeBook.id;
+    controller.addAccount(
+      Account(
+        id: 'cny-assets-account',
+        bookId: bookId,
+        name: '人民币现金',
+        type: AccountType.cash,
+        groupId: null,
+        initialBalance: 100,
+        iconCode: 'cash',
+        note: '',
+        includeInAssets: true,
+        hidden: false,
+        currencyCode: 'CNY',
+      ),
+    );
+    controller.addAccount(
+      Account(
+        id: 'usd-assets-account',
+        bookId: bookId,
+        name: '美元现金',
+        type: AccountType.cash,
+        groupId: null,
+        initialBalance: 10,
+        iconCode: 'cash',
+        note: '',
+        includeInAssets: true,
+        hidden: false,
+        currencyCode: 'USD',
+      ),
+    );
+    await tester.pump();
+    await tapBottomTab(tester, 1);
+
+    expect(find.text('有 1 个账户待设置汇率'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('美元现金'),
+      260,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('USD 10'), findsOneWidget);
+    expect(find.text('CNY 172'), findsNothing);
+
+    expect(
+      await controller.saveExchangeRateDraft(
+        currencyCode: 'USD',
+        effectiveDate: DateTime(2020),
+        rateToBase: 7.2,
+      ),
+      isTrue,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('有 1 个账户待设置汇率'), findsNothing);
+    expect(find.text('CNY 172'), findsNWidgets(2));
+    expect(find.text('USD 10'), findsOneWidget);
+  });
+
   testWidgets('shows empty state on account groups page', (
     WidgetTester tester,
   ) async {
@@ -167,7 +227,7 @@ void main() {
     final totalText = tester.widget<Text>(
       find.byKey(const Key('account_group_total_现金')),
     );
-    expect(totalText.data, '100');
+    expect(totalText.data, 'CNY 100');
     expect(find.text('600'), findsNothing);
   });
 
@@ -383,8 +443,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.add));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).last, '旅行账本');
-    await tester.tap(find.text('确认'));
+    await tester.enterText(
+      find.byKey(const Key('ledger_book_name_field')),
+      '旅行账本',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('ledger_book_save_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('返回'));
     await tester.pumpAndSettle();

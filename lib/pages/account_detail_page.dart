@@ -9,6 +9,8 @@ import '../app/app_theme.dart';
 import '../app/chart_painters.dart';
 import '../app/common_widgets.dart';
 import '../app/credit_card.dart';
+import '../app/currency_catalog.dart';
+import '../app/currency_math.dart';
 import '../app/icon_catalog.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
@@ -128,7 +130,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                             Text(AppLocalizations.of(context).currentBalance),
                             const SizedBox(height: 6),
                             Text(
-                              formatAmount(balance),
+                              formatMoney(balance, currentAccount.currencyCode),
                               style: Theme.of(context).textTheme.displaySmall
                                   ?.copyWith(
                                     color: veriBlue,
@@ -217,7 +219,10 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                               ChartTooltipLine(
                                 text: AppLocalizations.of(context)
                                     .balanceAmount(
-                                      formatAmount(balanceTrendValues[index]),
+                                      formatMoney(
+                                        balanceTrendValues[index],
+                                        currentAccount.currencyCode,
+                                      ),
                                     ),
                               ),
                             ],
@@ -284,6 +289,8 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                                 categories: controller.categories,
                                 tags: controller.tags,
                                 showDate: true,
+                                baseCurrencyCode:
+                                    controller.activeBook.baseCurrencyCode,
                                 onTap: () => openEntryDetail(context, entry),
                               ),
                             ),
@@ -340,9 +347,18 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                       ),
                       const Divider(height: 1),
                       SettingsRow(
-                        icon: Icons.currency_yuan,
+                        icon: Icons.currency_exchange,
                         title: AppLocalizations.of(context).commonCurrency,
-                        trailing: AppLocalizations.of(context).currencyCny,
+                        trailing:
+                            '${currentAccount.currencyCode} · ${CurrencyCatalog.require(currentAccount.currencyCode).nameForLocale(Localizations.localeOf(context).toLanguageTag())}',
+                        trailingIcon:
+                            controller.accountCurrencyLocked(persistedAccount)
+                            ? Icons.lock_outline
+                            : Icons.chevron_right,
+                        onTap: () => _pickAccountCurrency(
+                          persistedAccount,
+                          currentAccount,
+                        ),
                       ),
                       const Divider(height: 1),
                       SettingsRow(
@@ -408,7 +424,10 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                           title: AppLocalizations.of(context).creditLimitLabel,
                           trailing: currentAccount.creditLimit == null
                               ? AppLocalizations.of(context).notSet
-                              : formatAmount(currentAccount.creditLimit!),
+                              : formatMoney(
+                                  currentAccount.creditLimit!,
+                                  currentAccount.currencyCode,
+                                ),
                           trailingIcon: Icons.chevron_right,
                           onTap: () => _editCreditLimit(currentAccount),
                         ),
@@ -547,9 +566,10 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text(
-                AppLocalizations.of(
-                  context,
-                ).balanceEditConfirmMessage(account.name, formatAmount(amount)),
+                AppLocalizations.of(context).balanceEditConfirmMessage(
+                  account.name,
+                  formatMoney(amount, account.currencyCode),
+                ),
               ),
               const SizedBox(height: 8),
               CheckboxListTile(
@@ -583,11 +603,22 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
     }
     final controller = VeriFinScope.of(context);
     if (recordEntry) {
-      controller.adjustAccountBalance(
+      final saved = controller.adjustAccountBalance(
         account,
         amount,
         note: AppLocalizations.of(context).balanceAdjustNote,
       );
+      if (!saved && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(
+                context,
+              ).balanceAdjustMissingRate(account.currencyCode),
+            ),
+          ),
+        );
+      }
     } else {
       controller.rebaseAccountBalance(account, amount);
     }
@@ -634,6 +665,54 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
           clearDueDay: losesCredit,
         );
       });
+    }
+  }
+
+  Future<void> _pickAccountCurrency(
+    Account persistedAccount,
+    Account currentAccount,
+  ) async {
+    var controller = VeriFinScope.of(context);
+    var accountDraft = currentAccount;
+    if (controller.accountCurrencyLocked(persistedAccount)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).accountCurrencyLocked),
+        ),
+      );
+      return;
+    }
+    if (controller.activeBook.currencySetupStatus ==
+        CurrencySetupStatus.legacyUnconfirmed) {
+      final confirmed = await confirmLegacyLedgerCurrency(
+        context: context,
+        book: controller.activeBook,
+      );
+      if (!mounted || !confirmed) return;
+      controller = VeriFinScope.of(context);
+      final latest = controller.accounts.firstWhere(
+        (account) => account.id == persistedAccount.id,
+        orElse: () => currentAccount,
+      );
+      setState(() {
+        _initialAccount = latest;
+        _draftAccount = latest;
+      });
+      accountDraft = latest;
+    }
+    final selected = await showCurrencyPickerSheet(
+      context: context,
+      title: AppLocalizations.of(context).selectAccountCurrency,
+      selectedCode: accountDraft.currencyCode,
+      preferredCodes: controller.accounts.map(
+        (account) => account.currencyCode,
+      ),
+    );
+    if (selected != null && mounted) {
+      setState(
+        () =>
+            _draftAccount = accountDraft.copyWith(currencyCode: selected.code),
+      );
     }
   }
 
@@ -939,7 +1018,7 @@ class AccountReportPage extends StatelessWidget {
                   children: <Widget>[
                     SummaryMetric(
                       label: AppLocalizations.of(context).currentBalance,
-                      value: formatAmount(balance),
+                      value: formatMoney(balance, currentAccount.currencyCode),
                       color: balance < 0 ? veriExpense : veriRoyal,
                     ),
                     SummaryMetric(
@@ -990,7 +1069,10 @@ class AccountReportPage extends StatelessWidget {
                           lines: <ChartTooltipLine>[
                             ChartTooltipLine(
                               text: AppLocalizations.of(context).balanceAmount(
-                                formatAmount(reportBalanceValues[index]),
+                                formatMoney(
+                                  reportBalanceValues[index],
+                                  currentAccount.currencyCode,
+                                ),
                               ),
                             ),
                           ],
@@ -1029,6 +1111,8 @@ class AccountReportPage extends StatelessWidget {
                               categories: controller.categories,
                               tags: controller.tags,
                               showDate: true,
+                              baseCurrencyCode:
+                                  controller.activeBook.baseCurrencyCode,
                               onTap: () => openEntryDetail(context, entry),
                             ),
                           ),
@@ -1134,7 +1218,7 @@ class _CreditSummaryCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  formatAmount(limit),
+                  formatMoney(limit, account.currencyCode),
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
@@ -1157,13 +1241,16 @@ class _CreditSummaryCard extends StatelessWidget {
                 Expanded(
                   child: _CreditStat(
                     label: l10n.creditUsedLabel,
-                    value: formatAmount(used),
+                    value: formatMoney(used, account.currencyCode),
                   ),
                 ),
                 Expanded(
                   child: _CreditStat(
                     label: l10n.creditAvailableLabel,
-                    value: formatAmount(availableCredit(limit, balance) ?? 0),
+                    value: formatMoney(
+                      availableCredit(limit, balance) ?? 0,
+                      account.currencyCode,
+                    ),
                     highlight: true,
                   ),
                 ),
@@ -1178,12 +1265,13 @@ class _CreditSummaryCard extends StatelessWidget {
           if (statementDay != null)
             _CreditStat(
               label: l10n.currentBillLabel,
-              value: formatAmount(
+              value: formatMoney(
                 billingCycleExpense(
                   entries,
                   account.id,
                   currentBillingCycle(statementDay, DateTime.now()),
                 ),
+                account.currencyCode,
               ),
               hint: _billingHint(l10n, statementDay, account.dueDay),
             ),

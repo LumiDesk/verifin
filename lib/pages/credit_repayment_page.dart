@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../app/common_widgets.dart';
 import '../app/credit_card.dart';
-import '../app/ledger_math.dart';
+import '../app/currency_catalog.dart';
+import '../app/currency_math.dart';
 import '../app/models.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
@@ -22,6 +23,8 @@ class CreditRepaymentPage extends StatefulWidget {
 
 class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
   double _amount = 0;
+  double? _fromAmount;
+  bool _fromAmountTouched = false;
   // 扣款账户 id；空串表示「无账户（代还）」。null 表示尚未初始化，build 时按默认解析。
   String? _fromAccountId;
   bool _noAccount = false;
@@ -83,7 +86,9 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
     final controller = VeriFinScope.of(context);
     final l10n = AppLocalizations.of(context);
     _ensureDefaultFrom(controller);
-    final canConfirm = _amount > 0;
+    _resolveFromAmount(controller);
+    final sourceAccount = _fromAccount(controller);
+    final canConfirm = _amount > 0 && (_noAccount || (_fromAmount ?? 0) > 0);
 
     return UnsavedChangesGuard(
       isDirty: !_saved,
@@ -108,10 +113,28 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
                 const SizedBox(height: 10),
                 SelectField(
                   label: l10n.creditRepayAmountLabel,
-                  value: formatAmount(_amount),
+                  value: formatMoney(_amount, widget.account.currencyCode),
                   icon: Icons.payments_outlined,
                   onTap: _pickAmount,
                 ),
+                if (!_noAccount && sourceAccount != null) ...<Widget>[
+                  if (sourceAccount.currencyCode !=
+                      widget.account.currencyCode) ...<Widget>[
+                    const SizedBox(height: 10),
+                    SelectField(
+                      key: const Key('repay_from_amount'),
+                      label: l10n.entryTransferOutAmount,
+                      value: _fromAmount == null
+                          ? l10n.exchangeRateNotSet
+                          : formatMoney(
+                              _fromAmount!,
+                              sourceAccount.currencyCode,
+                            ),
+                      icon: Icons.currency_exchange,
+                      onTap: () => _pickFromAmount(sourceAccount.currencyCode),
+                    ),
+                  ],
+                ],
                 const SizedBox(height: 10),
                 SelectField(
                   key: const Key('repay_from_account'),
@@ -145,15 +168,38 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
   }
 
   String _fromAccountLabel(VeriFinController controller) {
-    final matches = controller.accounts.where(
-      (account) => account.id == _fromAccountId,
-    );
-    if (matches.isEmpty) {
+    final account = _fromAccount(controller);
+    if (account == null) {
       return AppLocalizations.of(context).creditRepayNoAccountLabel;
     }
-    final account = matches.first;
     return '${account.name} '
-        '(${formatAmount(controller.accountBalance(account))})';
+        '(${formatMoney(controller.accountBalance(account), account.currencyCode)})';
+  }
+
+  Account? _fromAccount(VeriFinController controller) => controller.accounts
+      .where((account) => account.id == _fromAccountId)
+      .firstOrNull;
+
+  void _resolveFromAmount(VeriFinController controller) {
+    if (_noAccount) {
+      _fromAmount = null;
+      return;
+    }
+    final source = _fromAccount(controller);
+    if (source == null) return;
+    if (source.currencyCode == widget.account.currencyCode) {
+      _fromAmount = normalizeCurrencyAmount(_amount, source.currencyCode);
+      _fromAmountTouched = false;
+      return;
+    }
+    if (_fromAmountTouched) return;
+    final result = controller.convertAmount(
+      amount: _amount,
+      sourceCurrencyCode: widget.account.currencyCode,
+      targetCurrencyCode: source.currencyCode,
+      date: _occurredAt,
+    );
+    _fromAmount = result is ConvertedCurrencyAmount ? result.amount : null;
   }
 
   Future<void> _pickAmount() async {
@@ -161,10 +207,33 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
       context,
       title: AppLocalizations.of(context).creditRepayAmountLabel,
       initialAmount: _amount,
+      maxFractionDigits: CurrencyCatalog.require(
+        widget.account.currencyCode,
+      ).minorUnit,
     );
     if (amount != null && mounted) {
-      setState(() => _amount = amount);
+      setState(() {
+        _amount = normalizeCurrencyAmount(amount, widget.account.currencyCode);
+        _resolveFromAmount(VeriFinScope.of(context));
+      });
     }
+  }
+
+  Future<void> _pickFromAmount(String currencyCode) async {
+    final value = await showNumberPadSheet(
+      context,
+      title: AppLocalizations.of(context).entryAmountInputTitle(
+        AppLocalizations.of(context).entryTransferOutAmount,
+        currencyCode,
+      ),
+      initialAmount: _fromAmount,
+      maxFractionDigits: CurrencyCatalog.require(currencyCode).minorUnit,
+    );
+    if (value == null || value <= 0 || !mounted) return;
+    setState(() {
+      _fromAmount = normalizeCurrencyAmount(value, currencyCode);
+      _fromAmountTouched = true;
+    });
   }
 
   Future<void> _pickFromAccount(VeriFinController controller) async {
@@ -185,9 +254,12 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
       if (selected.id.isEmpty) {
         _noAccount = true;
         _fromAccountId = null;
+        _fromAmount = null;
       } else {
         _noAccount = false;
         _fromAccountId = selected.id;
+        _fromAmountTouched = false;
+        _resolveFromAmount(controller);
       }
     });
   }
@@ -210,6 +282,7 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
         _occurredAt.hour,
         _occurredAt.minute,
       );
+      _resolveFromAmount(VeriFinScope.of(context));
     });
   }
 
@@ -225,6 +298,12 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
     }
     final controller = VeriFinScope.of(context);
     final fromId = _noAccount ? '' : (_fromAccountId ?? '');
+    final source = _fromAccount(controller);
+    final sourceCode = source?.currencyCode ?? widget.account.currencyCode;
+    final sourceAmount = _noAccount ? _amount : _fromAmount;
+    if (sourceAmount == null || sourceAmount <= 0) {
+      return false;
+    }
     // 用转账分类（「转出」），与普通转账一致，避免列表按空分类回退成「已删除分类」。
     final transferCategories = controller.categoriesForType(EntryType.transfer);
     final categoryId = transferCategories.isEmpty
@@ -236,7 +315,22 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
         id: _entryId,
         bookId: controller.activeBook.id,
         type: EntryType.transfer,
-        amount: _amount,
+        amount: normalizeCurrencyAmount(sourceAmount, sourceCode),
+        currencyCode: sourceCode,
+        accountAmount: _noAccount
+            ? null
+            : normalizeCurrencyAmount(sourceAmount, sourceCode),
+        toAccountAmount: normalizeCurrencyAmount(
+          _amount,
+          widget.account.currencyCode,
+        ),
+        baseAmount: 0,
+        conversionSource:
+            sourceCode == widget.account.currencyCode && !_fromAmountTouched
+            ? ConversionSource.identity
+            : _fromAmountTouched
+            ? ConversionSource.manual
+            : ConversionSource.rateTable,
         categoryId: categoryId,
         accountId: fromId,
         toAccountId: widget.account.id,

@@ -4,6 +4,7 @@ library;
 
 export 'models/account.dart';
 export 'models/category.dart';
+export 'models/currency.dart';
 export 'models/ledger_book.dart';
 export 'models/ledger_entry.dart';
 export 'models/preferences.dart';

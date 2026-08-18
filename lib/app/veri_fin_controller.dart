@@ -14,6 +14,8 @@ import 'backup/transaction_import.dart';
 import 'backup/webdav_config.dart';
 import 'budget_cycle.dart';
 import 'category_tree.dart';
+import 'currency_catalog.dart';
+import 'currency_math.dart';
 import 'demo_data.dart';
 import 'model_lookup.dart';
 import 'amount_format.dart' as amount_format;
@@ -39,6 +41,7 @@ const Set<String> _knownBackupDataKeys = <String>{
   'tags',
   'attachments',
   'recurringRules',
+  'exchangeRates',
   'monthlyBudgets',
   'categoryBudgets',
   'dailyBudgets',

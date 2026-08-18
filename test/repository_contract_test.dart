@@ -71,6 +71,7 @@ void _runContract(String name, Future<LedgerRepository> Function() openRepo) {
       expect(await repo.loadTags(), isEmpty);
       expect(await repo.loadAttachments(), isEmpty);
       expect(await repo.loadRecurringRules(), isEmpty);
+      expect(await repo.loadExchangeRates(), isEmpty);
       expect(await repo.loadMonthlyBudgets(), isEmpty);
       expect(await repo.loadCategoryBudgets(), isEmpty);
       expect(await repo.loadDailyBudgets(), isEmpty);
@@ -156,6 +157,19 @@ void _runContract(String name, Future<LedgerRepository> Function() openRepo) {
           nextRunDate: DateTime(2026, 2, 1),
         ),
       ];
+      final rates = <ExchangeRate>[
+        ExchangeRate(
+          id: 'rate-1',
+          bookId: 'default',
+          baseCurrencyCode: 'CNY',
+          currencyCode: 'USD',
+          effectiveDate: DateTime(2026, 2, 1),
+          rateToBase: 7.2,
+          source: ExchangeRateSource.manual,
+          createdAt: DateTime(2026, 2, 1, 8),
+          updatedAt: DateTime(2026, 2, 1, 8),
+        ),
+      ];
 
       await repo.saveEntries(entries);
       await repo.saveBooks(books);
@@ -165,6 +179,7 @@ void _runContract(String name, Future<LedgerRepository> Function() openRepo) {
       await repo.saveTags(tags);
       await repo.saveAttachments(attachments);
       await repo.saveRecurringRules(rules);
+      await repo.saveExchangeRates(rates);
 
       expect(_jsonOf(await repo.loadEntries()), _jsonOf(entries));
       expect(_jsonOf(await repo.loadBooks()), _jsonOf(books));
@@ -174,6 +189,7 @@ void _runContract(String name, Future<LedgerRepository> Function() openRepo) {
       expect(_jsonOf(await repo.loadTags()), _jsonOf(tags));
       expect(_jsonOf(await repo.loadAttachments()), _jsonOf(attachments));
       expect(_jsonOf(await repo.loadRecurringRules()), _jsonOf(rules));
+      expect(_jsonOf(await repo.loadExchangeRates()), _jsonOf(rates));
       expect(await repo.hasAnyData(), isTrue);
     });
 
@@ -219,10 +235,24 @@ void _runContract(String name, Future<LedgerRepository> Function() openRepo) {
       await repo.saveEntryAggregate(
         entries: nextEntries,
         attachments: nextAttachments,
+        exchangeRates: <ExchangeRate>[
+          ExchangeRate(
+            id: 'rate-aggregate',
+            bookId: 'default',
+            baseCurrencyCode: 'CNY',
+            currencyCode: 'EUR',
+            effectiveDate: DateTime(2026, 2, 1),
+            rateToBase: 8,
+            source: ExchangeRateSource.manual,
+            createdAt: DateTime(2026, 2, 1),
+            updatedAt: DateTime(2026, 2, 1),
+          ),
+        ],
       );
 
       expect(_jsonOf(await repo.loadEntries()), _jsonOf(nextEntries));
       expect(_jsonOf(await repo.loadAttachments()), _jsonOf(nextAttachments));
+      expect((await repo.loadExchangeRates()).single.currencyCode, 'EUR');
     });
 
     test('已载入基线后的增删改保存，load 反映最新内容', () async {
@@ -301,6 +331,19 @@ void _runContract(String name, Future<LedgerRepository> Function() openRepo) {
         monthlyBudgets: const <String, double>{'default:2026-01': 800},
         categoryBudgets: const <String, double>{},
         dailyBudgets: const <String, double>{},
+        exchangeRates: <ExchangeRate>[
+          ExchangeRate(
+            id: 'new-rate',
+            bookId: 'default',
+            baseCurrencyCode: 'CNY',
+            currencyCode: 'USD',
+            effectiveDate: DateTime(2026, 1, 1),
+            rateToBase: 7.1,
+            source: ExchangeRateSource.imported,
+            createdAt: DateTime(2026, 1, 1),
+            updatedAt: DateTime(2026, 1, 2),
+          ),
+        ],
       );
       await repo.replaceAllLedgerData(snapshot);
 
@@ -311,6 +354,7 @@ void _runContract(String name, Future<LedgerRepository> Function() openRepo) {
       expect((await repo.loadTags()).single.id, 'new-tag');
       expect((await repo.loadBooks()).single.name, '恢复账本');
       expect(await repo.loadMonthlyBudgets(), {'default:2026-01': 800.0});
+      expect((await repo.loadExchangeRates()).single.id, 'new-rate');
 
       // 整替后再做单表保存：内容必须精确等于传入列表——锁住「整替后差分基线
       // 未重建、拿导入前旧快照去 diff 导致误删/漏写」这类回归。

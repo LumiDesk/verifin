@@ -20,13 +20,17 @@ class NumberPadSheet extends StatefulWidget {
     this.allowZero = false,
     this.hapticsEnabled = true,
     this.maxAmount,
-  });
+    this.maxFractionDigits = 2,
+  }) : assert(maxFractionDigits >= 0 && maxFractionDigits <= 12);
 
   final String title;
   final double? initialAmount;
   final bool allowNegative;
   final bool allowZero;
   final bool hapticsEnabled;
+
+  /// 单个操作数允许的小数位数。普通金额默认为 2；本地汇率可提高到 10。
+  final int maxFractionDigits;
 
   /// 可选金额上限：非空时输入框下方展示「最多 {max}」提示（超上限时变红），
   /// 点 OK 确认的结果会被封顶到该值。用于退款「剩余可退」等有上限的输入。
@@ -39,10 +43,11 @@ class NumberPadSheet extends StatefulWidget {
 class _NumberPadSheetState extends State<NumberPadSheet> {
   late String _input = widget.initialAmount == null
       ? ''
-      : formatAmount(widget.initialAmount!);
+      : _formatInitialValue(widget.initialAmount!, widget.maxFractionDigits);
 
   /// 求值当前输入（可能是 `500+800` 这类算式）；不完整/无效时为 null。
-  double? get _result => evaluateAmountExpression(_input);
+  double? get _result =>
+      evaluateAmountExpression(_input, decimalPlaces: widget.maxFractionDigits);
   double get _amount => _result ?? 0;
 
   /// 输入是否为算式（含运算符）——决定是否展示右下角结果预览。
@@ -102,7 +107,7 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
                         Text(
                           _result == null
                               ? AppLocalizations.of(context).calcIncomplete
-                              : '= ${formatAmount(_result!)}',
+                              : '= ${_formatResult(_result!)}',
                           textAlign: TextAlign.end,
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(
@@ -347,6 +352,9 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
         return;
       }
       if (value == '.') {
+        if (widget.maxFractionDigits == 0) {
+          return;
+        }
         final operand = _currentOperand;
         if (operand.contains('.')) {
           return;
@@ -358,7 +366,7 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
       final operand = _currentOperand;
       if (operand.contains('.')) {
         final decimalLength = operand.split('.').last.length;
-        if (decimalLength >= 2) {
+        if (decimalLength >= widget.maxFractionDigits) {
           return;
         }
       }
@@ -373,6 +381,15 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
         _input += value;
       }
     });
+  }
+
+  String _formatResult(double value) =>
+      _formatInitialValue(value, widget.maxFractionDigits);
+
+  static String _formatInitialValue(double value, int fractionDigits) {
+    final fixed = value.toStringAsFixed(fractionDigits);
+    if (!fixed.contains('.')) return fixed;
+    return fixed.replaceFirst(RegExp(r'\.?0+$'), '');
   }
 
   /// 追加一个运算符：不能以运算符开头；末尾已是运算符则替换；末尾的 `.` 先去掉。

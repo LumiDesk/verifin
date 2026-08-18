@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
+import '../app/currency_math.dart';
 import '../app/model_lookup.dart';
-import '../app/ledger_math.dart';
 import '../app/models.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
@@ -19,7 +19,7 @@ class PendingRefundsPage extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final controller = VeriFinScope.of(context);
     final pending = controller.pendingRefunds;
-    final total = pending.fold<double>(0, (sum, r) => sum + r.amount);
+    final total = pending.fold<double>(0, (sum, r) => sum + r.baseAmount);
 
     return Scaffold(
       body: SafeArea(
@@ -53,7 +53,7 @@ class PendingRefundsPage extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '+${formatAmount(total)}',
+                        '+${formatMoney(total, controller.activeBook.baseCurrencyCode)}',
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
                               fontWeight: FontWeight.w800,
@@ -117,7 +117,7 @@ class _PendingRefundRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    '+${formatAmount(refund.amount)} · $accountName',
+                    '+${formatMoney(refund.amount, refund.currencyCode)} · $accountName',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
@@ -138,8 +138,9 @@ class _PendingRefundRow extends StatelessWidget {
               ),
             ),
             TextButton(
-              onPressed: () =>
-                  controller.setRefundSettled(refund.id, DateTime.now()),
+              onPressed: expense == null
+                  ? null
+                  : () => _settleRefund(context, expense),
               child: Text(l10n.refundMarkSettled),
             ),
           ],
@@ -163,6 +164,20 @@ class _PendingRefundRow extends StatelessWidget {
       controller.deleteRefund(refund.id);
     } else {
       controller.updateRefund(result.refund!);
+    }
+  }
+
+  Future<void> _settleRefund(BuildContext context, LedgerEntry expense) async {
+    final controller = VeriFinScope.of(context);
+    final result = await showRefundSheet(
+      context: context,
+      expense: expense,
+      refunds: controller.refundsForEntry(expense.id),
+      existing: refund,
+      markSettled: true,
+    );
+    if (result?.refund != null && context.mounted) {
+      controller.updateRefund(result!.refund!);
     }
   }
 }

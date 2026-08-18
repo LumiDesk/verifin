@@ -14,7 +14,7 @@ class AppDatabase {
   final Database db;
 
   static const String defaultDatabaseName = 'verifin.db';
-  static const int schemaVersion = 13;
+  static const int schemaVersion = 14;
 
   /// 打开（或创建）数据库。测试通过 [factory]/[path] 注入 ffi 与内存路径；
   /// 真实平台留空则由 [resolveDatabaseFactory]/[resolveDatabasePath] 决定。
@@ -66,6 +66,7 @@ class AppDatabase {
         11: _migrateToV11,
         12: _migrateToV12,
         13: _migrateToV13,
+        14: _migrateToV14,
       };
 
   /// 只读暴露迁移注册表，供迁移矩阵测试把库推进到任意中间版本。生产代码勿用。
@@ -140,7 +141,7 @@ class AppDatabase {
 
   /// v6 → v7：周期记账规则表。
   static Future<void> _migrateToV7(Database db) async {
-    await db.execute(_recurringRulesTable);
+    await db.execute(_recurringRulesTableV7);
   }
 
   /// v7 → v8：信用卡账单日/还款日（可选）。
@@ -203,12 +204,111 @@ class AppDatabase {
     await db.execute('ALTER TABLE entries ADD COLUMN settled_at INTEGER');
   }
 
+  /// v13 → v14：离线多币种。本位币/账户币种、交易与周期规则的冻结金额，以及
+  /// 按账本和生效日维护的本地汇率表。旧数据的数字不换算，只按 CNY 原样重解释。
+  static Future<void> _migrateToV14(Database db) async {
+    if (await _tableExists(db, 'ledger_books')) {
+      await db.execute(
+        "ALTER TABLE ledger_books ADD COLUMN base_currency_code TEXT NOT NULL DEFAULT 'CNY'",
+      );
+      await db.execute(
+        "ALTER TABLE ledger_books ADD COLUMN currency_setup_status TEXT NOT NULL DEFAULT 'legacyUnconfirmed'",
+      );
+    }
+    if (await _tableExists(db, 'accounts')) {
+      await db.execute(
+        "ALTER TABLE accounts ADD COLUMN currency_code TEXT NOT NULL DEFAULT 'CNY'",
+      );
+    }
+    if (await _tableExists(db, 'entries')) {
+      await db.execute(
+        "ALTER TABLE entries ADD COLUMN currency_code TEXT NOT NULL DEFAULT 'CNY'",
+      );
+      await db.execute('ALTER TABLE entries ADD COLUMN account_amount REAL');
+      await db.execute('ALTER TABLE entries ADD COLUMN to_account_amount REAL');
+      await db.execute(
+        'ALTER TABLE entries ADD COLUMN base_amount REAL NOT NULL DEFAULT 0',
+      );
+      await db.execute(
+        "ALTER TABLE entries ADD COLUMN conversion_source TEXT NOT NULL DEFAULT 'legacy'",
+      );
+      // 条件判断只为兼容历史迁移的最小桩库；真实 entries 自 v1 起字段完整。
+      if (await _columnsExist(db, 'entries', const <String>[
+        'account_id',
+        'amount',
+      ])) {
+        await db.execute('''
+          UPDATE entries SET account_amount =
+            CASE WHEN account_id <> '' THEN amount ELSE NULL END
+        ''');
+      }
+      if (await _columnsExist(db, 'entries', const <String>[
+        'to_account_id',
+        'amount',
+      ])) {
+        await db.execute('''
+          UPDATE entries SET to_account_amount = CASE
+            WHEN to_account_id IS NOT NULL AND to_account_id <> '' THEN amount
+            ELSE NULL
+          END
+        ''');
+      }
+      if (await _columnsExist(db, 'entries', const <String>[
+        'type',
+        'amount',
+      ])) {
+        await db.execute('''
+          UPDATE entries SET base_amount =
+            CASE WHEN type = 'transfer' THEN 0 ELSE amount END
+        ''');
+      }
+    }
+    if (await _tableExists(db, 'recurring_rules')) {
+      await db.execute(
+        "ALTER TABLE recurring_rules ADD COLUMN currency_code TEXT NOT NULL DEFAULT 'CNY'",
+      );
+      await db.execute(
+        'ALTER TABLE recurring_rules ADD COLUMN account_amount REAL',
+      );
+      await db.execute(
+        'ALTER TABLE recurring_rules ADD COLUMN to_account_amount REAL',
+      );
+      await db.execute(
+        'ALTER TABLE recurring_rules ADD COLUMN base_amount REAL NOT NULL DEFAULT 0',
+      );
+      await db.execute(
+        "ALTER TABLE recurring_rules ADD COLUMN rate_policy TEXT NOT NULL DEFAULT 'fixedAmounts'",
+      );
+      await db.execute('''
+        UPDATE recurring_rules
+        SET account_amount = CASE WHEN account_id <> '' THEN amount ELSE NULL END,
+            to_account_amount = CASE
+              WHEN to_account_id IS NOT NULL AND to_account_id <> '' THEN amount
+              ELSE NULL
+            END,
+            base_amount = CASE WHEN type = 'transfer' THEN 0 ELSE amount END
+      ''');
+    }
+    await db.execute(_exchangeRatesTable);
+    await db.execute(_exchangeRatesLookupIndex);
+  }
+
   static Future<bool> _tableExists(Database db, String name) async {
     final rows = await db.rawQuery(
       "SELECT name FROM sqlite_master WHERE type='table' AND name = ?",
       <Object?>[name],
     );
     return rows.isNotEmpty;
+  }
+
+  static Future<bool> _columnsExist(
+    Database db,
+    String table,
+    List<String> names,
+  ) async {
+    final rows = await db.rawQuery('PRAGMA table_info($table)');
+    final existing = rows.map((row) => row['name']).whereType<String>().toSet();
+    return names.every(existing.contains);
   }
 
   /// 合并重复分类：保留每个 (label,type,IFNULL(parent_id,'')) 组内 rowid 最小的一条，
@@ -276,7 +376,8 @@ class AppDatabase {
     )
   ''';
 
-  static const String _recurringRulesTable = '''
+  /// v7 历史建表语句冻结副本。后续字段只能在新迁移段追加。
+  static const String _recurringRulesTableV7 = '''
     CREATE TABLE recurring_rules (
       id TEXT PRIMARY KEY,
       book_id TEXT NOT NULL,
@@ -294,6 +395,48 @@ class AppDatabase {
     )
   ''';
 
+  static const String _recurringRulesTableCurrent = '''
+    CREATE TABLE recurring_rules (
+      id TEXT PRIMARY KEY,
+      book_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      amount REAL NOT NULL,
+      currency_code TEXT NOT NULL DEFAULT 'CNY',
+      account_amount REAL,
+      to_account_amount REAL,
+      base_amount REAL NOT NULL DEFAULT 0,
+      rate_policy TEXT NOT NULL DEFAULT 'fixedAmounts',
+      category_id TEXT NOT NULL,
+      account_id TEXT NOT NULL,
+      to_account_id TEXT,
+      note TEXT NOT NULL,
+      frequency TEXT NOT NULL,
+      start_date INTEGER NOT NULL,
+      next_run_date INTEGER NOT NULL,
+      active INTEGER NOT NULL,
+      sort_order INTEGER NOT NULL
+    )
+  ''';
+
+  static const String _exchangeRatesTable = '''
+    CREATE TABLE exchange_rates (
+      id TEXT PRIMARY KEY,
+      book_id TEXT NOT NULL,
+      base_currency_code TEXT NOT NULL,
+      currency_code TEXT NOT NULL,
+      effective_date TEXT NOT NULL,
+      rate_to_base REAL NOT NULL,
+      source TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      UNIQUE (book_id, base_currency_code, currency_code, effective_date)
+    )
+  ''';
+
+  static const String _exchangeRatesLookupIndex =
+      'CREATE INDEX idx_exchange_rates_book_currency_date '
+      'ON exchange_rates (book_id, currency_code, effective_date)';
+
   /// 当前完整建表语句（供全新数据库 onCreate 用）。字段命名用 snake_case；
   /// 布尔存 0/1；时间存毫秒时间戳。已含历次迁移引入的列/表（parent_id、tags 等）。
   static const List<String> _schemaCurrent = <String>[
@@ -303,6 +446,8 @@ class AppDatabase {
       name TEXT NOT NULL,
       created_at INTEGER NOT NULL,
       is_default INTEGER NOT NULL,
+      base_currency_code TEXT NOT NULL DEFAULT 'CNY',
+      currency_setup_status TEXT NOT NULL DEFAULT 'legacyUnconfirmed',
       sort_order INTEGER NOT NULL
     )
     ''',
@@ -312,6 +457,11 @@ class AppDatabase {
       book_id TEXT NOT NULL,
       type TEXT NOT NULL,
       amount REAL NOT NULL,
+      currency_code TEXT NOT NULL DEFAULT 'CNY',
+      account_amount REAL,
+      to_account_amount REAL,
+      base_amount REAL NOT NULL DEFAULT 0,
+      conversion_source TEXT NOT NULL DEFAULT 'legacy',
       category_id TEXT NOT NULL,
       account_id TEXT NOT NULL,
       to_account_id TEXT,
@@ -335,6 +485,7 @@ class AppDatabase {
       type TEXT NOT NULL,
       group_id TEXT,
       initial_balance REAL NOT NULL,
+      currency_code TEXT NOT NULL DEFAULT 'CNY',
       icon_code TEXT NOT NULL,
       note TEXT NOT NULL,
       include_in_assets INTEGER NOT NULL,
@@ -399,6 +550,8 @@ class AppDatabase {
     )
     ''',
     'CREATE INDEX idx_attachments_entry ON attachments (entry_id)',
-    _recurringRulesTable,
+    _recurringRulesTableCurrent,
+    _exchangeRatesTable,
+    _exchangeRatesLookupIndex,
   ];
 }

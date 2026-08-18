@@ -6,6 +6,8 @@ import 'package:archive/archive.dart';
 import 'package:charset/charset.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/backup/payment_import.dart';
+import 'package:verifin/app/backup/transaction_import.dart'
+    show transactionCsvExport;
 import 'package:verifin/app/ledger_math.dart';
 import 'package:verifin/app/models.dart';
 
@@ -283,6 +285,173 @@ void main() {
       );
       expect(plan.importedCount, 1);
       expect(plan.entries.first.amount, 23.5);
+    });
+
+    test('外币列与导入汇率生成完整交易', () {
+      const content =
+          '日期,类型,金额,分类,账户,转入账户,备注,币种,账户金额,本位币金额,转入金额,汇率（1原币=X本位币）\n'
+          '2026-07-01,支出,10,餐饮,美元现金,,午饭,USD,10,72,,7.2\n';
+      final plan = run(
+        ImportPlatform.csvTemplate,
+        Uint8List.fromList(utf8.encode(content)),
+      );
+
+      final entry = plan.entries.single;
+      expect(entry.currencyCode, 'USD');
+      expect(entry.accountAmount, 10);
+      expect(entry.baseAmount, 72);
+      expect(plan.newAccounts.single.currencyCode, 'USD');
+      expect(plan.exchangeRateCandidates.single.rate.rateToBase, 7.2);
+    });
+
+    test('外币缺率可用预览前手工批量汇率重新构建', () {
+      const content =
+          '日期,类型,金额,分类,账户,转入账户,备注,币种\n'
+          '2026-07-01,支出,10,餐饮,美元现金,,午饭,USD\n';
+      final bytes = Uint8List.fromList(utf8.encode(content));
+      final unresolved = run(ImportPlatform.csvTemplate, bytes);
+      expect(unresolved.entries, isEmpty);
+      expect(unresolved.conversionIssues, hasLength(1));
+
+      final resolved = buildPlatformImportPlan(
+        platform: ImportPlatform.csvTemplate,
+        bytes: bytes,
+        bookId: 'book_default',
+        existingAccounts: const <Account>[],
+        existingCategories: const <Category>[],
+        now: DateTime(2026, 7, 5, 12),
+        rateOverrides: const <String, double>{'USD': 7.2},
+      );
+      expect(resolved.conversionIssues, isEmpty);
+      expect(resolved.entries.single.baseAmount, 72);
+    });
+
+    test('交易 CSV 导出后重新导入保留三层金额', () {
+      final account = Account(
+        id: 'usd',
+        bookId: 'book_default',
+        name: '人民币信用卡',
+        type: AccountType.cash,
+        groupId: null,
+        initialBalance: 0,
+        iconCode: 'wallet',
+        note: '',
+        includeInAssets: true,
+        hidden: false,
+        currencyCode: 'CNY',
+      );
+      const category = Category(
+        id: 'dining',
+        label: '餐饮',
+        type: EntryType.expense,
+        iconCode: 'dining',
+      );
+      final csv = transactionCsvExport(
+        entries: <LedgerEntry>[
+          LedgerEntry(
+            id: 'expense-usd',
+            bookId: 'book_default',
+            type: EntryType.expense,
+            amount: 10,
+            currencyCode: 'USD',
+            accountAmount: 72,
+            baseAmount: 72,
+            conversionSource: ConversionSource.imported,
+            categoryId: category.id,
+            accountId: account.id,
+            note: 'lunch, with comma',
+            occurredAt: DateTime(2026, 7, 1, 12, 30),
+          ),
+        ],
+        accounts: <Account>[account],
+        categories: const <Category>[category],
+        tags: const <Tag>[],
+        baseCurrencyCode: 'CNY',
+      );
+      final plan = run(
+        ImportPlatform.csvTemplate,
+        Uint8List.fromList(utf8.encode(csv)),
+      );
+
+      final entry = plan.entries.single;
+      expect(entry.amount, 10);
+      expect(entry.currencyCode, 'USD');
+      expect(entry.accountAmount, 72);
+      expect(entry.baseAmount, 72);
+      expect(entry.note, 'lunch, with comma');
+      expect(plan.newAccounts.single.currencyCode, 'CNY');
+    });
+
+    test('跨币转账 CSV 重建不同币种的两端账户', () {
+      final from = Account(
+        id: 'from-cny',
+        bookId: 'book_default',
+        name: '人民币现金',
+        type: AccountType.cash,
+        groupId: null,
+        initialBalance: 0,
+        iconCode: 'wallet',
+        note: '',
+        includeInAssets: true,
+        hidden: false,
+        currencyCode: 'CNY',
+      );
+      final to = Account(
+        id: 'to-usd',
+        bookId: 'book_default',
+        name: '美元现金',
+        type: AccountType.cash,
+        groupId: null,
+        initialBalance: 0,
+        iconCode: 'wallet',
+        note: '',
+        includeInAssets: true,
+        hidden: false,
+        currencyCode: 'USD',
+      );
+      const transferCategory = Category(
+        id: 'transfer_out',
+        label: '转出',
+        type: EntryType.transfer,
+        iconCode: 'transfer_out',
+      );
+      final csv = transactionCsvExport(
+        entries: <LedgerEntry>[
+          LedgerEntry(
+            id: 'cross-transfer',
+            bookId: 'book_default',
+            type: EntryType.transfer,
+            amount: 720,
+            currencyCode: 'CNY',
+            accountAmount: 720,
+            toAccountAmount: 100,
+            baseAmount: 0,
+            conversionSource: ConversionSource.manual,
+            categoryId: transferCategory.id,
+            accountId: from.id,
+            toAccountId: to.id,
+            note: '换汇',
+            occurredAt: DateTime(2026, 7, 1, 10),
+          ),
+        ],
+        accounts: <Account>[from, to],
+        categories: const <Category>[transferCategory],
+        tags: const <Tag>[],
+        baseCurrencyCode: 'CNY',
+      );
+      final plan = run(
+        ImportPlatform.csvTemplate,
+        Uint8List.fromList(utf8.encode(csv)),
+      );
+
+      final entry = plan.entries.single;
+      final byId = <String, Account>{
+        for (final account in plan.newAccounts) account.id: account,
+      };
+      expect(byId[entry.accountId]!.currencyCode, 'CNY');
+      expect(byId[entry.toAccountId]!.currencyCode, 'USD');
+      expect(entry.accountAmount, 720);
+      expect(entry.toAccountAmount, 100);
     });
   });
 
@@ -870,6 +1039,14 @@ void main() {
       expect(plan.errorCount, 0);
       // 12 行数据：退款(e1) 折叠进原支出、4 条债务(d1~d4) 跳过，余 7 条。
       expect(plan.importedCount, 7);
+      expect(
+        plan.entries.every((entry) => entry.currencyCode == 'CNY'),
+        isTrue,
+      );
+      expect(
+        plan.newAccounts.every((account) => account.currencyCode == 'CNY'),
+        isTrue,
+      );
     });
 
     test('债务/借贷类记录一律不导入（Veri Fin 无债务功能）', () {

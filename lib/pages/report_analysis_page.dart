@@ -75,7 +75,8 @@ class _ReportAnalysisPageState extends State<ReportAnalysisPage> {
             children: <Widget>[
               VeriHeader(
                 title: AppLocalizations.of(context).statAnalysisTitle,
-                subtitle: _range.label(AppLocalizations.of(context)),
+                subtitle:
+                    '${_range.label(AppLocalizations.of(context))} · ${controller.activeBook.baseCurrencyCode}',
                 showBack: true,
               ),
               const SizedBox(height: 10),

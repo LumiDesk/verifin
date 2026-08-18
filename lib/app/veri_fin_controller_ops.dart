@@ -17,6 +17,115 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     orElse: () => ledgerBooks.first,
   );
 
+  CurrencyDefinition get activeBaseCurrency =>
+      CurrencyCatalog.require(activeBook.baseCurrencyCode);
+
+  List<ExchangeRate> get exchangeRates =>
+      _exchangeRatesView ??= List<ExchangeRate>.unmodifiable(
+        _exchangeRates.where((rate) => rate.bookId == _activeBookId).toList()
+          ..sort((a, b) {
+            final byCode = a.currencyCode.compareTo(b.currencyCode);
+            if (byCode != 0) return byCode;
+            final byDate = b.effectiveDate.compareTo(a.effectiveDate);
+            return byDate != 0 ? byDate : b.id.compareTo(a.id);
+          }),
+      );
+
+  ExchangeRate? exchangeRateFor(String currencyCode, DateTime date) {
+    return exchangeRateAt(
+      bookId: _activeBookId,
+      baseCurrencyCode: activeBook.baseCurrencyCode,
+      currencyCode: currencyCode,
+      date: date,
+      rates: _exchangeRates,
+    );
+  }
+
+  double? rateToBaseFor(String currencyCode, DateTime date) {
+    return rateToBaseAt(
+      bookId: _activeBookId,
+      baseCurrencyCode: activeBook.baseCurrencyCode,
+      currencyCode: currencyCode,
+      date: date,
+      rates: _exchangeRates,
+    );
+  }
+
+  CurrencyConversionResult convertAmount({
+    required num amount,
+    required String sourceCurrencyCode,
+    required String targetCurrencyCode,
+    required DateTime date,
+  }) {
+    return convertCurrencyAmount(
+      amount: amount,
+      sourceCurrencyCode: sourceCurrencyCode,
+      targetCurrencyCode: targetCurrencyCode,
+      baseCurrencyCode: activeBook.baseCurrencyCode,
+      bookId: _activeBookId,
+      date: date,
+      rates: _exchangeRates,
+    );
+  }
+
+  ConvertedAccountBalances accountBalancesInBase({
+    Iterable<Account>? accounts,
+    DateTime? date,
+  }) {
+    return convertAccountBalancesToBase(
+      accounts: accounts ?? this.accounts,
+      balanceOf: accountBalance,
+      bookId: _activeBookId,
+      baseCurrencyCode: activeBook.baseCurrencyCode,
+      date: date ?? DateTime.now(),
+      rates: _exchangeRates,
+    );
+  }
+
+  bool ledgerBookHasFinancialData(String bookId) {
+    bool hasBudget(Map<String, double> budgets) => budgets.entries.any(
+      (entry) => entry.key.startsWith('$bookId:') && entry.value != 0,
+    );
+
+    return _entries.any((entry) => entry.bookId == bookId) ||
+        _accounts.any(
+          (account) =>
+              account.bookId == bookId &&
+              (account.initialBalance != 0 || account.creditLimit != null),
+        ) ||
+        _recurringRules.any((rule) => rule.bookId == bookId) ||
+        _exchangeRates.any((rate) => rate.bookId == bookId) ||
+        hasBudget(_monthlyBudgets) ||
+        hasBudget(_categoryBudgets) ||
+        (_dailyBudgets[bookId] ?? 0) != 0;
+  }
+
+  bool accountCurrencyLocked(Account account) {
+    return account.initialBalance != 0 ||
+        account.creditLimit != null ||
+        _entries.any(
+          (entry) =>
+              entry.bookId == account.bookId &&
+              entryTouchesAccount(entry, account.id),
+        );
+  }
+
+  ({int accounts, int entries, int recurringRules, int budgetSettings})
+  currencyReinterpretImpact(String bookId) {
+    bool belongsToBook(String key) => key.startsWith('$bookId:');
+    return (
+      accounts: _accounts.where((account) => account.bookId == bookId).length,
+      entries: _entries.where((entry) => entry.bookId == bookId).length,
+      recurringRules: _recurringRules
+          .where((rule) => rule.bookId == bookId)
+          .length,
+      budgetSettings:
+          _monthlyBudgets.keys.where(belongsToBook).length +
+          _categoryBudgets.keys.where(belongsToBook).length +
+          ((_dailyBudgets[bookId] ?? 0) != 0 ? 1 : 0),
+    );
+  }
+
   List<Account> get accounts => _accountsView ??= List<Account>.unmodifiable(
     _accounts.where((account) => account.bookId == _activeBookId),
   );
@@ -137,6 +246,12 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     RecurringRule rule, {
     required bool isNew,
   }) async {
+    final book = ledgerBooks
+        .where((book) => book.id == rule.bookId)
+        .firstOrNull;
+    if (book == null || !_validRecurringRuleCurrencyAmounts(rule, book)) {
+      return false;
+    }
     final next = List<RecurringRule>.of(_recurringRules);
     if (isNew) {
       next.add(rule);
@@ -158,6 +273,42 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       ..addAll(next);
     notifyListeners();
     return true;
+  }
+
+  bool _validRecurringRuleCurrencyAmounts(RecurringRule rule, LedgerBook book) {
+    bool positive(double? value) =>
+        value != null && value.isFinite && value > 0;
+    final account = _accounts
+        .where(
+          (account) =>
+              account.id == rule.accountId && account.bookId == rule.bookId,
+        )
+        .firstOrNull;
+    final toAccount = _accounts
+        .where(
+          (account) =>
+              account.id == rule.toAccountId && account.bookId == rule.bookId,
+        )
+        .firstOrNull;
+    if (!CurrencyCatalog.isSupported(rule.currencyCode) ||
+        !positive(rule.amount) ||
+        rule.accountId.isEmpty && rule.accountAmount != null ||
+        rule.accountId.isNotEmpty && !positive(rule.accountAmount)) {
+      return false;
+    }
+    if (rule.type == EntryType.transfer) {
+      return isZeroCurrencyAmount(rule.baseAmount, book.baseCurrencyCode) &&
+          rule.accountId.isNotEmpty &&
+          rule.toAccountId != null &&
+          rule.toAccountId!.isNotEmpty &&
+          rule.toAccountId != rule.accountId &&
+          positive(rule.toAccountAmount) &&
+          (account == null || rule.currencyCode == account.currencyCode) &&
+          (toAccount == null || rule.toAccountId == toAccount.id);
+    }
+    return positive(rule.baseAmount) &&
+        rule.toAccountId == null &&
+        rule.toAccountAmount == null;
   }
 
   /// Persists the active switches edited on the recurring-rule list as a batch.
@@ -182,65 +333,272 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     return true;
   }
 
-  /// 补记所有到期的周期交易（打开应用 / 回前台时调用）。为每条到期规则按其
-  /// 频率补齐从 `nextRunDate` 到 [now] 的交易，并推进规则的 `nextRunDate`。
-  /// 返回新补记的交易数量。处理所有账本的规则（不限当前账本）。
-  int applyDueRecurring(DateTime now) {
+  // ---- 本地汇率 ----
+
+  Future<bool> saveExchangeRateDraft({
+    String? id,
+    required String currencyCode,
+    required DateTime effectiveDate,
+    required double rateToBase,
+    ExchangeRateSource source = ExchangeRateSource.manual,
+  }) async {
+    final code = currencyCode.trim().toUpperCase();
+    final baseCode = activeBook.baseCurrencyCode.toUpperCase();
+    if (activeBook.currencySetupStatus != CurrencySetupStatus.confirmed ||
+        !CurrencyCatalog.isSupported(code) ||
+        code == baseCode ||
+        !isValidExchangeRate(rateToBase)) {
+      return false;
+    }
+    final date = DateTime(
+      effectiveDate.year,
+      effectiveDate.month,
+      effectiveDate.day,
+    );
+    final idIndex = id == null
+        ? -1
+        : _exchangeRates.indexWhere(
+            (rate) => rate.bookId == _activeBookId && rate.id == id,
+          );
+    final keyIndex = _exchangeRates.indexWhere(
+      (rate) =>
+          rate.bookId == _activeBookId &&
+          rate.baseCurrencyCode == baseCode &&
+          rate.currencyCode == code &&
+          currencyDateKey(rate.effectiveDate) == currencyDateKey(date),
+    );
+    if (idIndex != -1 && keyIndex != -1 && idIndex != keyIndex) return false;
+    final existingIndex = idIndex != -1 ? idIndex : keyIndex;
+    final now = DateTime.now();
+    final existing = existingIndex == -1 ? null : _exchangeRates[existingIndex];
+    final candidate = ExchangeRate(
+      id: existing?.id ?? id ?? _generateId('rate'),
+      bookId: _activeBookId,
+      baseCurrencyCode: baseCode,
+      currencyCode: code,
+      effectiveDate: date,
+      rateToBase: rateToBase,
+      source: source,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    );
+    final next = List<ExchangeRate>.of(_exchangeRates);
+    if (existingIndex == -1) {
+      next.add(candidate);
+    } else {
+      next[existingIndex] = candidate;
+    }
+    try {
+      await _repository.saveExchangeRates(next);
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _exchangeRates
+      ..clear()
+      ..addAll(next);
+    notifyListeners();
+    return true;
+  }
+
+  Future<bool> deleteExchangeRate(String id) async {
+    final next = <ExchangeRate>[
+      for (final rate in _exchangeRates)
+        if (rate.id != id || rate.bookId != _activeBookId) rate,
+    ];
+    if (next.length == _exchangeRates.length) return false;
+    try {
+      await _repository.saveExchangeRates(next);
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _exchangeRates
+      ..clear()
+      ..addAll(next);
+    notifyListeners();
+    return true;
+  }
+
+  /// Returns due rules in the active ledger that cannot currently be posted
+  /// because one or more local rates are missing.
+  Map<String, Set<String>> dueRecurringMissingRates(DateTime now) {
+    final result = <String, Set<String>>{};
+    for (final rule in recurringRules.where((rule) => rule.active)) {
+      final dueDates = dueDatesFor(rule, now);
+      if (dueDates.isEmpty) continue;
+      for (final due in dueDates) {
+        final materialized = _materializeRecurringEntry(rule, due);
+        if (materialized.missingCodes.isNotEmpty) {
+          result[rule.id] = materialized.missingCodes;
+          break;
+        }
+      }
+    }
+    return result;
+  }
+
+  ({LedgerEntry? entry, Set<String> missingCodes}) _materializeRecurringEntry(
+    RecurringRule rule,
+    DateTime due,
+  ) {
+    final book = ledgerBooks
+        .where((book) => book.id == rule.bookId)
+        .firstOrNull;
+    if (book == null) return (entry: null, missingCodes: const <String>{});
+    final account = _accounts
+        .where(
+          (account) =>
+              account.id == rule.accountId && account.bookId == rule.bookId,
+        )
+        .firstOrNull;
+    final toAccount = _accounts
+        .where(
+          (account) =>
+              account.id == rule.toAccountId && account.bookId == rule.bookId,
+        )
+        .firstOrNull;
+    final sourceCode = rule.type == EntryType.transfer && account != null
+        ? account.currencyCode
+        : rule.currencyCode;
+    final id = 'entry_recur_${rule.id}_${due.millisecondsSinceEpoch}';
+    if (rule.ratePolicy == RecurringRatePolicy.fixedAmounts) {
+      return (
+        entry: LedgerEntry(
+          id: id,
+          bookId: rule.bookId,
+          type: rule.type,
+          amount: rule.amount,
+          currencyCode: sourceCode,
+          accountAmount: rule.accountId.isEmpty ? null : rule.accountAmount,
+          toAccountAmount: rule.type == EntryType.transfer
+              ? rule.toAccountAmount
+              : null,
+          baseAmount: rule.type == EntryType.transfer ? 0 : rule.baseAmount,
+          conversionSource: ConversionSource.manual,
+          categoryId: rule.categoryId,
+          accountId: rule.accountId,
+          toAccountId: rule.type == EntryType.transfer
+              ? rule.toAccountId
+              : null,
+          note: rule.note,
+          occurredAt: due,
+        ),
+        missingCodes: const <String>{},
+      );
+    }
+
+    final missing = <String>{};
+    double? converted(String targetCode) {
+      final result = convertCurrencyAmount(
+        amount: rule.amount,
+        sourceCurrencyCode: sourceCode,
+        targetCurrencyCode: targetCode,
+        baseCurrencyCode: book.baseCurrencyCode,
+        bookId: rule.bookId,
+        date: due,
+        rates: _exchangeRates,
+      );
+      if (result is ConvertedCurrencyAmount) return result.amount;
+      if (result is MissingCurrencyRate) missing.addAll(result.currencyCodes);
+      return null;
+    }
+
+    final accountAmount = rule.accountId.isEmpty
+        ? null
+        : converted(account?.currencyCode ?? sourceCode);
+    final toAccountAmount = rule.type == EntryType.transfer
+        ? converted(toAccount?.currencyCode ?? sourceCode)
+        : null;
+    final baseAmount = rule.type == EntryType.transfer
+        ? 0.0
+        : converted(book.baseCurrencyCode);
+    if (missing.isNotEmpty ||
+        rule.accountId.isNotEmpty && accountAmount == null ||
+        rule.type == EntryType.transfer && toAccountAmount == null ||
+        rule.type != EntryType.transfer && baseAmount == null) {
+      return (entry: null, missingCodes: missing);
+    }
+    return (
+      entry: LedgerEntry(
+        id: id,
+        bookId: rule.bookId,
+        type: rule.type,
+        amount: normalizeCurrencyAmount(rule.amount, sourceCode),
+        currencyCode: sourceCode,
+        accountAmount: accountAmount,
+        toAccountAmount: toAccountAmount,
+        baseAmount: baseAmount!,
+        conversionSource: ConversionSource.rateTable,
+        categoryId: rule.categoryId,
+        accountId: rule.accountId,
+        toAccountId: rule.type == EntryType.transfer ? rule.toAccountId : null,
+        note: rule.note,
+        occurredAt: due,
+      ),
+      missingCodes: const <String>{},
+    );
+  }
+
+  /// Atomically posts all due recurring entries and advances only dates that
+  /// were successfully materialized. A missing rate leaves that due date in
+  /// place for retry. Returns -1 if persistence fails.
+  Future<int> applyDueRecurring(DateTime now) async {
     var generated = 0;
-    var rulesChanged = false;
-    final existingIds = _entries.map((e) => e.id).toSet();
-    for (var i = 0; i < _recurringRules.length; i++) {
-      final rule = _recurringRules[i];
+    final nextEntries = List<LedgerEntry>.of(_entries);
+    final nextRules = List<RecurringRule>.of(_recurringRules);
+    final existingIds = nextEntries.map((e) => e.id).toSet();
+    for (var i = 0; i < nextRules.length; i++) {
+      final rule = nextRules[i];
       final dueDates = dueDatesFor(rule, now);
       if (dueDates.isEmpty) {
         continue;
       }
+      DateTime? lastProcessed;
       for (final due in dueDates) {
-        // 补记 id 由 rule.id + 到期日毫秒确定。若用户把规则日期回拨重新触发补记，
-        // 同一到期日会生成同 id 条目，跳过以免覆盖用户可能手改过的那条。
         final id = 'entry_recur_${rule.id}_${due.millisecondsSinceEpoch}';
         if (!existingIds.add(id)) {
+          lastProcessed = due;
           continue;
         }
-        _entries.add(
-          LedgerEntry(
-            id: id,
-            bookId: rule.bookId,
-            type: rule.type,
-            amount: rule.amount,
-            categoryId: rule.categoryId,
-            accountId: rule.accountId,
-            toAccountId: rule.type == EntryType.transfer
-                ? rule.toAccountId
-                : null,
-            note: rule.note,
-            occurredAt: due,
+        final materialized = _materializeRecurringEntry(rule, due);
+        if (materialized.entry == null) {
+          existingIds.remove(id);
+          break;
+        }
+        nextEntries.add(materialized.entry!);
+        generated += 1;
+        lastProcessed = due;
+      }
+      if (lastProcessed != null) {
+        nextRules[i] = rule.copyWith(
+          nextRunDate: advanceRecurring(
+            lastProcessed,
+            rule.frequency,
+            anchorDay: rule.startDate.day,
           ),
         );
-        generated += 1;
       }
-      _recurringRules[i] = rule.copyWith(
-        nextRunDate: advanceRecurring(
-          dueDates.last,
-          rule.frequency,
-          anchorDay: rule.startDate.day,
-        ),
+    }
+    final rulesChanged = !listEquals(nextRules, _recurringRules);
+    if (generated == 0 && !rulesChanged) return 0;
+    nextEntries.sort(_compareEntriesLatestFirst);
+    try {
+      await _repository.saveRecurringGeneration(
+        entries: nextEntries,
+        recurringRules: nextRules,
       );
-      rulesChanged = true;
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return -1;
     }
-    if (generated > 0) {
-      _entries.sort(_compareEntriesLatestFirst);
-      _persistEntries();
-    }
-    if (rulesChanged) {
-      _persistRecurringRules();
-    }
-    if (generated > 0 || rulesChanged) {
-      notifyListeners();
-    }
-    // 注意：不在此触发 onEntryAdded。applyDueRecurring 只在 main 的开屏/回前台流程中
-    // 调用，紧随其后已有 maybeBackupOnOpen + pushWidgetData，再触发会重复备份
-    // （加密备份还会重复跑 PBKDF2）。
+    _entries
+      ..clear()
+      ..addAll(nextEntries);
+    _recurringRules
+      ..clear()
+      ..addAll(nextRules);
+    notifyListeners();
     return generated;
   }
 
@@ -1341,7 +1699,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
 
   /// Atomically persists an entry together with its refunds and attachments.
   ///
-  /// [entry.refundedAmount] is ignored and derived again from the settled
+  /// [entry.refundedBaseAmount] is ignored and derived again from the settled
   /// refunds, preventing an editor's stale entry snapshot from overwriting the
   /// controller-managed cache.
   Future<bool> saveEntryAggregateDraft({
@@ -1349,6 +1707,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     required bool isNew,
     List<LedgerEntry> refunds = const <LedgerEntry>[],
     List<Attachment> attachments = const <Attachment>[],
+    String? rememberRateCurrencyCode,
+    double? rememberRateToBase,
+    DateTime? rememberRateEffectiveDate,
   }) async {
     final currentIndex = _entries.indexWhere((item) => item.id == entry.id);
     if ((isNew && currentIndex != -1) || (!isNew && currentIndex == -1)) {
@@ -1357,12 +1718,20 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     if (!isNew && _entries[currentIndex].bookId != entry.bookId) {
       return false;
     }
+    final book = ledgerBooks
+        .where((item) => item.id == entry.bookId)
+        .firstOrNull;
+    if (book == null || !_validEntryCurrencyAmounts(entry, book)) {
+      return false;
+    }
     if (refunds.any(
           (refund) =>
               refund.type != EntryType.refund ||
               refund.refundOf != entry.id ||
               refund.bookId != entry.bookId ||
-              refund.amount <= 0,
+              refund.currencyCode != entry.currencyCode ||
+              refund.amount <= 0 ||
+              !_validEntryCurrencyAmounts(refund, book),
         ) ||
         attachments.any((attachment) => attachment.entryId != entry.id)) {
       return false;
@@ -1371,8 +1740,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       0,
       (total, refund) => total + refund.amount,
     );
+    final refundTolerance = currencyAmountTolerance(entry.currencyCode);
     if (entry.type != EntryType.expense && refunds.isNotEmpty ||
-        refundTotal > entry.amount + 0.0001) {
+        refundTotal > entry.amount + refundTolerance) {
       return false;
     }
 
@@ -1382,7 +1752,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     final nextEntries = <LedgerEntry>[];
     for (final current in _entries) {
       if (current.id == entry.id) {
-        nextEntries.add(entry.copyWith(refundedAmount: 0));
+        nextEntries.add(entry.copyWith(refundedBaseAmount: 0));
       } else if (current.type == EntryType.refund &&
           current.refundOf == entry.id) {
         continue;
@@ -1391,7 +1761,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       }
     }
     if (isNew) {
-      nextEntries.add(entry.copyWith(refundedAmount: 0));
+      nextEntries.add(entry.copyWith(refundedBaseAmount: 0));
     }
     nextEntries.addAll(refunds);
 
@@ -1399,7 +1769,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     for (final current in nextEntries) {
       if (current.isSettledRefund && current.refundOf != null) {
         settledByExpense[current.refundOf!] =
-            (settledByExpense[current.refundOf!] ?? 0) + current.amount;
+            (settledByExpense[current.refundOf!] ?? 0) + current.baseAmount;
       }
     }
     for (var i = 0; i < nextEntries.length; i++) {
@@ -1407,10 +1777,10 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       if (current.type != EntryType.expense) {
         continue;
       }
-      final refundedAmount = (settledByExpense[current.id] ?? 0)
-          .clamp(0.0, current.amount)
+      final refundedBaseAmount = (settledByExpense[current.id] ?? 0)
+          .clamp(0.0, current.baseAmount)
           .toDouble();
-      nextEntries[i] = current.copyWith(refundedAmount: refundedAmount);
+      nextEntries[i] = current.copyWith(refundedBaseAmount: refundedBaseAmount);
     }
     nextEntries.sort(_compareEntriesLatestFirst);
 
@@ -1419,10 +1789,59 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         if (attachment.entryId != entry.id) attachment,
       ...attachments,
     ];
+    List<ExchangeRate>? nextRates;
+    if (rememberRateCurrencyCode != null ||
+        rememberRateToBase != null ||
+        rememberRateEffectiveDate != null) {
+      if (rememberRateCurrencyCode == null ||
+          rememberRateToBase == null ||
+          rememberRateEffectiveDate == null) {
+        return false;
+      }
+      final code = rememberRateCurrencyCode.trim().toUpperCase();
+      final baseCode = book.baseCurrencyCode.toUpperCase();
+      if (book.currencySetupStatus != CurrencySetupStatus.confirmed ||
+          !CurrencyCatalog.isSupported(code) ||
+          code == baseCode ||
+          !isValidExchangeRate(rememberRateToBase)) {
+        return false;
+      }
+      final effectiveDate = dateOnly(rememberRateEffectiveDate);
+      final existingIndex = _exchangeRates.indexWhere(
+        (rate) =>
+            rate.bookId == entry.bookId &&
+            rate.baseCurrencyCode == baseCode &&
+            rate.currencyCode == code &&
+            currencyDateKey(rate.effectiveDate) ==
+                currencyDateKey(effectiveDate),
+      );
+      final now = DateTime.now();
+      final existing = existingIndex == -1
+          ? null
+          : _exchangeRates[existingIndex];
+      final candidate = ExchangeRate(
+        id: existing?.id ?? _generateId('rate'),
+        bookId: entry.bookId,
+        baseCurrencyCode: baseCode,
+        currencyCode: code,
+        effectiveDate: effectiveDate,
+        rateToBase: rememberRateToBase,
+        source: ExchangeRateSource.manual,
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now,
+      );
+      nextRates = List<ExchangeRate>.of(_exchangeRates);
+      if (existingIndex == -1) {
+        nextRates.add(candidate);
+      } else {
+        nextRates[existingIndex] = candidate;
+      }
+    }
     try {
       await _repository.saveEntryAggregate(
         entries: nextEntries,
         attachments: nextAttachments,
+        exchangeRates: nextRates,
       );
     } catch (error, stackTrace) {
       _handlePersistError(error, stackTrace);
@@ -1435,9 +1854,64 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _attachments
       ..clear()
       ..addAll(nextAttachments);
+    if (nextRates != null) {
+      _exchangeRates
+        ..clear()
+        ..addAll(nextRates);
+    }
     notifyListeners();
     if (hasNewEntry) {
       onEntryAdded?.call();
+    }
+    return true;
+  }
+
+  bool _validEntryCurrencyAmounts(LedgerEntry entry, LedgerBook book) {
+    bool positive(double? value) =>
+        value != null && value.isFinite && value > 0;
+    bool nonNegative(double value) => value.isFinite && value >= 0;
+    Account? accountFor(String? id) {
+      if (id == null || id.isEmpty) return null;
+      return _accounts
+          .where(
+            (account) => account.id == id && account.bookId == entry.bookId,
+          )
+          .firstOrNull;
+    }
+
+    final code = entry.currencyCode.toUpperCase();
+    if (!CurrencyCatalog.isSupported(code) ||
+        !positive(entry.amount) ||
+        !nonNegative(entry.fee)) {
+      return false;
+    }
+    final account = accountFor(entry.accountId);
+    final toAccount = accountFor(entry.toAccountId);
+    if (entry.accountId.isEmpty) {
+      if (entry.accountAmount != null) return false;
+    } else if (!positive(entry.accountAmount)) {
+      return false;
+    }
+    if (entry.toAccountId == null || entry.toAccountId!.isEmpty) {
+      if (entry.toAccountAmount != null) return false;
+    } else if (!positive(entry.toAccountAmount)) {
+      return false;
+    }
+    if (entry.type == EntryType.transfer) {
+      if (!isZeroCurrencyAmount(entry.baseAmount, book.baseCurrencyCode) ||
+          entry.accountId.isEmpty &&
+              (entry.toAccountId == null || entry.toAccountId!.isEmpty) ||
+          account != null && code != account.currencyCode ||
+          entry.accountId.isEmpty &&
+              toAccount != null &&
+              code != toAccount.currencyCode) {
+        return false;
+      }
+    } else if (!positive(entry.baseAmount) || entry.toAccountId != null) {
+      return false;
+    }
+    if (entry.type != EntryType.transfer && entry.fee != 0) {
+      return false;
     }
     return true;
   }
@@ -1452,6 +1926,8 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       existingAccounts: accounts,
       existingCategories: categories,
       now: DateTime.now(),
+      baseCurrencyCode: activeBook.baseCurrencyCode,
+      exchangeRates: exchangeRates,
       existingTags: tags,
       seedEnglish: _seedEnglish,
     );
@@ -1489,7 +1965,11 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
 
   /// 仅解析所选平台账单为导入计划，**不落库**——供导入预览页展示、让用户
   /// 排除/编辑后再确认。解析失败抛 [FormatException]。
-  ImportPlan parsePlatformImport(ImportPlatform platform, Uint8List bytes) {
+  ImportPlan parsePlatformImport(
+    ImportPlatform platform,
+    Uint8List bytes, {
+    Map<String, double> rateOverrides = const <String, double>{},
+  }) {
     return buildPlatformImportPlan(
       platform: platform,
       bytes: bytes,
@@ -1497,6 +1977,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       existingAccounts: accounts,
       existingCategories: categories,
       now: DateTime.now(),
+      baseCurrencyCode: activeBook.baseCurrencyCode,
+      exchangeRates: exchangeRates,
+      rateOverrides: rateOverrides,
       seedEnglish: _seedEnglish,
     );
   }
@@ -1511,6 +1994,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     required List<Category> candidateCategories,
     List<Tag> candidateTags = const <Tag>[],
     Set<String> alwaysCreateAccountIds = const <String>{},
+    List<ExchangeRate> candidateExchangeRates = const <ExchangeRate>[],
   }) {
     if (entries.isEmpty && alwaysCreateAccountIds.isEmpty) {
       return;
@@ -1576,6 +2060,25 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
               !existingTagIds.contains(tag.id),
         )
         .toList();
+    final existingRateKeys = _exchangeRates
+        .map(
+          (rate) =>
+              '${rate.bookId}:${rate.currencyCode}:${currencyDateKey(rate.effectiveDate)}',
+        )
+        .toSet();
+    final newRates = <ExchangeRate>[];
+    for (final rate in candidateExchangeRates) {
+      final key =
+          '${rate.bookId}:${rate.currencyCode}:${currencyDateKey(rate.effectiveDate)}';
+      if (rate.bookId == _activeBookId &&
+          rate.baseCurrencyCode == activeBook.baseCurrencyCode &&
+          rate.currencyCode != rate.baseCurrencyCode &&
+          CurrencyCatalog.isSupported(rate.currencyCode) &&
+          isValidExchangeRate(rate.rateToBase) &&
+          existingRateKeys.add(key)) {
+        newRates.add(rate);
+      }
+    }
 
     // 名称去首尾空格：候选账户经预览页改名后可能带空格，与 addAccount 同规则。
     _accounts.addAll(
@@ -1591,6 +2094,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     if (newTags.isNotEmpty) {
       _tags.addAll(newTags);
     }
+    if (newRates.isNotEmpty) {
+      _exchangeRates.addAll(newRates);
+    }
     _entries.addAll(entries);
     _entries.sort(_compareEntriesLatestFirst);
     // 导入数据里的旧式单标量退款（如一木账单的「退款」列）迁成关联退款条目、
@@ -1600,6 +2106,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _persistCategories();
     if (newTags.isNotEmpty) {
       _persistTags();
+    }
+    if (newRates.isNotEmpty) {
+      _persistExchangeRates();
     }
     _persistEntries();
     notifyListeners();
@@ -1689,16 +2198,82 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     required DateTime initiatedAt,
     DateTime? settledAt,
     String note = '',
+    double? accountAmount,
+    double? baseAmount,
+    ConversionSource? conversionSource,
   }) {
     final expense = _entryOrNull(expenseId);
     if (expense == null || expense.type != EntryType.expense) return null;
     final capped = amount.clamp(0.0, remainingRefundable(expenseId)).toDouble();
     if (capped <= 0) return null;
+    final book = _ledgerBooks
+        .where((book) => book.id == expense.bookId)
+        .firstOrNull;
+    if (book == null) return null;
+    final normalizedAmount = normalizeCurrencyAmount(
+      capped,
+      expense.currencyCode,
+    );
+    final resolvedBaseAmount = normalizeCurrencyAmount(
+      baseAmount ?? expense.baseAmount * normalizedAmount / expense.amount,
+      book.baseCurrencyCode,
+    );
+    final account = accountId.isEmpty
+        ? null
+        : _accounts
+              .where(
+                (account) =>
+                    account.id == accountId && account.bookId == expense.bookId,
+              )
+              .firstOrNull;
+    double? resolvedAccountAmount;
+    if (account != null) {
+      if (accountAmount != null) {
+        resolvedAccountAmount = normalizeCurrencyAmount(
+          accountAmount,
+          account.currencyCode,
+        );
+      } else if (account.id == expense.accountId &&
+          expense.accountAmount != null) {
+        resolvedAccountAmount = normalizeCurrencyAmount(
+          expense.accountAmount! * normalizedAmount / expense.amount,
+          account.currencyCode,
+        );
+      } else if (account.currencyCode == book.baseCurrencyCode) {
+        resolvedAccountAmount = resolvedBaseAmount;
+      } else {
+        final converted = convertCurrencyAmount(
+          amount: normalizedAmount,
+          sourceCurrencyCode: expense.currencyCode,
+          targetCurrencyCode: account.currencyCode,
+          baseCurrencyCode: book.baseCurrencyCode,
+          bookId: expense.bookId,
+          date: initiatedAt,
+          rates: _exchangeRates,
+        );
+        if (converted is! ConvertedCurrencyAmount) return null;
+        resolvedAccountAmount = converted.amount;
+      }
+    } else if (accountId.isNotEmpty) {
+      // Keep compatibility with an already-deleted account reference while
+      // still requiring an explicit actual amount for new cross-currency data.
+      resolvedAccountAmount = accountAmount ?? normalizedAmount;
+    }
     final refund = LedgerEntry(
       id: _generateId('entry'),
       bookId: expense.bookId,
       type: EntryType.refund,
-      amount: capped,
+      amount: normalizedAmount,
+      currencyCode: expense.currencyCode,
+      accountAmount: resolvedAccountAmount,
+      baseAmount: resolvedBaseAmount,
+      conversionSource:
+          conversionSource ??
+          (expense.currencyCode == book.baseCurrencyCode &&
+                  (account == null ||
+                      account.currencyCode == book.baseCurrencyCode)
+              ? ConversionSource.identity
+              : ConversionSource.rateTable),
       categoryId: expense.categoryId,
       accountId: accountId,
       note: note,
@@ -1774,17 +2349,22 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
-  void addLedgerBook(String name) {
+  void addLedgerBook(String name, {String? baseCurrencyCode}) {
     final trimmedName = name.trim();
     if (trimmedName.isEmpty) {
       return;
     }
+    final code = (baseCurrencyCode ?? activeBook.baseCurrencyCode)
+        .toUpperCase();
+    if (!CurrencyCatalog.isSupported(code)) return;
     final now = DateTime.now();
     final book = LedgerBook(
       id: _generateId('book'),
       name: trimmedName,
       createdAt: now,
       isDefault: false,
+      baseCurrencyCode: code,
+      currencySetupStatus: CurrencySetupStatus.confirmed,
     );
     _ledgerBooks.add(book);
     _activeBookId = book.id;
@@ -1805,6 +2385,155 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _ledgerBooks[index] = _ledgerBooks[index].copyWith(name: trimmedName);
     _persistLedgerBooks();
     notifyListeners();
+  }
+
+  /// 空账本可直接改变本位币；已有财务数据时必须新建账本，不能换算历史数字。
+  Future<bool> changeEmptyLedgerBookBaseCurrency(
+    String bookId,
+    String currencyCode,
+  ) async {
+    final code = currencyCode.trim().toUpperCase();
+    final bookIndex = _ledgerBooks.indexWhere((book) => book.id == bookId);
+    if (bookIndex == -1 ||
+        !CurrencyCatalog.isSupported(code) ||
+        ledgerBookHasFinancialData(bookId)) {
+      return false;
+    }
+    final current = _ledgerBooks[bookIndex];
+    final nextBooks = List<LedgerBook>.of(_ledgerBooks)
+      ..[bookIndex] = current.copyWith(
+        baseCurrencyCode: code,
+        currencySetupStatus: CurrencySetupStatus.confirmed,
+      );
+    final nextAccounts = <Account>[
+      for (final account in _accounts)
+        account.bookId == bookId
+            ? account.copyWith(currencyCode: code)
+            : account,
+    ];
+    final nextRates = <ExchangeRate>[
+      for (final rate in _exchangeRates)
+        if (rate.bookId != bookId) rate,
+    ];
+    try {
+      await _repository.replaceAllLedgerData(
+        _ledgerDataSnapshot(
+          books: nextBooks,
+          accounts: nextAccounts,
+          exchangeRates: nextRates,
+        ),
+      );
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _ledgerBooks
+      ..clear()
+      ..addAll(nextBooks);
+    _accounts
+      ..clear()
+      ..addAll(nextAccounts);
+    _exchangeRates
+      ..clear()
+      ..addAll(nextRates);
+    notifyListeners();
+    return true;
+  }
+
+  /// 首版旧账本的一次性“重解释”：所有数字保持不变，只把它们的币种标签从
+  /// 迁移占位 CNY 改为用户确认的币种。全部核心表在同一 SQLite 事务内替换。
+  Future<bool> reinterpretLegacyLedgerBookCurrency(
+    String bookId,
+    String currencyCode,
+  ) async {
+    final code = currencyCode.trim().toUpperCase();
+    final bookIndex = _ledgerBooks.indexWhere((book) => book.id == bookId);
+    if (bookIndex == -1 ||
+        _ledgerBooks[bookIndex].currencySetupStatus !=
+            CurrencySetupStatus.legacyUnconfirmed ||
+        !CurrencyCatalog.isSupported(code)) {
+      return false;
+    }
+    final nextBooks = List<LedgerBook>.of(_ledgerBooks)
+      ..[bookIndex] = _ledgerBooks[bookIndex].copyWith(
+        baseCurrencyCode: code,
+        currencySetupStatus: CurrencySetupStatus.confirmed,
+      );
+    final nextAccounts = <Account>[
+      for (final account in _accounts)
+        account.bookId == bookId
+            ? account.copyWith(currencyCode: code)
+            : account,
+    ];
+    final nextEntries = <LedgerEntry>[
+      for (final entry in _entries)
+        if (entry.bookId != bookId)
+          entry
+        else
+          entry.copyWith(
+            currencyCode: code,
+            accountAmount: entry.accountId.isEmpty ? null : entry.amount,
+            clearAccountAmount: entry.accountId.isEmpty,
+            toAccountAmount: entry.toAccountId?.isNotEmpty == true
+                ? entry.amount
+                : null,
+            clearToAccountAmount: entry.toAccountId?.isNotEmpty != true,
+            baseAmount: entry.type == EntryType.transfer ? 0 : entry.amount,
+            conversionSource: ConversionSource.legacy,
+          ),
+    ];
+    final nextRecurringRules = <RecurringRule>[
+      for (final rule in _recurringRules)
+        if (rule.bookId != bookId)
+          rule
+        else
+          rule.copyWith(
+            currencyCode: code,
+            accountAmount: rule.accountId.isEmpty ? null : rule.amount,
+            clearAccountAmount: rule.accountId.isEmpty,
+            toAccountAmount: rule.toAccountId?.isNotEmpty == true
+                ? rule.amount
+                : null,
+            clearToAccountAmount: rule.toAccountId?.isNotEmpty != true,
+            baseAmount: rule.type == EntryType.transfer ? 0 : rule.amount,
+            ratePolicy: RecurringRatePolicy.fixedAmounts,
+          ),
+    ];
+    final nextRates = <ExchangeRate>[
+      for (final rate in _exchangeRates)
+        if (rate.bookId != bookId) rate,
+    ];
+    try {
+      await _repository.replaceAllLedgerData(
+        _ledgerDataSnapshot(
+          books: nextBooks,
+          accounts: nextAccounts,
+          entries: nextEntries,
+          recurringRules: nextRecurringRules,
+          exchangeRates: nextRates,
+        ),
+      );
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _ledgerBooks
+      ..clear()
+      ..addAll(nextBooks);
+    _accounts
+      ..clear()
+      ..addAll(nextAccounts);
+    _entries
+      ..clear()
+      ..addAll(nextEntries);
+    _recurringRules
+      ..clear()
+      ..addAll(nextRecurringRules);
+    _exchangeRates
+      ..clear()
+      ..addAll(nextRates);
+    notifyListeners();
+    return true;
   }
 
   void switchLedgerBook(String bookId) {
@@ -1830,6 +2559,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _accounts.removeWhere((account) => account.bookId == bookId);
     _accountGroups.removeWhere((group) => group.bookId == bookId);
     _recurringRules.removeWhere((rule) => rule.bookId == bookId);
+    _exchangeRates.removeWhere((rate) => rate.bookId == bookId);
     _collapsedAssetSections.removeWhere((key) => key.startsWith('$bookId:'));
     _assetAccountOrders.removeWhere((key, _) => key.startsWith('$bookId:'));
     _assetSectionOrders.removeWhere((key, _) => key.startsWith('$bookId:'));
@@ -1944,16 +2674,48 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     return changed;
   }
 
+  bool _isAccountCurrencyAllowed(Account account) {
+    final book = _ledgerBooks
+        .where((item) => item.id == account.bookId)
+        .firstOrNull;
+    return book != null &&
+        CurrencyCatalog.isSupported(account.currencyCode) &&
+        (book.currencySetupStatus == CurrencySetupStatus.confirmed ||
+            account.currencyCode == book.baseCurrencyCode);
+  }
+
+  Account _normalizeAccountCurrencyAmounts(Account account) {
+    final creditLimit = account.creditLimit;
+    return account.copyWith(
+      initialBalance: normalizeCurrencyAmount(
+        account.initialBalance,
+        account.currencyCode,
+      ),
+      creditLimit: creditLimit == null
+          ? null
+          : normalizeCurrencyAmount(creditLimit, account.currencyCode),
+      clearCreditLimit: creditLimit == null,
+    );
+  }
+
   void addAccount(Account account) {
+    if (!_isAccountCurrencyAllowed(account)) return;
     // 名称统一去首尾空格（与 addAccountGroup、导入侧 plan_builder 同规则）。
-    _accounts.add(account.copyWith(name: account.name.trim()));
+    _accounts.add(
+      _normalizeAccountCurrencyAmounts(
+        account.copyWith(name: account.name.trim()),
+      ),
+    );
     _persistAccounts();
     notifyListeners();
   }
 
   /// 编辑页提交新账户：只有 SQLite 写入成功后才更新内存并通知 UI。
   Future<bool> addAccountDraft(Account account) async {
-    final normalized = account.copyWith(name: account.name.trim());
+    if (!_isAccountCurrencyAllowed(account)) return false;
+    final normalized = _normalizeAccountCurrencyAmounts(
+      account.copyWith(name: account.name.trim()),
+    );
     final next = <Account>[..._accounts, normalized];
     try {
       await _repository.saveAccounts(next);
@@ -1971,7 +2733,15 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     if (index == -1) {
       return;
     }
-    _accounts[index] = account.copyWith(name: account.name.trim());
+    final current = _accounts[index];
+    if (!_isAccountCurrencyAllowed(account) ||
+        (current.currencyCode != account.currencyCode &&
+            accountCurrencyLocked(current))) {
+      return;
+    }
+    _accounts[index] = _normalizeAccountCurrencyAmounts(
+      account.copyWith(name: account.name.trim()),
+    );
     _persistAccounts();
     notifyListeners();
   }
@@ -1982,7 +2752,15 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     if (index == -1) {
       return false;
     }
-    final normalized = account.copyWith(name: account.name.trim());
+    final current = _accounts[index];
+    if (!_isAccountCurrencyAllowed(account) ||
+        (current.currencyCode != account.currencyCode &&
+            accountCurrencyLocked(current))) {
+      return false;
+    }
+    final normalized = _normalizeAccountCurrencyAmounts(
+      account.copyWith(name: account.name.trim()),
+    );
     final next = List<Account>.of(_accounts)..[index] = normalized;
     try {
       await _repository.saveAccounts(next);
@@ -2053,17 +2831,33 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     return affectedRules;
   }
 
-  void adjustAccountBalance(
+  bool adjustAccountBalance(
     Account account,
     double targetBalance, {
     String note = '余额调整',
   }) {
     final currentBalance = accountBalance(account);
     final difference = targetBalance - currentBalance;
-    if (difference.abs() < 0.005) {
-      return;
+    if (isZeroCurrencyAmount(difference, account.currencyCode)) {
+      return false;
     }
     final now = DateTime.now();
+    final book = _ledgerBooks
+        .where((item) => item.id == account.bookId)
+        .firstOrNull;
+    if (book == null) return false;
+    final rate = rateToBaseAt(
+      bookId: account.bookId,
+      baseCurrencyCode: book.baseCurrencyCode,
+      currencyCode: account.currencyCode,
+      date: now,
+      rates: _exchangeRates,
+    );
+    if (rate == null) return false;
+    final baseAmount = normalizeCurrencyAmount(
+      difference.abs() * rate,
+      book.baseCurrencyCode,
+    );
     _entries.insert(
       0,
       LedgerEntry(
@@ -2071,6 +2865,12 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         bookId: account.bookId,
         type: difference > 0 ? EntryType.income : EntryType.expense,
         amount: difference.abs(),
+        currencyCode: account.currencyCode,
+        accountAmount: difference.abs(),
+        baseAmount: baseAmount,
+        conversionSource: account.currencyCode == book.baseCurrencyCode
+            ? ConversionSource.identity
+            : ConversionSource.rateTable,
         categoryId: difference > 0
             ? 'balance_adjust_income'
             : 'balance_adjust_expense',
@@ -2084,13 +2884,14 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
     // 余额调整也生成了一笔交易：触发自动备份与小组件刷新。
     onEntryAdded?.call();
+    return true;
   }
 
   /// 不生成交易,直接调整初始余额,使当前余额等于目标值。
   void rebaseAccountBalance(Account account, double targetBalance) {
     final currentBalance = accountBalance(account);
     final difference = targetBalance - currentBalance;
-    if (difference.abs() < 0.005) {
+    if (isZeroCurrencyAmount(difference, account.currencyCode)) {
       return;
     }
     final index = _accounts.indexWhere((item) => item.id == account.id);
@@ -2098,7 +2899,10 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       return;
     }
     _accounts[index] = _accounts[index].copyWith(
-      initialBalance: _accounts[index].initialBalance + difference,
+      initialBalance: normalizeCurrencyAmount(
+        _accounts[index].initialBalance + difference,
+        account.currencyCode,
+      ),
     );
     _persistAccounts();
     notifyListeners();
@@ -2635,6 +3439,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _tags.clear();
     _attachments.clear();
     _recurringRules.clear();
+    _exchangeRates.clear();
     _monthlyBudgets.clear();
     _categoryBudgets.clear();
     _dailyBudgets.clear();
@@ -2665,7 +3470,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   String exportDataJson() {
     final payload = <String, Object?>{
       'app': 'verifin',
-      'version': 1,
+      'version': 2,
       'exportedAt': DateTime.now().toIso8601String(),
       'data': <String, Object?>{
         'ledgerBooks': _ledgerBooks.map((book) => book.toJson()).toList(),
@@ -2677,6 +3482,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         'tags': _tags.map((tag) => tag.toJson()).toList(),
         'attachments': _attachments.map((a) => a.toJson()).toList(),
         'recurringRules': _recurringRules.map((r) => r.toJson()).toList(),
+        'exchangeRates': _exchangeRates.map((rate) => rate.toJson()).toList(),
         'monthlyBudgets': Map<String, double>.from(_monthlyBudgets),
         'categoryBudgets': Map<String, double>.from(_categoryBudgets),
         'dailyBudgets': Map<String, double>.from(_dailyBudgets),
@@ -2698,6 +3504,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         'defaultAccountIds': Map<String, String>.from(_defaultAccountIds),
         'fabActionMode': _fabActionMode.name,
         'amountForceTwoDecimals': _amountForceTwoDecimals,
+        'currencyFractionStyle': amount_format.currencyFractionStyle.name,
         'autoSuggestEnabled': _autoSuggestEnabled,
         'homeTrendConfig': _homeTrendConfig.toJson(),
       },
@@ -2714,6 +3521,15 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       throw const FormatException('备份文件格式不正确');
     }
     final root = Map<String, Object?>.from(decoded);
+
+    final rawVersion = root['version'];
+    if (rawVersion != null && rawVersion is! num) {
+      throw const FormatException('备份版本格式不正确');
+    }
+    final version = (rawVersion as num?)?.toInt() ?? 1;
+    if (version < 1 || version > 2) {
+      throw FormatException('不支持的备份版本：$version');
+    }
 
     // 防御性拦截加密信封：它带 `app:'verifin'` 但只有密文、无任何数据键，若直接
     // 往下走会被当成「空备份」用默认数据覆盖并清库。加密备份必须先解密再导入。
@@ -2780,6 +3596,10 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       data['recurringRules'],
       RecurringRule.fromJson,
     );
+    final nextExchangeRates = _decodeModelList<ExchangeRate>(
+      data['exchangeRates'],
+      ExchangeRate.fromJson,
+    );
     final nextMonthlyBudgets = _bookScopedBudgets(
       _decodeBudgets(data['monthlyBudgets']),
     );
@@ -2845,14 +3665,32 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     final nextFabActionMode = FabActionMode.fromStorage(
       data['fabActionMode'] as String?,
     );
+    final nextCurrencyFractionStyle = data.containsKey('currencyFractionStyle')
+        ? CurrencyFractionStyle.fromStorage(
+            data['currencyFractionStyle'] as String?,
+          )
+        : (data['amountForceTwoDecimals'] as bool? ?? false)
+        ? CurrencyFractionStyle.standard
+        : CurrencyFractionStyle.compact;
     final nextAmountForceTwoDecimals =
-        data['amountForceTwoDecimals'] as bool? ?? false;
+        nextCurrencyFractionStyle == CurrencyFractionStyle.standard;
     // 旧备份没有这个键：按「功能一直是开着的」还原，不因恢复备份而静默关掉。
     final nextAutoSuggestEnabled = data['autoSuggestEnabled'] as bool? ?? true;
     final homeTrendValue = data['homeTrendConfig'];
     final nextHomeTrendConfig = homeTrendValue is Map
         ? HomeTrendConfig.fromJson(Map<String, dynamic>.from(homeTrendValue))
         : HomeTrendConfig.defaults;
+
+    _validateImportedCurrencyData(
+      books: nextLedgerBooks,
+      accounts: nextAccounts,
+      entries: nextEntries,
+      recurringRules: nextRecurringRules,
+      exchangeRates: nextExchangeRates,
+      monthlyBudgets: nextMonthlyBudgets,
+      categoryBudgets: nextCategoryBudgets,
+      dailyBudgets: nextDailyBudgets,
+    );
 
     _ledgerBooks
       ..clear()
@@ -2880,6 +3718,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _recurringRules
       ..clear()
       ..addAll(nextRecurringRules);
+    _exchangeRates
+      ..clear()
+      ..addAll(nextExchangeRates);
     _monthlyBudgets
       ..clear()
       ..addAll(nextMonthlyBudgets);
@@ -2949,6 +3790,141 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
+  void _validateImportedCurrencyData({
+    required List<LedgerBook> books,
+    required List<Account> accounts,
+    required List<LedgerEntry> entries,
+    required List<RecurringRule> recurringRules,
+    required List<ExchangeRate> exchangeRates,
+    required Map<String, double> monthlyBudgets,
+    required Map<String, double> categoryBudgets,
+    required Map<String, double> dailyBudgets,
+  }) {
+    void requireCurrency(String code, String field) {
+      if (!CurrencyCatalog.isSupported(code)) {
+        throw FormatException('$field 使用了不支持的币种：$code');
+      }
+    }
+
+    void requireFinite(
+      num? value,
+      String field, {
+      bool positive = false,
+      bool nonNegative = false,
+    }) {
+      if (value == null) return;
+      if (!value.isFinite ||
+          (positive && value <= 0) ||
+          (nonNegative && value < 0)) {
+        throw FormatException('$field 金额不合法');
+      }
+    }
+
+    final booksById = <String, LedgerBook>{};
+    for (final book in books) {
+      if (book.id.isEmpty || booksById.containsKey(book.id)) {
+        throw const FormatException('账本 id 为空或重复');
+      }
+      requireCurrency(book.baseCurrencyCode, '账本 ${book.id}');
+      booksById[book.id] = book;
+    }
+
+    for (final account in accounts) {
+      if (!booksById.containsKey(account.bookId)) {
+        throw FormatException('账户 ${account.id} 引用了不存在的账本');
+      }
+      requireCurrency(account.currencyCode, '账户 ${account.id}');
+      requireFinite(account.initialBalance, '账户 ${account.id} 初始余额');
+      requireFinite(
+        account.creditLimit,
+        '账户 ${account.id} 信用额度',
+        nonNegative: true,
+      );
+    }
+
+    for (final entry in entries) {
+      if (!booksById.containsKey(entry.bookId)) {
+        throw FormatException('交易 ${entry.id} 引用了不存在的账本');
+      }
+      requireCurrency(entry.currencyCode, '交易 ${entry.id}');
+      requireFinite(entry.amount, '交易 ${entry.id} 原币金额', positive: true);
+      requireFinite(
+        entry.accountAmount,
+        '交易 ${entry.id} 账户金额',
+        nonNegative: true,
+      );
+      requireFinite(
+        entry.toAccountAmount,
+        '交易 ${entry.id} 转入金额',
+        nonNegative: true,
+      );
+      requireFinite(
+        entry.baseAmount,
+        '交易 ${entry.id} 本位币金额',
+        nonNegative: true,
+      );
+      requireFinite(
+        entry.refundedBaseAmount,
+        '交易 ${entry.id} 已退款金额',
+        nonNegative: true,
+      );
+      requireFinite(entry.fee, '交易 ${entry.id} 手续费', nonNegative: true);
+    }
+
+    for (final rule in recurringRules) {
+      if (!booksById.containsKey(rule.bookId)) {
+        throw FormatException('周期规则 ${rule.id} 引用了不存在的账本');
+      }
+      requireCurrency(rule.currencyCode, '周期规则 ${rule.id}');
+      requireFinite(rule.amount, '周期规则 ${rule.id} 原币金额', positive: true);
+      requireFinite(
+        rule.accountAmount,
+        '周期规则 ${rule.id} 账户金额',
+        nonNegative: true,
+      );
+      requireFinite(
+        rule.toAccountAmount,
+        '周期规则 ${rule.id} 转入金额',
+        nonNegative: true,
+      );
+      requireFinite(
+        rule.baseAmount,
+        '周期规则 ${rule.id} 本位币金额',
+        nonNegative: true,
+      );
+    }
+
+    final rateKeys = <String>{};
+    for (final rate in exchangeRates) {
+      final book = booksById[rate.bookId];
+      if (book == null) {
+        throw FormatException('汇率 ${rate.id} 引用了不存在的账本');
+      }
+      requireCurrency(rate.baseCurrencyCode, '汇率 ${rate.id} 本位币');
+      requireCurrency(rate.currencyCode, '汇率 ${rate.id} 外币');
+      if (rate.baseCurrencyCode != book.baseCurrencyCode ||
+          rate.currencyCode == rate.baseCurrencyCode) {
+        throw FormatException('汇率 ${rate.id} 的币种方向不合法');
+      }
+      requireFinite(rate.rateToBase, '汇率 ${rate.id}', positive: true);
+      final key =
+          '${rate.bookId}:${rate.currencyCode}:${currencyDateKey(rate.effectiveDate)}';
+      if (rate.id.isEmpty || !rateKeys.add(key)) {
+        throw const FormatException('汇率 id 为空或同日记录重复');
+      }
+    }
+
+    for (final item in <Map<String, double>>[
+      monthlyBudgets,
+      categoryBudgets,
+      dailyBudgets,
+    ]) {
+      for (final entry in item.entries) {
+        requireFinite(entry.value, '预算 ${entry.key}', nonNegative: true);
+      }
+    }
+  }
+
   double accountBalance(Account account) {
     var balance = account.initialBalance;
     for (final entry in _entries.where(
@@ -2958,9 +3934,8 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     )) {
       balance += accountDeltaForEntry(entry, account.id);
     }
-    // 金额以分为最小展示/输入单位；连续加减 double 可能把数学上的 0 留成
-    // -2.7e-17 一类残差，进而误触发负余额颜色和正负判断。
-    return normalizeAmount(balance);
+    // 按账户币种的 minor unit 消除连续加减产生的浮点残差。
+    return normalizeCurrencyAmount(balance, account.currencyCode);
   }
 
   /// 载入偏好类小数据（KV）。账目类数据由 [_loadFromRepository] 从 SQLite 载入。

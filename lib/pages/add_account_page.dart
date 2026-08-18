@@ -17,6 +17,7 @@ class _AddAccountPageState extends State<AddAccountPage> {
   AccountType _type = AccountType.onlinePayment;
   String _iconCode = 'wallet';
   String _groupId = 'ungrouped';
+  String? _currencyCode;
   bool _iconManuallySelected = false;
   // 「后四位跟随完整卡号」开关，新账户默认打开。
   bool _cardLast4Follows = true;
@@ -31,6 +32,12 @@ class _AddAccountPageState extends State<AddAccountPage> {
     _cardLast4Controller.addListener(_handleDraftChanged);
     _cardNumberController.addListener(_handleDraftChanged);
     _noteController.addListener(_handleDraftChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _currencyCode ??= VeriFinScope.of(context).activeBook.baseCurrencyCode;
   }
 
   @override
@@ -52,6 +59,9 @@ class _AddAccountPageState extends State<AddAccountPage> {
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
     final groups = controller.accountGroups;
+    final currencyCode =
+        _currencyCode ?? controller.activeBook.baseCurrencyCode;
+    final currency = CurrencyCatalog.require(currencyCode);
 
     return UnsavedChangesGuard(
       isDirty: _isDirty,
@@ -105,6 +115,15 @@ class _AddAccountPageState extends State<AddAccountPage> {
                     ),
                     const SizedBox(height: 10),
                   ],
+                  SelectField(
+                    key: const Key('account_currency_select_field'),
+                    label: AppLocalizations.of(context).commonCurrency,
+                    value:
+                        '${currency.code} · ${currency.nameForLocale(Localizations.localeOf(context).toLanguageTag())}',
+                    icon: Icons.currency_exchange,
+                    onTap: _pickCurrency,
+                  ),
+                  const SizedBox(height: 10),
                   TextFormField(
                     controller: _balanceController,
                     keyboardType: const TextInputType.numberWithOptions(
@@ -114,7 +133,7 @@ class _AddAccountPageState extends State<AddAccountPage> {
                     decoration: InputDecoration(
                       labelText: AppLocalizations.of(
                         context,
-                      ).accountBalanceLabel,
+                      ).accountBalanceCurrencyLabel(currencyCode),
                       hintText: AppLocalizations.of(context).accountBalanceHint,
                     ),
                   ),
@@ -183,6 +202,31 @@ class _AddAccountPageState extends State<AddAccountPage> {
         _iconCode = selected;
         _iconManuallySelected = true;
       });
+    }
+  }
+
+  Future<void> _pickCurrency() async {
+    var controller = VeriFinScope.of(context);
+    if (controller.activeBook.currencySetupStatus ==
+        CurrencySetupStatus.legacyUnconfirmed) {
+      final confirmed = await confirmLegacyLedgerCurrency(
+        context: context,
+        book: controller.activeBook,
+      );
+      if (!mounted || !confirmed) return;
+      controller = VeriFinScope.of(context);
+      setState(() => _currencyCode = controller.activeBook.baseCurrencyCode);
+    }
+    final selected = await showCurrencyPickerSheet(
+      context: context,
+      title: AppLocalizations.of(context).selectAccountCurrency,
+      selectedCode: _currencyCode,
+      preferredCodes: controller.accounts.map(
+        (account) => account.currencyCode,
+      ),
+    );
+    if (selected != null && mounted) {
+      setState(() => _currencyCode = selected.code);
     }
   }
 
@@ -261,6 +305,8 @@ class _AddAccountPageState extends State<AddAccountPage> {
             _type != AccountType.onlinePayment ||
             _iconCode != 'wallet' ||
             _groupId != 'ungrouped' ||
+            _currencyCode !=
+                VeriFinScope.of(context).activeBook.baseCurrencyCode ||
             _noteController.text.trim().isNotEmpty ||
             (_type.supportsCardLast4 &&
                 (_cardNumberController.text.trim().isNotEmpty ||
@@ -288,6 +334,7 @@ class _AddAccountPageState extends State<AddAccountPage> {
         type: _type,
         groupId: _groupId,
         initialBalance: double.tryParse(_balanceController.text.trim()) ?? 0,
+        currencyCode: _currencyCode ?? controller.activeBook.baseCurrencyCode,
         iconCode: _iconCode,
         note: _noteController.text.trim(),
         includeInAssets: true,

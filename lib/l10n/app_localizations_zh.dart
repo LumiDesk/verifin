@@ -2514,7 +2514,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get csvTemplateImportGuide =>
-      '请先用本页「下载 CSV 模板」，按模板列填写后再导入。表头只能用模板列（日期、类型、金额、分类、账户、转入账户、备注，可选 子分类、标签），含其他软件的列会导入失败。其他记账软件请在上方选择对应入口。';
+      '请先用本页「下载 CSV 模板」，按模板列填写后再导入。外币交易需填写币种，并提供本位币金额或汇率；跨币转账还需提供两端实际金额。含其他软件的列会导入失败。';
 
   @override
   String get billImportCommonNote => '交易会追加到当前账本，匹配不到的账户与分类按名称自动新建，不会删除现有数据。';
@@ -3052,6 +3052,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiWarningAccountUnmatched => '账户未匹配，已置为无账户，请确认';
 
   @override
+  String get aiWarningCurrencyUnmatched => '币种未识别，已回退到账户币种或本位币，请确认';
+
+  @override
   String get screenshotEntryButton => '截图识账';
 
   @override
@@ -3130,6 +3133,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get csvTemplateSaveFailed => '保存模板失败，请稍后再试';
+
+  @override
+  String get exportTransactionsCsv => '导出交易 CSV';
+
+  @override
+  String get transactionsCsvExported => '已导出交易 CSV，位置：下载目录';
+
+  @override
+  String get transactionsCsvExportFailed => '导出交易 CSV 失败，请稍后再试';
 
   @override
   String get chooseFile => '选择文件';
@@ -3777,4 +3789,302 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get budgetCycleNotSet => '未设置';
+
+  @override
+  String get commonClear => '清除';
+
+  @override
+  String get currencySearchHint => '搜索代码、名称或符号';
+
+  @override
+  String get currencySearchEmpty => '没有找到货币';
+
+  @override
+  String get currencySearchEmptyDesc => '请尝试输入 ISO 代码或其他名称。';
+
+  @override
+  String currencyPickerMeta(String symbol, int digits) {
+    return '符号 $symbol · $digits 位小数';
+  }
+
+  @override
+  String get ledgerBaseCurrency => '账本本位币';
+
+  @override
+  String get ledgerBaseCurrencyDesc => '预算、统计和总资产将统一以此货币展示。';
+
+  @override
+  String get selectBaseCurrency => '选择账本本位币';
+
+  @override
+  String get selectAccountCurrency => '选择账户币种';
+
+  @override
+  String get selectRateCurrency => '选择要维护汇率的货币';
+
+  @override
+  String get ledgerCurrencyLocked => '这个账本已有财务数据，本位币已锁定。如需其他本位币，请新建账本。';
+
+  @override
+  String get ledgerCurrencyChangeTitle => '更改本位币？';
+
+  @override
+  String ledgerCurrencyChangeMessage(String code, String name) {
+    return '空账本将改用 $code（$name）；现有零余额账户也会一并改为该币种。';
+  }
+
+  @override
+  String get legacyCurrencySetupTitle => '确认现有金额的币种';
+
+  @override
+  String get legacyCurrencySetupDesc =>
+      '这是升级前创建的账本。请先确认现有数字原本代表哪种货币，确认后才能添加外币账户和汇率。';
+
+  @override
+  String get legacyCurrencyStart => '开始确认';
+
+  @override
+  String legacyCurrencyConfirmCurrent(String code) {
+    return '现有金额就是 $code';
+  }
+
+  @override
+  String get legacyCurrencyChooseAnother => '现有金额其实是其他币种';
+
+  @override
+  String legacyCurrencyConfirmTitle(String code) {
+    return '把现有金额解释为 $code？';
+  }
+
+  @override
+  String legacyCurrencyConfirmMessage(
+    int accounts,
+    int entries,
+    int rules,
+    int budgets,
+    String code,
+  ) {
+    return '将更新 $accounts 个账户、$entries 笔交易、$rules 条周期规则和 $budgets 项预算设置。所有数值保持不变，只把币种标签解释为 $code；确认后不可再次重解释。';
+  }
+
+  @override
+  String get legacyCurrencyApply => '确认并应用';
+
+  @override
+  String legacyCurrencySaved(String code) {
+    return '已将现有金额解释为 $code';
+  }
+
+  @override
+  String accountBalanceCurrencyLabel(String code) {
+    return '初始余额（$code）';
+  }
+
+  @override
+  String get accountCurrencyLocked => '账户已有余额、信用额度或交易记录，币种已锁定。';
+
+  @override
+  String balanceAdjustMissingRate(String code) {
+    return '缺少 $code 对本位币的有效汇率，无法生成余额调整交易。';
+  }
+
+  @override
+  String get currencyRatesTitle => '货币与汇率';
+
+  @override
+  String get currencyRatesOfflineDesc =>
+      '汇率保存在本机并由你维护。应用不会联网获取或自动刷新汇率；修改汇率也不会改变已保存交易的历史统计。';
+
+  @override
+  String get exchangeRateCurrencies => '外币汇率';
+
+  @override
+  String get exchangeRateAdd => '添加汇率';
+
+  @override
+  String get exchangeRateEmpty => '还没有外币汇率';
+
+  @override
+  String get exchangeRateEmptyDesc => '添加外币后，按日期维护它对账本本位币的汇率。';
+
+  @override
+  String exchangeRateEquation(String currency, String rate, String base) {
+    return '1 $currency = $rate $base';
+  }
+
+  @override
+  String get exchangeRateNotSet => '尚未设置汇率';
+
+  @override
+  String exchangeRateDateAndStatus(String date, String status) {
+    return '$date · $status';
+  }
+
+  @override
+  String get exchangeRateStale => '可能已过期';
+
+  @override
+  String get exchangeRateSourceManual => '手动维护';
+
+  @override
+  String get exchangeRateSourceImported => '导入';
+
+  @override
+  String exchangeRateHistory(String currency) {
+    return '$currency 汇率历史';
+  }
+
+  @override
+  String exchangeRateAgainst(String base) {
+    return '相对 $base';
+  }
+
+  @override
+  String get exchangeRateHistoryEmpty => '还没有历史记录';
+
+  @override
+  String get exchangeRateHistoryEmptyDesc => '点击右上角加号添加第一条生效汇率。';
+
+  @override
+  String get exchangeRateDeleteTitle => '删除这条汇率？';
+
+  @override
+  String get exchangeRateDeleteMessage => '已保存交易不会改变，但资产估值或待生成的周期交易之后可能缺少汇率。';
+
+  @override
+  String get exchangeRateEffectiveDate => '选择汇率生效日期';
+
+  @override
+  String exchangeRateInputTitle(String currency, String base) {
+    return '1 $currency 等于多少 $base';
+  }
+
+  @override
+  String get exchangeRateSaved => '汇率已保存';
+
+  @override
+  String get entryCurrencyLabel => '交易币种';
+
+  @override
+  String get entryCurrencyPickTitle => '选择交易币种';
+
+  @override
+  String get entryOriginalAmountLabel => '原币金额';
+
+  @override
+  String get entryAccountAmountExpense => '账户实际扣款';
+
+  @override
+  String get entryAccountAmountIncome => '账户实际入账';
+
+  @override
+  String get entryLedgerAmountLabel => '计入账本';
+
+  @override
+  String get entryTransferOutAmount => '转出金额';
+
+  @override
+  String get entryTransferInAmount => '转入金额';
+
+  @override
+  String get entryRateLabel => '换算汇率';
+
+  @override
+  String entryRateEquation(String source, String rate, String target) {
+    return '1 $source = $rate $target';
+  }
+
+  @override
+  String entryRateEditTitle(String source, String target) {
+    return '1 $source 等于多少 $target';
+  }
+
+  @override
+  String entryMissingRate(String currencies) {
+    return '缺少 $currencies 的本地汇率，请填写实际金额或先维护汇率';
+  }
+
+  @override
+  String get entryRememberRate => '记住为当日汇率';
+
+  @override
+  String get entryRememberRateHint => '默认关闭；开启后会把本单折算价保存到当前账本的汇率表。';
+
+  @override
+  String get entryConversionSummary => '金额摘要';
+
+  @override
+  String get entryConversionSourceRateTable => '已按本地汇率自动换算，可点击金额修改';
+
+  @override
+  String get entryConversionSourceManual => '本单金额已手动调整，历史统计将冻结保存值';
+
+  @override
+  String entryAmountInputTitle(String label, String currency) {
+    return '填写 $label（$currency）';
+  }
+
+  @override
+  String get entryCurrencySaveMissing => '请先补齐跨币种交易所需的实际金额';
+
+  @override
+  String get refundAccountAmountLabel => '账户实际到账';
+
+  @override
+  String get refundBaseAmountLabel => '本位币冲抵额';
+
+  @override
+  String get refundCurrencyLockedHint => '退款原币沿用原支出，不可更改。';
+
+  @override
+  String get recurringRatePolicyLabel => '跨币种换算';
+
+  @override
+  String get recurringRatePolicyLatest => '每次使用最新本地汇率';
+
+  @override
+  String get recurringRatePolicyFixed => '固定当前金额';
+
+  @override
+  String get recurringMissingRate => '待补汇率';
+
+  @override
+  String recurringMissingRateCount(int count) {
+    return '有 $count 条规则因缺少汇率等待补记';
+  }
+
+  @override
+  String get recurringRetryNow => '立即补记';
+
+  @override
+  String recurringGeneratedCount(int count) {
+    return '已补记 $count 笔交易';
+  }
+
+  @override
+  String assetValuationMissing(int count) {
+    return '有 $count 个账户待设置汇率';
+  }
+
+  @override
+  String assetValuationMissingDesc(String currencies) {
+    return '缺少 $currencies 对本位币的汇率，暂不显示不完整的资产总额。';
+  }
+
+  @override
+  String get assetTrendMissingRate => '历史资产走势缺少汇率，补齐相应日期的本地汇率后显示。';
+
+  @override
+  String get widgetRateMissing => '汇率缺失';
+
+  @override
+  String baseCurrencyAmountLabel(String currency) {
+    return '本位币 $currency';
+  }
+
+  @override
+  String get importSaveExchangeRates => '保存导入汇率';
+
+  @override
+  String get importSaveExchangeRatesHint => '默认关闭；开启后只保存最终纳入交易使用的当日汇率。';
 }

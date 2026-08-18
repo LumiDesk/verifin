@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
+import '../app/currency_catalog.dart';
 import '../app/models.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
+import 'sheets.dart';
 
 /// 新用户引导：首启动（同意隐私政策后）出现，分步介绍并可快速建首个账户、设本月预算。
 /// 完成或跳过后写入 `verifin.onboarding.v1`，只出现一次。（阶段 4.5）
@@ -23,7 +25,17 @@ class _OnboardingPageState extends State<OnboardingPage> {
   final TextEditingController _budget = TextEditingController();
 
   int _page = 0;
+  String? _baseCurrencyCode;
   static const int _lastPage = 3;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _baseCurrencyCode ??=
+        Localizations.localeOf(context).languageCode.toLowerCase() == 'zh'
+        ? 'CNY'
+        : 'USD';
+  }
 
   @override
   void dispose() {
@@ -47,6 +59,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   Future<void> _finish() async {
     final controller = VeriFinScope.of(context);
+    final desiredBase =
+        _baseCurrencyCode ?? controller.activeBook.baseCurrencyCode;
+    if (desiredBase != controller.activeBook.baseCurrencyCode) {
+      await controller.changeEmptyLedgerBookBaseCurrency(
+        controller.activeBook.id,
+        desiredBase,
+      );
+    }
     // 建首个账户（填了名称才建）。
     final name = _accountName.text.trim();
     if (name.isNotEmpty) {
@@ -62,6 +82,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
           note: '',
           includeInAssets: true,
           hidden: false,
+          currencyCode: controller.activeBook.baseCurrencyCode,
         ),
       );
     }
@@ -74,6 +95,17 @@ class _OnboardingPageState extends State<OnboardingPage> {
     if (mounted) {
       Navigator.of(context).pop();
     }
+  }
+
+  Future<void> _pickBaseCurrency() async {
+    final selected = await showCurrencyPickerSheet(
+      context: context,
+      title: AppLocalizations.of(context).selectBaseCurrency,
+      selectedCode: _baseCurrencyCode,
+      preferredCodes: <String>[_baseCurrencyCode!],
+    );
+    if (selected == null || !mounted) return;
+    setState(() => _baseCurrencyCode = selected.code);
   }
 
   @override
@@ -103,6 +135,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   _AccountStep(
                     nameController: _accountName,
                     balanceController: _accountBalance,
+                    baseCurrencyCode: _baseCurrencyCode ?? 'CNY',
+                    onPickBaseCurrency: _pickBaseCurrency,
                   ),
                   _BudgetStep(budgetController: _budget),
                   const _DoneStep(),
@@ -204,10 +238,14 @@ class _AccountStep extends StatelessWidget {
   const _AccountStep({
     required this.nameController,
     required this.balanceController,
+    required this.baseCurrencyCode,
+    required this.onPickBaseCurrency,
   });
 
   final TextEditingController nameController;
   final TextEditingController balanceController;
+  final String baseCurrencyCode;
+  final VoidCallback onPickBaseCurrency;
 
   @override
   Widget build(BuildContext context) {
@@ -217,6 +255,19 @@ class _AccountStep extends StatelessWidget {
       description: AppLocalizations.of(context).onboardAccountDesc,
       child: Column(
         children: <Widget>[
+          ListTile(
+            key: const Key('onboarding_base_currency'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(AppLocalizations.of(context).ledgerBaseCurrency),
+            subtitle: Text(
+              CurrencyCatalog.require(
+                baseCurrencyCode,
+              ).nameForLocale(Localizations.localeOf(context).languageCode),
+            ),
+            trailing: Text(baseCurrencyCode),
+            onTap: onPickBaseCurrency,
+          ),
+          const SizedBox(height: 8),
           TextField(
             key: const Key('onboarding_account_name'),
             controller: nameController,
@@ -231,7 +282,9 @@ class _AccountStep extends StatelessWidget {
             controller: balanceController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: InputDecoration(
-              labelText: AppLocalizations.of(context).onboardBalanceLabel,
+              labelText: AppLocalizations.of(
+                context,
+              ).accountBalanceCurrencyLabel(baseCurrencyCode),
               hintText: '0',
             ),
           ),

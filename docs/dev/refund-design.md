@@ -10,6 +10,11 @@
 > `saveEntryAggregateDraft` / `saveEntryAggregate` 一次性原子保存；待退款清单核销仍是独立命令。
 > 时间线影响见 `known-limitations.md` L3。下文仍保留部分初始方案与批注作为决策历史，
 > 凡涉及“退款上时间线/可加附件”的描述，均以上述当前行为为准。
+> 自数据库 schema v14 起，退款的多币种当前口径为：`amount/currencyCode`
+> 保存退款原币金额，`accountAmount` 保存实际入账账户金额，`baseAmount` 保存冻结的
+> 本位币冲减金额；原支出的派生统计使用 `refundedBaseAmount/netBaseAmount`。下文仍出现的
+> `refundedAmount`、`netAmount` 与直接相减公式属于单币种时期的历史设计，当前实现以源码、
+> 测试和 `multi-currency-design.md` 为准。
 
 ---
 

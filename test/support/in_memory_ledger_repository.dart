@@ -15,6 +15,7 @@ class InMemoryLedgerRepository implements LedgerRepository {
   List<Tag> _tags = <Tag>[];
   List<Attachment> _attachments = <Attachment>[];
   List<RecurringRule> _recurringRules = <RecurringRule>[];
+  List<ExchangeRate> _exchangeRates = <ExchangeRate>[];
   Map<String, double> _monthlyBudgets = <String, double>{};
   Map<String, double> _categoryBudgets = <String, double>{};
   Map<String, double> _dailyBudgets = <String, double>{};
@@ -83,9 +84,13 @@ class InMemoryLedgerRepository implements LedgerRepository {
   Future<void> saveEntryAggregate({
     required List<LedgerEntry> entries,
     required List<Attachment> attachments,
+    List<ExchangeRate>? exchangeRates,
   }) async {
     _entries = List<LedgerEntry>.of(entries);
     _attachments = List<Attachment>.of(attachments);
+    if (exchangeRates != null) {
+      _exchangeRates = List<ExchangeRate>.of(exchangeRates);
+    }
   }
 
   @override
@@ -95,6 +100,24 @@ class InMemoryLedgerRepository implements LedgerRepository {
   @override
   Future<void> saveRecurringRules(List<RecurringRule> rules) async {
     _recurringRules = List<RecurringRule>.of(rules);
+  }
+
+  @override
+  Future<void> saveRecurringGeneration({
+    required List<LedgerEntry> entries,
+    required List<RecurringRule> recurringRules,
+  }) async {
+    _entries = List<LedgerEntry>.of(entries);
+    _recurringRules = List<RecurringRule>.of(recurringRules);
+  }
+
+  @override
+  Future<List<ExchangeRate>> loadExchangeRates() async =>
+      List<ExchangeRate>.of(_exchangeRates);
+
+  @override
+  Future<void> saveExchangeRates(List<ExchangeRate> rates) async {
+    _exchangeRates = List<ExchangeRate>.of(rates);
   }
 
   @override
@@ -145,6 +168,7 @@ class InMemoryLedgerRepository implements LedgerRepository {
     _attachments = List<Attachment>.of(snapshot.attachments);
     _entries = List<LedgerEntry>.of(snapshot.entries);
     _recurringRules = List<RecurringRule>.of(snapshot.recurringRules);
+    _exchangeRates = List<ExchangeRate>.of(snapshot.exchangeRates);
     _monthlyBudgets = Map<String, double>.of(snapshot.monthlyBudgets);
     _categoryBudgets = Map<String, double>.of(snapshot.categoryBudgets);
     _dailyBudgets = Map<String, double>.of(snapshot.dailyBudgets);
@@ -156,5 +180,6 @@ class InMemoryLedgerRepository implements LedgerRepository {
       _books.isNotEmpty ||
       _accounts.isNotEmpty ||
       _groups.isNotEmpty ||
-      _categories.isNotEmpty;
+      _categories.isNotEmpty ||
+      _exchangeRates.isNotEmpty;
 }

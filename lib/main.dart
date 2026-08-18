@@ -65,7 +65,7 @@ Future<void> main() async {
           return;
         }
         // 打开应用时补记到期的周期交易。
-        controller.applyDueRecurring(DateTime.now());
+        await controller.applyDueRecurring(DateTime.now());
         runApp(VeriFinApp(controller: controller));
       },
       (error, stack) {
@@ -229,14 +229,18 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
     );
   }
 
+  Future<void> _postDueRecurringAndRefresh() async {
+    await _controller.applyDueRecurring(DateTime.now());
+    await BackupCoordinator.maybeBackupOnOpen(_controller);
+    await pushWidgetData(_controller);
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       // 顺序约束：先补记到期的周期交易，再备份 / 推送小组件——顺序颠倒会把
       // 补记前的旧数据备份出去、推到桌面小组件上。
-      _controller.applyDueRecurring(DateTime.now());
-      BackupCoordinator.maybeBackupOnOpen(_controller);
-      pushWidgetData(_controller);
+      unawaited(_postDueRecurringAndRefresh());
       // 每次回前台都重排提醒：每日提醒底层是「触发时自排下一天」的精确闹钟链，
       // 一旦某次因 Doze / force-stop / 重启 / 时区变化断掉，就再不会自愈。只在
       // 冷启动重排会漏掉「常驻后台、只热恢复」的用户；apply 幂等（先 cancel 再排），

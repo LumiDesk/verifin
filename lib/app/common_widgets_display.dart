@@ -179,6 +179,35 @@ class DetailInfoRow extends StatelessWidget {
   }
 }
 
+/// Currency-aware editable amount row shared by transaction, refund and
+/// recurring editors. A null amount is rendered as an explicit missing state.
+class CurrencyAmountField extends StatelessWidget {
+  const CurrencyAmountField({
+    super.key,
+    required this.label,
+    required this.currencyCode,
+    required this.amount,
+    required this.missingText,
+    this.onTap,
+  });
+
+  final String label;
+  final String currencyCode;
+  final double? amount;
+  final String missingText;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return DetailInfoRow(
+      label: label,
+      value: amount == null ? missingText : formatMoney(amount!, currencyCode),
+      placeholder: amount == null,
+      onTap: onTap,
+    );
+  }
+}
+
 class SummaryMetric extends StatelessWidget {
   const SummaryMetric({
     super.key,

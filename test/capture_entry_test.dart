@@ -13,9 +13,12 @@ AiEntryContext _context() => AiEntryContext(
     AiOption(id: 'transport', label: '交通'),
   ],
   incomeCategories: const <AiOption>[AiOption(id: 'salary', label: '工资')],
-  accounts: const <AiOption>[AiOption(id: 'cash', label: '现金')],
+  accounts: const <AiOption>[
+    AiOption(id: 'cash', label: '现金', currencyCode: 'CNY'),
+  ],
   today: DateTime(2026, 7, 7, 12, 30),
   bookId: 'default',
+  baseCurrencyCode: 'CNY',
 );
 
 void main() {

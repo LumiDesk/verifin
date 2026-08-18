@@ -11,7 +11,8 @@ import 'import/tally.dart';
 import 'import/wechat.dart';
 import 'import/yimu.dart';
 
-export 'import/plan_builder.dart' show ImportPlan;
+export 'import/plan_builder.dart'
+    show ImportConversionIssue, ImportExchangeRateCandidate, ImportPlan;
 export 'import/raw_import.dart' show ImportRowError;
 
 /// 支付平台 / 记账软件账单来源。用户在导入前显式选择，避免仅靠表头猜测出错。
@@ -67,14 +68,36 @@ ImportPlan buildPlatformImportPlan({
   required List<Account> existingAccounts,
   required List<Category> existingCategories,
   required DateTime now,
+  String baseCurrencyCode = defaultCurrencyCode,
+  List<ExchangeRate> exchangeRates = const <ExchangeRate>[],
+  Map<String, double> rateOverrides = const <String, double>{},
   bool seedEnglish = false,
 }) {
+  final parsed = parsePlatformBytes(platform, bytes);
+  final resolved = rateOverrides.isEmpty
+      ? parsed
+      : ParsedImport(
+          records: <RawImportRecord>[
+            for (final record in parsed.records)
+              if (record.currencyCode != null &&
+                  rateOverrides.containsKey(record.currencyCode!.toUpperCase()))
+                record.withImportedRate(
+                  rateOverrides[record.currencyCode!.toUpperCase()]!,
+                )
+              else
+                record,
+          ],
+          errors: parsed.errors,
+          accounts: parsed.accounts,
+        );
   return buildImportPlanFromRecords(
-    parsed: parsePlatformBytes(platform, bytes),
+    parsed: resolved,
     bookId: bookId,
     existingAccounts: existingAccounts,
     existingCategories: existingCategories,
     now: now,
+    baseCurrencyCode: baseCurrencyCode,
+    exchangeRates: exchangeRates,
     seedEnglish: seedEnglish,
   );
 }

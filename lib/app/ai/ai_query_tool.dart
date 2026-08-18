@@ -9,6 +9,7 @@
 // 说明：[AiResultDisplay] 里的 `title` 目前用中文默认文案；国际化（zh/en）随聊天页 UI 的
 // i18n 一并处理（见落地顺序第 5 步），此处先留中文默认。
 import '../models.dart';
+import '../currency_math.dart';
 import '../ledger_math.dart';
 import '../report_analysis.dart';
 import 'ai_tool_schema.dart';
@@ -23,6 +24,7 @@ class AiToolContext {
     required this.categories,
     required this.tags,
     required this.balanceOf,
+    required this.baseCurrencyCode,
     required this.now,
   });
 
@@ -40,6 +42,9 @@ class AiToolContext {
 
   /// 账户当前余额查询（含初始余额与全部交易累积）。
   final double Function(Account account) balanceOf;
+
+  /// 统计、筛选与工具回传金额使用的当前账本本位币。
+  final String baseCurrencyCode;
 
   /// 当前时间（相对时间窗如「本月」的基准）。
   final DateTime now;
@@ -443,6 +448,9 @@ String _typeLabel(EntryType type) => switch (type) {
   EntryType.refund => '退款',
 };
 
+String _baseMoney(AiToolContext context, num value) =>
+    formatMoney(value, context.baseCurrencyCode);
+
 // ─────────────────────────── 工具实现 ───────────────────────────
 
 /// 收支汇总：某时间窗内的收入 / 支出 / 净额与笔数。
@@ -467,9 +475,9 @@ class SummaryTool extends AiQueryTool {
     final rangeLabel = _rangeLabel(window);
     return AiToolResult(
       summary:
-          '$rangeLabel 收入 ${summary.income.toStringAsFixed(2)}（${summary.incomeCount} 笔），'
-          '支出 ${summary.expense.toStringAsFixed(2)}（${summary.expenseCount} 笔），'
-          '净额 ${summary.net.toStringAsFixed(2)}。',
+          '$rangeLabel 收入 ${_baseMoney(ctx, summary.income)}（${summary.incomeCount} 笔），'
+          '支出 ${_baseMoney(ctx, summary.expense)}（${summary.expenseCount} 笔），'
+          '净额 ${_baseMoney(ctx, summary.net)}。',
       display: AiStatDisplay(
         title: '$rangeLabel · 收支汇总',
         items: <AiStatItem>[
@@ -527,7 +535,7 @@ class CategoryRankingTool extends AiQueryTool {
     final detail = stats
         .map(
           (s) =>
-              '${s.category.label} ${s.amount.toStringAsFixed(2)}（${(s.percent * 100).toStringAsFixed(1)}%，${s.count}笔）',
+              '${s.category.label} ${_baseMoney(ctx, s.amount)}（${(s.percent * 100).toStringAsFixed(1)}%，${s.count}笔）',
         )
         .join('；');
     final summaryText = stats.isEmpty
@@ -593,7 +601,7 @@ class TagRankingTool extends AiQueryTool {
     final detail = stats
         .map(
           (s) =>
-              '${s.tag.label} ${s.amount.toStringAsFixed(2)}（${(s.percent * 100).toStringAsFixed(1)}%，${s.count}笔）',
+              '${s.tag.label} ${_baseMoney(ctx, s.amount)}（${(s.percent * 100).toStringAsFixed(1)}%，${s.count}笔）',
         )
         .join('；');
     final summaryText = stats.isEmpty
@@ -693,7 +701,7 @@ class QueryTransactionsTool extends AiQueryTool {
         .map(
           (e) =>
               '${e.occurredAt.year}-${e.occurredAt.month}-${e.occurredAt.day} '
-              '${_typeLabel(e.type)} ${e.netAmount.toStringAsFixed(2)}'
+              '${_typeLabel(e.type)} ${_baseMoney(ctx, e.netBaseAmount)}'
               '${e.note.isEmpty ? '' : '（${e.note}）'}',
         )
         .join('；');
@@ -765,7 +773,7 @@ class LargestTransactionsTool extends AiQueryTool {
     final detail = results
         .map(
           (e) =>
-              '${e.netAmount.toStringAsFixed(2)}'
+              '${_baseMoney(ctx, e.netBaseAmount)}'
               '${e.note.isEmpty ? '' : '（${e.note}）'}',
         )
         .join('；');

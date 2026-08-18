@@ -201,6 +201,7 @@ class _AiChatPageState extends State<AiChatPage> {
       categories: scope.categories,
       tags: scope.tags,
       balanceOf: scope.accountBalance,
+      baseCurrencyCode: scope.activeBook.baseCurrencyCode,
       now: DateTime.now(),
     );
     final settings = scope.aiSettings;

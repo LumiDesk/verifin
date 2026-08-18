@@ -11,11 +11,12 @@ AiEntryContext _context() => AiEntryContext(
   ],
   incomeCategories: const <AiOption>[AiOption(id: 'salary', label: '工资')],
   accounts: const <AiOption>[
-    AiOption(id: 'cash', label: '现金'),
-    AiOption(id: 'card', label: '招商银行'),
+    AiOption(id: 'cash', label: '现金', currencyCode: 'CNY'),
+    AiOption(id: 'card', label: '招商银行', currencyCode: 'USD'),
   ],
   today: DateTime(2026, 7, 5, 9, 30),
   bookId: 'default',
+  baseCurrencyCode: 'CNY',
 );
 
 void main() {
@@ -29,6 +30,8 @@ void main() {
       expect(prompt, contains('transport'));
       expect(prompt, contains('salary'));
       expect(prompt, contains('card'));
+      expect(prompt, contains('currencyCode'));
+      expect(prompt, contains('USD'));
     });
   });
 
@@ -56,6 +59,7 @@ void main() {
       );
       expect(draft.type, EntryType.expense);
       expect(draft.amount, 32);
+      expect(draft.currencyCode, 'CNY');
       expect(draft.categoryId, 'transport');
       expect(draft.accountId, 'cash');
       expect(draft.note, '打车');
@@ -89,6 +93,25 @@ void main() {
       expect(draft.type, EntryType.income);
       expect(draft.categoryId, 'salary');
       expect(draft.accountId, 'card');
+      expect(draft.currencyCode, 'USD');
+    });
+
+    test('explicit ISO currency is preserved and invalid code falls back', () {
+      final foreign = parseAiEntryDraft(
+        '{"type":"expense","amount":12,"currencyCode":"jpy",'
+        '"categoryId":"dining","accountId":"cash"}',
+        _context(),
+      );
+      expect(foreign.currencyCode, 'JPY');
+      expect(foreign.warnings, isEmpty);
+
+      final invalid = parseAiEntryDraft(
+        '{"type":"expense","amount":12,"currencyCode":"XYZ",'
+        '"categoryId":"dining","accountId":"cash"}',
+        _context(),
+      );
+      expect(invalid.currencyCode, 'CNY');
+      expect(invalid.warnings, contains(AiDraftWarning.currencyUnmatched));
     });
 
     test('transfer keeps both accounts and empty category', () {

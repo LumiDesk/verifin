@@ -6,6 +6,8 @@ import '../app/app_theme.dart';
 import '../app/category_suggest.dart';
 import '../app/category_tree.dart';
 import '../app/common_widgets.dart';
+import '../app/currency_catalog.dart';
+import '../app/currency_math.dart';
 import '../app/model_lookup.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
@@ -72,6 +74,18 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   String? _toAccountId;
   DateTime _occurredAt = DateTime.now();
   double _fee = 0;
+  String? _currencyCode;
+  double? _accountAmount;
+  double? _toAccountAmount;
+  double? _baseAmount;
+  ConversionSource _conversionSource = ConversionSource.identity;
+  bool _currencyTouched = false;
+  bool _accountAmountTouched = false;
+  bool _toAccountAmountTouched = false;
+  bool _baseAmountTouched = false;
+  bool _rememberRate = false;
+  bool _moneyInitialized = false;
+  Set<String> _missingRateCodes = <String>{};
   // 支出可标记「待报销」；新建时不涉及回款冲抵，退款金额建后在编辑页填写。
   bool _reimbursable = false;
   List<String> _tagIds = <String>[];
@@ -131,6 +145,11 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       _toAccountId = editing.toAccountId;
       _occurredAt = editing.occurredAt;
       _fee = editing.fee;
+      _currencyCode = editing.currencyCode;
+      _accountAmount = editing.accountAmount;
+      _toAccountAmount = editing.toAccountAmount;
+      _baseAmount = editing.baseAmount;
+      _conversionSource = editing.conversionSource;
       _reimbursable = editing.reimbursable;
       _tagIds = List<String>.of(editing.tagIds);
       _applyingSuggestion = true;
@@ -158,6 +177,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       }
       _toAccountId = draft.toAccountId;
       _occurredAt = draft.occurredAt;
+      _currencyCode = draft.currencyCode;
       _applyingSuggestion = true;
       _noteController.text = draft.note;
       _applyingSuggestion = false;
@@ -167,6 +187,9 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (!_moneyInitialized) {
+      _initializeCurrencyAmounts();
+    }
     // 开屏（金额已确定、备注为空）先按金额习惯识别一次。
     if (_autoSuggestEnabled && !_didInitialSuggest) {
       _didInitialSuggest = true;
@@ -179,6 +202,194 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     _noteController.removeListener(_onNoteChanged);
     _noteController.dispose();
     super.dispose();
+  }
+
+  List<Account> _availableAccounts(VeriFinController controller) {
+    final values = _isDraft
+        ? <Account>[...controller.accounts, ...widget.draftExtraAccounts!]
+        : controller.accounts;
+    return values.where((account) => !account.hidden).toList();
+  }
+
+  Account? _accountFor(List<Account> accounts, String? id) {
+    if (id == null || id.isEmpty) return null;
+    return accounts.where((account) => account.id == id).firstOrNull;
+  }
+
+  void _initializeCurrencyAmounts() {
+    final controller = VeriFinScope.of(context);
+    final accounts = _availableAccounts(controller);
+    if (!_noAccount &&
+        accounts.isNotEmpty &&
+        !accounts.any((account) => account.id == _accountId)) {
+      _accountId = accounts.first.id;
+    }
+    _normalizeTransferAccounts(accounts);
+    _currencyCode ??=
+        _accountFor(accounts, _accountId)?.currencyCode ??
+        controller.activeBook.baseCurrencyCode;
+    _moneyInitialized = true;
+    if (widget.draftEntry == null) {
+      _refreshCurrencyAmounts(
+        controller,
+        accounts,
+        forceAccount: true,
+        forceToAccount: true,
+        forceBase: true,
+      );
+    } else {
+      _refreshMissingRateCodes(controller, accounts);
+    }
+  }
+
+  double? _convertAmount(
+    VeriFinController controller, {
+    required double amount,
+    required String sourceCode,
+    required String targetCode,
+  }) {
+    final result = controller.convertAmount(
+      amount: amount,
+      sourceCurrencyCode: sourceCode,
+      targetCurrencyCode: targetCode,
+      date: _occurredAt,
+    );
+    if (result is ConvertedCurrencyAmount) return result.amount;
+    if (result is MissingCurrencyRate) {
+      _missingRateCodes.addAll(result.currencyCodes);
+    }
+    return null;
+  }
+
+  void _refreshCurrencyAmounts(
+    VeriFinController controller,
+    List<Account> accounts, {
+    bool forceAccount = false,
+    bool forceToAccount = false,
+    bool forceBase = false,
+  }) {
+    _missingRateCodes = <String>{};
+    final baseCode = controller.activeBook.baseCurrencyCode;
+    final account = _noAccount ? null : _accountFor(accounts, _accountId);
+    final toAccount = _accountFor(accounts, _toAccountId);
+
+    if (_type == EntryType.transfer) {
+      if (account != null) {
+        _currencyCode = account.currencyCode;
+        _amount = normalizeCurrencyAmount(_amount, account.currencyCode);
+        _accountAmount = _amount;
+      }
+      _baseAmount = 0;
+      if (toAccount == null) {
+        _toAccountAmount = null;
+      } else if (account != null &&
+          toAccount.currencyCode == account.currencyCode) {
+        _toAccountAmount = normalizeCurrencyAmount(
+          _amount,
+          toAccount.currencyCode,
+        );
+        _toAccountAmountTouched = false;
+      } else if (forceToAccount || !_toAccountAmountTouched) {
+        _toAccountAmount = _convertAmount(
+          controller,
+          amount: _amount,
+          sourceCode: _currencyCode!,
+          targetCode: toAccount.currencyCode,
+        );
+      }
+      _conversionSource = _toAccountAmountTouched
+          ? ConversionSource.manual
+          : account != null &&
+                toAccount != null &&
+                account.currencyCode != toAccount.currencyCode
+          ? ConversionSource.rateTable
+          : ConversionSource.identity;
+      _refreshMissingRateCodes(controller, accounts);
+      return;
+    }
+
+    final code = _currencyCode ?? baseCode;
+    if (account == null) {
+      _accountAmount = null;
+    } else if (code == account.currencyCode) {
+      _accountAmount = normalizeCurrencyAmount(_amount, account.currencyCode);
+      _accountAmountTouched = false;
+    } else if (forceAccount || !_accountAmountTouched) {
+      _accountAmount = _convertAmount(
+        controller,
+        amount: _amount,
+        sourceCode: code,
+        targetCode: account.currencyCode,
+      );
+    }
+
+    if (code == baseCode) {
+      _baseAmount = normalizeCurrencyAmount(_amount, baseCode);
+      _baseAmountTouched = false;
+    } else if (account?.currencyCode == baseCode && _accountAmount != null) {
+      _baseAmount = normalizeCurrencyAmount(_accountAmount!, baseCode);
+      _baseAmountTouched = _accountAmountTouched;
+    } else if (forceBase || !_baseAmountTouched) {
+      _baseAmount = _convertAmount(
+        controller,
+        amount: _amount,
+        sourceCode: code,
+        targetCode: baseCode,
+      );
+    }
+    _conversionSource = _accountAmountTouched || _baseAmountTouched
+        ? ConversionSource.manual
+        : code == baseCode &&
+              (account == null || account.currencyCode == baseCode)
+        ? ConversionSource.identity
+        : ConversionSource.rateTable;
+    _refreshMissingRateCodes(controller, accounts);
+  }
+
+  void _refreshMissingRateCodes(
+    VeriFinController controller,
+    List<Account> accounts,
+  ) {
+    final missing = <String>{};
+    final code = _currencyCode ?? controller.activeBook.baseCurrencyCode;
+    final account = _noAccount ? null : _accountFor(accounts, _accountId);
+    final toAccount = _accountFor(accounts, _toAccountId);
+    if (_type == EntryType.transfer) {
+      if (toAccount != null &&
+          toAccount.currencyCode != code &&
+          _toAccountAmount == null) {
+        final result = controller.convertAmount(
+          amount: _amount,
+          sourceCurrencyCode: code,
+          targetCurrencyCode: toAccount.currencyCode,
+          date: _occurredAt,
+        );
+        if (result is MissingCurrencyRate) missing.addAll(result.currencyCodes);
+      }
+    } else {
+      if (account != null &&
+          account.currencyCode != code &&
+          _accountAmount == null) {
+        final result = controller.convertAmount(
+          amount: _amount,
+          sourceCurrencyCode: code,
+          targetCurrencyCode: account.currencyCode,
+          date: _occurredAt,
+        );
+        if (result is MissingCurrencyRate) missing.addAll(result.currencyCodes);
+      }
+      if (code != controller.activeBook.baseCurrencyCode &&
+          _baseAmount == null) {
+        final result = controller.convertAmount(
+          amount: _amount,
+          sourceCurrencyCode: code,
+          targetCurrencyCode: controller.activeBook.baseCurrencyCode,
+          date: _occurredAt,
+        );
+        if (result is MissingCurrencyRate) missing.addAll(result.currencyCodes);
+      }
+    }
+    _missingRateCodes = missing;
   }
 
   void _onNoteChanged() {
@@ -285,10 +496,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       _type = EntryType.expense;
     }
     // 草稿模式下把临时账户（未落库，如导入将新建的）并入可选列表。
-    final baseAccounts = _isDraft
-        ? <Account>[...controller.accounts, ...widget.draftExtraAccounts!]
-        : controller.accounts;
-    final accounts = baseAccounts.where((account) => !account.hidden).toList();
+    final accounts = _availableAccounts(controller);
     final hasAccounts = accounts.isNotEmpty;
     // 转账必须落到具体账户，不允许「无账户」。
     if (_type == EntryType.transfer) {
@@ -384,6 +592,16 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                           final next = _categoriesForType(controller, _type);
                           _categoryId = next.isEmpty ? '' : next.first.id;
                           _normalizeTransferAccounts(accounts);
+                          if (_type == EntryType.transfer) {
+                            _currencyTouched = false;
+                          }
+                          _refreshCurrencyAmounts(
+                            controller,
+                            accounts,
+                            forceAccount: true,
+                            forceToAccount: true,
+                            forceBase: true,
+                          );
                         });
                         // 用户改了类型后，在该类型内重新识别分类/标签/备注。
                         _recomputeSuggestion();
@@ -397,13 +615,31 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Text(
-                          formatAmount(_amount),
+                          formatCurrencyNumber(
+                            _amount,
+                            _currencyCode ??
+                                controller.activeBook.baseCurrencyCode,
+                          ),
                           style: Theme.of(context).textTheme.displayLarge
                               ?.copyWith(
                                 color: amountColor,
                                 fontWeight: FontWeight.w800,
                               ),
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: ActionChip(
+                        key: const Key('entry_currency_button'),
+                        avatar: const Icon(Icons.currency_exchange, size: 18),
+                        label: Text(
+                          '${AppLocalizations.of(context).entryCurrencyLabel}: ${_currencyCode ?? controller.activeBook.baseCurrencyCode}',
+                        ),
+                        onPressed: _type == EntryType.transfer
+                            ? null
+                            : _pickCurrency,
                       ),
                     ),
                     const Divider(height: 24),
@@ -487,7 +723,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         key: const Key('account_dropdown'),
                         label: AppLocalizations.of(context).transferOutAccount,
                         value:
-                            '${accountById(accounts, _accountId).name} (${formatAmount(controller.accountBalance(accountById(accounts, _accountId)))})',
+                            '${accountById(accounts, _accountId).name} (${formatMoney(controller.accountBalance(accountById(accounts, _accountId)), accountById(accounts, _accountId).currencyCode)})',
                         leading: AccountIconBox(
                           iconCode: accountById(accounts, _accountId).iconCode,
                           size: 26,
@@ -500,7 +736,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         label: AppLocalizations.of(context).transferInAccount,
                         value: _toAccountId == null
                             ? AppLocalizations.of(context).pleaseSelect
-                            : '${accountById(accounts, _toAccountId!).name} (${formatAmount(controller.accountBalance(accountById(accounts, _toAccountId!)))})',
+                            : '${accountById(accounts, _toAccountId!).name} (${formatMoney(controller.accountBalance(accountById(accounts, _toAccountId!)), accountById(accounts, _toAccountId!).currencyCode)})',
                         icon: _toAccountId == null ? Icons.call_received : null,
                         leading: _toAccountId == null
                             ? null
@@ -520,7 +756,11 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         key: const Key('fee_field'),
                         label: AppLocalizations.of(context).feeLabel,
                         value: _fee > 0
-                            ? formatAmount(_fee)
+                            ? formatMoney(
+                                _fee,
+                                _currencyCode ??
+                                    controller.activeBook.baseCurrencyCode,
+                              )
                             : AppLocalizations.of(context).feeNoneTapToFill,
                         icon: Icons.paid_outlined,
                         onTap: _editFee,
@@ -531,7 +771,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         label: AppLocalizations.of(context).accountLabel,
                         value: _noAccount
                             ? AppLocalizations.of(context).noAccountLabel
-                            : '${accountById(accounts, _accountId).name} (${formatAmount(controller.accountBalance(accountById(accounts, _accountId)))})',
+                            : '${accountById(accounts, _accountId).name} (${formatMoney(controller.accountBalance(accountById(accounts, _accountId)), accountById(accounts, _accountId).currencyCode)})',
                         icon: _noAccount
                             ? Icons.money_off_csred_outlined
                             : null,
@@ -556,6 +796,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                           context,
                         ).noUsableAccountDesc,
                       ),
+                    ..._buildCurrencyAmountFields(controller, accounts),
                     const SizedBox(height: 14),
                     TextField(
                       key: const Key('entry_note_field'),
@@ -633,33 +874,344 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     );
   }
 
+  List<Widget> _buildCurrencyAmountFields(
+    VeriFinController controller,
+    List<Account> accounts,
+  ) {
+    final l10n = AppLocalizations.of(context);
+    final code = _currencyCode ?? controller.activeBook.baseCurrencyCode;
+    final baseCode = controller.activeBook.baseCurrencyCode;
+    final account = _noAccount ? null : _accountFor(accounts, _accountId);
+    final toAccount = _accountFor(accounts, _toAccountId);
+    final fields = <Widget>[];
+    if (_type == EntryType.transfer) {
+      if (toAccount != null && toAccount.currencyCode != code) {
+        fields.addAll(<Widget>[
+          const SizedBox(height: 12),
+          VeriCard(
+            child: Column(
+              children: <Widget>[
+                CurrencyAmountField(
+                  key: const Key('entry_to_account_amount'),
+                  label: l10n.entryTransferInAmount,
+                  currencyCode: toAccount.currencyCode,
+                  amount: _toAccountAmount,
+                  missingText: l10n.exchangeRateNotSet,
+                  onTap: () => _editToAccountAmount(toAccount.currencyCode),
+                ),
+                DetailInfoRow(
+                  label: l10n.entryRateLabel,
+                  value: _toAccountAmount == null || _amount <= 0
+                      ? l10n.exchangeRateNotSet
+                      : l10n.entryRateEquation(
+                          code,
+                          formatRateValue(_toAccountAmount! / _amount),
+                          toAccount.currencyCode,
+                        ),
+                  placeholder: _toAccountAmount == null,
+                  onTap: () => _editDerivedRate(
+                    sourceCode: code,
+                    targetCode: toAccount.currencyCode,
+                    transfer: true,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ]);
+      }
+    } else {
+      final needsAccountAmount =
+          account != null && account.currencyCode != code;
+      final needsBaseAmount = code != baseCode;
+      if (needsAccountAmount || needsBaseAmount) {
+        fields.addAll(<Widget>[
+          const SizedBox(height: 12),
+          VeriCard(
+            child: Column(
+              children: <Widget>[
+                if (needsAccountAmount)
+                  CurrencyAmountField(
+                    key: const Key('entry_account_amount'),
+                    label: _type == EntryType.expense
+                        ? l10n.entryAccountAmountExpense
+                        : l10n.entryAccountAmountIncome,
+                    currencyCode: account.currencyCode,
+                    amount: _accountAmount,
+                    missingText: l10n.exchangeRateNotSet,
+                    onTap: () => _editAccountAmount(account.currencyCode),
+                  ),
+                if (needsBaseAmount)
+                  CurrencyAmountField(
+                    key: const Key('entry_base_amount'),
+                    label: l10n.entryLedgerAmountLabel,
+                    currencyCode: baseCode,
+                    amount: _baseAmount,
+                    missingText: l10n.exchangeRateNotSet,
+                    onTap: () => _editBaseAmount(baseCode),
+                  ),
+                if (needsBaseAmount)
+                  DetailInfoRow(
+                    label: l10n.entryRateLabel,
+                    value: _baseAmount == null || _amount <= 0
+                        ? l10n.exchangeRateNotSet
+                        : l10n.entryRateEquation(
+                            code,
+                            formatRateValue(_baseAmount! / _amount),
+                            baseCode,
+                          ),
+                    placeholder: _baseAmount == null,
+                    onTap: () => _editDerivedRate(
+                      sourceCode: code,
+                      targetCode: baseCode,
+                      transfer: false,
+                    ),
+                  ),
+                if (needsBaseAmount && _baseAmount != null)
+                  CompactSwitchRow(
+                    icon: Icons.bookmark_add_outlined,
+                    title: Text(l10n.entryRememberRate),
+                    subtitle: Text(l10n.entryRememberRateHint),
+                    value: _rememberRate,
+                    onChanged: (value) => setState(() => _rememberRate = value),
+                  ),
+              ],
+            ),
+          ),
+        ]);
+      }
+    }
+    if (_missingRateCodes.isNotEmpty) {
+      fields.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(
+            l10n.entryMissingRate(
+              (_missingRateCodes.toList()..sort()).join(', '),
+            ),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: veriWarning,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      );
+    } else if (fields.isNotEmpty) {
+      fields.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Text(
+            _conversionSource == ConversionSource.manual
+                ? l10n.entryConversionSourceManual
+                : l10n.entryConversionSourceRateTable,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.55),
+            ),
+          ),
+        ),
+      );
+    }
+    return fields;
+  }
+
+  Future<void> _pickCurrency() async {
+    final controller = VeriFinScope.of(context);
+    final selected = await showCurrencyPickerSheet(
+      context: context,
+      title: AppLocalizations.of(context).entryCurrencyPickTitle,
+      selectedCode: _currencyCode,
+      preferredCodes: <String>[
+        controller.activeBook.baseCurrencyCode,
+        for (final account in controller.accounts) account.currencyCode,
+      ],
+    );
+    if (!mounted || selected == null || selected.code == _currencyCode) return;
+    setState(() {
+      _currencyCode = selected.code;
+      _currencyTouched = true;
+      _amount = normalizeCurrencyAmount(_amount, selected.code);
+      _accountAmountTouched = false;
+      _baseAmountTouched = false;
+      _rememberRate = false;
+      _refreshCurrencyAmounts(
+        controller,
+        _availableAccounts(controller),
+        forceAccount: true,
+        forceBase: true,
+      );
+    });
+  }
+
   Future<void> _editAmount() async {
+    final code =
+        _currencyCode ?? VeriFinScope.of(context).activeBook.baseCurrencyCode;
     final amount = await showNumberPadSheet(
       context,
-      title: AppLocalizations.of(context).amountEditTitle,
+      title: AppLocalizations.of(context).entryAmountInputTitle(
+        AppLocalizations.of(context).entryOriginalAmountLabel,
+        code,
+      ),
       initialAmount: _amount,
+      maxFractionDigits: CurrencyCatalog.require(code).minorUnit,
     );
 
     if (!mounted || amount == null || amount <= 0) {
       return;
     }
 
-    setState(() => _amount = amount);
+    setState(() {
+      _amount = normalizeCurrencyAmount(amount, code);
+      _refreshCurrencyAmounts(
+        VeriFinScope.of(context),
+        _availableAccounts(VeriFinScope.of(context)),
+      );
+    });
     // 金额变了，按新金额重新识别。
     _recomputeSuggestion();
   }
 
   Future<void> _editFee() async {
+    final code =
+        _currencyCode ?? VeriFinScope.of(context).activeBook.baseCurrencyCode;
     final fee = await showNumberPadSheet(
       context,
       title: AppLocalizations.of(context).transferFeeTitle,
       initialAmount: _fee > 0 ? _fee : null,
       allowZero: true,
+      maxFractionDigits: CurrencyCatalog.require(code).minorUnit,
     );
     if (!mounted || fee == null || fee < 0) {
       return;
     }
-    setState(() => _fee = fee);
+    setState(() => _fee = normalizeCurrencyAmount(fee, code));
+  }
+
+  Future<void> _editAccountAmount(String currencyCode) async {
+    final l10n = AppLocalizations.of(context);
+    final value = await showNumberPadSheet(
+      context,
+      title: l10n.entryAmountInputTitle(
+        _type == EntryType.expense
+            ? l10n.entryAccountAmountExpense
+            : l10n.entryAccountAmountIncome,
+        currencyCode,
+      ),
+      initialAmount: _accountAmount,
+      maxFractionDigits: CurrencyCatalog.require(currencyCode).minorUnit,
+    );
+    if (!mounted || value == null || value <= 0) return;
+    setState(() {
+      _accountAmount = normalizeCurrencyAmount(value, currencyCode);
+      _accountAmountTouched = true;
+      if (currencyCode ==
+          VeriFinScope.of(context).activeBook.baseCurrencyCode) {
+        _baseAmount = _accountAmount;
+        _baseAmountTouched = true;
+      }
+      _conversionSource = ConversionSource.manual;
+      _refreshMissingRateCodes(
+        VeriFinScope.of(context),
+        _availableAccounts(VeriFinScope.of(context)),
+      );
+    });
+  }
+
+  Future<void> _editToAccountAmount(String currencyCode) async {
+    final l10n = AppLocalizations.of(context);
+    final value = await showNumberPadSheet(
+      context,
+      title: l10n.entryAmountInputTitle(
+        l10n.entryTransferInAmount,
+        currencyCode,
+      ),
+      initialAmount: _toAccountAmount,
+      maxFractionDigits: CurrencyCatalog.require(currencyCode).minorUnit,
+    );
+    if (!mounted || value == null || value <= 0) return;
+    setState(() {
+      _toAccountAmount = normalizeCurrencyAmount(value, currencyCode);
+      _toAccountAmountTouched = true;
+      _conversionSource = ConversionSource.manual;
+      _refreshMissingRateCodes(
+        VeriFinScope.of(context),
+        _availableAccounts(VeriFinScope.of(context)),
+      );
+    });
+  }
+
+  Future<void> _editBaseAmount(String currencyCode) async {
+    final l10n = AppLocalizations.of(context);
+    final value = await showNumberPadSheet(
+      context,
+      title: l10n.entryAmountInputTitle(
+        l10n.entryLedgerAmountLabel,
+        currencyCode,
+      ),
+      initialAmount: _baseAmount,
+      maxFractionDigits: CurrencyCatalog.require(currencyCode).minorUnit,
+    );
+    if (!mounted || value == null || value <= 0) return;
+    setState(() {
+      _baseAmount = normalizeCurrencyAmount(value, currencyCode);
+      _baseAmountTouched = true;
+      final account = _accountFor(
+        _availableAccounts(VeriFinScope.of(context)),
+        _accountId,
+      );
+      if (!_noAccount && account?.currencyCode == currencyCode) {
+        _accountAmount = _baseAmount;
+        _accountAmountTouched = true;
+      }
+      _conversionSource = ConversionSource.manual;
+      _refreshMissingRateCodes(
+        VeriFinScope.of(context),
+        _availableAccounts(VeriFinScope.of(context)),
+      );
+    });
+  }
+
+  Future<void> _editDerivedRate({
+    required String sourceCode,
+    required String targetCode,
+    required bool transfer,
+  }) async {
+    final currentTarget = transfer ? _toAccountAmount : _baseAmount;
+    final value = await showNumberPadSheet(
+      context,
+      title: AppLocalizations.of(
+        context,
+      ).entryRateEditTitle(sourceCode, targetCode),
+      initialAmount: currentTarget == null || _amount <= 0
+          ? null
+          : currentTarget / _amount,
+      maxFractionDigits: 10,
+    );
+    if (!mounted || value == null || value <= 0) return;
+    setState(() {
+      final targetAmount = normalizeCurrencyAmount(_amount * value, targetCode);
+      if (transfer) {
+        _toAccountAmount = targetAmount;
+        _toAccountAmountTouched = true;
+      } else {
+        _baseAmount = targetAmount;
+        _baseAmountTouched = true;
+        final account = _accountFor(
+          _availableAccounts(VeriFinScope.of(context)),
+          _accountId,
+        );
+        if (!_noAccount && account?.currencyCode == targetCode) {
+          _accountAmount = targetAmount;
+          _accountAmountTouched = true;
+        }
+      }
+      _conversionSource = ConversionSource.manual;
+      _refreshMissingRateCodes(
+        VeriFinScope.of(context),
+        _availableAccounts(VeriFinScope.of(context)),
+      );
+    });
   }
 
   Future<void> _showAllCategories() async {
@@ -701,11 +1253,28 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     setState(() {
       if (selected.id.isEmpty) {
         _noAccount = true;
+        if (!_currencyTouched) {
+          _currencyCode = VeriFinScope.of(context).activeBook.baseCurrencyCode;
+        }
       } else {
         _noAccount = false;
         _accountId = selected.id;
+        if (!_currencyTouched || isTransfer) {
+          _currencyCode = selected.currencyCode;
+        }
       }
       _normalizeTransferAccounts(accounts);
+      _accountAmountTouched = false;
+      _toAccountAmountTouched = false;
+      _baseAmountTouched = false;
+      _rememberRate = false;
+      _refreshCurrencyAmounts(
+        VeriFinScope.of(context),
+        accounts,
+        forceAccount: true,
+        forceToAccount: true,
+        forceBase: true,
+      );
     });
   }
 
@@ -724,7 +1293,15 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       balanceOf: VeriFinScope.of(context).accountBalance,
     );
     if (selected != null && mounted) {
-      setState(() => _toAccountId = selected.id);
+      setState(() {
+        _toAccountId = selected.id;
+        _toAccountAmountTouched = false;
+        _refreshCurrencyAmounts(
+          VeriFinScope.of(context),
+          accounts,
+          forceToAccount: true,
+        );
+      });
     }
   }
 
@@ -749,12 +1326,22 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   bool _canSave(List<Account> accounts) {
     if (_type != EntryType.transfer) {
       // 无账户也可保存（只记金额）；否则需有可选账户。
-      return _noAccount || accounts.isNotEmpty;
+      final hasAccountAmount =
+          _noAccount || (_accountAmount != null && _accountAmount! > 0);
+      return (_noAccount || accounts.isNotEmpty) &&
+          hasAccountAmount &&
+          _baseAmount != null &&
+          _baseAmount! > 0;
     }
     if (accounts.isEmpty) {
       return false;
     }
-    return _toAccountId != null && _toAccountId != _accountId;
+    return _toAccountId != null &&
+        _toAccountId != _accountId &&
+        _accountAmount != null &&
+        _accountAmount! > 0 &&
+        _toAccountAmount != null &&
+        _toAccountAmount! > 0;
   }
 
   Future<void> _pickDate() async {
@@ -776,6 +1363,10 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
         picked.day,
         _occurredAt.hour,
         _occurredAt.minute,
+      );
+      _refreshCurrencyAmounts(
+        VeriFinScope.of(context),
+        _availableAccounts(VeriFinScope.of(context)),
       );
     });
   }
@@ -834,20 +1425,44 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   LedgerEntry _buildDraftEntry() {
     final original = widget.draftEntry;
     final noAccount = _type != EntryType.transfer && _noAccount;
+    final controller = VeriFinScope.of(context);
+    final accounts = _availableAccounts(controller);
+    final code =
+        _currencyCode ??
+        _accountFor(accounts, _accountId)?.currencyCode ??
+        controller.activeBook.baseCurrencyCode;
+    final accountCode = _accountFor(accounts, _accountId)?.currencyCode;
+    final toAccountCode = _accountFor(accounts, _toAccountId)?.currencyCode;
     return LedgerEntry(
       id: _entryId,
       bookId: original?.bookId ?? VeriFinScope.of(context).activeBook.id,
       type: _type,
-      amount: _amount,
+      amount: normalizeCurrencyAmount(_amount, code),
+      currencyCode: code,
+      accountAmount: noAccount || accountCode == null
+          ? null
+          : normalizeCurrencyAmount(_accountAmount ?? _amount, accountCode),
+      toAccountAmount: _type != EntryType.transfer || toAccountCode == null
+          ? null
+          : normalizeCurrencyAmount(_toAccountAmount ?? _amount, toAccountCode),
+      baseAmount: _type == EntryType.transfer
+          ? 0
+          : normalizeCurrencyAmount(
+              _baseAmount ?? _amount,
+              controller.activeBook.baseCurrencyCode,
+            ),
+      conversionSource: _conversionSource,
       categoryId: _categoryId,
       accountId: noAccount ? '' : _accountId,
       toAccountId: _type == EntryType.transfer ? _toAccountId : null,
       note: _noteController.text.trim(),
       occurredAt: _occurredAt,
       tagIds: List<String>.of(_tagIds),
-      fee: _type == EntryType.transfer ? _fee : 0,
+      fee: _type == EntryType.transfer
+          ? normalizeCurrencyAmount(_fee, code)
+          : 0,
       reimbursable: _type == EntryType.expense && _reimbursable,
-      refundedAmount: original?.refundedAmount ?? 0,
+      refundedBaseAmount: original?.refundedBaseAmount ?? 0,
     );
   }
 
@@ -859,6 +1474,11 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   bool _sameDraft(LedgerEntry left, LedgerEntry right) =>
       left.type == right.type &&
       left.amount == right.amount &&
+      left.currencyCode == right.currencyCode &&
+      left.accountAmount == right.accountAmount &&
+      left.toAccountAmount == right.toAccountAmount &&
+      left.baseAmount == right.baseAmount &&
+      left.conversionSource == right.conversionSource &&
       left.categoryId == right.categoryId &&
       left.accountId == right.accountId &&
       left.toAccountId == right.toAccountId &&
@@ -936,6 +1556,11 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       entry: draft,
       isNew: true,
       attachments: attachments,
+      rememberRateCurrencyCode: _rememberRate ? draft.currencyCode : null,
+      rememberRateToBase: _rememberRate
+          ? draft.baseAmount / draft.amount
+          : null,
+      rememberRateEffectiveDate: _rememberRate ? draft.occurredAt : null,
     );
     if (!saved) {
       _saving = false;
@@ -1007,6 +1632,8 @@ String aiDraftWarningLabel(AppLocalizations l10n, AiDraftWarning warning) {
       return l10n.aiWarningCategoryUnmatched;
     case AiDraftWarning.accountUnmatched:
       return l10n.aiWarningAccountUnmatched;
+    case AiDraftWarning.currencyUnmatched:
+      return l10n.aiWarningCurrencyUnmatched;
   }
 }
 

@@ -184,6 +184,177 @@ void main() {
     target.dispose();
   });
 
+  test(
+    'v2 backup round-trip preserves currencies, frozen amounts and rates',
+    () async {
+      final source = await makeController();
+      final book = source.activeBook;
+      final account = Account(
+        id: 'usd-cash',
+        bookId: book.id,
+        name: '美元现金',
+        type: AccountType.cash,
+        groupId: null,
+        initialBalance: 100,
+        iconCode: 'wallet',
+        note: '',
+        includeInAssets: true,
+        hidden: false,
+        currencyCode: 'USD',
+      );
+      source
+        ..addAccount(account)
+        ..addEntry(
+          LedgerEntry(
+            id: 'usd-expense',
+            bookId: book.id,
+            type: EntryType.expense,
+            amount: 10,
+            currencyCode: 'USD',
+            accountAmount: 10,
+            baseAmount: 72,
+            conversionSource: ConversionSource.imported,
+            categoryId: 'dining',
+            accountId: account.id,
+            note: '外币午餐',
+            occurredAt: DateTime(2026, 7, 2, 12),
+          ),
+        );
+      expect(
+        await source.saveExchangeRateDraft(
+          currencyCode: 'USD',
+          effectiveDate: DateTime(2026, 7, 1),
+          rateToBase: 7.2,
+          source: ExchangeRateSource.imported,
+        ),
+        isTrue,
+      );
+
+      final backup = source.exportDataJson();
+      final root = jsonDecode(backup) as Map<String, dynamic>;
+      expect(root['version'], 2);
+      final data = root['data'] as Map<String, dynamic>;
+      expect(data['exchangeRates'], hasLength(1));
+      expect(data['currencyFractionStyle'], isNotNull);
+
+      final target = await makeController();
+      target.importDataJson(backup);
+      final restoredAccount = target.accounts.single;
+      final restoredEntry = target.entries.single;
+      expect(target.activeBook.baseCurrencyCode, book.baseCurrencyCode);
+      expect(
+        target.activeBook.currencySetupStatus,
+        CurrencySetupStatus.confirmed,
+      );
+      expect(restoredAccount.currencyCode, 'USD');
+      expect(restoredEntry.currencyCode, 'USD');
+      expect(restoredEntry.accountAmount, 10);
+      expect(restoredEntry.baseAmount, 72);
+      expect(restoredEntry.conversionSource, ConversionSource.imported);
+      expect(target.exchangeRates.single.currencyCode, 'USD');
+      expect(target.exchangeRates.single.rateToBase, 7.2);
+      expect(target.exchangeRates.single.source, ExchangeRateSource.imported);
+
+      source.dispose();
+      target.dispose();
+    },
+  );
+
+  test(
+    'v1 backup reinterprets missing currency fields as legacy CNY',
+    () async {
+      final controller = await makeController();
+      controller.importDataJson(
+        jsonEncode(<String, Object?>{
+          'app': 'verifin',
+          'version': 1,
+          'data': <String, Object?>{
+            'ledgerBooks': <Object?>[
+              <String, Object?>{
+                'id': 'default',
+                'name': '旧账本',
+                'createdAt': '2026-01-01T00:00:00.000',
+                'isDefault': true,
+              },
+            ],
+            'activeBookId': 'default',
+            'accounts': <Object?>[
+              <String, Object?>{
+                'id': 'legacy-cash',
+                'bookId': 'default',
+                'name': '现金',
+                'type': 'cash',
+                'initialBalance': 88,
+              },
+            ],
+            'entries': <Object?>[
+              <String, Object?>{
+                'id': 'legacy-entry',
+                'bookId': 'default',
+                'type': 'expense',
+                'amount': 12.34,
+                'categoryId': 'dining',
+                'accountId': 'legacy-cash',
+                'note': '',
+                'occurredAt': '2026-01-02T12:00:00.000',
+              },
+            ],
+          },
+        }),
+      );
+
+      expect(controller.activeBook.baseCurrencyCode, 'CNY');
+      expect(
+        controller.activeBook.currencySetupStatus,
+        CurrencySetupStatus.legacyUnconfirmed,
+      );
+      expect(controller.accounts.single.currencyCode, 'CNY');
+      final entry = controller.entries.single;
+      expect(entry.amount, 12.34);
+      expect(entry.accountAmount, 12.34);
+      expect(entry.baseAmount, 12.34);
+      expect(entry.conversionSource, ConversionSource.legacy);
+      expect(controller.exchangeRates, isEmpty);
+
+      controller.dispose();
+    },
+  );
+
+  test(
+    'invalid v2 currency data is rejected before existing data changes',
+    () async {
+      final controller = await makeController();
+      controller.addAccount(
+        Account(
+          id: 'keep-account',
+          bookId: controller.activeBook.id,
+          name: '保留账户',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 30,
+          iconCode: 'wallet',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+        ),
+      );
+      final root =
+          jsonDecode(controller.exportDataJson()) as Map<String, dynamic>;
+      final data = root['data'] as Map<String, dynamic>;
+      final accounts = data['accounts'] as List<dynamic>;
+      (accounts.single as Map<String, dynamic>)['currencyCode'] = 'ZZZ';
+
+      expect(
+        () => controller.importDataJson(jsonEncode(root)),
+        throwsFormatException,
+      );
+      expect(controller.accounts.single.id, 'keep-account');
+      expect(controller.accounts.single.currencyCode, 'CNY');
+
+      controller.dispose();
+    },
+  );
+
   test('legacy backup without panel fields falls back to defaults', () async {
     final source = await makeController();
     final exported = source.exportDataJson();
@@ -221,7 +392,7 @@ void main() {
 
     controller.importDataJson(rawJson);
 
-    expect(controller.accounts.length, greaterThanOrEqualTo(8));
+    expect(controller.accounts.length, greaterThanOrEqualTo(9));
     expect(controller.entries.length, greaterThanOrEqualTo(20));
     expect(controller.accountGroups.length, greaterThanOrEqualTo(4));
     expect(
@@ -249,6 +420,24 @@ void main() {
     expect(controller.attachmentCountForEntry('entry_20260703_001'), 1);
     // 周期记账：样例含每月房租规则，导入后应能读回。
     expect(controller.recurringRules.map((r) => r.note), contains('房租'));
+    final usdAccount = controller.accounts.firstWhere(
+      (account) => account.id == 'acc_usd_cash',
+    );
+    expect(usdAccount.currencyCode, 'USD');
+    final usdExpense = controller.entries.firstWhere(
+      (entry) => entry.id == 'entry_usd_expense_001',
+    );
+    expect(usdExpense.currencyCode, 'USD');
+    expect(usdExpense.accountAmount, 10);
+    expect(usdExpense.baseAmount, 72);
+    expect(usdExpense.refundedBaseAmount, 14.4);
+    final crossTransfer = controller.entries.firstWhere(
+      (entry) => entry.id == 'entry_cross_transfer_001',
+    );
+    expect(crossTransfer.accountAmount, 720);
+    expect(crossTransfer.toAccountAmount, 100);
+    expect(controller.exchangeRates.single.currencyCode, 'USD');
+    expect(controller.exchangeRates.single.rateToBase, 7.2);
     // 设备偏好：样例含默认账户、记一笔按钮行为、金额两位小数、自动识别开关、首页指标
     // 配置，导入后应读回。
     expect(controller.defaultAccountId, 'acc_alipay');

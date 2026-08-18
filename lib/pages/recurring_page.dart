@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
+import '../app/currency_catalog.dart';
+import '../app/currency_math.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
+import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
 import 'sheets.dart';
@@ -35,6 +39,7 @@ class _RecurringRulesPageState extends State<RecurringRulesPage> {
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
     final rules = controller.recurringRules;
+    final missingByRule = controller.dueRecurringMissingRates(DateTime.now());
     _syncRules(rules);
 
     return UnsavedChangesGuard(
@@ -61,6 +66,30 @@ class _RecurringRulesPageState extends State<RecurringRulesPage> {
                   ],
                 ),
                 const SizedBox(height: 10),
+                if (missingByRule.isNotEmpty) ...<Widget>[
+                  VeriCard(
+                    child: Row(
+                      children: <Widget>[
+                        const Icon(Icons.currency_exchange, color: veriWarning),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            AppLocalizations.of(
+                              context,
+                            ).recurringMissingRateCount(missingByRule.length),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _retryDue,
+                          child: Text(
+                            AppLocalizations.of(context).recurringRetryNow,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
                 if (rules.isEmpty)
                   VeriCard(
                     child: Padding(
@@ -90,6 +119,8 @@ class _RecurringRulesPageState extends State<RecurringRulesPage> {
                               active: _draftActive[rule.id] ?? rule.active,
                             ),
                             category: controller.categoryById(rule.categoryId),
+                            missingCodes:
+                                missingByRule[rule.id] ?? const <String>{},
                             onTap: () => _openEditor(context, rule),
                             onToggle: (value) {
                               setState(() => _draftActive[rule.id] = value);
@@ -151,18 +182,35 @@ class _RecurringRulesPageState extends State<RecurringRulesPage> {
 
   Future<bool> _save() =>
       VeriFinScope.of(context).saveRecurringActiveDraft(_draftActive);
+
+  Future<void> _retryDue() async {
+    final controller = VeriFinScope.of(context);
+    final generated = await controller.applyDueRecurring(DateTime.now());
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          generated < 0
+              ? AppLocalizations.of(context).saveFailed
+              : AppLocalizations.of(context).recurringGeneratedCount(generated),
+        ),
+      ),
+    );
+  }
 }
 
 class _RecurringRow extends StatelessWidget {
   const _RecurringRow({
     required this.rule,
     required this.category,
+    required this.missingCodes,
     required this.onTap,
     required this.onToggle,
   });
 
   final RecurringRule rule;
   final Category category;
+  final Set<String> missingCodes;
   final VoidCallback onTap;
   final ValueChanged<bool> onToggle;
 
@@ -199,7 +247,7 @@ class _RecurringRow extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    '${rule.frequency.label(AppLocalizations.of(context))} · $sign${formatAmount(rule.amount)}'
+                    '${rule.frequency.label(AppLocalizations.of(context))} · $sign${formatMoney(rule.amount, rule.currencyCode)}'
                     ' · ${AppLocalizations.of(context).nextRun(AppLocalizations.of(context).dateMonthDay(rule.nextRunDate))}',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: Theme.of(
@@ -208,6 +256,16 @@ class _RecurringRow extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
+                  if (missingCodes.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: 3),
+                    Text(
+                      '${AppLocalizations.of(context).recurringMissingRate}: ${(missingCodes.toList()..sort()).join(', ')}',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: veriWarning,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -223,6 +281,11 @@ class _RecurringRow extends StatelessWidget {
 typedef _RecurringRuleDraftSnapshot = ({
   EntryType type,
   double amount,
+  String currencyCode,
+  double? accountAmount,
+  double? toAccountAmount,
+  double baseAmount,
+  RecurringRatePolicy ratePolicy,
   String categoryId,
   String accountId,
   String? toAccountId,
@@ -244,6 +307,16 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
   final EditorExitController _exitController = EditorExitController();
   late EntryType _type;
   late double _amount;
+  late String _currencyCode;
+  double? _accountAmount;
+  double? _toAccountAmount;
+  double _baseAmount = 0;
+  RecurringRatePolicy _ratePolicy = RecurringRatePolicy.latestAvailable;
+  bool _currencyTouched = false;
+  bool _accountAmountTouched = false;
+  bool _toAccountAmountTouched = false;
+  bool _baseAmountTouched = false;
+  Set<String> _missingRateCodes = <String>{};
   late String _categoryId;
   late String _accountId;
   String? _toAccountId;
@@ -265,6 +338,11 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
     if (rule != null) {
       _type = rule.type;
       _amount = rule.amount;
+      _currencyCode = rule.currencyCode;
+      _accountAmount = rule.accountAmount;
+      _toAccountAmount = rule.toAccountAmount;
+      _baseAmount = rule.baseAmount;
+      _ratePolicy = rule.ratePolicy;
       _categoryId = rule.categoryId;
       _accountId = rule.accountId;
       _toAccountId = rule.toAccountId;
@@ -278,9 +356,19 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
       _accountId = controller.accounts.isEmpty
           ? ''
           : controller.accounts.first.id;
+      _currencyCode = controller.accounts.isEmpty
+          ? controller.activeBook.baseCurrencyCode
+          : controller.accounts.first.currencyCode;
       _frequency = RecurringFrequency.monthly;
       _startDate = dateOnly(DateTime.now());
       _noteController = TextEditingController();
+      _resolveAmounts(
+        controller,
+        controller.accounts,
+        forceAccount: true,
+        forceToAccount: true,
+        forceBase: true,
+      );
     }
     _initialDraft = _draftSnapshot;
   }
@@ -289,6 +377,97 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
   void dispose() {
     _noteController.dispose();
     super.dispose();
+  }
+
+  Account? _findAccount(List<Account> accounts, String? id) {
+    if (id == null || id.isEmpty) return null;
+    return accounts.where((account) => account.id == id).firstOrNull;
+  }
+
+  double? _converted(
+    VeriFinController controller,
+    double amount,
+    String sourceCode,
+    String targetCode,
+  ) {
+    final result = controller.convertAmount(
+      amount: amount,
+      sourceCurrencyCode: sourceCode,
+      targetCurrencyCode: targetCode,
+      date: _startDate,
+    );
+    if (result is ConvertedCurrencyAmount) return result.amount;
+    if (result is MissingCurrencyRate) {
+      _missingRateCodes.addAll(result.currencyCodes);
+    }
+    return null;
+  }
+
+  void _resolveAmounts(
+    VeriFinController controller,
+    List<Account> accounts, {
+    bool forceAccount = false,
+    bool forceToAccount = false,
+    bool forceBase = false,
+  }) {
+    _missingRateCodes = <String>{};
+    final account = _findAccount(accounts, _accountId);
+    final toAccount = _findAccount(accounts, _toAccountId);
+    final baseCode = controller.activeBook.baseCurrencyCode;
+    if (_amount <= 0) {
+      _accountAmount = _accountId.isEmpty ? null : 0;
+      _toAccountAmount = null;
+      _baseAmount = 0;
+      return;
+    }
+    if (_type == EntryType.transfer) {
+      if (account != null) {
+        _currencyCode = account.currencyCode;
+        _amount = normalizeCurrencyAmount(_amount, _currencyCode);
+        _accountAmount = _amount;
+      }
+      _baseAmount = 0;
+      if (toAccount == null) {
+        _toAccountAmount = null;
+      } else if (toAccount.currencyCode == _currencyCode) {
+        _toAccountAmount = normalizeCurrencyAmount(
+          _amount,
+          toAccount.currencyCode,
+        );
+        _toAccountAmountTouched = false;
+      } else if (forceToAccount || !_toAccountAmountTouched) {
+        _toAccountAmount = _converted(
+          controller,
+          _amount,
+          _currencyCode,
+          toAccount.currencyCode,
+        );
+      }
+      return;
+    }
+    if (account == null) {
+      _accountAmount = null;
+    } else if (account.currencyCode == _currencyCode) {
+      _accountAmount = normalizeCurrencyAmount(_amount, account.currencyCode);
+      _accountAmountTouched = false;
+    } else if (forceAccount || !_accountAmountTouched) {
+      _accountAmount = _converted(
+        controller,
+        _amount,
+        _currencyCode,
+        account.currencyCode,
+      );
+    }
+    if (_currencyCode == baseCode) {
+      _baseAmount = normalizeCurrencyAmount(_amount, baseCode);
+      _baseAmountTouched = false;
+    } else if (account?.currencyCode == baseCode && _accountAmount != null) {
+      _baseAmount = _accountAmount!;
+      _baseAmountTouched = _accountAmountTouched;
+    } else if (forceBase || !_baseAmountTouched) {
+      _baseAmount =
+          _converted(controller, _amount, _currencyCode, baseCode) ?? 0;
+    }
   }
 
   @override
@@ -348,6 +527,16 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
                           .categoriesForType(_type)
                           .first
                           .id;
+                      if (_type == EntryType.transfer) {
+                        _currencyTouched = false;
+                      }
+                      _resolveAmounts(
+                        controller,
+                        accounts,
+                        forceAccount: true,
+                        forceToAccount: true,
+                        forceBase: true,
+                      );
                     });
                   },
                 ),
@@ -358,10 +547,17 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
                       DetailInfoRow(
                         label: AppLocalizations.of(context).amountLabel,
                         value: _amount > 0
-                            ? formatAmount(_amount)
+                            ? formatMoney(_amount, _currencyCode)
                             : AppLocalizations.of(context).tapToFill,
                         placeholder: _amount <= 0,
                         onTap: _editAmount,
+                      ),
+                      DetailInfoRow(
+                        label: AppLocalizations.of(context).entryCurrencyLabel,
+                        value: _currencyCode,
+                        onTap: _type == EntryType.transfer
+                            ? null
+                            : _pickCurrency,
                       ),
                       DetailInfoRow(
                         label: AppLocalizations.of(context).commonCategory,
@@ -397,6 +593,21 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
                               ? null
                               : () => _pickAccount(true),
                         ),
+                      ..._currencyAmountFields(controller, accounts),
+                      DetailInfoRow(
+                        label: AppLocalizations.of(
+                          context,
+                        ).recurringRatePolicyLabel,
+                        value:
+                            _ratePolicy == RecurringRatePolicy.latestAvailable
+                            ? AppLocalizations.of(
+                                context,
+                              ).recurringRatePolicyLatest
+                            : AppLocalizations.of(
+                                context,
+                              ).recurringRatePolicyFixed,
+                        onTap: _pickRatePolicy,
+                      ),
                       DetailInfoRow(
                         label: AppLocalizations.of(context).frequencyLabel,
                         value: _frequency.label(AppLocalizations.of(context)),
@@ -429,7 +640,9 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
   }
 
   bool _canSave(List<Account> accounts) {
-    if (_amount <= 0) {
+    if (_amount <= 0 ||
+        (_type != EntryType.transfer && _baseAmount <= 0) ||
+        (_accountId.isNotEmpty && (_accountAmount ?? 0) <= 0)) {
       return false;
     }
     if (_type == EntryType.transfer) {
@@ -440,10 +653,106 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
       if (_toAccountId == null || _toAccountId == _accountId) {
         return false;
       }
-      return true;
+      return (_toAccountAmount ?? 0) > 0;
     }
     // 收支：选了具体账户或「无账户」都可保存（与记账页一致）。
     return true;
+  }
+
+  List<Widget> _currencyAmountFields(
+    VeriFinController controller,
+    List<Account> accounts,
+  ) {
+    final l10n = AppLocalizations.of(context);
+    final account = _findAccount(accounts, _accountId);
+    final toAccount = _findAccount(accounts, _toAccountId);
+    final baseCode = controller.activeBook.baseCurrencyCode;
+    final fields = <Widget>[];
+    if (_type == EntryType.transfer &&
+        toAccount != null &&
+        toAccount.currencyCode != _currencyCode) {
+      fields.add(
+        CurrencyAmountField(
+          key: const Key('recurring_to_account_amount'),
+          label: l10n.entryTransferInAmount,
+          currencyCode: toAccount.currencyCode,
+          amount: _toAccountAmount,
+          missingText: l10n.exchangeRateNotSet,
+          onTap: () => _editToAmount(toAccount.currencyCode),
+        ),
+      );
+    } else if (_type != EntryType.transfer) {
+      if (account != null && account.currencyCode != _currencyCode) {
+        fields.add(
+          CurrencyAmountField(
+            key: const Key('recurring_account_amount'),
+            label: _type == EntryType.expense
+                ? l10n.entryAccountAmountExpense
+                : l10n.entryAccountAmountIncome,
+            currencyCode: account.currencyCode,
+            amount: _accountAmount,
+            missingText: l10n.exchangeRateNotSet,
+            onTap: () => _editAccountAmount(account.currencyCode),
+          ),
+        );
+      }
+      if (_currencyCode != baseCode) {
+        fields.add(
+          CurrencyAmountField(
+            key: const Key('recurring_base_amount'),
+            label: l10n.entryLedgerAmountLabel,
+            currencyCode: baseCode,
+            amount: _baseAmount > 0 ? _baseAmount : null,
+            missingText: l10n.exchangeRateNotSet,
+            onTap: () => _editBaseAmount(baseCode),
+          ),
+        );
+      }
+    }
+    if (_missingRateCodes.isNotEmpty) {
+      fields.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Text(
+            l10n.entryMissingRate(
+              (_missingRateCodes.toList()..sort()).join(', '),
+            ),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: veriWarning,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      );
+    }
+    return fields;
+  }
+
+  Future<void> _pickCurrency() async {
+    final controller = VeriFinScope.of(context);
+    final selected = await showCurrencyPickerSheet(
+      context: context,
+      title: AppLocalizations.of(context).entryCurrencyPickTitle,
+      selectedCode: _currencyCode,
+      preferredCodes: <String>[
+        controller.activeBook.baseCurrencyCode,
+        for (final account in controller.accounts) account.currencyCode,
+      ],
+    );
+    if (!mounted || selected == null || selected.code == _currencyCode) return;
+    setState(() {
+      _currencyCode = selected.code;
+      _currencyTouched = true;
+      _amount = normalizeCurrencyAmount(_amount, _currencyCode);
+      _accountAmountTouched = false;
+      _baseAmountTouched = false;
+      _resolveAmounts(
+        controller,
+        controller.accounts,
+        forceAccount: true,
+        forceBase: true,
+      );
+    });
   }
 
   Future<void> _editAmount() async {
@@ -451,11 +760,100 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
       context,
       title: AppLocalizations.of(context).amountLabel,
       initialAmount: _amount > 0 ? _amount : null,
+      maxFractionDigits: CurrencyCatalog.require(_currencyCode).minorUnit,
     );
     if (amount == null || amount <= 0 || !mounted) {
       return;
     }
-    setState(() => _amount = amount);
+    setState(() {
+      _amount = normalizeCurrencyAmount(amount, _currencyCode);
+      final controller = VeriFinScope.of(context);
+      _resolveAmounts(controller, controller.accounts);
+    });
+  }
+
+  Future<void> _editAccountAmount(String currencyCode) async {
+    final value = await showNumberPadSheet(
+      context,
+      title: AppLocalizations.of(context).entryAmountInputTitle(
+        _type == EntryType.expense
+            ? AppLocalizations.of(context).entryAccountAmountExpense
+            : AppLocalizations.of(context).entryAccountAmountIncome,
+        currencyCode,
+      ),
+      initialAmount: _accountAmount,
+      maxFractionDigits: CurrencyCatalog.require(currencyCode).minorUnit,
+    );
+    if (!mounted || value == null || value <= 0) return;
+    setState(() {
+      _accountAmount = normalizeCurrencyAmount(value, currencyCode);
+      _accountAmountTouched = true;
+      if (currencyCode ==
+          VeriFinScope.of(context).activeBook.baseCurrencyCode) {
+        _baseAmount = _accountAmount!;
+        _baseAmountTouched = true;
+      }
+      _missingRateCodes.clear();
+    });
+  }
+
+  Future<void> _editToAmount(String currencyCode) async {
+    final value = await showNumberPadSheet(
+      context,
+      title: AppLocalizations.of(context).entryAmountInputTitle(
+        AppLocalizations.of(context).entryTransferInAmount,
+        currencyCode,
+      ),
+      initialAmount: _toAccountAmount,
+      maxFractionDigits: CurrencyCatalog.require(currencyCode).minorUnit,
+    );
+    if (!mounted || value == null || value <= 0) return;
+    setState(() {
+      _toAccountAmount = normalizeCurrencyAmount(value, currencyCode);
+      _toAccountAmountTouched = true;
+      _missingRateCodes.clear();
+    });
+  }
+
+  Future<void> _editBaseAmount(String baseCode) async {
+    final value = await showNumberPadSheet(
+      context,
+      title: AppLocalizations.of(context).entryAmountInputTitle(
+        AppLocalizations.of(context).entryLedgerAmountLabel,
+        baseCode,
+      ),
+      initialAmount: _baseAmount > 0 ? _baseAmount : null,
+      maxFractionDigits: CurrencyCatalog.require(baseCode).minorUnit,
+    );
+    if (!mounted || value == null || value <= 0) return;
+    setState(() {
+      _baseAmount = normalizeCurrencyAmount(value, baseCode);
+      _baseAmountTouched = true;
+      final account = _findAccount(
+        VeriFinScope.of(context).accounts,
+        _accountId,
+      );
+      if (account?.currencyCode == baseCode) {
+        _accountAmount = _baseAmount;
+        _accountAmountTouched = true;
+      }
+      _missingRateCodes.clear();
+    });
+  }
+
+  Future<void> _pickRatePolicy() async {
+    final selected = await showOptionSheet<RecurringRatePolicy>(
+      context: context,
+      title: AppLocalizations.of(context).recurringRatePolicyLabel,
+      values: RecurringRatePolicy.values,
+      selected: _ratePolicy,
+      labelOf: (value) => value == RecurringRatePolicy.latestAvailable
+          ? AppLocalizations.of(context).recurringRatePolicyLatest
+          : AppLocalizations.of(context).recurringRatePolicyFixed,
+    );
+    if (selected != null && mounted) {
+      setState(() => _ratePolicy = selected);
+    }
   }
 
   Future<void> _pickCategory() async {
@@ -505,10 +903,25 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
     setState(() {
       if (toAccount) {
         _toAccountId = selected.id;
+        _toAccountAmountTouched = false;
       } else {
         // 选到「无账户」时 selected.id 为空串，正是 RecurringRule 表达无账户的方式。
         _accountId = selected.id;
+        if (!_currencyTouched || isTransfer) {
+          _currencyCode = selected.id.isEmpty
+              ? controller.activeBook.baseCurrencyCode
+              : selected.currencyCode;
+        }
+        _accountAmountTouched = false;
+        _baseAmountTouched = false;
       }
+      _resolveAmounts(
+        controller,
+        accounts,
+        forceAccount: !toAccount,
+        forceToAccount: true,
+        forceBase: !toAccount,
+      );
     });
   }
 
@@ -533,7 +946,11 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
       lastDate: DateTime(2100),
     );
     if (picked != null && mounted) {
-      setState(() => _startDate = dateOnly(picked));
+      setState(() {
+        _startDate = dateOnly(picked);
+        final controller = VeriFinScope.of(context);
+        _resolveAmounts(controller, controller.accounts);
+      });
     }
   }
 
@@ -553,6 +970,11 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
   _RecurringRuleDraftSnapshot get _draftSnapshot => (
     type: _type,
     amount: _amount,
+    currencyCode: _currencyCode,
+    accountAmount: _accountAmount,
+    toAccountAmount: _type == EntryType.transfer ? _toAccountAmount : null,
+    baseAmount: _type == EntryType.transfer ? 0 : _baseAmount,
+    ratePolicy: _ratePolicy,
     categoryId: _categoryId,
     accountId: _accountId,
     toAccountId: _type == EntryType.transfer ? _toAccountId : null,
@@ -578,7 +1000,14 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
             id: 'recur_${DateTime.now().microsecondsSinceEpoch}',
             bookId: controller.activeBook.id,
             type: _type,
-            amount: _amount,
+            amount: normalizeCurrencyAmount(_amount, _currencyCode),
+            currencyCode: _currencyCode,
+            accountAmount: _accountId.isEmpty ? null : _accountAmount,
+            toAccountAmount: _type == EntryType.transfer
+                ? _toAccountAmount
+                : null,
+            baseAmount: _type == EntryType.transfer ? 0 : _baseAmount,
+            ratePolicy: _ratePolicy,
             categoryId: _categoryId,
             accountId: _accountId,
             toAccountId: _type == EntryType.transfer ? _toAccountId : null,
@@ -589,7 +1018,16 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
           )
         : existing.copyWith(
             type: _type,
-            amount: _amount,
+            amount: normalizeCurrencyAmount(_amount, _currencyCode),
+            currencyCode: _currencyCode,
+            accountAmount: _accountId.isEmpty ? null : _accountAmount,
+            clearAccountAmount: _accountId.isEmpty,
+            toAccountAmount: _type == EntryType.transfer
+                ? _toAccountAmount
+                : null,
+            clearToAccountAmount: _type != EntryType.transfer,
+            baseAmount: _type == EntryType.transfer ? 0 : _baseAmount,
+            ratePolicy: _ratePolicy,
             categoryId: _categoryId,
             accountId: _accountId,
             toAccountId: _type == EntryType.transfer ? _toAccountId : null,
@@ -605,7 +1043,7 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
       return false;
     }
     // 立即补记已到期的交易。
-    controller.applyDueRecurring(DateTime.now());
+    await controller.applyDueRecurring(DateTime.now());
     return true;
   }
 

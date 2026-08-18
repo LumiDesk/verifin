@@ -1,4 +1,6 @@
 import '../../category_tree.dart';
+import '../../currency_catalog.dart';
+import '../../currency_math.dart';
 import '../../ledger_math.dart';
 import '../../models.dart';
 import 'raw_import.dart';
@@ -12,6 +14,8 @@ class ImportPlan {
     required this.errors,
     this.newTags = const <Tag>[],
     this.standaloneAccountIds = const <String>{},
+    this.conversionIssues = const <ImportConversionIssue>[],
+    this.exchangeRateCandidates = const <ImportExchangeRateCandidate>[],
   });
 
   final List<LedgerEntry> entries;
@@ -21,6 +25,8 @@ class ImportPlan {
   /// 为匹配交易里的标签名需要新建的标签（去重后）。标签全局共享、不分账本。
   final List<Tag> newTags;
   final List<ImportRowError> errors;
+  final List<ImportConversionIssue> conversionIssues;
+  final List<ImportExchangeRateCandidate> exchangeRateCandidates;
 
   /// 待新建账户中「即使没有交易引用也要创建」的 id 集合。默认空——普通导入的账户都由
   /// 交易派生、被排除后不应留下空账户；仅 Tally 这类携带账户余额/类型的来源，会把源账本
@@ -28,8 +34,33 @@ class ImportPlan {
   final Set<String> standaloneAccountIds;
 
   int get importedCount => entries.length;
-  int get errorCount => errors.length;
-  bool get isEmpty => entries.isEmpty && errors.isEmpty;
+  int get errorCount => errors.length + conversionIssues.length;
+  bool get isEmpty =>
+      entries.isEmpty && errors.isEmpty && conversionIssues.isEmpty;
+}
+
+class ImportExchangeRateCandidate {
+  const ImportExchangeRateCandidate({
+    required this.rate,
+    required this.entryIds,
+  });
+
+  final ExchangeRate rate;
+  final Set<String> entryIds;
+}
+
+class ImportConversionIssue {
+  const ImportConversionIssue({
+    required this.line,
+    required this.currencyCode,
+    required this.message,
+    required this.record,
+  });
+
+  final int line;
+  final String currencyCode;
+  final String message;
+  final RawImportRecord record;
 }
 
 /// 所有来源的**唯一共享落库计划生成器**：把各平台 parser 产出的强类型 [ParsedImport]
@@ -46,6 +77,8 @@ ImportPlan buildImportPlanFromRecords({
   required List<Account> existingAccounts,
   required List<Category> existingCategories,
   required DateTime now,
+  String baseCurrencyCode = defaultCurrencyCode,
+  List<ExchangeRate> exchangeRates = const <ExchangeRate>[],
   List<Tag> existingTags = const <Tag>[],
   bool seedEnglish = false,
 }) {
@@ -56,6 +89,7 @@ ImportPlan buildImportPlanFromRecords({
   final newTags = <Tag>[];
   final entries = <LedgerEntry>[];
   final errors = <ImportRowError>[...parsed.errors];
+  final conversionIssues = <ImportConversionIssue>[];
   var idCounter = 0;
 
   String nextId(String prefix) {
@@ -63,22 +97,39 @@ ImportPlan buildImportPlanFromRecords({
     return '${prefix}_${now.microsecondsSinceEpoch}_$idCounter';
   }
 
-  // 本次导入按名新建的账户候选：去空格名 → 候选 id。同一来源名跨行复用同一候选。
+  // 本次导入按「去空格名 + 币种」新建账户候选；同名不同币种不得误合并。
   final accountCandidateIds = <String, String>{};
 
   // 解析/新建单个账户。[name] 须已去首尾空格且非空。账户名不唯一（id 才是身份），
   // 按名匹配只在**恰好一个**现有账户同名时复用；多个同名时不猜归属，转为待新建
   // 候选进预览页「导入账户」映射区，由用户显式映射到目标账户或保留新建。
-  String resolveAccount(String name) {
-    final candidateId = accountCandidateIds[name];
+  String resolveAccount(
+    String name,
+    String currencyCode, {
+    bool allowUniqueOtherCurrency = false,
+  }) {
+    final key = '$currencyCode\u0000$name';
+    final candidateId = accountCandidateIds[key];
     if (candidateId != null) {
       return candidateId;
     }
     final matches = existingAccounts
-        .where((account) => account.name.trim() == name)
+        .where(
+          (account) =>
+              account.name.trim() == name &&
+              account.currencyCode == currencyCode,
+        )
         .toList();
     if (matches.length == 1) {
       return matches.single.id;
+    }
+    if (matches.isEmpty && allowUniqueOtherCurrency) {
+      final sameName = existingAccounts
+          .where((account) => account.name.trim() == name)
+          .toList();
+      if (sameName.length == 1) {
+        return sameName.single.id;
+      }
     }
     final account = Account(
       id: nextId('account'),
@@ -91,10 +142,18 @@ ImportPlan buildImportPlanFromRecords({
       note: '',
       includeInAssets: true,
       hidden: false,
+      currencyCode: currencyCode,
     );
     newAccounts.add(account);
-    accountCandidateIds[name] = account.id;
+    accountCandidateIds[key] = account.id;
     return account.id;
+  }
+
+  Account? accountByResolvedId(String id) {
+    for (final account in <Account>[...existingAccounts, ...newAccounts]) {
+      if (account.id == id) return account;
+    }
+    return null;
   }
 
   // 空分类名兜底：解析到固定 id 的「未分类」（与载入自愈同一约定，见
@@ -230,8 +289,146 @@ ImportPlan buildImportPlanFromRecords({
       )
       .id;
 
+  void addConversionIssue(
+    RawImportRecord record,
+    String currencyCode,
+    String message,
+  ) {
+    conversionIssues.add(
+      ImportConversionIssue(
+        line: record.sourceLine ?? 0,
+        currencyCode: currencyCode,
+        message: message,
+        record: record,
+      ),
+    );
+  }
+
+  final candidateRatesByKey = <String, ExchangeRate>{};
+  final candidateRateEntryIds = <String, Set<String>>{};
+
+  String rateKey(String currencyCode, DateTime date) =>
+      '$currencyCode:${currencyDateKey(date)}';
+
+  bool sameRate(double a, double b) {
+    final scale = a.abs() > b.abs() ? a.abs() : b.abs();
+    return (a - b).abs() <= (scale == 0 ? 1e-10 : scale * 1e-10);
+  }
+
+  List<ExchangeRate> ratesForRecord(ExchangeRate? providedRate) {
+    final all = <ExchangeRate>[...exchangeRates, ...candidateRatesByKey.values];
+    if (providedRate == null) return all;
+    final key = rateKey(providedRate.currencyCode, providedRate.effectiveDate);
+    return <ExchangeRate>[
+      providedRate,
+      ...all.where(
+        (rate) => rateKey(rate.currencyCode, rate.effectiveDate) != key,
+      ),
+    ];
+  }
+
+  double? convertedRecordAmount({
+    required RawImportRecord record,
+    required String sourceCurrencyCode,
+    required String targetCurrencyCode,
+    required ExchangeRate? providedRate,
+  }) {
+    final result = convertCurrencyAmount(
+      amount: record.amount,
+      sourceCurrencyCode: sourceCurrencyCode,
+      targetCurrencyCode: targetCurrencyCode,
+      baseCurrencyCode: baseCurrencyCode,
+      bookId: bookId,
+      date: record.date,
+      rates: ratesForRecord(providedRate),
+    );
+    return result is ConvertedCurrencyAmount ? result.amount : null;
+  }
+
+  void registerCandidateRate(ExchangeRate? rate, String? key, String entryId) {
+    if (rate == null || key == null) return;
+    candidateRatesByKey[key] = rate;
+    candidateRateEntryIds.putIfAbsent(key, () => <String>{}).add(entryId);
+  }
+
   for (final record in parsed.records) {
     final line = record.sourceLine ?? 0;
+    final currencyCode = (record.currencyCode ?? baseCurrencyCode)
+        .toUpperCase();
+    if (!CurrencyCatalog.isSupported(currencyCode)) {
+      errors.add(ImportRowError(line: line, message: '币种代码无法识别：$currencyCode'));
+      continue;
+    }
+    final accountCurrencyHint = record.accountCurrencyCode?.toUpperCase();
+    final toAccountCurrencyHint = record.toAccountCurrencyCode?.toUpperCase();
+    final unsupportedAccountCurrency = <String?>[
+      accountCurrencyHint,
+      toAccountCurrencyHint,
+    ].whereType<String>().where((code) => !CurrencyCatalog.isSupported(code));
+    if (unsupportedAccountCurrency.isNotEmpty) {
+      errors.add(
+        ImportRowError(
+          line: line,
+          message: '账户币种代码无法识别：${unsupportedAccountCurrency.join('、')}',
+        ),
+      );
+      continue;
+    }
+    if (!record.amount.isFinite || record.amount <= 0) {
+      errors.add(ImportRowError(line: line, message: '金额无效（应为大于 0 的数字）'));
+      continue;
+    }
+    if (record.rateToBase != null && !isValidExchangeRate(record.rateToBase!)) {
+      errors.add(ImportRowError(line: line, message: '汇率无效（应为大于 0 的数字）'));
+      continue;
+    }
+    if (<double?>[
+          record.accountAmount,
+          record.toAccountAmount,
+        ].any((value) => value != null && (!value.isFinite || value <= 0)) ||
+        record.baseAmount != null &&
+            (!record.baseAmount!.isFinite || record.baseAmount! < 0)) {
+      errors.add(ImportRowError(line: line, message: '换算金额无效'));
+      continue;
+    }
+
+    ExchangeRate? providedRate;
+    String? candidateRateKey;
+    if (record.rateToBase != null && currencyCode != baseCurrencyCode) {
+      final effectiveDate = record.rateDate ?? record.date;
+      final key = rateKey(currencyCode, effectiveDate);
+      final sameDayRates =
+          <ExchangeRate>[...exchangeRates, ...candidateRatesByKey.values].where(
+            (rate) =>
+                rate.bookId == bookId &&
+                rate.baseCurrencyCode == baseCurrencyCode &&
+                rateKey(rate.currencyCode, rate.effectiveDate) == key,
+          );
+      final existingRate = sameDayRates.firstOrNull;
+      if (existingRate != null) {
+        if (!sameRate(existingRate.rateToBase, record.rateToBase!)) {
+          addConversionIssue(record, currencyCode, '导入汇率与同日已有汇率不一致');
+          continue;
+        }
+        providedRate = existingRate;
+        if (candidateRatesByKey.containsKey(key)) {
+          candidateRateKey = key;
+        }
+      } else {
+        providedRate = ExchangeRate(
+          id: 'rate_import_${now.microsecondsSinceEpoch}_${currencyCode}_${currencyDateKey(effectiveDate)}',
+          bookId: bookId,
+          baseCurrencyCode: baseCurrencyCode,
+          currencyCode: currencyCode,
+          effectiveDate: effectiveDate,
+          rateToBase: record.rateToBase!,
+          source: record.rateSource ?? ExchangeRateSource.imported,
+          createdAt: now,
+          updatedAt: now,
+        );
+        candidateRateKey = key;
+      }
+    }
 
     if (record.type == EntryType.transfer) {
       // 账户名按去首尾空格解析（与创建账户的 trim 规则一致），
@@ -249,29 +446,134 @@ ImportPlan buildImportPlanFromRecords({
       // 标签在报错检查之后才解析：被跳过的错误行不应留下无引用的候选标签。
       final tagIds = resolveTags(record.tags);
       // 单边为空（如源账本转入/转出到未跟踪账户）仍按转账记，空的一端不计余额。
-      final fromId = fromName.isEmpty ? '' : resolveAccount(fromName);
-      final toId = toName.isEmpty ? null : resolveAccount(toName);
-      entries.add(
-        LedgerEntry(
-          id: nextId('entry'),
-          bookId: bookId,
-          type: EntryType.transfer,
-          amount: record.amount,
-          categoryId: transferCategoryId,
-          accountId: fromId,
-          toAccountId: toId,
-          note: record.note,
-          occurredAt: record.date,
-          fee: record.fee,
-          tagIds: tagIds,
-        ),
+      final fromId = fromName.isEmpty
+          ? ''
+          : resolveAccount(
+              fromName,
+              accountCurrencyHint ?? currencyCode,
+              allowUniqueOtherCurrency:
+                  accountCurrencyHint == null && record.accountAmount != null,
+            );
+      final toId = toName.isEmpty
+          ? null
+          : resolveAccount(
+              toName,
+              toAccountCurrencyHint ?? currencyCode,
+              allowUniqueOtherCurrency:
+                  toAccountCurrencyHint == null &&
+                  record.toAccountAmount != null,
+            );
+      final fromCurrency = fromId.isEmpty
+          ? null
+          : accountByResolvedId(fromId)?.currencyCode;
+      final toCurrency = toId == null
+          ? null
+          : accountByResolvedId(toId)?.currencyCode;
+      final accountAmount = fromCurrency == null
+          ? null
+          : record.accountAmount ??
+                (fromCurrency == currencyCode
+                    ? record.amount
+                    : convertedRecordAmount(
+                        record: record,
+                        sourceCurrencyCode: currencyCode,
+                        targetCurrencyCode: fromCurrency,
+                        providedRate: providedRate,
+                      ));
+      final toAccountAmount = toCurrency == null
+          ? null
+          : record.toAccountAmount ??
+                (toCurrency == currencyCode
+                    ? record.amount
+                    : convertedRecordAmount(
+                        record: record,
+                        sourceCurrencyCode: currencyCode,
+                        targetCurrencyCode: toCurrency,
+                        providedRate: providedRate,
+                      ));
+      if (fromCurrency != null && accountAmount == null) {
+        addConversionIssue(record, currencyCode, '缺少转出账户实际扣款金额或可用汇率');
+        continue;
+      }
+      if (toCurrency != null && toAccountAmount == null) {
+        addConversionIssue(record, currencyCode, '缺少转入账户实际到账金额或可用汇率');
+        continue;
+      }
+      final entry = LedgerEntry(
+        id: nextId('entry'),
+        bookId: bookId,
+        type: EntryType.transfer,
+        amount: record.amount,
+        currencyCode: currencyCode,
+        accountAmount: accountAmount,
+        toAccountAmount: toAccountAmount,
+        baseAmount: 0,
+        conversionSource: ConversionSource.imported,
+        categoryId: transferCategoryId,
+        accountId: fromId,
+        toAccountId: toId,
+        note: record.note,
+        occurredAt: record.date,
+        fee: record.fee,
+        tagIds: tagIds,
       );
+      entries.add(entry);
+      registerCandidateRate(providedRate, candidateRateKey, entry.id);
       continue;
     }
 
     final tagIds = resolveTags(record.tags);
     final accountName = record.account.trim();
-    final accountId = accountName.isEmpty ? '' : resolveAccount(accountName);
+    final accountId = accountName.isEmpty
+        ? ''
+        : resolveAccount(
+            accountName,
+            accountCurrencyHint ?? currencyCode,
+            allowUniqueOtherCurrency:
+                accountCurrencyHint == null && record.accountAmount != null,
+          );
+    final accountCurrency = accountId.isEmpty
+        ? null
+        : accountByResolvedId(accountId)?.currencyCode;
+    final accountAmount = accountCurrency == null
+        ? null
+        : record.accountAmount ??
+              (accountCurrency == currencyCode
+                  ? record.amount
+                  : convertedRecordAmount(
+                      record: record,
+                      sourceCurrencyCode: currencyCode,
+                      targetCurrencyCode: accountCurrency,
+                      providedRate: providedRate,
+                    ));
+    if (accountCurrency != null && accountAmount == null) {
+      addConversionIssue(record, currencyCode, '缺少账户实际金额或可用汇率');
+      continue;
+    }
+    final convertedBaseAmount = currencyCode == baseCurrencyCode
+        ? normalizeCurrencyAmount(record.amount, baseCurrencyCode)
+        : convertedRecordAmount(
+            record: record,
+            sourceCurrencyCode: currencyCode,
+            targetCurrencyCode: baseCurrencyCode,
+            providedRate: providedRate,
+          );
+    final baseAmount = record.baseAmount ?? convertedBaseAmount;
+    if (baseAmount == null) {
+      addConversionIssue(record, currencyCode, '缺少本位币金额或可用汇率');
+      continue;
+    }
+    if (!baseAmount.isFinite || baseAmount <= 0) {
+      errors.add(ImportRowError(line: line, message: '本位币金额无效'));
+      continue;
+    }
+    if (record.baseAmount != null &&
+        convertedBaseAmount != null &&
+        (record.baseAmount! - convertedBaseAmount).abs() >=
+            currencyAmountTolerance(baseCurrencyCode)) {
+      addConversionIssue(record, currencyCode, '本位币金额与汇率换算结果不一致');
+      continue;
+    }
     final categoryId = resolveCategoryHierarchy(
       record.category,
       record.subCategory,
@@ -279,24 +581,34 @@ ImportPlan buildImportPlanFromRecords({
     );
     // 支出可带退款（部分/全额）：钳制在 [0, 金额]，使净额=金额−退款、退款回原账户
     // （与 App 内退款冲抵语义一致）。收入行忽略。
-    final refunded = record.type == EntryType.expense
+    final refundedOriginal = record.type == EntryType.expense
         ? record.refunded.clamp(0, record.amount).toDouble()
         : 0.0;
-    entries.add(
-      LedgerEntry(
-        id: nextId('entry'),
-        bookId: bookId,
-        type: record.type,
-        amount: record.amount,
-        categoryId: categoryId,
-        accountId: accountId,
-        toAccountId: null,
-        note: record.note,
-        occurredAt: record.date,
-        refundedAmount: refunded,
-        tagIds: tagIds,
-      ),
+    final refundedBase = record.amount == 0
+        ? 0.0
+        : normalizeCurrencyAmount(
+            refundedOriginal / record.amount * baseAmount,
+            baseCurrencyCode,
+          );
+    final entry = LedgerEntry(
+      id: nextId('entry'),
+      bookId: bookId,
+      type: record.type,
+      amount: record.amount,
+      currencyCode: currencyCode,
+      accountAmount: accountAmount,
+      baseAmount: baseAmount,
+      conversionSource: ConversionSource.imported,
+      categoryId: categoryId,
+      accountId: accountId,
+      toAccountId: null,
+      note: record.note,
+      occurredAt: record.date,
+      refundedBaseAmount: refundedBase,
+      tagIds: tagIds,
     );
+    entries.add(entry);
+    registerCandidateRate(providedRate, candidateRateKey, entry.id);
   }
 
   // 携带余额/类型的账户元数据（Tally）：回推初始余额对齐来源、补建无流水账户。
@@ -307,6 +619,7 @@ ImportPlan buildImportPlanFromRecords({
     existingAccounts: existingAccounts,
     bookId: bookId,
     now: now,
+    baseCurrencyCode: baseCurrencyCode,
   );
 
   return ImportPlan(
@@ -315,6 +628,16 @@ ImportPlan buildImportPlanFromRecords({
     newCategories: newCategories,
     newTags: newTags,
     errors: errors,
+    conversionIssues: conversionIssues,
+    exchangeRateCandidates: <ImportExchangeRateCandidate>[
+      for (final item in candidateRatesByKey.entries)
+        ImportExchangeRateCandidate(
+          rate: item.value,
+          entryIds: Set<String>.unmodifiable(
+            candidateRateEntryIds[item.key] ?? const <String>{},
+          ),
+        ),
+    ],
     standaloneAccountIds: standalone,
   );
 }
@@ -333,6 +656,7 @@ Set<String> _applyAccountMetadata({
   required List<Account> existingAccounts,
   required String bookId,
   required DateTime now,
+  required String baseCurrencyCode,
 }) {
   if (accounts.isEmpty) {
     return const <String>{};
@@ -357,7 +681,13 @@ Set<String> _applyAccountMetadata({
     if (assetName.isEmpty) {
       continue;
     }
-    final newIndex = newAccounts.indexWhere((a) => a.name == assetName);
+    final currencyCode = (asset.currencyCode ?? baseCurrencyCode).toUpperCase();
+    if (!CurrencyCatalog.isSupported(currencyCode)) {
+      continue;
+    }
+    final newIndex = newAccounts.indexWhere(
+      (a) => a.name == assetName && a.currencyCode == currencyCode,
+    );
     if (newIndex != -1) {
       // 本次导入新建的账户：回推初始余额，使显示余额对齐来源；标记为独立账户。
       final account = newAccounts[newIndex];
@@ -371,7 +701,9 @@ Set<String> _applyAccountMetadata({
       continue;
     }
     // 已存在的同名账户：不改动（尊重用户既有数据）。
-    if (existingAccounts.any((a) => a.name.trim() == assetName)) {
+    if (existingAccounts.any(
+      (a) => a.name.trim() == assetName && a.currencyCode == currencyCode,
+    )) {
       continue;
     }
     // 没有任何流水的资产（零余额钱包、借出/负债对象等）：直接以当前余额新建。
@@ -389,6 +721,7 @@ Set<String> _applyAccountMetadata({
         note: '',
         includeInAssets: asset.includeInAssets,
         hidden: false,
+        currencyCode: currencyCode,
       ),
     );
     standalone.add(id);

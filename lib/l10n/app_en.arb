@@ -907,7 +907,7 @@
   "yimuTransferImportGuide": "In YiMu (一木记账): Me → Import/Export → Export data → Export transfers, choose Excel (.xls) and save it to your phone, then choose it here.\n\nImports transfer records, keeping both accounts and the fee. For income/expense bills, use the separate \"YiMu · Bills\" entry. Menu paths may vary by app version.",
   "qianjiImportGuide": "In Qianji (钱迹): Me → Settings → Backup & export → Export bills → choose the \"CSV\" (detail) format with the \"All\" time range. You get a .csv file starting with \"QianJi\"; save it to your phone, then choose it here.\n\nExpense, income, transfer, credit-card repayment, refund and reimbursement are all imported: refunds offset the original expense via their linked bill (net = original − refund); categories restore the two-level hierarchy and tags are imported too. Qianji's debt/loan records (lend, collect, interest, etc.) are NOT imported — this app has no debt feature and can't represent them faithfully; they are mostly \"pay then get repaid\" round-trips, so skipping them doesn't affect your real income/expense. Menu paths may vary by app version.",
   "tallyImportGuide": "In Tally (记账): Settings → Data backup & restore → Export backup, which produces a .zip file starting with \"Tally\". Save it to your phone, then choose it here.\n\nPick the backup zip rather than the CSV bill export: the backup keeps exact transaction times, and income/expense/transfers, first- and second-level categories, accounts and notes are all imported (categories use the second-level category). Menu paths may vary by app version.",
-  "csvTemplateImportGuide": "First use \"Download CSV template\" on this page, fill it in following the template columns, then import. The header may only use template columns (Date, Type, Amount, Category, Account, Transfer-in account, Note; optional Subcategory, Tags); columns from other apps will fail the import. For other apps, pick the matching entry above.",
+  "csvTemplateImportGuide": "Download the CSV template first. For a foreign-currency transaction, provide its currency plus either the base amount or rate; cross-currency transfers also need the actual amount at both ends. Columns from other apps are rejected.",
   "billImportCommonNote": "Transactions are appended to the current ledger; unmatched accounts and categories are created by name. Nothing is deleted.",
   "backupToLocalDir": "Back up to local folder",
   "backupDirLabel": "Backup folder",
@@ -1077,6 +1077,7 @@
   "aiEntryNoAmount": "Couldn't recognize an amount — include it, e.g. \"taxi 32\"",
   "aiWarningCategoryUnmatched": "Category not matched — a default was used, please confirm",
   "aiWarningAccountUnmatched": "Account not matched — set to no account, please confirm",
+  "aiWarningCurrencyUnmatched": "Currency not recognized — using the account or base currency, please confirm",
   "screenshotEntryButton": "Scan a screenshot",
   "screenshotEntryUnsupported": "Image text recognition is not supported on this device",
   "screenshotEntryNoText": "No text was recognized in the image — try a clearer screenshot",
@@ -1100,6 +1101,9 @@
   "clearWebdavMessage": "Auto-upload will stop; backups already on the server are not deleted.",
   "csvTemplateSaved": "CSV template saved to the Downloads folder",
   "csvTemplateSaveFailed": "Failed to save the template; try again later",
+  "exportTransactionsCsv": "Export transactions CSV",
+  "transactionsCsvExported": "Transactions CSV exported to Downloads",
+  "transactionsCsvExportFailed": "Failed to export transactions CSV; try again later",
   "chooseFile": "Choose file",
   "importedEntries": "Imported {count} transactions",
   "skippedRows": ", {count} rows skipped",
@@ -1468,5 +1472,185 @@
       }
     }
   },
-  "budgetCycleNotSet": "Not set"
+  "budgetCycleNotSet": "Not set",
+  "commonClear": "Clear",
+  "currencySearchHint": "Search by code, name, or symbol",
+  "currencySearchEmpty": "No currency found",
+  "currencySearchEmptyDesc": "Try an ISO code or another currency name.",
+  "currencyPickerMeta": "Symbol {symbol} · {digits} decimal places",
+  "@currencyPickerMeta": {
+    "placeholders": {
+      "symbol": {"type": "String"},
+      "digits": {"type": "int"}
+    }
+  },
+  "ledgerBaseCurrency": "Ledger base currency",
+  "ledgerBaseCurrencyDesc": "Budgets, reports, and total assets use this currency.",
+  "selectBaseCurrency": "Select ledger base currency",
+  "selectAccountCurrency": "Select account currency",
+  "selectRateCurrency": "Select a currency for exchange rates",
+  "ledgerCurrencyLocked": "This ledger contains financial data, so its base currency is locked. Create another ledger to use a different base currency.",
+  "ledgerCurrencyChangeTitle": "Change base currency?",
+  "ledgerCurrencyChangeMessage": "This empty ledger will use {code} ({name}); its zero-balance accounts will change to the same currency.",
+  "@ledgerCurrencyChangeMessage": {
+    "placeholders": {
+      "code": {"type": "String"},
+      "name": {"type": "String"}
+    }
+  },
+  "legacyCurrencySetupTitle": "Confirm the currency of existing amounts",
+  "legacyCurrencySetupDesc": "This ledger was created before multi-currency support. Confirm what its existing numbers represent before adding foreign-currency accounts or rates.",
+  "legacyCurrencyStart": "Confirm currency",
+  "legacyCurrencyConfirmCurrent": "Existing amounts are {code}",
+  "@legacyCurrencyConfirmCurrent": {
+    "placeholders": {"code": {"type": "String"}}
+  },
+  "legacyCurrencyChooseAnother": "Existing amounts are another currency",
+  "legacyCurrencyConfirmTitle": "Interpret existing amounts as {code}?",
+  "@legacyCurrencyConfirmTitle": {
+    "placeholders": {"code": {"type": "String"}}
+  },
+  "legacyCurrencyConfirmMessage": "This updates {accounts} accounts, {entries} transactions, {rules} recurring rules, and {budgets} budget settings. Every number stays unchanged; only its currency is interpreted as {code}. This cannot be reinterpreted again.",
+  "@legacyCurrencyConfirmMessage": {
+    "placeholders": {
+      "accounts": {"type": "int"},
+      "entries": {"type": "int"},
+      "rules": {"type": "int"},
+      "budgets": {"type": "int"},
+      "code": {"type": "String"}
+    }
+  },
+  "legacyCurrencyApply": "Confirm and apply",
+  "legacyCurrencySaved": "Existing amounts are now interpreted as {code}",
+  "@legacyCurrencySaved": {
+    "placeholders": {"code": {"type": "String"}}
+  },
+  "accountBalanceCurrencyLabel": "Opening balance ({code})",
+  "@accountBalanceCurrencyLabel": {
+    "placeholders": {"code": {"type": "String"}}
+  },
+  "accountCurrencyLocked": "The account currency is locked because it has a balance, credit limit, or transaction history.",
+  "balanceAdjustMissingRate": "No valid {code}-to-base exchange rate is available, so the balance adjustment transaction cannot be created.",
+  "@balanceAdjustMissingRate": {
+    "placeholders": {"code": {"type": "String"}}
+  },
+  "currencyRatesTitle": "Currencies & rates",
+  "currencyRatesOfflineDesc": "Rates are stored on this device and maintained by you. The app never downloads or refreshes them, and changing a rate does not rewrite historical transaction reports.",
+  "exchangeRateCurrencies": "Foreign currency rates",
+  "exchangeRateAdd": "Add exchange rate",
+  "exchangeRateEmpty": "No foreign exchange rates yet",
+  "exchangeRateEmptyDesc": "Add a currency and maintain its rate against the ledger base currency by date.",
+  "exchangeRateEquation": "1 {currency} = {rate} {base}",
+  "@exchangeRateEquation": {
+    "placeholders": {
+      "currency": {"type": "String"},
+      "rate": {"type": "String"},
+      "base": {"type": "String"}
+    }
+  },
+  "exchangeRateNotSet": "No rate set",
+  "exchangeRateDateAndStatus": "{date} · {status}",
+  "@exchangeRateDateAndStatus": {
+    "placeholders": {
+      "date": {"type": "String"},
+      "status": {"type": "String"}
+    }
+  },
+  "exchangeRateStale": "May be outdated",
+  "exchangeRateSourceManual": "Manual",
+  "exchangeRateSourceImported": "Imported",
+  "exchangeRateHistory": "{currency} rate history",
+  "@exchangeRateHistory": {
+    "placeholders": {"currency": {"type": "String"}}
+  },
+  "exchangeRateAgainst": "Against {base}",
+  "@exchangeRateAgainst": {
+    "placeholders": {"base": {"type": "String"}}
+  },
+  "exchangeRateHistoryEmpty": "No rate history yet",
+  "exchangeRateHistoryEmptyDesc": "Use the add button to create the first effective rate.",
+  "exchangeRateDeleteTitle": "Delete this exchange rate?",
+  "exchangeRateDeleteMessage": "Saved transactions will not change, but asset valuation or pending recurring transactions may later be missing a rate.",
+  "exchangeRateEffectiveDate": "Select effective date",
+  "exchangeRateInputTitle": "How many {base} equal 1 {currency}?",
+  "@exchangeRateInputTitle": {
+    "placeholders": {
+      "currency": {"type": "String"},
+      "base": {"type": "String"}
+    }
+  },
+  "exchangeRateSaved": "Exchange rate saved",
+  "entryCurrencyLabel": "Transaction currency",
+  "entryCurrencyPickTitle": "Choose transaction currency",
+  "entryOriginalAmountLabel": "Original amount",
+  "entryAccountAmountExpense": "Actual account charge",
+  "entryAccountAmountIncome": "Actual account credit",
+  "entryLedgerAmountLabel": "Recorded in ledger",
+  "entryTransferOutAmount": "Amount sent",
+  "entryTransferInAmount": "Amount received",
+  "entryRateLabel": "Conversion rate",
+  "entryRateEquation": "1 {source} = {rate} {target}",
+  "@entryRateEquation": {
+    "placeholders": {
+      "source": {"type": "String"},
+      "rate": {"type": "String"},
+      "target": {"type": "String"}
+    }
+  },
+  "entryRateEditTitle": "How many {target} equal 1 {source}?",
+  "@entryRateEditTitle": {
+    "placeholders": {
+      "source": {"type": "String"},
+      "target": {"type": "String"}
+    }
+  },
+  "entryMissingRate": "A local rate for {currencies} is missing. Enter the actual amount or add a rate first.",
+  "@entryMissingRate": {
+    "placeholders": {"currencies": {"type": "String"}}
+  },
+  "entryRememberRate": "Remember as rate for this date",
+  "entryRememberRateHint": "Off by default. When enabled, this transaction's rate is saved to the current ledger rate table.",
+  "entryConversionSummary": "Amount summary",
+  "entryConversionSourceRateTable": "Calculated from a local rate. Tap an amount to adjust it.",
+  "entryConversionSourceManual": "Amounts were adjusted for this transaction and will be frozen for historical reports.",
+  "entryAmountInputTitle": "Enter {label} ({currency})",
+  "@entryAmountInputTitle": {
+    "placeholders": {
+      "label": {"type": "String"},
+      "currency": {"type": "String"}
+    }
+  },
+  "entryCurrencySaveMissing": "Complete the actual amounts required for this multi-currency transaction first.",
+  "refundAccountAmountLabel": "Actual account credit",
+  "refundBaseAmountLabel": "Base-currency offset",
+  "refundCurrencyLockedHint": "The refund keeps the original expense currency and cannot be changed.",
+  "recurringRatePolicyLabel": "Multi-currency conversion",
+  "recurringRatePolicyLatest": "Use latest local rate each time",
+  "recurringRatePolicyFixed": "Keep current amounts fixed",
+  "recurringMissingRate": "Rate required",
+  "recurringMissingRateCount": "{count} rules are waiting for a rate before they can be posted",
+  "@recurringMissingRateCount": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "recurringRetryNow": "Post due entries now",
+  "recurringGeneratedCount": "Posted {count} due transactions",
+  "@recurringGeneratedCount": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "assetValuationMissing": "{count} accounts need an exchange rate",
+  "@assetValuationMissing": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "assetValuationMissingDesc": "A rate from {currencies} to the base currency is missing, so an incomplete asset total is not shown.",
+  "@assetValuationMissingDesc": {
+    "placeholders": {"currencies": {"type": "String"}}
+  },
+  "assetTrendMissingRate": "Historical asset trend needs exchange rates. Add local rates for the affected dates to show it.",
+  "widgetRateMissing": "Rate missing",
+  "baseCurrencyAmountLabel": "Base currency {currency}",
+  "@baseCurrencyAmountLabel": {
+    "placeholders": {"currency": {"type": "String"}}
+  },
+  "importSaveExchangeRates": "Save imported rates",
+  "importSaveExchangeRatesHint": "Off by default. When enabled, only rates used by included transactions are saved."
 }

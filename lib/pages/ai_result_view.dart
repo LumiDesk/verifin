@@ -6,6 +6,7 @@ import '../app/ai/ai_query_tool.dart';
 import '../app/app_theme.dart';
 import '../app/chart_painters.dart';
 import '../app/common_widgets.dart';
+import '../app/currency_math.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
 import '../app/veri_fin_scope.dart';
@@ -71,6 +72,9 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final baseCurrencyCode = VeriFinScope.of(
+      context,
+    ).activeBook.baseCurrencyCode;
     return VeriCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -87,7 +91,7 @@ class _StatCard extends StatelessWidget {
                   ),
                   const Spacer(),
                   Text(
-                    formatAmount(item.value),
+                    formatMoney(item.value, baseCurrencyCode),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: item.emphasize
                           ? FontWeight.w700
@@ -110,6 +114,9 @@ class _RankingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final baseCurrencyCode = VeriFinScope.of(
+      context,
+    ).activeBook.baseCurrencyCode;
     final rows = display.rows;
     if (rows.isEmpty) {
       return VeriCard(
@@ -140,7 +147,9 @@ class _RankingCard extends StatelessWidget {
               tooltipOf: (index) => ChartTooltip(
                 title: labels[index],
                 lines: <ChartTooltipLine>[
-                  ChartTooltipLine(text: formatAmount(values[index])),
+                  ChartTooltipLine(
+                    text: formatMoney(values[index], baseCurrencyCode),
+                  ),
                   ChartTooltipLine(
                     text:
                         '${(chartRows[index].percent * 100).toStringAsFixed(1)}% · ${AppLocalizations.of(context).entriesCount(chartRows[index].count)}',
@@ -172,7 +181,7 @@ class _RankingCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    formatAmount(row.amount),
+                    formatMoney(row.amount, baseCurrencyCode),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -192,6 +201,9 @@ class _TrendCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final baseCurrencyCode = VeriFinScope.of(
+      context,
+    ).activeBook.baseCurrencyCode;
     if (display.values.isEmpty) {
       return VeriCard(
         child: Column(
@@ -220,7 +232,9 @@ class _TrendCard extends StatelessWidget {
                     ? display.labels[index]
                     : '',
                 lines: <ChartTooltipLine>[
-                  ChartTooltipLine(text: formatAmount(display.values[index])),
+                  ChartTooltipLine(
+                    text: formatMoney(display.values[index], baseCurrencyCode),
+                  ),
                 ],
               ),
             ),
@@ -276,6 +290,7 @@ class _TransactionsCard extends StatelessWidget {
           accounts: controller.accounts,
           categories: controller.categories,
           tags: controller.tags,
+          baseCurrencyCode: controller.activeBook.baseCurrencyCode,
           onEntryTap: (entry) => openEntryDetail(context, entry),
         ),
       ],

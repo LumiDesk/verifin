@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:verifin/app/models.dart';
 import 'package:verifin/data/app_database.dart';
 import 'package:verifin/data/ledger_repository.dart';
 
@@ -153,7 +154,7 @@ void main() {
       final repo = SqliteLedgerRepository(app);
 
       final entries = await repo.loadEntries();
-      expect(entries, hasLength(3));
+      expect(entries, hasLength(4));
       final lunch = entries.singleWhere((e) => e.id == 'e1');
       expect(lunch.amount, 25.5);
       expect(lunch.note, '午饭');
@@ -163,6 +164,17 @@ void main() {
       expect(lunch.refundOf, isNull);
       expect(lunch.settledAt, isNull);
       expect(lunch.tagIds, isEmpty);
+      expect(lunch.currencyCode, 'CNY');
+      expect(lunch.accountAmount, 25.5);
+      expect(lunch.toAccountAmount, isNull);
+      expect(lunch.baseAmount, 25.5);
+      expect(lunch.conversionSource, ConversionSource.legacy);
+      final transfer = entries.singleWhere((entry) => entry.id == 'e4');
+      expect(transfer.currencyCode, 'CNY');
+      expect(transfer.accountAmount, 50);
+      expect(transfer.toAccountAmount, 50);
+      expect(transfer.baseAmount, 0);
+      expect(transfer.conversionSource, ConversionSource.legacy);
 
       // v10 去重：两个「餐饮」合并为一个，引用它们的交易统一指向保留者。
       final categories = await repo.loadCategories();
@@ -177,8 +189,12 @@ void main() {
       expect(account.creditLimit, isNull);
       expect(account.statementDay, isNull);
       expect(account.dueDay, isNull);
+      expect(account.currencyCode, 'CNY');
 
-      expect((await repo.loadBooks()).single.name, '日常账本');
+      final book = (await repo.loadBooks()).single;
+      expect(book.name, '日常账本');
+      expect(book.baseCurrencyCode, 'CNY');
+      expect(book.currencySetupStatus, CurrencySetupStatus.legacyUnconfirmed);
       expect((await repo.loadAccountGroups()).single.name, '资金');
       expect(await repo.loadMonthlyBudgets(), {'default:2026-01': 3000.0});
       expect(await repo.loadCategoryBudgets(), {'default:cat-a': 500.0});
@@ -186,14 +202,54 @@ void main() {
       expect(await repo.loadTags(), isEmpty);
       expect(await repo.loadAttachments(), isEmpty);
       expect(await repo.loadRecurringRules(), isEmpty);
+      expect(await repo.loadExchangeRates(), isEmpty);
 
       await app.close();
     });
   }
+
+  test('v13 周期规则升级后补齐 CNY 金额模板与固定汇率策略', () async {
+    final path = '${tempDir.path}/v13_recurring.db';
+    final raw = await databaseFactoryFfi.openDatabase(path);
+    for (final statement in _schemaV1) {
+      await raw.execute(statement);
+    }
+    for (var version = 2; version <= 13; version++) {
+      await AppDatabase.migrations[version]!(raw);
+    }
+    await raw.insert('recurring_rules', <String, Object?>{
+      'id': 'rule-old',
+      'book_id': 'default',
+      'type': 'transfer',
+      'amount': 66.6,
+      'category_id': 'cat-a',
+      'account_id': 'acc-1',
+      'to_account_id': 'acc-2',
+      'note': '旧转账规则',
+      'frequency': 'monthly',
+      'start_date': DateTime(2026, 1, 1).millisecondsSinceEpoch,
+      'next_run_date': DateTime(2026, 2, 1).millisecondsSinceEpoch,
+      'active': 1,
+      'sort_order': 0,
+    });
+    await raw.execute('PRAGMA user_version = 13');
+    await raw.close();
+
+    final app = await AppDatabase.open(factory: databaseFactoryFfi, path: path);
+    final rule = (await SqliteLedgerRepository(
+      app,
+    ).loadRecurringRules()).single;
+    expect(rule.currencyCode, 'CNY');
+    expect(rule.accountAmount, 66.6);
+    expect(rule.toAccountAmount, 66.6);
+    expect(rule.baseAmount, 0);
+    expect(rule.ratePolicy, RecurringRatePolicy.fixedAmounts);
+    await app.close();
+  });
 }
 
 /// v1 时代的代表性数据：账本/账户/分组/分类（含一对重复「餐饮」，供 v10 去重
-/// 迁移在真实链路上发挥）/三笔交易/两类预算。
+/// 迁移在真实链路上发挥）/四笔交易/两类预算。
 Future<void> _seedV1Data(Database db) async {
   final when = DateTime(2026, 1, 10, 12).millisecondsSinceEpoch;
   await db.insert('ledger_books', <String, Object?>{
@@ -258,6 +314,17 @@ Future<void> _seedV1Data(Database db) async {
       'occurred_at': when,
     });
   }
+  await db.insert('entries', <String, Object?>{
+    'id': 'e4',
+    'book_id': 'default',
+    'type': 'transfer',
+    'amount': 50.0,
+    'category_id': 'cat-a',
+    'account_id': 'acc-1',
+    'to_account_id': 'acc-2',
+    'note': '转账',
+    'occurred_at': when,
+  });
   await db.insert('monthly_budgets', <String, Object?>{
     'scope_key': 'default:2026-01',
     'amount': 3000.0,

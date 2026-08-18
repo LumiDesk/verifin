@@ -217,6 +217,7 @@ class HomeMetricContext {
     required this.entries,
     required this.accounts,
     required this.balanceOf,
+    this.balanceInBaseOf,
     required this.now,
   });
 
@@ -225,6 +226,9 @@ class HomeMetricContext {
 
   /// 账户当前余额（由 controller.accountBalance 注入，兼容未落库账户）。
   final double Function(Account) balanceOf;
+
+  /// 账户余额折算成本位币后的值；缺汇率时返回 null。未注入时保持单币种兼容。
+  final double? Function(Account)? balanceInBaseOf;
   final DateTime now;
 }
 
@@ -258,10 +262,18 @@ double _net(HomeMetricContext ctx, bool Function(LedgerEntry) inPeriod) {
       _sum(ctx, EntryType.expense, inPeriod);
 }
 
-Iterable<double> _assetBalances(HomeMetricContext ctx) {
-  return ctx.accounts
-      .where((account) => account.includeInAssets && !account.hidden)
-      .map(ctx.balanceOf);
+List<double>? _assetBalances(HomeMetricContext ctx) {
+  final balances = <double>[];
+  for (final account in ctx.accounts.where(
+    (account) => account.includeInAssets && !account.hidden,
+  )) {
+    final balance =
+        ctx.balanceInBaseOf?.call(account) ??
+        (ctx.balanceInBaseOf == null ? ctx.balanceOf(account) : null);
+    if (balance == null) return null;
+    balances.add(balance);
+  }
+  return balances;
 }
 
 /// 计算指定指标当前的数值（当前账本口径）。纯函数。
@@ -302,34 +314,37 @@ double computeHomeMetric(HomeMetric metric, HomeMetricContext ctx) {
     case HomeMetric.totalNet:
       return _net(ctx, (_) => true);
     case HomeMetric.totalAssets:
-      return _assetBalances(
-        ctx,
-      ).where((b) => b > 0).fold<double>(0, (sum, b) => sum + b);
+      final balances = _assetBalances(ctx);
+      if (balances == null) return double.nan;
+      return balances.where((b) => b > 0).fold<double>(0, (sum, b) => sum + b);
     case HomeMetric.totalLiabilities:
       // 负债以正数（绝对值）展示。
-      return _assetBalances(
-        ctx,
-      ).where((b) => b < 0).fold<double>(0, (sum, b) => sum + b).abs();
+      final balances = _assetBalances(ctx);
+      if (balances == null) return double.nan;
+      return balances
+          .where((b) => b < 0)
+          .fold<double>(0, (sum, b) => sum + b)
+          .abs();
     case HomeMetric.netAssets:
-      return _assetBalances(ctx).fold<double>(0, (sum, b) => sum + b);
+      final balances = _assetBalances(ctx);
+      if (balances == null) return double.nan;
+      return balances.fold<double>(0, (sum, b) => sum + b);
     case HomeMetric.reimbursablePending:
       // 待报销：标记为待报销的支出中尚未被冲抵的部分之和。
       return ctx.entries
           .where((e) => e.type == EntryType.expense && e.reimbursable)
-          .fold<double>(
-            0,
-            (sum, e) => sum + (e.amount - e.refundedAmount).clamp(0, e.amount),
-          );
+          .fold<double>(0, (sum, e) => sum + e.netBaseAmount);
     case HomeMetric.reimbursed:
       // 已报销：待报销支出里已经回款/冲抵的金额之和。
       return ctx.entries
           .where((e) => e.type == EntryType.expense && e.reimbursable)
-          .fold<double>(0, (sum, e) => sum + e.refundedAmount);
+          .fold<double>(0, (sum, e) => sum + e.refundedBaseAmount);
   }
 }
 
 /// 指标按风格格式化为展示字符串（读全局金额小数位偏好）。
 String formatHomeMetric(HomeMetric metric, double value) {
+  if (!value.isFinite) return '—';
   switch (homeMetricStyle(metric)) {
     case HomeMetricStyle.expense:
       return formatExpenseAmount(value);
@@ -344,7 +359,7 @@ String formatHomeMetric(HomeMetric metric, double value) {
 
 /// 指标取色：零值用传入的弱化色，否则按风格（结余按正负）取色。
 Color homeMetricColor(HomeMetric metric, double value, Color mutedColor) {
-  if (isZeroAmount(value)) {
+  if (!value.isFinite || isZeroAmount(value)) {
     return mutedColor;
   }
   switch (homeMetricStyle(metric)) {
