@@ -20,6 +20,7 @@ class LedgerDataSnapshot {
     required this.monthlyBudgets,
     required this.categoryBudgets,
     required this.dailyBudgets,
+    this.exchangeRates = const <ExchangeRate>[],
   });
 
   final List<LedgerBook> books;
@@ -33,6 +34,7 @@ class LedgerDataSnapshot {
   final Map<String, double> monthlyBudgets;
   final Map<String, double> categoryBudgets;
   final Map<String, double> dailyBudgets;
+  final List<ExchangeRate> exchangeRates;
 }
 
 /// 账目类数据仓储接口。生产实现为 [SqliteLedgerRepository]；测试可注入内存实现，
@@ -61,14 +63,18 @@ abstract interface class LedgerRepository {
   Future<List<Attachment>> loadAttachments();
   Future<void> saveAttachments(List<Attachment> attachments);
 
-  /// Replaces entries and attachments in one transaction.
+  /// Replaces entries, attachments and optional exchange rates in one transaction.
   Future<void> saveEntryAggregate({
     required List<LedgerEntry> entries,
     required List<Attachment> attachments,
+    List<ExchangeRate>? exchangeRates,
   });
 
   Future<List<RecurringRule>> loadRecurringRules();
   Future<void> saveRecurringRules(List<RecurringRule> rules);
+
+  Future<List<ExchangeRate>> loadExchangeRates();
+  Future<void> saveExchangeRates(List<ExchangeRate> rates);
 
   Future<Map<String, double>> loadMonthlyBudgets();
   Future<void> saveMonthlyBudgets(Map<String, double> budgets);
@@ -97,7 +103,7 @@ abstract interface class LedgerRepository {
 /// 基于 SQLite 的仓储实现。列表顺序通过 sort_order 列保留（entries 除外，其顺序
 /// 由 occurred_at 决定）。
 ///
-/// 写入策略：交易/账本/账户/分组/分类/标签/周期规则走**行级差分**（[_incrementalReplace]）
+/// 写入策略：交易/账本/账户/分组/分类/标签/周期规则/汇率走**行级差分**（[_incrementalReplace]）
 /// ——只写与内存基线快照不同的行，避免单条改动就重写整表（entries 随交易量无限增长，
 /// 是写放大主因）。附件（含大 blob）与预算（极小）仍整表覆盖。saveX 的对外语义不变：
 /// 落库后该表内容 == 传入列表。导入/恢复/重置走 [replaceAllLedgerData] 多表原子整替。
@@ -220,6 +226,7 @@ class SqliteLedgerRepository implements LedgerRepository {
   Future<void> saveEntryAggregate({
     required List<LedgerEntry> entries,
     required List<Attachment> attachments,
+    List<ExchangeRate>? exchangeRates,
   }) async {
     await _db.transaction((txn) async {
       await _replaceInTxn(txn, 'entries', entries.map(_entryToRow));
@@ -228,8 +235,18 @@ class SqliteLedgerRepository implements LedgerRepository {
         'attachments',
         _indexed(attachments, _attachmentToRow),
       );
+      if (exchangeRates != null) {
+        await _replaceInTxn(
+          txn,
+          'exchange_rates',
+          exchangeRates.map(_exchangeRateToRow),
+        );
+      }
     });
     _seedSnapshot('entries', entries.map(_entryToRow));
+    if (exchangeRates != null) {
+      _seedSnapshot('exchange_rates', exchangeRates.map(_exchangeRateToRow));
+    }
   }
 
   // ---- 周期记账规则 ----
@@ -248,6 +265,24 @@ class SqliteLedgerRepository implements LedgerRepository {
       'recurring_rules',
       _indexed(rules, _recurringToRow),
     );
+  }
+
+  // ---- 本地汇率 ----
+
+  @override
+  Future<List<ExchangeRate>> loadExchangeRates() async {
+    final rows = await _db.query(
+      'exchange_rates',
+      orderBy: 'currency_code ASC, effective_date DESC, id DESC',
+    );
+    final rates = rows.map(_exchangeRateFromRow).toList();
+    _seedSnapshot('exchange_rates', rates.map(_exchangeRateToRow));
+    return rates;
+  }
+
+  @override
+  Future<void> saveExchangeRates(List<ExchangeRate> rates) async {
+    await _incrementalReplace('exchange_rates', rates.map(_exchangeRateToRow));
   }
 
   // ---- 预算（键值对：月度 / 分类）----
@@ -344,6 +379,11 @@ class SqliteLedgerRepository implements LedgerRepository {
         'daily_budgets',
         _budgetRows(snapshot.dailyBudgets),
       );
+      await _replaceInTxn(
+        txn,
+        'exchange_rates',
+        snapshot.exchangeRates.map(_exchangeRateToRow),
+      );
     });
     // 整替后重建各增量表基线，使后续单条 saveX 的差分有正确起点（否则会拿导入前
     // 的旧快照去 diff、误删或漏写）。附件/预算不走增量、无需重置。
@@ -357,6 +397,10 @@ class SqliteLedgerRepository implements LedgerRepository {
       'recurring_rules',
       _indexed(snapshot.recurringRules, _recurringToRow),
     );
+    _seedSnapshot(
+      'exchange_rates',
+      snapshot.exchangeRates.map(_exchangeRateToRow),
+    );
   }
 
   /// 是否已存在任何账目数据（用于判断迁移是否有内容写入）。
@@ -368,6 +412,7 @@ class SqliteLedgerRepository implements LedgerRepository {
       'accounts',
       'account_groups',
       'categories',
+      'exchange_rates',
     ]) {
       final rows = await _db.rawQuery('SELECT COUNT(*) AS c FROM $table');
       final count = (rows.first['c'] as int?) ?? 0;
@@ -513,6 +558,11 @@ class SqliteLedgerRepository implements LedgerRepository {
     'book_id': e.bookId,
     'type': e.type.storageValue,
     'amount': e.amount,
+    'currency_code': e.currencyCode,
+    'account_amount': e.accountAmount,
+    'to_account_amount': e.toAccountAmount,
+    'base_amount': e.baseAmount,
+    'conversion_source': e.conversionSource.name,
     'category_id': e.categoryId,
     'account_id': e.accountId,
     'to_account_id': e.toAccountId,
@@ -522,7 +572,7 @@ class SqliteLedgerRepository implements LedgerRepository {
     'tag_ids': e.tagIds.isEmpty ? null : jsonEncode(e.tagIds),
     'fee': e.fee,
     'reimbursable': e.reimbursable ? 1 : 0,
-    'refunded_amount': e.refundedAmount,
+    'refunded_amount': e.refundedBaseAmount,
     'refund_of': e.refundOf,
     'settled_at': e.settledAt?.millisecondsSinceEpoch,
   };
@@ -532,6 +582,13 @@ class SqliteLedgerRepository implements LedgerRepository {
     bookId: row['book_id'] as String,
     type: EntryType.fromStorage(row['type'] as String),
     amount: (row['amount'] as num).toDouble(),
+    currencyCode: row['currency_code'] as String? ?? defaultCurrencyCode,
+    accountAmount: (row['account_amount'] as num?)?.toDouble(),
+    toAccountAmount: (row['to_account_amount'] as num?)?.toDouble(),
+    baseAmount: (row['base_amount'] as num?)?.toDouble() ?? 0,
+    conversionSource: ConversionSource.fromStorage(
+      row['conversion_source'] as String?,
+    ),
     categoryId: row['category_id'] as String,
     accountId: row['account_id'] as String,
     toAccountId: row['to_account_id'] as String?,
@@ -540,7 +597,7 @@ class SqliteLedgerRepository implements LedgerRepository {
     tagIds: _decodeTagIds(row['tag_ids']),
     fee: (row['fee'] as num?)?.toDouble() ?? 0,
     reimbursable: ((row['reimbursable'] as int?) ?? 0) != 0,
-    refundedAmount: (row['refunded_amount'] as num?)?.toDouble() ?? 0,
+    refundedBaseAmount: (row['refunded_amount'] as num?)?.toDouble() ?? 0,
     refundOf: row['refund_of'] as String?,
     settledAt: row['settled_at'] == null
         ? null
@@ -586,6 +643,11 @@ class SqliteLedgerRepository implements LedgerRepository {
         'book_id': r.bookId,
         'type': r.type.storageValue,
         'amount': r.amount,
+        'currency_code': r.currencyCode,
+        'account_amount': r.accountAmount,
+        'to_account_amount': r.toAccountAmount,
+        'base_amount': r.baseAmount,
+        'rate_policy': r.ratePolicy.name,
         'category_id': r.categoryId,
         'account_id': r.accountId,
         'to_account_id': r.toAccountId,
@@ -597,25 +659,62 @@ class SqliteLedgerRepository implements LedgerRepository {
         'sort_order': index,
       };
 
-  static RecurringRule _recurringFromRow(Map<String, Object?> row) =>
-      RecurringRule(
-        id: row['id'] as String,
-        bookId: row['book_id'] as String,
-        type: EntryType.fromStorage(row['type'] as String),
-        amount: (row['amount'] as num).toDouble(),
-        categoryId: row['category_id'] as String,
-        accountId: row['account_id'] as String,
-        toAccountId: row['to_account_id'] as String?,
-        note: row['note'] as String? ?? '',
-        frequency: RecurringFrequency.fromStorage(row['frequency'] as String?),
-        startDate: DateTime.fromMillisecondsSinceEpoch(
-          row['start_date'] as int,
-        ),
-        nextRunDate: DateTime.fromMillisecondsSinceEpoch(
-          row['next_run_date'] as int,
-        ),
-        active: ((row['active'] as int?) ?? 1) != 0,
+  static RecurringRule _recurringFromRow(
+    Map<String, Object?> row,
+  ) => RecurringRule(
+    id: row['id'] as String,
+    bookId: row['book_id'] as String,
+    type: EntryType.fromStorage(row['type'] as String),
+    amount: (row['amount'] as num).toDouble(),
+    currencyCode: row['currency_code'] as String? ?? defaultCurrencyCode,
+    accountAmount: (row['account_amount'] as num?)?.toDouble(),
+    toAccountAmount: (row['to_account_amount'] as num?)?.toDouble(),
+    baseAmount: (row['base_amount'] as num?)?.toDouble() ?? 0,
+    ratePolicy: RecurringRatePolicy.fromStorage(row['rate_policy'] as String?),
+    categoryId: row['category_id'] as String,
+    accountId: row['account_id'] as String,
+    toAccountId: row['to_account_id'] as String?,
+    note: row['note'] as String? ?? '',
+    frequency: RecurringFrequency.fromStorage(row['frequency'] as String?),
+    startDate: DateTime.fromMillisecondsSinceEpoch(row['start_date'] as int),
+    nextRunDate: DateTime.fromMillisecondsSinceEpoch(
+      row['next_run_date'] as int,
+    ),
+    active: ((row['active'] as int?) ?? 1) != 0,
+  );
+
+  static Map<String, Object?> _exchangeRateToRow(ExchangeRate rate) =>
+      <String, Object?>{
+        'id': rate.id,
+        'book_id': rate.bookId,
+        'base_currency_code': rate.baseCurrencyCode,
+        'currency_code': rate.currencyCode,
+        'effective_date': currencyDateKey(rate.effectiveDate),
+        'rate_to_base': rate.rateToBase,
+        'source': rate.source.name,
+        'created_at': rate.createdAt.millisecondsSinceEpoch,
+        'updated_at': rate.updatedAt.millisecondsSinceEpoch,
+      };
+
+  static ExchangeRate _exchangeRateFromRow(Map<String, Object?> row) {
+    final effectiveDate = parseCurrencyDateKey(row['effective_date']);
+    if (effectiveDate == null) {
+      throw FormatException(
+        'Invalid exchange rate effective_date: ${row['effective_date']}',
       );
+    }
+    return ExchangeRate(
+      id: row['id'] as String,
+      bookId: row['book_id'] as String,
+      baseCurrencyCode: row['base_currency_code'] as String,
+      currencyCode: row['currency_code'] as String,
+      effectiveDate: effectiveDate,
+      rateToBase: (row['rate_to_base'] as num).toDouble(),
+      source: ExchangeRateSource.fromStorage(row['source'] as String?),
+      createdAt: DateTime.fromMillisecondsSinceEpoch(row['created_at'] as int),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(row['updated_at'] as int),
+    );
+  }
 
   static Map<String, Object?> _bookToRow(LedgerBook b, int index) =>
       <String, Object?>{
@@ -623,6 +722,8 @@ class SqliteLedgerRepository implements LedgerRepository {
         'name': b.name,
         'created_at': b.createdAt.millisecondsSinceEpoch,
         'is_default': b.isDefault ? 1 : 0,
+        'base_currency_code': b.baseCurrencyCode,
+        'currency_setup_status': b.currencySetupStatus.name,
         'sort_order': index,
       };
 
@@ -631,6 +732,11 @@ class SqliteLedgerRepository implements LedgerRepository {
     name: row['name'] as String,
     createdAt: DateTime.fromMillisecondsSinceEpoch(row['created_at'] as int),
     isDefault: (row['is_default'] as int) != 0,
+    baseCurrencyCode:
+        row['base_currency_code'] as String? ?? defaultCurrencyCode,
+    currencySetupStatus: CurrencySetupStatus.fromStorage(
+      row['currency_setup_status'] as String?,
+    ),
   );
 
   static Map<String, Object?> _accountToRow(Account a, int index) =>
@@ -641,6 +747,7 @@ class SqliteLedgerRepository implements LedgerRepository {
         'type': a.type.name,
         'group_id': a.groupId,
         'initial_balance': a.initialBalance,
+        'currency_code': a.currencyCode,
         'icon_code': a.iconCode,
         'note': a.note,
         'include_in_assets': a.includeInAssets ? 1 : 0,
@@ -661,6 +768,7 @@ class SqliteLedgerRepository implements LedgerRepository {
     type: AccountType.fromStorage(row['type'] as String?),
     groupId: row['group_id'] as String?,
     initialBalance: (row['initial_balance'] as num).toDouble(),
+    currencyCode: row['currency_code'] as String? ?? defaultCurrencyCode,
     iconCode: row['icon_code'] as String,
     note: row['note'] as String? ?? '',
     includeInAssets: (row['include_in_assets'] as int) != 0,

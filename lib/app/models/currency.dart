@@ -137,7 +137,7 @@ class ExchangeRate {
       'bookId': bookId,
       'baseCurrencyCode': baseCurrencyCode,
       'currencyCode': currencyCode,
-      'effectiveDate': _dateKey(effectiveDate),
+      'effectiveDate': currencyDateKey(effectiveDate),
       'rateToBase': rateToBase,
       'source': source.name,
       'createdAt': createdAt.toIso8601String(),
@@ -156,7 +156,7 @@ class ExchangeRate {
       currencyCode: (json['currencyCode'] as String? ?? defaultCurrencyCode)
           .toUpperCase(),
       effectiveDate:
-          _parseDateKey(json['effectiveDate']) ??
+          parseCurrencyDateKey(json['effectiveDate']) ??
           DateTime(now.year, now.month, now.day),
       rateToBase: (json['rateToBase'] as num? ?? 0).toDouble(),
       source: ExchangeRateSource.fromStorage(json['source'] as String?),
@@ -166,13 +166,13 @@ class ExchangeRate {
   }
 }
 
-String _dateKey(DateTime date) {
+String currencyDateKey(DateTime date) {
   final month = date.month.toString().padLeft(2, '0');
   final day = date.day.toString().padLeft(2, '0');
   return '${date.year}-$month-$day';
 }
 
-DateTime? _parseDateKey(Object? raw) {
+DateTime? parseCurrencyDateKey(Object? raw) {
   if (raw is! String) return null;
   final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(raw);
   if (match == null) return null;
