@@ -19,14 +19,14 @@ void main() {
     await tester.tap(find.byKey(const Key('save_entry_button')));
     await tester.pumpAndSettle();
 
-    // 首页「最近交易」反映这笔 -45。
+    // 首页「最近交易」反映原币金额，并明确显示 ISO 代码。
     expect(find.text('最近交易'), findsOneWidget);
-    expect(find.text('-45'), findsAtLeastNWidgets(1));
+    expect(find.text('-CNY 45'), findsAtLeastNWidgets(1));
 
     // 资产页：账户余额同步为 -45。
     await tapBottomTab(tester, 1);
     expect(find.text('现金账户'), findsAtLeastNWidgets(1));
-    expect(find.text('-45'), findsAtLeastNWidgets(1));
+    expect(find.text('CNY -45'), findsAtLeastNWidgets(1));
 
     // 再记一笔 45 支出，账户余额累计到 -90。
     await tapBottomTab(tester, 0);
@@ -35,6 +35,6 @@ void main() {
     await tester.pumpAndSettle();
 
     await tapBottomTab(tester, 1);
-    expect(find.text('-90'), findsAtLeastNWidgets(1));
+    expect(find.text('CNY -90'), findsAtLeastNWidgets(1));
   });
 }
