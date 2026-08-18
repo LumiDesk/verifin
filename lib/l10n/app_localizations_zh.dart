@@ -3949,4 +3949,98 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get exchangeRateSaved => '汇率已保存';
+
+  @override
+  String get entryCurrencyLabel => '交易币种';
+
+  @override
+  String get entryCurrencyPickTitle => '选择交易币种';
+
+  @override
+  String get entryOriginalAmountLabel => '原币金额';
+
+  @override
+  String get entryAccountAmountExpense => '账户实际扣款';
+
+  @override
+  String get entryAccountAmountIncome => '账户实际入账';
+
+  @override
+  String get entryLedgerAmountLabel => '计入账本';
+
+  @override
+  String get entryTransferOutAmount => '转出金额';
+
+  @override
+  String get entryTransferInAmount => '转入金额';
+
+  @override
+  String get entryRateLabel => '换算汇率';
+
+  @override
+  String entryRateEquation(String source, String rate, String target) {
+    return '1 $source = $rate $target';
+  }
+
+  @override
+  String entryRateEditTitle(String source, String target) {
+    return '1 $source 等于多少 $target';
+  }
+
+  @override
+  String entryMissingRate(String currencies) {
+    return '缺少 $currencies 的本地汇率，请填写实际金额或先维护汇率';
+  }
+
+  @override
+  String get entryRememberRate => '记住为当日汇率';
+
+  @override
+  String get entryRememberRateHint => '默认关闭；开启后会把本单折算价保存到当前账本的汇率表。';
+
+  @override
+  String get entryConversionSummary => '金额摘要';
+
+  @override
+  String get entryConversionSourceRateTable => '已按本地汇率自动换算，可点击金额修改';
+
+  @override
+  String get entryConversionSourceManual => '本单金额已手动调整，历史统计将冻结保存值';
+
+  @override
+  String entryAmountInputTitle(String label, String currency) {
+    return '填写 $label（$currency）';
+  }
+
+  @override
+  String get entryCurrencySaveMissing => '请先补齐跨币种交易所需的实际金额';
+
+  @override
+  String get refundAccountAmountLabel => '账户实际到账';
+
+  @override
+  String get refundBaseAmountLabel => '本位币冲抵额';
+
+  @override
+  String get refundCurrencyLockedHint => '退款原币沿用原支出，不可更改。';
+
+  @override
+  String get recurringRatePolicyLabel => '跨币种换算';
+
+  @override
+  String get recurringRatePolicyLatest => '每次使用最新本地汇率';
+
+  @override
+  String get recurringRatePolicyFixed => '固定当前金额';
+
+  @override
+  String get recurringMissingRate => '待补汇率';
+
+  @override
+  String recurringMissingRateCount(int count) {
+    return '有 $count 条规则因缺少汇率等待补记';
+  }
+
+  @override
+  String get recurringRetryNow => '立即补记';
 }

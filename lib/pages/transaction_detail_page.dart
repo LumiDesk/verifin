@@ -2,7 +2,10 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
+import '../app/currency_catalog.dart';
+import '../app/currency_math.dart';
 import '../app/model_lookup.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
@@ -27,6 +30,17 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
   LedgerEntry? _initialEntry;
   late EntryType _type;
   late double _amount;
+  late String _currencyCode;
+  late double? _accountAmount;
+  late double? _toAccountAmount;
+  late double _baseAmount;
+  late ConversionSource _conversionSource;
+  bool _currencyTouched = false;
+  bool _accountAmountTouched = false;
+  bool _toAccountAmountTouched = false;
+  bool _baseAmountTouched = false;
+  bool _rememberRate = false;
+  Set<String> _missingRateCodes = <String>{};
   late String _categoryId;
   late String _accountId;
   // 「无账户」：只记金额、不计入任何账户余额（仅收支有效）。
@@ -58,6 +72,11 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     _initialEntry = entry;
     _type = entry.type;
     _amount = entry.amount;
+    _currencyCode = entry.currencyCode;
+    _accountAmount = entry.accountAmount;
+    _toAccountAmount = entry.toAccountAmount;
+    _baseAmount = entry.baseAmount;
+    _conversionSource = entry.conversionSource;
     _categoryId = entry.categoryId;
     _accountId = entry.accountId;
     _noAccount = entry.type != EntryType.transfer && entry.accountId.isEmpty;
@@ -122,20 +141,26 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     final noneLabel = AppLocalizations.of(context).noAccountLabel;
     final accountFieldValue = _noAccount
         ? noneLabel
-        : '${account.name} (${formatAmount(controller.accountBalance(account))})';
+        : '${account.name} (${formatMoney(controller.accountBalance(account), account.currencyCode)})';
     final canSave =
         (accounts.isNotEmpty || _noAccount) &&
+        (_type == EntryType.transfer ||
+            _baseAmount > 0 && (_noAccount || (_accountAmount ?? 0) > 0)) &&
         (_type != EntryType.transfer ||
-            (_toAccountId != null && _toAccountId != _accountId)) &&
+            (_toAccountId != null &&
+                _toAccountId != _accountId &&
+                (_accountAmount ?? 0) > 0 &&
+                (_toAccountAmount ?? 0) > 0)) &&
         (_type == EntryType.expense
-            ? _refundTotal <= _amount + 0.0001
+            ? _refundTotal <= _amount + currencyAmountTolerance(_currencyCode)
             : _refunds.isEmpty);
     final amountColor = colorForType(_type);
+    final formattedAmount = formatCurrencyNumber(_amount, _currencyCode);
     final amountText = switch (_type) {
-      EntryType.expense => formatExpenseAmount(_amount),
-      EntryType.income => '+${formatIncomeAmount(_amount)}',
-      EntryType.transfer => formatAmount(_amount),
-      EntryType.refund => '+${formatIncomeAmount(_amount)}',
+      EntryType.expense => '-$formattedAmount',
+      EntryType.income => '+$formattedAmount',
+      EntryType.transfer => formattedAmount,
+      EntryType.refund => '+$formattedAmount',
     };
 
     return UnsavedChangesGuard(
@@ -219,13 +244,21 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                         value: category.label,
                         onTap: _pickCategory,
                       ),
+                      DetailInfoRow(
+                        key: const Key('transaction_currency_field'),
+                        label: AppLocalizations.of(context).entryCurrencyLabel,
+                        value: _currencyCode,
+                        onTap: _type == EntryType.transfer
+                            ? null
+                            : _pickCurrency,
+                      ),
                       if (_type == EntryType.transfer) ...<Widget>[
                         DetailInfoRow(
                           label: AppLocalizations.of(
                             context,
                           ).transferOutAccount,
                           value:
-                              '${account.name} (${formatAmount(controller.accountBalance(account))})',
+                              '${account.name} (${formatMoney(controller.accountBalance(account), account.currencyCode)})',
                           onTap: accounts.isEmpty
                               ? null
                               : () => _pickAccount(accounts),
@@ -234,7 +267,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                           label: AppLocalizations.of(context).transferInAccount,
                           value: toAccount == null
                               ? AppLocalizations.of(context).pleaseSelect
-                              : '${toAccount.name} (${formatAmount(controller.accountBalance(toAccount))})',
+                              : '${toAccount.name} (${formatMoney(controller.accountBalance(toAccount), toAccount.currencyCode)})',
                           placeholder: toAccount == null,
                           onTap: accounts.length < 2
                               ? null
@@ -243,7 +276,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                         DetailInfoRow(
                           label: AppLocalizations.of(context).feeLabel,
                           value: _fee > 0
-                              ? formatAmount(_fee)
+                              ? formatMoney(_fee, _currencyCode)
                               : AppLocalizations.of(context).commonNoneShort,
                           placeholder: _fee <= 0,
                           onTap: _editFee,
@@ -257,6 +290,12 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                               ? null
                               : () => _pickAccount(accounts),
                         ),
+                      ..._buildCurrencyAmountFields(
+                        controller,
+                        accounts,
+                        account,
+                        toAccount,
+                      ),
                       DetailInfoRow(
                         label: AppLocalizations.of(context).dateLabel,
                         value:
@@ -343,16 +382,255 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     );
   }
 
+  Account? _findAccount(List<Account> accounts, String? id) {
+    if (id == null || id.isEmpty) return null;
+    return accounts.where((account) => account.id == id).firstOrNull;
+  }
+
+  double? _converted(
+    VeriFinController controller,
+    double amount,
+    String sourceCode,
+    String targetCode,
+  ) {
+    final result = controller.convertAmount(
+      amount: amount,
+      sourceCurrencyCode: sourceCode,
+      targetCurrencyCode: targetCode,
+      date: _occurredAt,
+    );
+    if (result is ConvertedCurrencyAmount) return result.amount;
+    if (result is MissingCurrencyRate) {
+      _missingRateCodes.addAll(result.currencyCodes);
+    }
+    return null;
+  }
+
+  void _resolveCurrencyAmounts(
+    VeriFinController controller,
+    List<Account> accounts, {
+    bool forceAccount = false,
+    bool forceToAccount = false,
+    bool forceBase = false,
+  }) {
+    _missingRateCodes = <String>{};
+    final account = _noAccount ? null : _findAccount(accounts, _accountId);
+    final toAccount = _findAccount(accounts, _toAccountId);
+    final baseCode = controller.activeBook.baseCurrencyCode;
+    if (_type == EntryType.transfer) {
+      if (account != null) {
+        _currencyCode = account.currencyCode;
+        _amount = normalizeCurrencyAmount(_amount, _currencyCode);
+        _accountAmount = _amount;
+      }
+      _baseAmount = 0;
+      if (toAccount == null) {
+        _toAccountAmount = null;
+      } else if (toAccount.currencyCode == _currencyCode) {
+        _toAccountAmount = normalizeCurrencyAmount(
+          _amount,
+          toAccount.currencyCode,
+        );
+        _toAccountAmountTouched = false;
+      } else if (forceToAccount || !_toAccountAmountTouched) {
+        _toAccountAmount = _converted(
+          controller,
+          _amount,
+          _currencyCode,
+          toAccount.currencyCode,
+        );
+      }
+      _conversionSource = _toAccountAmountTouched
+          ? ConversionSource.manual
+          : toAccount != null && toAccount.currencyCode != _currencyCode
+          ? ConversionSource.rateTable
+          : ConversionSource.identity;
+      return;
+    }
+    if (account == null) {
+      _accountAmount = null;
+    } else if (account.currencyCode == _currencyCode) {
+      _accountAmount = normalizeCurrencyAmount(_amount, account.currencyCode);
+      _accountAmountTouched = false;
+    } else if (forceAccount || !_accountAmountTouched) {
+      _accountAmount = _converted(
+        controller,
+        _amount,
+        _currencyCode,
+        account.currencyCode,
+      );
+    }
+    if (_currencyCode == baseCode) {
+      _baseAmount = normalizeCurrencyAmount(_amount, baseCode);
+      _baseAmountTouched = false;
+    } else if (account?.currencyCode == baseCode && _accountAmount != null) {
+      _baseAmount = normalizeCurrencyAmount(_accountAmount!, baseCode);
+      _baseAmountTouched = _accountAmountTouched;
+    } else if (forceBase || !_baseAmountTouched) {
+      _baseAmount =
+          _converted(controller, _amount, _currencyCode, baseCode) ?? 0;
+    }
+    _conversionSource = _accountAmountTouched || _baseAmountTouched
+        ? ConversionSource.manual
+        : _currencyCode == baseCode &&
+              (account == null || account.currencyCode == baseCode)
+        ? ConversionSource.identity
+        : ConversionSource.rateTable;
+  }
+
+  List<Widget> _buildCurrencyAmountFields(
+    VeriFinController controller,
+    List<Account> accounts,
+    Account account,
+    Account? toAccount,
+  ) {
+    final l10n = AppLocalizations.of(context);
+    final fields = <Widget>[];
+    if (_type == EntryType.transfer &&
+        toAccount != null &&
+        toAccount.currencyCode != _currencyCode) {
+      fields.add(
+        CurrencyAmountField(
+          key: const Key('transaction_to_account_amount'),
+          label: l10n.entryTransferInAmount,
+          currencyCode: toAccount.currencyCode,
+          amount: _toAccountAmount,
+          missingText: l10n.exchangeRateNotSet,
+          onTap: () => _editToAccountAmount(toAccount.currencyCode),
+        ),
+      );
+      fields.add(
+        DetailInfoRow(
+          label: l10n.entryRateLabel,
+          value: _toAccountAmount == null || _amount <= 0
+              ? l10n.exchangeRateNotSet
+              : l10n.entryRateEquation(
+                  _currencyCode,
+                  formatRateValue(_toAccountAmount! / _amount),
+                  toAccount.currencyCode,
+                ),
+          placeholder: _toAccountAmount == null,
+          onTap: () => _editDerivedRate(
+            targetCode: toAccount.currencyCode,
+            transfer: true,
+          ),
+        ),
+      );
+    } else if (_type != EntryType.transfer) {
+      if (!_noAccount && account.currencyCode != _currencyCode) {
+        fields.add(
+          CurrencyAmountField(
+            key: const Key('transaction_account_amount'),
+            label: _type == EntryType.expense
+                ? l10n.entryAccountAmountExpense
+                : l10n.entryAccountAmountIncome,
+            currencyCode: account.currencyCode,
+            amount: _accountAmount,
+            missingText: l10n.exchangeRateNotSet,
+            onTap: () => _editAccountAmount(account.currencyCode),
+          ),
+        );
+      }
+      final baseCode = controller.activeBook.baseCurrencyCode;
+      if (_currencyCode != baseCode) {
+        fields.add(
+          CurrencyAmountField(
+            key: const Key('transaction_base_amount'),
+            label: l10n.entryLedgerAmountLabel,
+            currencyCode: baseCode,
+            amount: _baseAmount > 0 ? _baseAmount : null,
+            missingText: l10n.exchangeRateNotSet,
+            onTap: () => _editBaseAmount(baseCode),
+          ),
+        );
+        fields.add(
+          DetailInfoRow(
+            label: l10n.entryRateLabel,
+            value: _baseAmount <= 0 || _amount <= 0
+                ? l10n.exchangeRateNotSet
+                : l10n.entryRateEquation(
+                    _currencyCode,
+                    formatRateValue(_baseAmount / _amount),
+                    baseCode,
+                  ),
+            placeholder: _baseAmount <= 0,
+            onTap: () =>
+                _editDerivedRate(targetCode: baseCode, transfer: false),
+          ),
+        );
+        fields.add(
+          CompactSwitchRow(
+            icon: Icons.bookmark_add_outlined,
+            title: Text(l10n.entryRememberRate),
+            subtitle: Text(l10n.entryRememberRateHint),
+            value: _rememberRate,
+            onChanged: (value) => setState(() => _rememberRate = value),
+          ),
+        );
+      }
+    }
+    if (_missingRateCodes.isNotEmpty) {
+      fields.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Text(
+            l10n.entryMissingRate(
+              (_missingRateCodes.toList()..sort()).join(', '),
+            ),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: veriWarning,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      );
+    }
+    return fields;
+  }
+
+  Future<void> _pickCurrency() async {
+    final controller = VeriFinScope.of(context);
+    final selected = await showCurrencyPickerSheet(
+      context: context,
+      title: AppLocalizations.of(context).entryCurrencyPickTitle,
+      selectedCode: _currencyCode,
+      preferredCodes: <String>[
+        controller.activeBook.baseCurrencyCode,
+        for (final account in controller.accounts) account.currencyCode,
+      ],
+    );
+    if (!mounted || selected == null || selected.code == _currencyCode) return;
+    setState(() {
+      _currencyCode = selected.code;
+      _currencyTouched = true;
+      _amount = normalizeCurrencyAmount(_amount, _currencyCode);
+      _accountAmountTouched = false;
+      _baseAmountTouched = false;
+      _rememberRate = false;
+      _resolveCurrencyAmounts(
+        controller,
+        controller.accounts,
+        forceAccount: true,
+        forceBase: true,
+      );
+    });
+  }
+
   Future<void> _editAmount() async {
     final amount = await showNumberPadSheet(
       context,
       title: AppLocalizations.of(context).amountEditTitle,
       initialAmount: _amount,
+      maxFractionDigits: CurrencyCatalog.require(_currencyCode).minorUnit,
     );
     if (amount == null || amount <= 0 || !mounted) {
       return;
     }
-    setState(() => _amount = amount);
+    setState(() {
+      _amount = normalizeCurrencyAmount(amount, _currencyCode);
+      final controller = VeriFinScope.of(context);
+      _resolveCurrencyAmounts(controller, controller.accounts);
+    });
   }
 
   Future<void> _editFee() async {
@@ -361,11 +639,123 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       title: AppLocalizations.of(context).transferFeeTitle,
       initialAmount: _fee > 0 ? _fee : null,
       allowZero: true,
+      maxFractionDigits: CurrencyCatalog.require(_currencyCode).minorUnit,
     );
     if (fee == null || fee < 0 || !mounted) {
       return;
     }
-    setState(() => _fee = fee);
+    setState(() => _fee = normalizeCurrencyAmount(fee, _currencyCode));
+  }
+
+  Future<void> _editAccountAmount(String currencyCode) async {
+    final l10n = AppLocalizations.of(context);
+    final value = await showNumberPadSheet(
+      context,
+      title: l10n.entryAmountInputTitle(
+        _type == EntryType.expense
+            ? l10n.entryAccountAmountExpense
+            : l10n.entryAccountAmountIncome,
+        currencyCode,
+      ),
+      initialAmount: _accountAmount,
+      maxFractionDigits: CurrencyCatalog.require(currencyCode).minorUnit,
+    );
+    if (!mounted || value == null || value <= 0) return;
+    setState(() {
+      _accountAmount = normalizeCurrencyAmount(value, currencyCode);
+      _accountAmountTouched = true;
+      if (currencyCode ==
+          VeriFinScope.of(context).activeBook.baseCurrencyCode) {
+        _baseAmount = _accountAmount!;
+        _baseAmountTouched = true;
+      }
+      _conversionSource = ConversionSource.manual;
+      _missingRateCodes.clear();
+    });
+  }
+
+  Future<void> _editToAccountAmount(String currencyCode) async {
+    final value = await showNumberPadSheet(
+      context,
+      title: AppLocalizations.of(context).entryAmountInputTitle(
+        AppLocalizations.of(context).entryTransferInAmount,
+        currencyCode,
+      ),
+      initialAmount: _toAccountAmount,
+      maxFractionDigits: CurrencyCatalog.require(currencyCode).minorUnit,
+    );
+    if (!mounted || value == null || value <= 0) return;
+    setState(() {
+      _toAccountAmount = normalizeCurrencyAmount(value, currencyCode);
+      _toAccountAmountTouched = true;
+      _conversionSource = ConversionSource.manual;
+      _missingRateCodes.clear();
+    });
+  }
+
+  Future<void> _editBaseAmount(String baseCode) async {
+    final value = await showNumberPadSheet(
+      context,
+      title: AppLocalizations.of(context).entryAmountInputTitle(
+        AppLocalizations.of(context).entryLedgerAmountLabel,
+        baseCode,
+      ),
+      initialAmount: _baseAmount > 0 ? _baseAmount : null,
+      maxFractionDigits: CurrencyCatalog.require(baseCode).minorUnit,
+    );
+    if (!mounted || value == null || value <= 0) return;
+    setState(() {
+      _baseAmount = normalizeCurrencyAmount(value, baseCode);
+      _baseAmountTouched = true;
+      final account = _findAccount(
+        VeriFinScope.of(context).accounts,
+        _accountId,
+      );
+      if (!_noAccount && account?.currencyCode == baseCode) {
+        _accountAmount = _baseAmount;
+        _accountAmountTouched = true;
+      }
+      _conversionSource = ConversionSource.manual;
+      _missingRateCodes.clear();
+    });
+  }
+
+  Future<void> _editDerivedRate({
+    required String targetCode,
+    required bool transfer,
+  }) async {
+    final current = transfer ? _toAccountAmount : _baseAmount;
+    final rate = await showNumberPadSheet(
+      context,
+      title: AppLocalizations.of(
+        context,
+      ).entryRateEditTitle(_currencyCode, targetCode),
+      initialAmount: current == null || current <= 0 || _amount <= 0
+          ? null
+          : current / _amount,
+      maxFractionDigits: 10,
+    );
+    if (!mounted || rate == null || rate <= 0) return;
+    setState(() {
+      final target = normalizeCurrencyAmount(_amount * rate, targetCode);
+      if (transfer) {
+        _toAccountAmount = target;
+        _toAccountAmountTouched = true;
+      } else {
+        _baseAmount = target;
+        _baseAmountTouched = true;
+        final account = _findAccount(
+          VeriFinScope.of(context).accounts,
+          _accountId,
+        );
+        if (!_noAccount && account?.currencyCode == targetCode) {
+          _accountAmount = target;
+          _accountAmountTouched = true;
+        }
+      }
+      _conversionSource = ConversionSource.manual;
+      _missingRateCodes.clear();
+    });
   }
 
   Future<void> _pickType() async {
@@ -389,6 +779,16 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
         _categoryId = controller.categoriesForType(_type).first.id;
       }
       _normalizeTransferAccounts(controller.accounts);
+      if (_type == EntryType.transfer) {
+        _currencyTouched = false;
+      }
+      _resolveCurrencyAmounts(
+        controller,
+        controller.accounts,
+        forceAccount: true,
+        forceToAccount: true,
+        forceBase: true,
+      );
     });
   }
 
@@ -423,11 +823,30 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       setState(() {
         if (selected.id.isEmpty) {
           _noAccount = true;
+          if (!_currencyTouched) {
+            _currencyCode = VeriFinScope.of(
+              context,
+            ).activeBook.baseCurrencyCode;
+          }
         } else {
           _noAccount = false;
           _accountId = selected.id;
+          if (!_currencyTouched || isTransfer) {
+            _currencyCode = selected.currencyCode;
+          }
         }
         _normalizeTransferAccounts(accounts);
+        _accountAmountTouched = false;
+        _toAccountAmountTouched = false;
+        _baseAmountTouched = false;
+        _rememberRate = false;
+        _resolveCurrencyAmounts(
+          VeriFinScope.of(context),
+          accounts,
+          forceAccount: true,
+          forceToAccount: true,
+          forceBase: true,
+        );
       });
     }
   }
@@ -447,7 +866,15 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       balanceOf: VeriFinScope.of(context).accountBalance,
     );
     if (selected != null && mounted) {
-      setState(() => _toAccountId = selected.id);
+      setState(() {
+        _toAccountId = selected.id;
+        _toAccountAmountTouched = false;
+        _resolveCurrencyAmounts(
+          VeriFinScope.of(context),
+          accounts,
+          forceToAccount: true,
+        );
+      });
     }
   }
 
@@ -488,6 +915,8 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
         _occurredAt.hour,
         _occurredAt.minute,
       );
+      final controller = VeriFinScope.of(context);
+      _resolveCurrencyAmounts(controller, controller.accounts);
     });
   }
 
@@ -526,10 +955,6 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
   double get _refundTotal =>
       _refunds.fold<double>(0, (total, refund) => total + refund.amount);
 
-  double get _settledRefundTotal => _refunds
-      .where((refund) => refund.isSettledRefund)
-      .fold<double>(0, (total, refund) => total + refund.amount);
-
   LedgerEntry _buildEntry() {
     final entry = _initialEntry;
     if (entry == null) {
@@ -538,7 +963,37 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     final noAccount = _type != EntryType.transfer && _noAccount;
     return entry.copyWith(
       type: _type,
-      amount: _amount,
+      amount: normalizeCurrencyAmount(_amount, _currencyCode),
+      currencyCode: _currencyCode,
+      accountAmount: noAccount
+          ? null
+          : normalizeCurrencyAmount(
+              _accountAmount ?? _amount,
+              _findAccount(
+                    VeriFinScope.of(context).accounts,
+                    _accountId,
+                  )?.currencyCode ??
+                  _currencyCode,
+            ),
+      clearAccountAmount: noAccount,
+      toAccountAmount: _type == EntryType.transfer && _toAccountId != null
+          ? normalizeCurrencyAmount(
+              _toAccountAmount ?? _amount,
+              _findAccount(
+                    VeriFinScope.of(context).accounts,
+                    _toAccountId,
+                  )?.currencyCode ??
+                  _currencyCode,
+            )
+          : null,
+      clearToAccountAmount: _type != EntryType.transfer,
+      baseAmount: _type == EntryType.transfer
+          ? 0
+          : normalizeCurrencyAmount(
+              _baseAmount,
+              VeriFinScope.of(context).activeBook.baseCurrencyCode,
+            ),
+      conversionSource: _conversionSource,
       categoryId: _categoryId,
       accountId: noAccount ? '' : _accountId,
       toAccountId: _type == EntryType.transfer ? _toAccountId : null,
@@ -546,10 +1001,16 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       note: _noteController.text.trim(),
       occurredAt: _occurredAt,
       tagIds: List<String>.of(_tagIds),
-      fee: _type == EntryType.transfer ? _fee : 0,
+      fee: _type == EntryType.transfer
+          ? normalizeCurrencyAmount(_fee, _currencyCode)
+          : 0,
       reimbursable: _type == EntryType.expense && _reimbursable,
-      refundedAmount: _type == EntryType.expense
-          ? _settledRefundTotal.clamp(0.0, _amount).toDouble()
+      refundedBaseAmount: _type == EntryType.expense
+          ? _refunds
+                .where((refund) => refund.isSettledRefund)
+                .fold<double>(0, (total, refund) => total + refund.baseAmount)
+                .clamp(0.0, _baseAmount)
+                .toDouble()
           : 0,
     );
   }
@@ -589,7 +1050,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       );
       return false;
     }
-    if (_refundTotal > _amount + 0.0001 ||
+    if (_refundTotal > _amount + currencyAmountTolerance(_currencyCode) ||
         (_type != EntryType.expense && _refunds.isNotEmpty)) {
       return false;
     }
@@ -599,6 +1060,9 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       isNew: false,
       refunds: _refunds,
       attachments: _attachments,
+      rememberRateCurrencyCode: _rememberRate ? _currencyCode : null,
+      rememberRateToBase: _rememberRate ? _baseAmount / _amount : null,
+      rememberRateEffectiveDate: _rememberRate ? _occurredAt : null,
     );
     if (mounted) {
       _saving = false;

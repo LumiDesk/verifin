@@ -1575,5 +1575,58 @@
       "base": {"type": "String"}
     }
   },
-  "exchangeRateSaved": "Exchange rate saved"
+  "exchangeRateSaved": "Exchange rate saved",
+  "entryCurrencyLabel": "Transaction currency",
+  "entryCurrencyPickTitle": "Choose transaction currency",
+  "entryOriginalAmountLabel": "Original amount",
+  "entryAccountAmountExpense": "Actual account charge",
+  "entryAccountAmountIncome": "Actual account credit",
+  "entryLedgerAmountLabel": "Recorded in ledger",
+  "entryTransferOutAmount": "Amount sent",
+  "entryTransferInAmount": "Amount received",
+  "entryRateLabel": "Conversion rate",
+  "entryRateEquation": "1 {source} = {rate} {target}",
+  "@entryRateEquation": {
+    "placeholders": {
+      "source": {"type": "String"},
+      "rate": {"type": "String"},
+      "target": {"type": "String"}
+    }
+  },
+  "entryRateEditTitle": "How many {target} equal 1 {source}?",
+  "@entryRateEditTitle": {
+    "placeholders": {
+      "source": {"type": "String"},
+      "target": {"type": "String"}
+    }
+  },
+  "entryMissingRate": "A local rate for {currencies} is missing. Enter the actual amount or add a rate first.",
+  "@entryMissingRate": {
+    "placeholders": {"currencies": {"type": "String"}}
+  },
+  "entryRememberRate": "Remember as rate for this date",
+  "entryRememberRateHint": "Off by default. When enabled, this transaction's rate is saved to the current ledger rate table.",
+  "entryConversionSummary": "Amount summary",
+  "entryConversionSourceRateTable": "Calculated from a local rate. Tap an amount to adjust it.",
+  "entryConversionSourceManual": "Amounts were adjusted for this transaction and will be frozen for historical reports.",
+  "entryAmountInputTitle": "Enter {label} ({currency})",
+  "@entryAmountInputTitle": {
+    "placeholders": {
+      "label": {"type": "String"},
+      "currency": {"type": "String"}
+    }
+  },
+  "entryCurrencySaveMissing": "Complete the actual amounts required for this multi-currency transaction first.",
+  "refundAccountAmountLabel": "Actual account credit",
+  "refundBaseAmountLabel": "Base-currency offset",
+  "refundCurrencyLockedHint": "The refund keeps the original expense currency and cannot be changed.",
+  "recurringRatePolicyLabel": "Multi-currency conversion",
+  "recurringRatePolicyLatest": "Use latest local rate each time",
+  "recurringRatePolicyFixed": "Keep current amounts fixed",
+  "recurringMissingRate": "Rate required",
+  "recurringMissingRateCount": "{count} rules are waiting for a rate before they can be posted",
+  "@recurringMissingRateCount": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "recurringRetryNow": "Post due entries now"
 }

@@ -432,11 +432,6 @@ Future<void> editExchangeRate({
   );
 }
 
-String formatRateValue(double value) {
-  final fixed = value.toStringAsFixed(10);
-  return fixed.replaceFirst(RegExp(r'\.?0+$'), '');
-}
-
 String exchangeRateSourceLabel(
   AppLocalizations l10n,
   ExchangeRateSource source,

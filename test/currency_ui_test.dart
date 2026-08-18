@@ -6,6 +6,7 @@ import 'package:verifin/app/veri_fin_scope.dart';
 import 'package:verifin/local_storage/local_storage.dart';
 import 'package:verifin/pages/assets_pages.dart';
 import 'package:verifin/pages/currency_rates_page.dart';
+import 'package:verifin/pages/entry_detail_page.dart';
 import 'package:verifin/pages/ledger_books_page.dart';
 import 'package:verifin/pages/sheets.dart';
 
@@ -168,5 +169,107 @@ void main() {
       controller.activeBook.currencySetupStatus,
       CurrencySetupStatus.confirmed,
     );
+  });
+
+  testWidgets('外币普通交易同时保存原币、账户金额和冻结本位币金额', (tester) async {
+    final controller = await makeController();
+    controller.addAccount(
+      Account(
+        id: 'usd-cash',
+        bookId: controller.activeBook.id,
+        name: '美元现金',
+        type: AccountType.cash,
+        groupId: null,
+        initialBalance: 100,
+        iconCode: 'cash',
+        note: '',
+        includeInAssets: true,
+        hidden: false,
+        currencyCode: 'USD',
+      ),
+    );
+    await controller.saveExchangeRateDraft(
+      currencyCode: 'USD',
+      effectiveDate: DateTime.now(),
+      rateToBase: 7.2,
+    );
+    await pumpPage(
+      tester,
+      controller,
+      const EntryDetailPage(initialAmount: 10, initialAccountId: 'usd-cash'),
+    );
+
+    expect(find.text('交易币种: USD'), findsOneWidget);
+    expect(find.byKey(const Key('entry_base_amount')), findsOneWidget);
+    expect(find.text('CNY 72'), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const Key('save_entry_button')));
+    await tester.tap(find.byKey(const Key('save_entry_button')));
+    await tester.pumpAndSettle();
+
+    final saved = controller.entries.single;
+    expect(saved.amount, 10);
+    expect(saved.currencyCode, 'USD');
+    expect(saved.accountAmount, 10);
+    expect(saved.baseAmount, 72);
+    expect(saved.conversionSource, ConversionSource.rateTable);
+  });
+
+  testWidgets('跨币种转账显示并保存两端真实金额', (tester) async {
+    final controller = await makeController();
+    controller
+      ..addAccount(
+        Account(
+          id: 'usd-cash',
+          bookId: controller.activeBook.id,
+          name: '美元现金',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 100,
+          iconCode: 'cash',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+          currencyCode: 'USD',
+        ),
+      )
+      ..addAccount(
+        Account(
+          id: 'cny-cash',
+          bookId: controller.activeBook.id,
+          name: '人民币现金',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 0,
+          iconCode: 'cash',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+        ),
+      );
+    await controller.saveExchangeRateDraft(
+      currencyCode: 'USD',
+      effectiveDate: DateTime.now(),
+      rateToBase: 7.2,
+    );
+    await pumpPage(
+      tester,
+      controller,
+      const EntryDetailPage(initialAmount: 10, initialAccountId: 'usd-cash'),
+    );
+    await tester.tap(find.text('转账'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('entry_to_account_amount')), findsOneWidget);
+    expect(find.text('CNY 72'), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const Key('save_entry_button')));
+    await tester.tap(find.byKey(const Key('save_entry_button')));
+    await tester.pumpAndSettle();
+
+    final saved = controller.entries.single;
+    expect(saved.type, EntryType.transfer);
+    expect(saved.currencyCode, 'USD');
+    expect(saved.accountAmount, 10);
+    expect(saved.toAccountAmount, 72);
+    expect(saved.baseAmount, 0);
   });
 }

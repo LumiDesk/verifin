@@ -7225,6 +7225,174 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'汇率已保存'**
   String get exchangeRateSaved;
+
+  /// No description provided for @entryCurrencyLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'交易币种'**
+  String get entryCurrencyLabel;
+
+  /// No description provided for @entryCurrencyPickTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择交易币种'**
+  String get entryCurrencyPickTitle;
+
+  /// No description provided for @entryOriginalAmountLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'原币金额'**
+  String get entryOriginalAmountLabel;
+
+  /// No description provided for @entryAccountAmountExpense.
+  ///
+  /// In zh, this message translates to:
+  /// **'账户实际扣款'**
+  String get entryAccountAmountExpense;
+
+  /// No description provided for @entryAccountAmountIncome.
+  ///
+  /// In zh, this message translates to:
+  /// **'账户实际入账'**
+  String get entryAccountAmountIncome;
+
+  /// No description provided for @entryLedgerAmountLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'计入账本'**
+  String get entryLedgerAmountLabel;
+
+  /// No description provided for @entryTransferOutAmount.
+  ///
+  /// In zh, this message translates to:
+  /// **'转出金额'**
+  String get entryTransferOutAmount;
+
+  /// No description provided for @entryTransferInAmount.
+  ///
+  /// In zh, this message translates to:
+  /// **'转入金额'**
+  String get entryTransferInAmount;
+
+  /// No description provided for @entryRateLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'换算汇率'**
+  String get entryRateLabel;
+
+  /// No description provided for @entryRateEquation.
+  ///
+  /// In zh, this message translates to:
+  /// **'1 {source} = {rate} {target}'**
+  String entryRateEquation(String source, String rate, String target);
+
+  /// No description provided for @entryRateEditTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'1 {source} 等于多少 {target}'**
+  String entryRateEditTitle(String source, String target);
+
+  /// No description provided for @entryMissingRate.
+  ///
+  /// In zh, this message translates to:
+  /// **'缺少 {currencies} 的本地汇率，请填写实际金额或先维护汇率'**
+  String entryMissingRate(String currencies);
+
+  /// No description provided for @entryRememberRate.
+  ///
+  /// In zh, this message translates to:
+  /// **'记住为当日汇率'**
+  String get entryRememberRate;
+
+  /// No description provided for @entryRememberRateHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'默认关闭；开启后会把本单折算价保存到当前账本的汇率表。'**
+  String get entryRememberRateHint;
+
+  /// No description provided for @entryConversionSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'金额摘要'**
+  String get entryConversionSummary;
+
+  /// No description provided for @entryConversionSourceRateTable.
+  ///
+  /// In zh, this message translates to:
+  /// **'已按本地汇率自动换算，可点击金额修改'**
+  String get entryConversionSourceRateTable;
+
+  /// No description provided for @entryConversionSourceManual.
+  ///
+  /// In zh, this message translates to:
+  /// **'本单金额已手动调整，历史统计将冻结保存值'**
+  String get entryConversionSourceManual;
+
+  /// No description provided for @entryAmountInputTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'填写 {label}（{currency}）'**
+  String entryAmountInputTitle(String label, String currency);
+
+  /// No description provided for @entryCurrencySaveMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'请先补齐跨币种交易所需的实际金额'**
+  String get entryCurrencySaveMissing;
+
+  /// No description provided for @refundAccountAmountLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'账户实际到账'**
+  String get refundAccountAmountLabel;
+
+  /// No description provided for @refundBaseAmountLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'本位币冲抵额'**
+  String get refundBaseAmountLabel;
+
+  /// No description provided for @refundCurrencyLockedHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'退款原币沿用原支出，不可更改。'**
+  String get refundCurrencyLockedHint;
+
+  /// No description provided for @recurringRatePolicyLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'跨币种换算'**
+  String get recurringRatePolicyLabel;
+
+  /// No description provided for @recurringRatePolicyLatest.
+  ///
+  /// In zh, this message translates to:
+  /// **'每次使用最新本地汇率'**
+  String get recurringRatePolicyLatest;
+
+  /// No description provided for @recurringRatePolicyFixed.
+  ///
+  /// In zh, this message translates to:
+  /// **'固定当前金额'**
+  String get recurringRatePolicyFixed;
+
+  /// No description provided for @recurringMissingRate.
+  ///
+  /// In zh, this message translates to:
+  /// **'待补汇率'**
+  String get recurringMissingRate;
+
+  /// No description provided for @recurringMissingRateCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'有 {count} 条规则因缺少汇率等待补记'**
+  String recurringMissingRateCount(int count);
+
+  /// No description provided for @recurringRetryNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'立即补记'**
+  String get recurringRetryNow;
 }
 
 class _AppLocalizationsDelegate

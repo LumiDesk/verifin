@@ -1531,6 +1531,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     required bool isNew,
     List<LedgerEntry> refunds = const <LedgerEntry>[],
     List<Attachment> attachments = const <Attachment>[],
+    String? rememberRateCurrencyCode,
+    double? rememberRateToBase,
+    DateTime? rememberRateEffectiveDate,
   }) async {
     final currentIndex = _entries.indexWhere((item) => item.id == entry.id);
     if ((isNew && currentIndex != -1) || (!isNew && currentIndex == -1)) {
@@ -1539,13 +1542,20 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     if (!isNew && _entries[currentIndex].bookId != entry.bookId) {
       return false;
     }
+    final book = ledgerBooks
+        .where((item) => item.id == entry.bookId)
+        .firstOrNull;
+    if (book == null || !_validEntryCurrencyAmounts(entry, book)) {
+      return false;
+    }
     if (refunds.any(
           (refund) =>
               refund.type != EntryType.refund ||
               refund.refundOf != entry.id ||
               refund.bookId != entry.bookId ||
               refund.currencyCode != entry.currencyCode ||
-              refund.amount <= 0,
+              refund.amount <= 0 ||
+              !_validEntryCurrencyAmounts(refund, book),
         ) ||
         attachments.any((attachment) => attachment.entryId != entry.id)) {
       return false;
@@ -1603,10 +1613,59 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         if (attachment.entryId != entry.id) attachment,
       ...attachments,
     ];
+    List<ExchangeRate>? nextRates;
+    if (rememberRateCurrencyCode != null ||
+        rememberRateToBase != null ||
+        rememberRateEffectiveDate != null) {
+      if (rememberRateCurrencyCode == null ||
+          rememberRateToBase == null ||
+          rememberRateEffectiveDate == null) {
+        return false;
+      }
+      final code = rememberRateCurrencyCode.trim().toUpperCase();
+      final baseCode = book.baseCurrencyCode.toUpperCase();
+      if (book.currencySetupStatus != CurrencySetupStatus.confirmed ||
+          !CurrencyCatalog.isSupported(code) ||
+          code == baseCode ||
+          !isValidExchangeRate(rememberRateToBase)) {
+        return false;
+      }
+      final effectiveDate = dateOnly(rememberRateEffectiveDate);
+      final existingIndex = _exchangeRates.indexWhere(
+        (rate) =>
+            rate.bookId == entry.bookId &&
+            rate.baseCurrencyCode == baseCode &&
+            rate.currencyCode == code &&
+            currencyDateKey(rate.effectiveDate) ==
+                currencyDateKey(effectiveDate),
+      );
+      final now = DateTime.now();
+      final existing = existingIndex == -1
+          ? null
+          : _exchangeRates[existingIndex];
+      final candidate = ExchangeRate(
+        id: existing?.id ?? _generateId('rate'),
+        bookId: entry.bookId,
+        baseCurrencyCode: baseCode,
+        currencyCode: code,
+        effectiveDate: effectiveDate,
+        rateToBase: rememberRateToBase,
+        source: ExchangeRateSource.manual,
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now,
+      );
+      nextRates = List<ExchangeRate>.of(_exchangeRates);
+      if (existingIndex == -1) {
+        nextRates.add(candidate);
+      } else {
+        nextRates[existingIndex] = candidate;
+      }
+    }
     try {
       await _repository.saveEntryAggregate(
         entries: nextEntries,
         attachments: nextAttachments,
+        exchangeRates: nextRates,
       );
     } catch (error, stackTrace) {
       _handlePersistError(error, stackTrace);
@@ -1619,9 +1678,64 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _attachments
       ..clear()
       ..addAll(nextAttachments);
+    if (nextRates != null) {
+      _exchangeRates
+        ..clear()
+        ..addAll(nextRates);
+    }
     notifyListeners();
     if (hasNewEntry) {
       onEntryAdded?.call();
+    }
+    return true;
+  }
+
+  bool _validEntryCurrencyAmounts(LedgerEntry entry, LedgerBook book) {
+    bool positive(double? value) =>
+        value != null && value.isFinite && value > 0;
+    bool nonNegative(double value) => value.isFinite && value >= 0;
+    Account? accountFor(String? id) {
+      if (id == null || id.isEmpty) return null;
+      return _accounts
+          .where(
+            (account) => account.id == id && account.bookId == entry.bookId,
+          )
+          .firstOrNull;
+    }
+
+    final code = entry.currencyCode.toUpperCase();
+    if (!CurrencyCatalog.isSupported(code) ||
+        !positive(entry.amount) ||
+        !nonNegative(entry.fee)) {
+      return false;
+    }
+    final account = accountFor(entry.accountId);
+    final toAccount = accountFor(entry.toAccountId);
+    if (entry.accountId.isEmpty) {
+      if (entry.accountAmount != null) return false;
+    } else if (!positive(entry.accountAmount)) {
+      return false;
+    }
+    if (entry.toAccountId == null || entry.toAccountId!.isEmpty) {
+      if (entry.toAccountAmount != null) return false;
+    } else if (!positive(entry.toAccountAmount)) {
+      return false;
+    }
+    if (entry.type == EntryType.transfer) {
+      if (!isZeroCurrencyAmount(entry.baseAmount, book.baseCurrencyCode) ||
+          entry.accountId.isEmpty &&
+              (entry.toAccountId == null || entry.toAccountId!.isEmpty) ||
+          account != null && code != account.currencyCode ||
+          entry.accountId.isEmpty &&
+              toAccount != null &&
+              code != toAccount.currencyCode) {
+        return false;
+      }
+    } else if (!positive(entry.baseAmount) || entry.toAccountId != null) {
+      return false;
+    }
+    if (entry.type != EntryType.transfer && entry.fee != 0) {
+      return false;
     }
     return true;
   }

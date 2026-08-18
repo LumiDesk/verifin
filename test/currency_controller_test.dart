@@ -383,6 +383,62 @@ void main() {
     expect(accountDeltaForEntry(refund, 'cny-account'), 370);
     controller.dispose();
   });
+
+  test('交易可与记住的当日汇率原子保存并覆盖同日记录', () async {
+    final repository = InMemoryLedgerRepository();
+    final controller = await controllerWith(repository);
+    final occurredAt = DateTime(2026, 8, 18, 20, 30);
+    final entry = LedgerEntry(
+      id: 'foreign-cash',
+      bookId: controller.activeBook.id,
+      type: EntryType.expense,
+      amount: 10,
+      currencyCode: 'USD',
+      accountAmount: null,
+      baseAmount: 72.35,
+      conversionSource: ConversionSource.manual,
+      categoryId: 'dining',
+      accountId: '',
+      note: '',
+      occurredAt: occurredAt,
+    );
+
+    expect(
+      await controller.saveEntryAggregateDraft(
+        entry: entry,
+        isNew: true,
+        rememberRateCurrencyCode: 'USD',
+        rememberRateToBase: 7.235,
+        rememberRateEffectiveDate: occurredAt,
+      ),
+      isTrue,
+    );
+    final rateId = controller.exchangeRates.single.id;
+    expect(
+      controller.exchangeRates.single.effectiveDate,
+      DateTime(2026, 8, 18),
+    );
+    expect(controller.exchangeRates.single.rateToBase, 7.235);
+
+    expect(
+      await controller.saveEntryAggregateDraft(
+        entry: entry.copyWith(baseAmount: 73),
+        isNew: false,
+        rememberRateCurrencyCode: 'USD',
+        rememberRateToBase: 7.3,
+        rememberRateEffectiveDate: occurredAt,
+      ),
+      isTrue,
+    );
+    expect(controller.exchangeRates.single.id, rateId);
+    expect(controller.exchangeRates.single.rateToBase, 7.3);
+
+    final restarted = await controllerWith(repository);
+    expect(restarted.entries.single.baseAmount, 73);
+    expect(restarted.exchangeRates.single.rateToBase, 7.3);
+    controller.dispose();
+    restarted.dispose();
+  });
 }
 
 class _FailingReplaceRepository extends InMemoryLedgerRepository {

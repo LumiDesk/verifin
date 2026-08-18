@@ -2511,5 +2511,58 @@
       "base": {"type": "String"}
     }
   },
-  "exchangeRateSaved": "汇率已保存"
+  "exchangeRateSaved": "汇率已保存",
+  "entryCurrencyLabel": "交易币种",
+  "entryCurrencyPickTitle": "选择交易币种",
+  "entryOriginalAmountLabel": "原币金额",
+  "entryAccountAmountExpense": "账户实际扣款",
+  "entryAccountAmountIncome": "账户实际入账",
+  "entryLedgerAmountLabel": "计入账本",
+  "entryTransferOutAmount": "转出金额",
+  "entryTransferInAmount": "转入金额",
+  "entryRateLabel": "换算汇率",
+  "entryRateEquation": "1 {source} = {rate} {target}",
+  "@entryRateEquation": {
+    "placeholders": {
+      "source": {"type": "String"},
+      "rate": {"type": "String"},
+      "target": {"type": "String"}
+    }
+  },
+  "entryRateEditTitle": "1 {source} 等于多少 {target}",
+  "@entryRateEditTitle": {
+    "placeholders": {
+      "source": {"type": "String"},
+      "target": {"type": "String"}
+    }
+  },
+  "entryMissingRate": "缺少 {currencies} 的本地汇率，请填写实际金额或先维护汇率",
+  "@entryMissingRate": {
+    "placeholders": {"currencies": {"type": "String"}}
+  },
+  "entryRememberRate": "记住为当日汇率",
+  "entryRememberRateHint": "默认关闭；开启后会把本单折算价保存到当前账本的汇率表。",
+  "entryConversionSummary": "金额摘要",
+  "entryConversionSourceRateTable": "已按本地汇率自动换算，可点击金额修改",
+  "entryConversionSourceManual": "本单金额已手动调整，历史统计将冻结保存值",
+  "entryAmountInputTitle": "填写 {label}（{currency}）",
+  "@entryAmountInputTitle": {
+    "placeholders": {
+      "label": {"type": "String"},
+      "currency": {"type": "String"}
+    }
+  },
+  "entryCurrencySaveMissing": "请先补齐跨币种交易所需的实际金额",
+  "refundAccountAmountLabel": "账户实际到账",
+  "refundBaseAmountLabel": "本位币冲抵额",
+  "refundCurrencyLockedHint": "退款原币沿用原支出，不可更改。",
+  "recurringRatePolicyLabel": "跨币种换算",
+  "recurringRatePolicyLatest": "每次使用最新本地汇率",
+  "recurringRatePolicyFixed": "固定当前金额",
+  "recurringMissingRate": "待补汇率",
+  "recurringMissingRateCount": "有 {count} 条规则因缺少汇率等待补记",
+  "@recurringMissingRateCount": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "recurringRetryNow": "立即补记"
 }

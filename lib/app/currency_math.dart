@@ -61,6 +61,13 @@ String formatMoney(
   };
 }
 
+/// Formats a rate with up to ten decimal places without amount rounding.
+String formatRateValue(num value) {
+  if (!value.isFinite) return '—';
+  final fixed = value.toDouble().toStringAsFixed(10);
+  return fixed.replaceFirst(RegExp(r'\.?0+$'), '');
+}
+
 /// 查找某一日可使用的最新汇率；绝不使用未来汇率。
 ExchangeRate? exchangeRateAt({
   required String bookId,

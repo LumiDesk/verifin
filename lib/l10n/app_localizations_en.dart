@@ -4054,4 +4054,103 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exchangeRateSaved => 'Exchange rate saved';
+
+  @override
+  String get entryCurrencyLabel => 'Transaction currency';
+
+  @override
+  String get entryCurrencyPickTitle => 'Choose transaction currency';
+
+  @override
+  String get entryOriginalAmountLabel => 'Original amount';
+
+  @override
+  String get entryAccountAmountExpense => 'Actual account charge';
+
+  @override
+  String get entryAccountAmountIncome => 'Actual account credit';
+
+  @override
+  String get entryLedgerAmountLabel => 'Recorded in ledger';
+
+  @override
+  String get entryTransferOutAmount => 'Amount sent';
+
+  @override
+  String get entryTransferInAmount => 'Amount received';
+
+  @override
+  String get entryRateLabel => 'Conversion rate';
+
+  @override
+  String entryRateEquation(String source, String rate, String target) {
+    return '1 $source = $rate $target';
+  }
+
+  @override
+  String entryRateEditTitle(String source, String target) {
+    return 'How many $target equal 1 $source?';
+  }
+
+  @override
+  String entryMissingRate(String currencies) {
+    return 'A local rate for $currencies is missing. Enter the actual amount or add a rate first.';
+  }
+
+  @override
+  String get entryRememberRate => 'Remember as rate for this date';
+
+  @override
+  String get entryRememberRateHint =>
+      'Off by default. When enabled, this transaction\'s rate is saved to the current ledger rate table.';
+
+  @override
+  String get entryConversionSummary => 'Amount summary';
+
+  @override
+  String get entryConversionSourceRateTable =>
+      'Calculated from a local rate. Tap an amount to adjust it.';
+
+  @override
+  String get entryConversionSourceManual =>
+      'Amounts were adjusted for this transaction and will be frozen for historical reports.';
+
+  @override
+  String entryAmountInputTitle(String label, String currency) {
+    return 'Enter $label ($currency)';
+  }
+
+  @override
+  String get entryCurrencySaveMissing =>
+      'Complete the actual amounts required for this multi-currency transaction first.';
+
+  @override
+  String get refundAccountAmountLabel => 'Actual account credit';
+
+  @override
+  String get refundBaseAmountLabel => 'Base-currency offset';
+
+  @override
+  String get refundCurrencyLockedHint =>
+      'The refund keeps the original expense currency and cannot be changed.';
+
+  @override
+  String get recurringRatePolicyLabel => 'Multi-currency conversion';
+
+  @override
+  String get recurringRatePolicyLatest => 'Use latest local rate each time';
+
+  @override
+  String get recurringRatePolicyFixed => 'Keep current amounts fixed';
+
+  @override
+  String get recurringMissingRate => 'Rate required';
+
+  @override
+  String recurringMissingRateCount(int count) {
+    return '$count rules are waiting for a rate before they can be posted';
+  }
+
+  @override
+  String get recurringRetryNow => 'Post due entries now';
 }
