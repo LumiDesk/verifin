@@ -6943,6 +6943,288 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'未设置'**
   String get budgetCycleNotSet;
+
+  /// No description provided for @commonClear.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除'**
+  String get commonClear;
+
+  /// No description provided for @currencySearchHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索代码、名称或符号'**
+  String get currencySearchHint;
+
+  /// No description provided for @currencySearchEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有找到货币'**
+  String get currencySearchEmpty;
+
+  /// No description provided for @currencySearchEmptyDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'请尝试输入 ISO 代码或其他名称。'**
+  String get currencySearchEmptyDesc;
+
+  /// No description provided for @currencyPickerMeta.
+  ///
+  /// In zh, this message translates to:
+  /// **'符号 {symbol} · {digits} 位小数'**
+  String currencyPickerMeta(String symbol, int digits);
+
+  /// No description provided for @ledgerBaseCurrency.
+  ///
+  /// In zh, this message translates to:
+  /// **'账本本位币'**
+  String get ledgerBaseCurrency;
+
+  /// No description provided for @ledgerBaseCurrencyDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'预算、统计和总资产将统一以此货币展示。'**
+  String get ledgerBaseCurrencyDesc;
+
+  /// No description provided for @selectBaseCurrency.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择账本本位币'**
+  String get selectBaseCurrency;
+
+  /// No description provided for @selectAccountCurrency.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择账户币种'**
+  String get selectAccountCurrency;
+
+  /// No description provided for @selectRateCurrency.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择要维护汇率的货币'**
+  String get selectRateCurrency;
+
+  /// No description provided for @ledgerCurrencyLocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个账本已有财务数据，本位币已锁定。如需其他本位币，请新建账本。'**
+  String get ledgerCurrencyLocked;
+
+  /// No description provided for @ledgerCurrencyChangeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'更改本位币？'**
+  String get ledgerCurrencyChangeTitle;
+
+  /// No description provided for @ledgerCurrencyChangeMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'空账本将改用 {code}（{name}）；现有零余额账户也会一并改为该币种。'**
+  String ledgerCurrencyChangeMessage(String code, String name);
+
+  /// No description provided for @legacyCurrencySetupTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认现有金额的币种'**
+  String get legacyCurrencySetupTitle;
+
+  /// No description provided for @legacyCurrencySetupDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'这是升级前创建的账本。请先确认现有数字原本代表哪种货币，确认后才能添加外币账户和汇率。'**
+  String get legacyCurrencySetupDesc;
+
+  /// No description provided for @legacyCurrencyStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始确认'**
+  String get legacyCurrencyStart;
+
+  /// No description provided for @legacyCurrencyConfirmCurrent.
+  ///
+  /// In zh, this message translates to:
+  /// **'现有金额就是 {code}'**
+  String legacyCurrencyConfirmCurrent(String code);
+
+  /// No description provided for @legacyCurrencyChooseAnother.
+  ///
+  /// In zh, this message translates to:
+  /// **'现有金额其实是其他币种'**
+  String get legacyCurrencyChooseAnother;
+
+  /// No description provided for @legacyCurrencyConfirmTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'把现有金额解释为 {code}？'**
+  String legacyCurrencyConfirmTitle(String code);
+
+  /// No description provided for @legacyCurrencyConfirmMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'将更新 {accounts} 个账户、{entries} 笔交易、{rules} 条周期规则和 {budgets} 项预算设置。所有数值保持不变，只把币种标签解释为 {code}；确认后不可再次重解释。'**
+  String legacyCurrencyConfirmMessage(
+    int accounts,
+    int entries,
+    int rules,
+    int budgets,
+    String code,
+  );
+
+  /// No description provided for @legacyCurrencyApply.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认并应用'**
+  String get legacyCurrencyApply;
+
+  /// No description provided for @legacyCurrencySaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'已将现有金额解释为 {code}'**
+  String legacyCurrencySaved(String code);
+
+  /// No description provided for @accountBalanceCurrencyLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'初始余额（{code}）'**
+  String accountBalanceCurrencyLabel(String code);
+
+  /// No description provided for @accountCurrencyLocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'账户已有余额、信用额度或交易记录，币种已锁定。'**
+  String get accountCurrencyLocked;
+
+  /// No description provided for @balanceAdjustMissingRate.
+  ///
+  /// In zh, this message translates to:
+  /// **'缺少 {code} 对本位币的有效汇率，无法生成余额调整交易。'**
+  String balanceAdjustMissingRate(String code);
+
+  /// No description provided for @currencyRatesTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'货币与汇率'**
+  String get currencyRatesTitle;
+
+  /// No description provided for @currencyRatesOfflineDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'汇率保存在本机并由你维护。应用不会联网获取或自动刷新汇率；修改汇率也不会改变已保存交易的历史统计。'**
+  String get currencyRatesOfflineDesc;
+
+  /// No description provided for @exchangeRateCurrencies.
+  ///
+  /// In zh, this message translates to:
+  /// **'外币汇率'**
+  String get exchangeRateCurrencies;
+
+  /// No description provided for @exchangeRateAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加汇率'**
+  String get exchangeRateAdd;
+
+  /// No description provided for @exchangeRateEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有外币汇率'**
+  String get exchangeRateEmpty;
+
+  /// No description provided for @exchangeRateEmptyDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加外币后，按日期维护它对账本本位币的汇率。'**
+  String get exchangeRateEmptyDesc;
+
+  /// No description provided for @exchangeRateEquation.
+  ///
+  /// In zh, this message translates to:
+  /// **'1 {currency} = {rate} {base}'**
+  String exchangeRateEquation(String currency, String rate, String base);
+
+  /// No description provided for @exchangeRateNotSet.
+  ///
+  /// In zh, this message translates to:
+  /// **'尚未设置汇率'**
+  String get exchangeRateNotSet;
+
+  /// No description provided for @exchangeRateDateAndStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'{date} · {status}'**
+  String exchangeRateDateAndStatus(String date, String status);
+
+  /// No description provided for @exchangeRateStale.
+  ///
+  /// In zh, this message translates to:
+  /// **'可能已过期'**
+  String get exchangeRateStale;
+
+  /// No description provided for @exchangeRateSourceManual.
+  ///
+  /// In zh, this message translates to:
+  /// **'手动维护'**
+  String get exchangeRateSourceManual;
+
+  /// No description provided for @exchangeRateSourceImported.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入'**
+  String get exchangeRateSourceImported;
+
+  /// No description provided for @exchangeRateHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'{currency} 汇率历史'**
+  String exchangeRateHistory(String currency);
+
+  /// No description provided for @exchangeRateAgainst.
+  ///
+  /// In zh, this message translates to:
+  /// **'相对 {base}'**
+  String exchangeRateAgainst(String base);
+
+  /// No description provided for @exchangeRateHistoryEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有历史记录'**
+  String get exchangeRateHistoryEmpty;
+
+  /// No description provided for @exchangeRateHistoryEmptyDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'点击右上角加号添加第一条生效汇率。'**
+  String get exchangeRateHistoryEmptyDesc;
+
+  /// No description provided for @exchangeRateDeleteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除这条汇率？'**
+  String get exchangeRateDeleteTitle;
+
+  /// No description provided for @exchangeRateDeleteMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'已保存交易不会改变，但资产估值或待生成的周期交易之后可能缺少汇率。'**
+  String get exchangeRateDeleteMessage;
+
+  /// No description provided for @exchangeRateEffectiveDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择汇率生效日期'**
+  String get exchangeRateEffectiveDate;
+
+  /// No description provided for @exchangeRateInputTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'1 {currency} 等于多少 {base}'**
+  String exchangeRateInputTitle(String currency, String base);
+
+  /// No description provided for @exchangeRateSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'汇率已保存'**
+  String get exchangeRateSaved;
 }
 
 class _AppLocalizationsDelegate

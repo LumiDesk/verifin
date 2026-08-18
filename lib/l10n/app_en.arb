@@ -1468,5 +1468,112 @@
       }
     }
   },
-  "budgetCycleNotSet": "Not set"
+  "budgetCycleNotSet": "Not set",
+  "commonClear": "Clear",
+  "currencySearchHint": "Search by code, name, or symbol",
+  "currencySearchEmpty": "No currency found",
+  "currencySearchEmptyDesc": "Try an ISO code or another currency name.",
+  "currencyPickerMeta": "Symbol {symbol} · {digits} decimal places",
+  "@currencyPickerMeta": {
+    "placeholders": {
+      "symbol": {"type": "String"},
+      "digits": {"type": "int"}
+    }
+  },
+  "ledgerBaseCurrency": "Ledger base currency",
+  "ledgerBaseCurrencyDesc": "Budgets, reports, and total assets use this currency.",
+  "selectBaseCurrency": "Select ledger base currency",
+  "selectAccountCurrency": "Select account currency",
+  "selectRateCurrency": "Select a currency for exchange rates",
+  "ledgerCurrencyLocked": "This ledger contains financial data, so its base currency is locked. Create another ledger to use a different base currency.",
+  "ledgerCurrencyChangeTitle": "Change base currency?",
+  "ledgerCurrencyChangeMessage": "This empty ledger will use {code} ({name}); its zero-balance accounts will change to the same currency.",
+  "@ledgerCurrencyChangeMessage": {
+    "placeholders": {
+      "code": {"type": "String"},
+      "name": {"type": "String"}
+    }
+  },
+  "legacyCurrencySetupTitle": "Confirm the currency of existing amounts",
+  "legacyCurrencySetupDesc": "This ledger was created before multi-currency support. Confirm what its existing numbers represent before adding foreign-currency accounts or rates.",
+  "legacyCurrencyStart": "Confirm currency",
+  "legacyCurrencyConfirmCurrent": "Existing amounts are {code}",
+  "@legacyCurrencyConfirmCurrent": {
+    "placeholders": {"code": {"type": "String"}}
+  },
+  "legacyCurrencyChooseAnother": "Existing amounts are another currency",
+  "legacyCurrencyConfirmTitle": "Interpret existing amounts as {code}?",
+  "@legacyCurrencyConfirmTitle": {
+    "placeholders": {"code": {"type": "String"}}
+  },
+  "legacyCurrencyConfirmMessage": "This updates {accounts} accounts, {entries} transactions, {rules} recurring rules, and {budgets} budget settings. Every number stays unchanged; only its currency is interpreted as {code}. This cannot be reinterpreted again.",
+  "@legacyCurrencyConfirmMessage": {
+    "placeholders": {
+      "accounts": {"type": "int"},
+      "entries": {"type": "int"},
+      "rules": {"type": "int"},
+      "budgets": {"type": "int"},
+      "code": {"type": "String"}
+    }
+  },
+  "legacyCurrencyApply": "Confirm and apply",
+  "legacyCurrencySaved": "Existing amounts are now interpreted as {code}",
+  "@legacyCurrencySaved": {
+    "placeholders": {"code": {"type": "String"}}
+  },
+  "accountBalanceCurrencyLabel": "Opening balance ({code})",
+  "@accountBalanceCurrencyLabel": {
+    "placeholders": {"code": {"type": "String"}}
+  },
+  "accountCurrencyLocked": "The account currency is locked because it has a balance, credit limit, or transaction history.",
+  "balanceAdjustMissingRate": "No valid {code}-to-base exchange rate is available, so the balance adjustment transaction cannot be created.",
+  "@balanceAdjustMissingRate": {
+    "placeholders": {"code": {"type": "String"}}
+  },
+  "currencyRatesTitle": "Currencies & rates",
+  "currencyRatesOfflineDesc": "Rates are stored on this device and maintained by you. The app never downloads or refreshes them, and changing a rate does not rewrite historical transaction reports.",
+  "exchangeRateCurrencies": "Foreign currency rates",
+  "exchangeRateAdd": "Add exchange rate",
+  "exchangeRateEmpty": "No foreign exchange rates yet",
+  "exchangeRateEmptyDesc": "Add a currency and maintain its rate against the ledger base currency by date.",
+  "exchangeRateEquation": "1 {currency} = {rate} {base}",
+  "@exchangeRateEquation": {
+    "placeholders": {
+      "currency": {"type": "String"},
+      "rate": {"type": "String"},
+      "base": {"type": "String"}
+    }
+  },
+  "exchangeRateNotSet": "No rate set",
+  "exchangeRateDateAndStatus": "{date} · {status}",
+  "@exchangeRateDateAndStatus": {
+    "placeholders": {
+      "date": {"type": "String"},
+      "status": {"type": "String"}
+    }
+  },
+  "exchangeRateStale": "May be outdated",
+  "exchangeRateSourceManual": "Manual",
+  "exchangeRateSourceImported": "Imported",
+  "exchangeRateHistory": "{currency} rate history",
+  "@exchangeRateHistory": {
+    "placeholders": {"currency": {"type": "String"}}
+  },
+  "exchangeRateAgainst": "Against {base}",
+  "@exchangeRateAgainst": {
+    "placeholders": {"base": {"type": "String"}}
+  },
+  "exchangeRateHistoryEmpty": "No rate history yet",
+  "exchangeRateHistoryEmptyDesc": "Use the add button to create the first effective rate.",
+  "exchangeRateDeleteTitle": "Delete this exchange rate?",
+  "exchangeRateDeleteMessage": "Saved transactions will not change, but asset valuation or pending recurring transactions may later be missing a rate.",
+  "exchangeRateEffectiveDate": "Select effective date",
+  "exchangeRateInputTitle": "How many {base} equal 1 {currency}?",
+  "@exchangeRateInputTitle": {
+    "placeholders": {
+      "currency": {"type": "String"},
+      "base": {"type": "String"}
+    }
+  },
+  "exchangeRateSaved": "Exchange rate saved"
 }

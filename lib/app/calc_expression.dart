@@ -10,7 +10,14 @@ const String _multiply = '×';
 const String _divide = '÷';
 
 /// 求值 [input]（面板原始输入串，可能含 `×`/`÷`）。不完整或无效时返回 `null`。
-double? evaluateAmountExpression(String input) {
+double? evaluateAmountExpression(String input, {int decimalPlaces = 2}) {
+  if (decimalPlaces < 0 || decimalPlaces > 12) {
+    throw ArgumentError.value(
+      decimalPlaces,
+      'decimalPlaces',
+      'must be between 0 and 12',
+    );
+  }
   if (input.isEmpty) {
     return null;
   }
@@ -84,9 +91,24 @@ double? evaluateAmountExpression(String input) {
         ? foldedNumbers[i + 1]
         : -foldedNumbers[i + 1];
   }
-  // 金额是钱，把结果规整到「分」，消除浮点尾差
-  // （如 0.1+0.2 得 0.30 而非 0.30000000000000004 存进库）。
-  return (result * 100).roundToDouble() / 100;
+  // 普通金额默认规整到「分」；汇率输入可显式提高精度。两者都消除算式产生的
+  // 浮点尾差（如 0.1+0.2）。
+  final factor = switch (decimalPlaces) {
+    0 => 1.0,
+    1 => 10.0,
+    2 => 100.0,
+    3 => 1000.0,
+    4 => 10000.0,
+    5 => 100000.0,
+    6 => 1000000.0,
+    7 => 10000000.0,
+    8 => 100000000.0,
+    9 => 1000000000.0,
+    10 => 10000000000.0,
+    11 => 100000000000.0,
+    _ => 1000000000000.0,
+  };
+  return (result * factor).roundToDouble() / factor;
 }
 
 /// [input] 去掉首位负号后是否仍含运算符——含则为「算式」，面板据此展示结果预览。

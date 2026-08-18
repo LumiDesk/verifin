@@ -383,8 +383,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.add));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).last, '旅行账本');
-    await tester.tap(find.text('确认'));
+    await tester.enterText(
+      find.byKey(const Key('ledger_book_name_field')),
+      '旅行账本',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('ledger_book_save_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('返回'));
     await tester.pumpAndSettle();

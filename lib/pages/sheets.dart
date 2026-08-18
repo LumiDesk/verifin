@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../app/account_icon_assets.dart';
 import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
+import '../app/currency_catalog.dart';
+import '../app/currency_math.dart';
 import '../app/icon_catalog.dart';
 import '../app/entry_sheets.dart';
 import '../app/ledger_math.dart';
@@ -144,6 +146,372 @@ Future<T?> showOptionSheet<T>({
   );
 }
 
+/// 可搜索的离线 ISO 4217 法定货币选择器。列表按常用币种、调用方提供的
+/// [preferredCodes] 与代码顺序排列；取消返回 null。
+Future<CurrencyDefinition?> showCurrencyPickerSheet({
+  required BuildContext context,
+  required String title,
+  String? selectedCode,
+  Iterable<String> preferredCodes = const <String>[],
+  Iterable<String> excludedCodes = const <String>[],
+}) {
+  return showModalBottomSheet<CurrencyDefinition>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    backgroundColor: Theme.of(context).colorScheme.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(veriRadiusLg)),
+    ),
+    builder: (context) => _CurrencyPickerSheet(
+      title: title,
+      selectedCode: selectedCode?.toUpperCase(),
+      preferredCodes: preferredCodes.map((code) => code.toUpperCase()).toList(),
+      excludedCodes: excludedCodes.map((code) => code.toUpperCase()).toSet(),
+    ),
+  );
+}
+
+class _CurrencyPickerSheet extends StatefulWidget {
+  const _CurrencyPickerSheet({
+    required this.title,
+    required this.selectedCode,
+    required this.preferredCodes,
+    required this.excludedCodes,
+  });
+
+  final String title;
+  final String? selectedCode;
+  final List<String> preferredCodes;
+  final Set<String> excludedCodes;
+
+  @override
+  State<_CurrencyPickerSheet> createState() => _CurrencyPickerSheetState();
+}
+
+class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<CurrencyDefinition> get _currencies {
+    final result = CurrencyCatalog.search(
+      _query,
+    ).where((item) => !widget.excludedCodes.contains(item.code)).toList();
+    if (_query.trim().isNotEmpty || widget.preferredCodes.isEmpty) {
+      return result;
+    }
+    final preferredRank = <String, int>{
+      for (final item in widget.preferredCodes.indexed) item.$2: item.$1,
+    };
+    result.sort((a, b) {
+      final aRank = preferredRank[a.code];
+      final bRank = preferredRank[b.code];
+      if (aRank != null || bRank != null) {
+        return (aRank ?? preferredRank.length).compareTo(
+          bRank ?? preferredRank.length,
+        );
+      }
+      final aCommon = CurrencyCatalog.commonCodes.indexOf(a.code);
+      final bCommon = CurrencyCatalog.commonCodes.indexOf(b.code);
+      if (aCommon != -1 || bCommon != -1) {
+        return (aCommon == -1 ? CurrencyCatalog.commonCodes.length : aCommon)
+            .compareTo(
+              bCommon == -1 ? CurrencyCatalog.commonCodes.length : bCommon,
+            );
+      }
+      return a.code.compareTo(b.code);
+    });
+    return result;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final localeName = Localizations.localeOf(context).toLanguageTag();
+    final currencies = _currencies;
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          14,
+          0,
+          14,
+          16 + MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * 0.76,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                widget.title,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                key: const Key('currency_search_field'),
+                controller: _searchController,
+                autofocus: false,
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.search),
+                  hintText: l10n.currencySearchHint,
+                  suffixIcon: _query.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: l10n.commonClear,
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _query = '');
+                          },
+                          icon: const Icon(Icons.close),
+                        ),
+                ),
+                onChanged: (value) => setState(() => _query = value),
+              ),
+              const SizedBox(height: 10),
+              Expanded(
+                child: currencies.isEmpty
+                    ? EmptyState(
+                        icon: Icons.search_off,
+                        title: l10n.currencySearchEmpty,
+                        description: l10n.currencySearchEmptyDesc,
+                      )
+                    : ListView.separated(
+                        itemCount: currencies.length,
+                        separatorBuilder: (_, _) => const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final currency = currencies[index];
+                          final selected = currency.code == widget.selectedCode;
+                          return ListTile(
+                            key: Key('currency_option_${currency.code}'),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                            ),
+                            leading: SizedBox(
+                              width: 48,
+                              child: Text(
+                                currency.code,
+                                style: Theme.of(context).textTheme.titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.w800),
+                              ),
+                            ),
+                            title: Text(currency.nameForLocale(localeName)),
+                            subtitle: Text(
+                              l10n.currencyPickerMeta(
+                                currency.symbol,
+                                currency.minorUnit,
+                              ),
+                            ),
+                            trailing: selected
+                                ? const Icon(
+                                    Icons.check_circle,
+                                    color: veriRoyal,
+                                  )
+                                : null,
+                            onTap: () => Navigator.of(context).pop(currency),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 新建账本表单，同时收集名称与本位币。
+Future<({String name, String currencyCode})?> showLedgerBookEditorSheet({
+  required BuildContext context,
+  required String initialCurrencyCode,
+}) {
+  return showModalBottomSheet<({String name, String currencyCode})>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (context) =>
+        _LedgerBookEditorSheet(initialCurrencyCode: initialCurrencyCode),
+  );
+}
+
+class _LedgerBookEditorSheet extends StatefulWidget {
+  const _LedgerBookEditorSheet({required this.initialCurrencyCode});
+
+  final String initialCurrencyCode;
+
+  @override
+  State<_LedgerBookEditorSheet> createState() => _LedgerBookEditorSheetState();
+}
+
+class _LedgerBookEditorSheetState extends State<_LedgerBookEditorSheet> {
+  final TextEditingController _nameController = TextEditingController();
+  late String _currencyCode = widget.initialCurrencyCode;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController.addListener(_handleChanged);
+  }
+
+  @override
+  void dispose() {
+    _nameController
+      ..removeListener(_handleChanged)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _handleChanged() => setState(() {});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final currency = CurrencyCatalog.require(_currencyCode);
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          14,
+          0,
+          14,
+          16 + MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              l10n.bookAdd,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              key: const Key('ledger_book_name_field'),
+              controller: _nameController,
+              autofocus: true,
+              decoration: InputDecoration(labelText: l10n.bookNameLabel),
+            ),
+            const SizedBox(height: 10),
+            SelectField(
+              label: l10n.ledgerBaseCurrency,
+              value:
+                  '${currency.code} · ${currency.nameForLocale(Localizations.localeOf(context).toLanguageTag())}',
+              icon: Icons.currency_exchange,
+              onTap: _pickCurrency,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              l10n.ledgerBaseCurrencyDesc,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.55),
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                key: const Key('ledger_book_save_button'),
+                onPressed: _nameController.text.trim().isEmpty
+                    ? null
+                    : () => Navigator.of(context).pop((
+                        name: _nameController.text.trim(),
+                        currencyCode: _currencyCode,
+                      )),
+                child: Text(l10n.commonConfirm),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickCurrency() async {
+    final selected = await showCurrencyPickerSheet(
+      context: context,
+      title: AppLocalizations.of(context).selectBaseCurrency,
+      selectedCode: _currencyCode,
+    );
+    if (selected != null && mounted) {
+      setState(() => _currencyCode = selected.code);
+    }
+  }
+}
+
+enum _LegacyCurrencyAction { confirmCurrent, chooseAnother }
+
+/// 旧单币种账本的一次性确认流程。返回 true 表示账本已完成确认；取消或失败返回 false。
+Future<bool> confirmLegacyLedgerCurrency({
+  required BuildContext context,
+  required LedgerBook book,
+}) async {
+  if (book.currencySetupStatus == CurrencySetupStatus.confirmed) return true;
+  final l10n = AppLocalizations.of(context);
+  final action = await showOptionSheet<_LegacyCurrencyAction>(
+    context: context,
+    title: l10n.legacyCurrencySetupTitle,
+    values: _LegacyCurrencyAction.values,
+    selected: _LegacyCurrencyAction.confirmCurrent,
+    showSelectedMarker: false,
+    labelOf: (value) => switch (value) {
+      _LegacyCurrencyAction.confirmCurrent => l10n.legacyCurrencyConfirmCurrent(
+        book.baseCurrencyCode,
+      ),
+      _LegacyCurrencyAction.chooseAnother => l10n.legacyCurrencyChooseAnother,
+    },
+  );
+  if (!context.mounted || action == null) return false;
+
+  var code = book.baseCurrencyCode;
+  if (action == _LegacyCurrencyAction.chooseAnother) {
+    final selected = await showCurrencyPickerSheet(
+      context: context,
+      title: l10n.selectBaseCurrency,
+      selectedCode: code,
+    );
+    if (!context.mounted || selected == null) return false;
+    code = selected.code;
+  }
+
+  final controller = VeriFinScope.of(context);
+  final impact = controller.currencyReinterpretImpact(book.id);
+  final confirmed = await showConfirmDialog(
+    context,
+    title: l10n.legacyCurrencyConfirmTitle(code),
+    message: l10n.legacyCurrencyConfirmMessage(
+      impact.accounts,
+      impact.entries,
+      impact.recurringRules,
+      impact.budgetSettings,
+      code,
+    ),
+    confirmLabel: l10n.legacyCurrencyApply,
+  );
+  if (!context.mounted || !confirmed) return false;
+  final saved = await controller.reinterpretLegacyLedgerBookCurrency(
+    book.id,
+    code,
+  );
+  if (!context.mounted) return saved;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(saved ? l10n.legacyCurrencySaved(code) : l10n.saveFailed),
+    ),
+  );
+  return saved;
+}
+
 enum _BudgetOverrideAction { edit, clear }
 
 /// 总预算的单期覆盖入口。默认值在预算设置页管理；此处只修改或清除所选键月的
@@ -259,6 +627,7 @@ Future<double?> showNumberPadSheet(
   bool allowNegative = false,
   bool allowZero = false,
   double? maxAmount,
+  int maxFractionDigits = 2,
 }) {
   final hapticsEnabled = VeriFinScope.of(context).hapticsEnabled;
   return showModalBottomSheet<double>(
@@ -272,6 +641,7 @@ Future<double?> showNumberPadSheet(
       allowZero: allowZero,
       hapticsEnabled: hapticsEnabled,
       maxAmount: maxAmount,
+      maxFractionDigits: maxFractionDigits,
     ),
   );
 }
@@ -543,7 +913,7 @@ class _AccountPickerRow extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             Text(
-              formatAmount(balance),
+              formatMoney(balance, account.currencyCode),
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 color: accountBalanceColor(context, account, balance),
                 fontWeight: FontWeight.w800,

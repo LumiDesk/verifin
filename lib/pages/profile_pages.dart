@@ -8,6 +8,7 @@ import '../app/models.dart';
 import '../app/series_math.dart';
 import '../app/veri_fin_scope.dart';
 import 'category_management_page.dart';
+import 'currency_rates_page.dart';
 import 'data_management_page.dart';
 import 'ledger_books_page.dart';
 import 'profile_info_page.dart';
@@ -22,6 +23,7 @@ import 'widget_gallery_page.dart';
 // 「我的」页由多个子页面组成；各子页面拆到独立文件，这里作为聚合入口统一导出，
 // 以便既有 import 'profile_pages.dart' 的调用点无需改动（阶段 4.3 工程化拆分）。
 export 'category_management_page.dart';
+export 'currency_rates_page.dart';
 export 'ledger_books_page.dart';
 export 'profile_info_page.dart';
 export 'profile_widgets.dart';
@@ -250,6 +252,17 @@ class ProfilePage extends StatelessWidget {
                 onTap: () => Navigator.of(context).push<void>(
                   MaterialPageRoute<void>(
                     builder: (context) => const WidgetGalleryPage(),
+                  ),
+                ),
+              ),
+              _FeatureTileData(
+                icon: Icons.currency_exchange,
+                color: veriCyan,
+                label: AppLocalizations.of(context).currencyRatesTitle,
+                subtitle: controller.activeBook.baseCurrencyCode,
+                onTap: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (context) => const CurrencyRatesPage(),
                   ),
                 ),
               ),

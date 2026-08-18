@@ -2404,5 +2404,112 @@
       }
     }
   },
-  "budgetCycleNotSet": "未设置"
+  "budgetCycleNotSet": "未设置",
+  "commonClear": "清除",
+  "currencySearchHint": "搜索代码、名称或符号",
+  "currencySearchEmpty": "没有找到货币",
+  "currencySearchEmptyDesc": "请尝试输入 ISO 代码或其他名称。",
+  "currencyPickerMeta": "符号 {symbol} · {digits} 位小数",
+  "@currencyPickerMeta": {
+    "placeholders": {
+      "symbol": {"type": "String"},
+      "digits": {"type": "int"}
+    }
+  },
+  "ledgerBaseCurrency": "账本本位币",
+  "ledgerBaseCurrencyDesc": "预算、统计和总资产将统一以此货币展示。",
+  "selectBaseCurrency": "选择账本本位币",
+  "selectAccountCurrency": "选择账户币种",
+  "selectRateCurrency": "选择要维护汇率的货币",
+  "ledgerCurrencyLocked": "这个账本已有财务数据，本位币已锁定。如需其他本位币，请新建账本。",
+  "ledgerCurrencyChangeTitle": "更改本位币？",
+  "ledgerCurrencyChangeMessage": "空账本将改用 {code}（{name}）；现有零余额账户也会一并改为该币种。",
+  "@ledgerCurrencyChangeMessage": {
+    "placeholders": {
+      "code": {"type": "String"},
+      "name": {"type": "String"}
+    }
+  },
+  "legacyCurrencySetupTitle": "确认现有金额的币种",
+  "legacyCurrencySetupDesc": "这是升级前创建的账本。请先确认现有数字原本代表哪种货币，确认后才能添加外币账户和汇率。",
+  "legacyCurrencyStart": "开始确认",
+  "legacyCurrencyConfirmCurrent": "现有金额就是 {code}",
+  "@legacyCurrencyConfirmCurrent": {
+    "placeholders": {"code": {"type": "String"}}
+  },
+  "legacyCurrencyChooseAnother": "现有金额其实是其他币种",
+  "legacyCurrencyConfirmTitle": "把现有金额解释为 {code}？",
+  "@legacyCurrencyConfirmTitle": {
+    "placeholders": {"code": {"type": "String"}}
+  },
+  "legacyCurrencyConfirmMessage": "将更新 {accounts} 个账户、{entries} 笔交易、{rules} 条周期规则和 {budgets} 项预算设置。所有数值保持不变，只把币种标签解释为 {code}；确认后不可再次重解释。",
+  "@legacyCurrencyConfirmMessage": {
+    "placeholders": {
+      "accounts": {"type": "int"},
+      "entries": {"type": "int"},
+      "rules": {"type": "int"},
+      "budgets": {"type": "int"},
+      "code": {"type": "String"}
+    }
+  },
+  "legacyCurrencyApply": "确认并应用",
+  "legacyCurrencySaved": "已将现有金额解释为 {code}",
+  "@legacyCurrencySaved": {
+    "placeholders": {"code": {"type": "String"}}
+  },
+  "accountBalanceCurrencyLabel": "初始余额（{code}）",
+  "@accountBalanceCurrencyLabel": {
+    "placeholders": {"code": {"type": "String"}}
+  },
+  "accountCurrencyLocked": "账户已有余额、信用额度或交易记录，币种已锁定。",
+  "balanceAdjustMissingRate": "缺少 {code} 对本位币的有效汇率，无法生成余额调整交易。",
+  "@balanceAdjustMissingRate": {
+    "placeholders": {"code": {"type": "String"}}
+  },
+  "currencyRatesTitle": "货币与汇率",
+  "currencyRatesOfflineDesc": "汇率保存在本机并由你维护。应用不会联网获取或自动刷新汇率；修改汇率也不会改变已保存交易的历史统计。",
+  "exchangeRateCurrencies": "外币汇率",
+  "exchangeRateAdd": "添加汇率",
+  "exchangeRateEmpty": "还没有外币汇率",
+  "exchangeRateEmptyDesc": "添加外币后，按日期维护它对账本本位币的汇率。",
+  "exchangeRateEquation": "1 {currency} = {rate} {base}",
+  "@exchangeRateEquation": {
+    "placeholders": {
+      "currency": {"type": "String"},
+      "rate": {"type": "String"},
+      "base": {"type": "String"}
+    }
+  },
+  "exchangeRateNotSet": "尚未设置汇率",
+  "exchangeRateDateAndStatus": "{date} · {status}",
+  "@exchangeRateDateAndStatus": {
+    "placeholders": {
+      "date": {"type": "String"},
+      "status": {"type": "String"}
+    }
+  },
+  "exchangeRateStale": "可能已过期",
+  "exchangeRateSourceManual": "手动维护",
+  "exchangeRateSourceImported": "导入",
+  "exchangeRateHistory": "{currency} 汇率历史",
+  "@exchangeRateHistory": {
+    "placeholders": {"currency": {"type": "String"}}
+  },
+  "exchangeRateAgainst": "相对 {base}",
+  "@exchangeRateAgainst": {
+    "placeholders": {"base": {"type": "String"}}
+  },
+  "exchangeRateHistoryEmpty": "还没有历史记录",
+  "exchangeRateHistoryEmptyDesc": "点击右上角加号添加第一条生效汇率。",
+  "exchangeRateDeleteTitle": "删除这条汇率？",
+  "exchangeRateDeleteMessage": "已保存交易不会改变，但资产估值或待生成的周期交易之后可能缺少汇率。",
+  "exchangeRateEffectiveDate": "选择汇率生效日期",
+  "exchangeRateInputTitle": "1 {currency} 等于多少 {base}",
+  "@exchangeRateInputTitle": {
+    "placeholders": {
+      "currency": {"type": "String"},
+      "base": {"type": "String"}
+    }
+  },
+  "exchangeRateSaved": "汇率已保存"
 }

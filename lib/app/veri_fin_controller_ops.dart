@@ -96,6 +96,22 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         );
   }
 
+  ({int accounts, int entries, int recurringRules, int budgetSettings})
+  currencyReinterpretImpact(String bookId) {
+    bool belongsToBook(String key) => key.startsWith('$bookId:');
+    return (
+      accounts: _accounts.where((account) => account.bookId == bookId).length,
+      entries: _entries.where((entry) => entry.bookId == bookId).length,
+      recurringRules: _recurringRules
+          .where((rule) => rule.bookId == bookId)
+          .length,
+      budgetSettings:
+          _monthlyBudgets.keys.where(belongsToBook).length +
+          _categoryBudgets.keys.where(belongsToBook).length +
+          ((_dailyBudgets[bookId] ?? 0) != 0 ? 1 : 0),
+    );
+  }
+
   List<Account> get accounts => _accountsView ??= List<Account>.unmodifiable(
     _accounts.where((account) => account.bookId == _activeBookId),
   );
@@ -2277,10 +2293,28 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
             account.currencyCode == book.baseCurrencyCode);
   }
 
+  Account _normalizeAccountCurrencyAmounts(Account account) {
+    final creditLimit = account.creditLimit;
+    return account.copyWith(
+      initialBalance: normalizeCurrencyAmount(
+        account.initialBalance,
+        account.currencyCode,
+      ),
+      creditLimit: creditLimit == null
+          ? null
+          : normalizeCurrencyAmount(creditLimit, account.currencyCode),
+      clearCreditLimit: creditLimit == null,
+    );
+  }
+
   void addAccount(Account account) {
     if (!_isAccountCurrencyAllowed(account)) return;
     // 名称统一去首尾空格（与 addAccountGroup、导入侧 plan_builder 同规则）。
-    _accounts.add(account.copyWith(name: account.name.trim()));
+    _accounts.add(
+      _normalizeAccountCurrencyAmounts(
+        account.copyWith(name: account.name.trim()),
+      ),
+    );
     _persistAccounts();
     notifyListeners();
   }
@@ -2288,7 +2322,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   /// 编辑页提交新账户：只有 SQLite 写入成功后才更新内存并通知 UI。
   Future<bool> addAccountDraft(Account account) async {
     if (!_isAccountCurrencyAllowed(account)) return false;
-    final normalized = account.copyWith(name: account.name.trim());
+    final normalized = _normalizeAccountCurrencyAmounts(
+      account.copyWith(name: account.name.trim()),
+    );
     final next = <Account>[..._accounts, normalized];
     try {
       await _repository.saveAccounts(next);
@@ -2312,7 +2348,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
             accountCurrencyLocked(current))) {
       return;
     }
-    _accounts[index] = account.copyWith(name: account.name.trim());
+    _accounts[index] = _normalizeAccountCurrencyAmounts(
+      account.copyWith(name: account.name.trim()),
+    );
     _persistAccounts();
     notifyListeners();
   }
@@ -2329,7 +2367,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
             accountCurrencyLocked(current))) {
       return false;
     }
-    final normalized = account.copyWith(name: account.name.trim());
+    final normalized = _normalizeAccountCurrencyAmounts(
+      account.copyWith(name: account.name.trim()),
+    );
     final next = List<Account>.of(_accounts)..[index] = normalized;
     try {
       await _repository.saveAccounts(next);
@@ -2468,7 +2508,10 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       return;
     }
     _accounts[index] = _accounts[index].copyWith(
-      initialBalance: _accounts[index].initialBalance + difference,
+      initialBalance: normalizeCurrencyAmount(
+        _accounts[index].initialBalance + difference,
+        account.currencyCode,
+      ),
     );
     _persistAccounts();
     notifyListeners();

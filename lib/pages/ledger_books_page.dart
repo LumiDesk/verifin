@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
+import '../app/currency_catalog.dart';
 import '../l10n/app_localizations.dart';
 import '../app/models.dart';
 import '../app/veri_fin_scope.dart';
@@ -54,15 +55,15 @@ class LedgerBooksPage extends StatelessWidget {
   }
 
   Future<void> _createBook(BuildContext context) async {
-    final name = await showTextInputDialog(
+    final controller = VeriFinScope.of(context);
+    final draft = await showLedgerBookEditorSheet(
       context: context,
-      title: AppLocalizations.of(context).bookAdd,
-      label: AppLocalizations.of(context).bookNameLabel,
+      initialCurrencyCode: controller.activeBook.baseCurrencyCode,
     );
-    if (!context.mounted || name == null) {
+    if (!context.mounted || draft == null) {
       return;
     }
-    VeriFinScope.of(context).addLedgerBook(name);
+    controller.addLedgerBook(draft.name, baseCurrencyCode: draft.currencyCode);
   }
 }
 
@@ -106,7 +107,8 @@ class _LedgerBookRow extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       '${book.isDefault ? '${AppLocalizations.of(context).defaultBookLabel} · ' : ''}'
-                      '${AppLocalizations.of(context).entriesCountFull(entryCount)}',
+                      '${AppLocalizations.of(context).entriesCountFull(entryCount)} · '
+                      '${book.baseCurrencyCode}',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: Theme.of(
                           context,
@@ -121,18 +123,29 @@ class _LedgerBookRow extends StatelessWidget {
                 const Icon(Icons.check_circle, color: veriRoyal, size: 18),
               PopupMenuButton<String>(
                 tooltip: AppLocalizations.of(context).bookActions,
-                onSelected: (value) {
+                onSelected: (value) async {
                   if (value == 'rename') {
-                    _renameBook(context);
+                    await _renameBook(context);
+                    return;
+                  }
+                  if (value == 'currency') {
+                    await _editBookCurrency(context);
+                    return;
                   }
                   if (value == 'delete') {
-                    _deleteBook(context);
+                    await _deleteBook(context);
                   }
                 },
                 itemBuilder: (context) => <PopupMenuEntry<String>>[
                   PopupMenuItem<String>(
                     value: 'rename',
                     child: Text(AppLocalizations.of(context).commonRename),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'currency',
+                    child: Text(
+                      AppLocalizations.of(context).ledgerBaseCurrency,
+                    ),
                   ),
                   PopupMenuItem<String>(
                     value: 'delete',
@@ -163,6 +176,50 @@ class _LedgerBookRow extends StatelessWidget {
       return;
     }
     VeriFinScope.of(context).renameLedgerBook(book.id, name);
+  }
+
+  Future<void> _editBookCurrency(BuildContext context) async {
+    final controller = VeriFinScope.of(context);
+    if (book.currencySetupStatus == CurrencySetupStatus.legacyUnconfirmed) {
+      await confirmLegacyLedgerCurrency(context: context, book: book);
+      return;
+    }
+    if (controller.ledgerBookHasFinancialData(book.id)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).ledgerCurrencyLocked),
+        ),
+      );
+      return;
+    }
+    final selected = await showCurrencyPickerSheet(
+      context: context,
+      title: AppLocalizations.of(context).selectBaseCurrency,
+      selectedCode: book.baseCurrencyCode,
+    );
+    if (!context.mounted ||
+        selected == null ||
+        selected.code == book.baseCurrencyCode) {
+      return;
+    }
+    final currency = CurrencyCatalog.require(selected.code);
+    final confirmed = await showConfirmDialog(
+      context,
+      title: AppLocalizations.of(context).ledgerCurrencyChangeTitle,
+      message: AppLocalizations.of(context).ledgerCurrencyChangeMessage(
+        currency.code,
+        currency.nameForLocale(Localizations.localeOf(context).toLanguageTag()),
+      ),
+    );
+    if (!context.mounted || !confirmed) return;
+    final saved = await controller.changeEmptyLedgerBookBaseCurrency(
+      book.id,
+      selected.code,
+    );
+    if (!context.mounted || saved) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppLocalizations.of(context).saveFailed)),
+    );
   }
 
   Future<void> _deleteBook(BuildContext context) async {
