@@ -206,6 +206,12 @@ abstract class AppLocalizations {
   /// **'确认'**
   String get commonConfirm;
 
+  /// No description provided for @commonEdit.
+  ///
+  /// In zh, this message translates to:
+  /// **'编辑'**
+  String get commonEdit;
+
   /// No description provided for @commonDelete.
   ///
   /// In zh, this message translates to:
@@ -7069,6 +7075,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'这个账本已有财务数据，本位币已锁定。如需其他本位币，请新建账本。'**
   String get ledgerCurrencyLocked;
+
+  /// No description provided for @ledgerCurrencyLockedShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'已有财务数据，已锁定'**
+  String get ledgerCurrencyLockedShort;
 
   /// No description provided for @ledgerCurrencyChangeTitle.
   ///

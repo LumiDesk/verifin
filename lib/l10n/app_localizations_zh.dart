@@ -63,6 +63,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonConfirm => '确认';
 
   @override
+  String get commonEdit => '编辑';
+
+  @override
   String get commonDelete => '删除';
 
   @override
@@ -3844,6 +3847,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ledgerCurrencyLocked => '这个账本已有财务数据，本位币已锁定。如需其他本位币，请新建账本。';
+
+  @override
+  String get ledgerCurrencyLockedShort => '已有财务数据，已锁定';
 
   @override
   String get ledgerCurrencyChangeTitle => '更改本位币？';

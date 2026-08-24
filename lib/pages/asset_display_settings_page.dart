@@ -175,19 +175,31 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
                 VeriCard(
                   child: Column(
                     children: <Widget>[
-                      SelectField(
-                        label: l10n.assetViewModeLabel,
-                        value: _viewMode.label(l10n),
-                        icon: Icons.view_agenda_outlined,
-                        onTap: _pickViewMode,
+                      VeriAnchoredMenuAnchor(
+                        entries: _viewModeMenuEntries(l10n),
+                        semanticLabel: l10n.assetViewModeLabel,
+                        width: 184,
+                        builder: (context, openMenu, menuOpen) => SelectField(
+                          label: l10n.assetViewModeLabel,
+                          value: _viewMode.label(l10n),
+                          icon: Icons.view_agenda_outlined,
+                          onTap: openMenu,
+                        ),
                       ),
-                      SettingsRow(
-                        icon: Icons.photo_size_select_actual_outlined,
-                        title: l10n.assetsCoverTitle,
-                        trailing: _coverUrl.isEmpty
-                            ? l10n.notSet
-                            : l10n.configuredLabel,
-                        onTap: _changeCover,
+                      VeriAnchoredMenuAnchor(
+                        entries: _coverMenuEntries(l10n),
+                        semanticLabel: l10n.assetsCoverTitle,
+                        width: 216,
+                        submenuWidth: 216,
+                        builder: (context, openMenu, menuOpen) => SettingsRow(
+                          icon: Icons.photo_size_select_actual_outlined,
+                          title: l10n.assetsCoverTitle,
+                          trailing: _coverUrl.isEmpty
+                              ? l10n.notSet
+                              : l10n.configuredLabel,
+                          trailingIcon: Icons.keyboard_arrow_down,
+                          onTap: openMenu,
+                        ),
                       ),
                     ],
                   ),
@@ -258,20 +270,28 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
     );
   }
 
-  Future<void> _pickViewMode() async {
-    final selected = await showOptionSheet<AssetAccountViewMode>(
-      context: context,
-      title: AppLocalizations.of(context).assetViewModeLabel,
-      values: AssetAccountViewMode.values,
-      selected: _viewMode,
-      labelOf: (mode) => mode.label(AppLocalizations.of(context)),
-    );
-    if (selected != null && mounted) {
-      setState(() {
-        _viewMode = selected;
-        _collapsedSections.clear();
-      });
-    }
+  List<VeriMenuEntry> _viewModeMenuEntries(AppLocalizations l10n) {
+    return <VeriMenuEntry>[
+      for (final mode in AssetAccountViewMode.values)
+        VeriMenuItem(
+          id: 'asset_view_${mode.name}',
+          icon: switch (mode) {
+            AssetAccountViewMode.group => Icons.folder_outlined,
+            AssetAccountViewMode.type => Icons.account_balance_wallet_outlined,
+          },
+          title: mode.label(l10n),
+          selected: _viewMode == mode,
+          onPressed: () => _selectViewMode(mode),
+        ),
+    ];
+  }
+
+  void _selectViewMode(AssetAccountViewMode mode) {
+    if (_viewMode == mode) return;
+    setState(() {
+      _viewMode = mode;
+      _collapsedSections.clear();
+    });
   }
 
   void _reorderSections(int oldIndex, int newIndex) {
@@ -310,81 +330,89 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
     });
   }
 
-  Future<void> _changeCover() async {
+  List<VeriMenuEntry> _coverMenuEntries(AppLocalizations l10n) {
+    return <VeriMenuEntry>[
+      VeriMenuItem(
+        id: 'asset_cover_online',
+        icon: Icons.public_outlined,
+        title: l10n.coverUseOnline,
+        submenuWidth: 216,
+        children: <VeriMenuEntry>[
+          for (final preset in _AssetsPageState._coverPresets)
+            VeriMenuItem(
+              id: 'asset_cover_preset_${preset.id}',
+              title: preset.label(l10n),
+              selected: preset.url == _coverUrl,
+              onPressed: () => setState(() => _coverUrl = preset.url),
+            ),
+        ],
+      ),
+      VeriMenuItem(
+        id: 'asset_cover_custom_url',
+        icon: Icons.link_outlined,
+        title: l10n.coverEnterUrl,
+        onPressed: () async => _enterCustomCoverUrl(),
+      ),
+      VeriMenuItem(
+        id: 'asset_cover_local',
+        icon: Icons.photo_library_outlined,
+        title: l10n.coverPickLocal,
+        onPressed: () async => _pickLocalCover(),
+      ),
+      const VeriMenuDivider(),
+      VeriMenuItem(
+        id: 'asset_cover_clear',
+        icon: Icons.hide_image_outlined,
+        title: l10n.coverClear,
+        enabled: _coverUrl.isNotEmpty,
+        foregroundColor: Theme.of(context).colorScheme.error,
+        onPressed: () => setState(() => _coverUrl = ''),
+      ),
+    ];
+  }
+
+  Future<void> _enterCustomCoverUrl() async {
     final l10n = AppLocalizations.of(context);
-    final action = await showOptionSheet<String>(
+    final url = await showTextInputDialog(
       context: context,
-      title: l10n.assetsCoverTitle,
-      values: const <String>['online', 'custom_url', 'local', 'clear'],
-      selected: 'online',
-      labelOf: (value) => switch (value) {
-        'online' => l10n.coverUseOnline,
-        'custom_url' => l10n.coverEnterUrl,
-        'local' => l10n.coverPickLocal,
-        'clear' => l10n.coverClear,
-        _ => value,
-      },
+      title: l10n.coverCustomTitle,
+      label: l10n.coverUrlLabel,
+      initialValue: _coverUrl.startsWith('http') ? _coverUrl : '',
     );
-    if (action == null || !mounted) {
+    if (url != null && mounted) {
+      setState(() => _coverUrl = url);
+    }
+  }
+
+  Future<void> _pickLocalCover() async {
+    final l10n = AppLocalizations.of(context);
+    final rawImage = await pickRawImageDataUrl();
+    if (rawImage == null || !mounted) {
       return;
     }
-    switch (action) {
-      case 'online':
-        final presets = _AssetsPageState._coverPresets;
-        final selected = await showOptionSheet<_AssetCoverPreset>(
-          context: context,
-          title: l10n.coverPickOnlineTitle,
-          values: presets,
-          selected: presets.firstWhere(
-            (item) => item.url == _coverUrl,
-            orElse: () => presets.first,
-          ),
-          labelOf: (value) => value.label(l10n),
-        );
-        if (selected != null && mounted) {
-          setState(() => _coverUrl = selected.url);
-        }
-      case 'custom_url':
-        final url = await showTextInputDialog(
-          context: context,
-          title: l10n.coverCustomTitle,
-          label: l10n.coverUrlLabel,
-          initialValue: _coverUrl.startsWith('http') ? _coverUrl : '',
-        );
-        if (url != null && mounted) {
-          setState(() => _coverUrl = url);
-        }
-      case 'local':
-        final rawImage = await pickRawImageDataUrl();
-        if (rawImage == null || !mounted) {
-          return;
-        }
-        final crop = await showImageCropper(
-          context: context,
-          imageDataUrl: rawImage,
-          title: l10n.coverCropTitle,
-          aspectRatio: assetCoverAspectRatio,
-        );
-        if (crop == null || !mounted) {
-          return;
-        }
-        final dataUrl = await runWithLoadingDialog<String?>(
-          context: context,
-          message: l10n.coverGenerating,
-          task: () => cropImageDataUrl(
-            sourceDataUrl: rawImage,
-            targetWidth: assetCoverTargetWidth,
-            targetHeight: assetCoverTargetHeight,
-            zoom: crop.zoom,
-            offsetX: crop.offsetX,
-            offsetY: crop.offsetY,
-          ),
-        );
-        if (dataUrl != null && mounted) {
-          setState(() => _coverUrl = dataUrl);
-        }
-      case 'clear':
-        setState(() => _coverUrl = '');
+    final crop = await showImageCropper(
+      context: context,
+      imageDataUrl: rawImage,
+      title: l10n.coverCropTitle,
+      aspectRatio: assetCoverAspectRatio,
+    );
+    if (crop == null || !mounted) {
+      return;
+    }
+    final dataUrl = await runWithLoadingDialog<String?>(
+      context: context,
+      message: l10n.coverGenerating,
+      task: () => cropImageDataUrl(
+        sourceDataUrl: rawImage,
+        targetWidth: assetCoverTargetWidth,
+        targetHeight: assetCoverTargetHeight,
+        zoom: crop.zoom,
+        offsetX: crop.offsetX,
+        offsetY: crop.offsetY,
+      ),
+    );
+    if (dataUrl != null && mounted) {
+      setState(() => _coverUrl = dataUrl);
     }
   }
 

@@ -66,6 +66,7 @@
   },
   "commonCancel": "取消",
   "commonConfirm": "确认",
+  "commonEdit": "编辑",
   "commonDelete": "删除",
   "commonBack": "返回",
   "@commonBack": {
@@ -2435,6 +2436,7 @@
   "selectAccountCurrency": "选择账户币种",
   "selectRateCurrency": "选择要维护汇率的货币",
   "ledgerCurrencyLocked": "这个账本已有财务数据，本位币已锁定。如需其他本位币，请新建账本。",
+  "ledgerCurrencyLockedShort": "已有财务数据，已锁定",
   "ledgerCurrencyChangeTitle": "更改本位币？",
   "ledgerCurrencyChangeMessage": "空账本将改用 {code}（{name}）；现有零余额账户也会一并改为该币种。",
   "@ledgerCurrencyChangeMessage": {

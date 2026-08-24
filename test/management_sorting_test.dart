@@ -44,6 +44,30 @@ void main() {
     expect(controller.tags.map((tag) => tag.label), <String>['旅行', '工作']);
   });
 
+  testWidgets('标签行和行尾入口打开同一个锚点操作菜单', (tester) async {
+    final controller = await makeController();
+    controller.addTag('旅行');
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(home: const TagManagementPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('旅行'));
+    await tester.pumpAndSettle();
+    expect(find.text('重命名'), findsOneWidget);
+    expect(find.text('删除标签'), findsOneWidget);
+
+    await tester.tapAt(const Offset(2, 2));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('旅行'));
+    await tester.pumpAndSettle();
+    expect(find.text('重命名'), findsOneWidget);
+    expect(find.text('删除标签'), findsOneWidget);
+  });
+
   test('分类、标签、账户分组排序草稿保存后可重载', () async {
     final store = LocalKeyValueStore();
     final controller = await makeController(store);

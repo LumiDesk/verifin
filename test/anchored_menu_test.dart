@@ -178,6 +178,28 @@ void main() {
     expect(find.text('设置'), findsNothing);
   });
 
+  testWidgets('uses the actual route constraints on a resized viewport', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(460, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      const _MenuTestApp(
+        width: 208,
+        entries: <VeriMenuEntry>[
+          VeriMenuItem(id: 'settings', title: '设置', onPressed: _noop),
+        ],
+      ),
+    );
+
+    await tester.tap(find.byTooltip('更多'));
+    await tester.pumpAndSettle();
+
+    final panelRect = tester.getRect(find.byType(SingleChildScrollView).last);
+    expect(panelRect.left, greaterThanOrEqualTo(0));
+    expect(panelRect.right, lessThanOrEqualTo(460));
+  });
+
   testWidgets('submenu expands from the selected row and supports widths', (
     tester,
   ) async {

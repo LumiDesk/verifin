@@ -283,31 +283,6 @@ class SortModeHeaderActions extends StatelessWidget {
   }
 }
 
-class HeaderPopupAction<T> extends StatelessWidget {
-  const HeaderPopupAction({
-    super.key,
-    required this.tooltip,
-    required this.icon,
-    required this.onSelected,
-    required this.itemBuilder,
-  });
-
-  final String tooltip;
-  final IconData icon;
-  final PopupMenuItemSelected<T> onSelected;
-  final PopupMenuItemBuilder<T> itemBuilder;
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<T>(
-      tooltip: tooltip,
-      icon: Icon(icon),
-      onSelected: onSelected,
-      itemBuilder: itemBuilder,
-    );
-  }
-}
-
 class HeaderTextAction extends StatelessWidget {
   const HeaderTextAction({
     super.key,

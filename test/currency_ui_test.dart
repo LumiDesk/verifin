@@ -91,6 +91,19 @@ void main() {
     expect(find.textContaining('0 笔交易 · USD'), findsOneWidget);
   });
 
+  testWidgets('账本行使用锚点菜单展示管理操作和禁用原因', (tester) async {
+    final controller = await makeController();
+    await pumpPage(tester, controller, const LedgerBooksPage());
+
+    await tester.tap(find.byTooltip('账本操作'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('重命名'), findsOneWidget);
+    expect(find.text('账本本位币'), findsOneWidget);
+    expect(find.text('CNY'), findsOneWidget);
+    expect(find.text('默认账本不可删除'), findsOneWidget);
+  });
+
   testWidgets('新增账户可选择币种并按 minor unit 保存余额', (tester) async {
     final controller = await makeController();
     await pumpPage(tester, controller, const AddAccountPage());
@@ -138,6 +151,26 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('1 USD = 7.1235 CNY'), findsOneWidget);
     expect(find.textContaining('应用不会联网'), findsOneWidget);
+  });
+
+  testWidgets('汇率历史行使用锚点菜单提供编辑和删除', (tester) async {
+    final controller = await makeController();
+    await controller.saveExchangeRateDraft(
+      currencyCode: 'USD',
+      effectiveDate: DateTime.now(),
+      rateToBase: 7.2,
+    );
+    await pumpPage(
+      tester,
+      controller,
+      const CurrencyRateHistoryPage(currencyCode: 'USD'),
+    );
+
+    await tester.tap(find.byTooltip('USD 汇率历史'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('编辑'), findsOneWidget);
+    expect(find.text('删除'), findsOneWidget);
   });
 
   testWidgets('旧账本从货币页完成一次性无换算重解释', (tester) async {
