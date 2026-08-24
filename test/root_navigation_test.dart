@@ -8,6 +8,7 @@ void main() {
   testWidgets('root navigation fits a 360dp Android viewport', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(360, 800);
+    tester.view.padding = const FakeViewPadding(bottom: 20);
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(const _NavigationHarness());
@@ -15,10 +16,16 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byKey(const Key('main_bottom_nav')), findsOneWidget);
     expect(find.byKey(const Key('quick_entry_fab')), findsOneWidget);
-    expect(
-      tester.getSize(find.byKey(const Key('main_nav_capsule'))).width,
-      268,
+    final capsuleRect = tester.getRect(
+      find.byKey(const Key('main_nav_capsule')),
     );
+    final quickEntryRect = tester.getRect(
+      find.byKey(const Key('main_quick_entry_scale')),
+    );
+    expect(capsuleRect.width, 244);
+    expect(capsuleRect.left, 24);
+    expect(360 - quickEntryRect.right, 24);
+    expect(800 - capsuleRect.bottom, 44);
   });
 
   testWidgets('quick entry only operates on home and preserves long press', (

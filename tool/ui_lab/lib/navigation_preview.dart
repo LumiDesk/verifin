@@ -1000,44 +1000,58 @@ class _FloatingRootNavigationState extends State<_FloatingRootNavigation>
     final showQuickEntry = widget.currentIndex == 0;
     return SafeArea(
       top: false,
-      minimum: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      child: SizedBox(
-        height: 60,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: <Widget>[
-            AnimatedAlign(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOutCubic,
-              alignment: showQuickEntry
-                  ? Alignment.centerLeft
-                  : Alignment.center,
-              child: SizedBox(
-                key: const Key('lab_nav_capsule'),
-                width: _navigationWidth,
-                height: 60,
-                child: _buildGlassCapsule(isDark),
-              ),
-            ),
-            Positioned(
-              right: 0,
-              top: 0,
-              child: IgnorePointer(
-                key: const Key('lab_quick_entry_visibility'),
-                ignoring: !showQuickEntry,
-                child: ExcludeSemantics(
-                  excluding: !showQuickEntry,
-                  child: AnimatedScale(
-                    key: const Key('lab_quick_entry_scale'),
-                    duration: const Duration(milliseconds: 180),
+      child: Padding(
+        key: const Key('lab_outer_spacing'),
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final quickEntrySpace = showQuickEntry ? 68.0 : 0.0;
+            final maximumWidth = (constraints.maxWidth - quickEntrySpace).clamp(
+              0.0,
+              _navigationWidth,
+            );
+            return SizedBox(
+              height: 60,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: <Widget>[
+                  AnimatedAlign(
+                    duration: const Duration(milliseconds: 220),
                     curve: Curves.easeOutCubic,
-                    scale: showQuickEntry ? 1 : 0,
-                    child: _QuickEntryButton(onTap: widget.onQuickEntry),
+                    alignment: showQuickEntry
+                        ? Alignment.centerLeft
+                        : Alignment.center,
+                    child: AnimatedContainer(
+                      key: const Key('lab_nav_capsule'),
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      width: maximumWidth,
+                      height: 60,
+                      child: _buildGlassCapsule(isDark),
+                    ),
                   ),
-                ),
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: IgnorePointer(
+                      key: const Key('lab_quick_entry_visibility'),
+                      ignoring: !showQuickEntry,
+                      child: ExcludeSemantics(
+                        excluding: !showQuickEntry,
+                        child: AnimatedScale(
+                          key: const Key('lab_quick_entry_scale'),
+                          duration: const Duration(milliseconds: 180),
+                          curve: Curves.easeOutCubic,
+                          scale: showQuickEntry ? 1 : 0,
+                          child: _QuickEntryButton(onTap: widget.onQuickEntry),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );

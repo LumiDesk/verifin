@@ -124,10 +124,14 @@ class _VeriFinShellState extends State<VeriFinShell> {
         _handleRootBack();
       },
       child: Scaffold(
+        key: const Key('main_shell_scaffold'),
+        extendBody: true,
         // 四个主页面横向 PageView：左右滑动切换。图表（onHorizontalDrag）与
         // 交易行 Dismissible 都是更深层的手势消费者，会在竞技场里本地胜出，
         // 故在图表/可滑删行上拖动仍走各自交互，仅空白区滑动才切页。
         body: SafeArea(
+          key: const Key('main_shell_body_safe_area'),
+          bottom: false,
           child: PageView(
             controller: _pageController,
             onPageChanged: (value) => setState(() => _index = value),

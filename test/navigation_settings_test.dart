@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/app_version.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/local_storage/local_storage.dart';
+import 'package:verifin/pages/home_page.dart';
 
 import 'support/test_harness.dart';
 
@@ -14,6 +15,31 @@ void main() {
   ) async {
     await pumpApp(tester);
 
+    expect(
+      tester
+          .widget<Scaffold>(find.byKey(const Key('main_shell_scaffold')))
+          .extendBody,
+      isTrue,
+    );
+    expect(
+      tester
+          .widget<SafeArea>(find.byKey(const Key('main_shell_body_safe_area')))
+          .bottom,
+      isFalse,
+    );
+    final homeList = tester.widget<ListView>(
+      find
+          .descendant(
+            of: find.byType(HomePage),
+            matching: find.byType(ListView),
+          )
+          .first,
+    );
+    final homeListPadding = homeList.padding! as EdgeInsets;
+    final navigationHeight = tester
+        .getSize(find.byKey(const Key('main_bottom_nav')))
+        .height;
+    expect(homeListPadding.bottom, navigationHeight + 12);
     expect(find.text('日常账本 · 单位：¥'), findsOneWidget);
 
     await tapBottomTab(tester, 1);

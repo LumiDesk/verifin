@@ -10,6 +10,7 @@ import '../app/currency_math.dart';
 import '../app/model_lookup.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
+import '../app/root_navigation.dart';
 import '../app/series_math.dart';
 import '../app/veri_fin_scope.dart';
 import 'ai_chat_page.dart';
@@ -248,7 +249,7 @@ class ReportsPage extends StatelessWidget {
 
     return VeriPage(
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(14, 8, 14, 82),
+        padding: veriRootPageListPadding(context),
         children: <Widget>[
           PageHeader(
             title: AppLocalizations.of(context).tabReports,

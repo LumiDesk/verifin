@@ -15,6 +15,7 @@ import '../app/icon_catalog.dart';
 import '../app/image_cropper.dart';
 import '../app/image_sources.dart';
 import '../app/models.dart';
+import '../app/root_navigation.dart';
 import '../app/series_math.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
@@ -168,7 +169,7 @@ class _AssetsPageState extends State<AssetsPage> {
         .toList(growable: false);
     return VeriPage(
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(14, 8, 14, 82),
+        padding: veriRootPageListPadding(context),
         children: <Widget>[
           PageHeader(
             title: AppLocalizations.of(context).tabAssets,

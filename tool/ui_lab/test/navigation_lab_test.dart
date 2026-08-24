@@ -14,6 +14,12 @@ void main() {
     expect(find.byKey(const Key('lab_tab_0')), findsOneWidget);
     expect(find.byKey(const Key('lab_tab_3')), findsOneWidget);
     expect(find.byKey(const Key('lab_quick_entry')), findsOneWidget);
+    expect(
+      tester
+          .widget<Padding>(find.byKey(const Key('lab_outer_spacing')))
+          .padding,
+      const EdgeInsets.fromLTRB(24, 0, 24, 24),
+    );
   });
 
   testWidgets('switches between preview destinations', (tester) async {

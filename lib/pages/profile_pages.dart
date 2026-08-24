@@ -5,6 +5,7 @@ import '../app/common_widgets.dart';
 import '../app/currency_math.dart';
 import '../l10n/app_localizations.dart';
 import '../app/models.dart';
+import '../app/root_navigation.dart';
 import '../app/series_math.dart';
 import '../app/veri_fin_scope.dart';
 import 'category_management_page.dart';
@@ -50,7 +51,7 @@ class ProfilePage extends StatelessWidget {
 
     return VeriPage(
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(14, 8, 14, 82),
+        padding: veriRootPageListPadding(context),
         children: <Widget>[
           PageHeader(
             title: AppLocalizations.of(context).tabProfile,

@@ -17,6 +17,19 @@ class VeriNavigationDestination {
   final String label;
 }
 
+/// 根页面列表在浮动导航后方绘制时所需的内容留白。
+///
+/// `Scaffold.extendBody` 会把完整底栏高度写入后代 [MediaQuery] 的 bottom
+/// padding；在它之上再保留 12dp，确保最后一项不会贴住或落入玻璃导航。
+EdgeInsets veriRootPageListPadding(BuildContext context) {
+  return EdgeInsets.fromLTRB(
+    14,
+    8,
+    14,
+    MediaQuery.paddingOf(context).bottom + 12,
+  );
+}
+
 /// Veri Fin 根页面的浮动玻璃导航。
 ///
 /// 玻璃基底只使用均匀中性透明色、背景模糊、单一轮廓和阴影，不绘制渐变或
@@ -231,62 +244,65 @@ class _VeriRootNavigationState extends State<VeriRootNavigation>
     return SafeArea(
       key: _key('bottom_nav'),
       top: false,
-      minimum: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final quickEntrySpace = widget.showQuickEntry ? 68.0 : 0.0;
-          final maximumWidth = (constraints.maxWidth - quickEntrySpace).clamp(
-            0.0,
-            _navigationWidth,
-          );
-          return SizedBox(
-            height: 60,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: <Widget>[
-                AnimatedAlign(
-                  duration: const Duration(milliseconds: 220),
-                  curve: Curves.easeOutCubic,
-                  alignment: widget.showQuickEntry
-                      ? Alignment.centerLeft
-                      : Alignment.center,
-                  child: AnimatedContainer(
-                    key: _key('nav_capsule'),
+      child: Padding(
+        key: _key('outer_spacing'),
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final quickEntrySpace = widget.showQuickEntry ? 68.0 : 0.0;
+            final maximumWidth = (constraints.maxWidth - quickEntrySpace).clamp(
+              0.0,
+              _navigationWidth,
+            );
+            return SizedBox(
+              height: 60,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: <Widget>[
+                  AnimatedAlign(
                     duration: const Duration(milliseconds: 220),
                     curve: Curves.easeOutCubic,
-                    width: maximumWidth,
-                    height: 60,
-                    child: _buildGlassCapsule(isDark),
+                    alignment: widget.showQuickEntry
+                        ? Alignment.centerLeft
+                        : Alignment.center,
+                    child: AnimatedContainer(
+                      key: _key('nav_capsule'),
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      width: maximumWidth,
+                      height: 60,
+                      child: _buildGlassCapsule(isDark),
+                    ),
                   ),
-                ),
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: IgnorePointer(
-                    key: _key('quick_entry_visibility'),
-                    ignoring: !widget.showQuickEntry,
-                    child: ExcludeSemantics(
-                      excluding: !widget.showQuickEntry,
-                      child: AnimatedScale(
-                        key: _key('quick_entry_scale'),
-                        duration: const Duration(milliseconds: 180),
-                        curve: Curves.easeOutCubic,
-                        scale: widget.showQuickEntry ? 1 : 0,
-                        child: _QuickEntryButton(
-                          keyPrefix: widget.keyPrefix,
-                          actionKey: widget.quickEntryKey,
-                          label: widget.quickEntryLabel,
-                          onTap: widget.onQuickEntryTap,
-                          onLongPress: widget.onQuickEntryLongPress,
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: IgnorePointer(
+                      key: _key('quick_entry_visibility'),
+                      ignoring: !widget.showQuickEntry,
+                      child: ExcludeSemantics(
+                        excluding: !widget.showQuickEntry,
+                        child: AnimatedScale(
+                          key: _key('quick_entry_scale'),
+                          duration: const Duration(milliseconds: 180),
+                          curve: Curves.easeOutCubic,
+                          scale: widget.showQuickEntry ? 1 : 0,
+                          child: _QuickEntryButton(
+                            keyPrefix: widget.keyPrefix,
+                            actionKey: widget.quickEntryKey,
+                            label: widget.quickEntryLabel,
+                            onTap: widget.onQuickEntryTap,
+                            onLongPress: widget.onQuickEntryLongPress,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          );
-        },
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

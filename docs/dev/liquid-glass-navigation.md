@@ -50,9 +50,11 @@
 
 ## 尺寸与窄屏
 
-- 标准胶囊最大宽度 298dp，高度 60dp；快捷按钮 60dp，二者间距 8dp，左右外边距 12dp。
+- 标准胶囊最大宽度 298dp，高度 60dp；快捷按钮 60dp，二者间距 8dp；系统安全区之外再留左右和底部各 24dp 外边距。
 - 首页可用宽度不足时，胶囊自动收窄为 `availableWidth - 68dp`，避免在 360dp 及更窄设备与快捷按钮重叠。
 - 非首页隐藏快捷按钮后，胶囊恢复最大可用宽度并居中。
+- Shell 必须设置 `Scaffold.extendBody: true`，让页面内容绘制到浮动导航背后；否则 Scaffold 为 `bottomNavigationBar` 预留的整宽区域会看起来像旧底栏背景。
+- Shell 外层 `SafeArea` 必须关闭 bottom 裁切；四个根页面列表统一使用 `veriRootPageListPadding(context)`，按 Scaffold 注入的实际底栏高度再加 12dp 内容留白，避免末项被玻璃覆盖。
 - 滑块四周间距 3dp；上下用 `top/bottom` 等距约束，不用 `top + 固定高度`。
 - 每个 Tab 的触控区仍覆盖完整槽位，不能跟随视觉滑块一起缩小。
 
