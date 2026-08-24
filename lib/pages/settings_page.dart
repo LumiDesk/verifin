@@ -94,20 +94,54 @@ class _SettingsPageState extends State<SettingsPage> {
                 VeriCard(
                   child: Column(
                     children: <Widget>[
-                      SettingsRow(
-                        icon: Icons.dark_mode_outlined,
-                        title: AppLocalizations.of(context).themeMode,
-                        trailing: _theme.label(AppLocalizations.of(context)),
-                        trailingIcon: Icons.chevron_right,
-                        onTap: _pickThemePreference,
+                      VeriAnchoredChoice<ThemePreference>(
+                        values: ThemePreference.values,
+                        selected: _theme,
+                        idOf: (value) => 'settings_theme_${value.name}',
+                        labelOf: (value) =>
+                            value.label(AppLocalizations.of(context)),
+                        iconOf: (value) => switch (value) {
+                          ThemePreference.system => Icons.brightness_auto,
+                          ThemePreference.light => Icons.light_mode_outlined,
+                          ThemePreference.dark => Icons.dark_mode_outlined,
+                        },
+                        onSelected: (value) => setState(() => _theme = value),
+                        semanticLabel: AppLocalizations.of(
+                          context,
+                        ).themePickerTitle,
+                        width: 208,
+                        builder: (context, openMenu, menuOpen) => SettingsRow(
+                          icon: Icons.dark_mode_outlined,
+                          title: AppLocalizations.of(context).themeMode,
+                          trailing: _theme.label(AppLocalizations.of(context)),
+                          trailingIcon: Icons.chevron_right,
+                          onTap: openMenu,
+                        ),
                       ),
                       const Divider(height: 1),
-                      SettingsRow(
-                        icon: Icons.translate_outlined,
-                        title: AppLocalizations.of(context).settingsLanguage,
-                        trailing: _locale.label(AppLocalizations.of(context)),
-                        trailingIcon: Icons.chevron_right,
-                        onTap: _pickLocalePreference,
+                      VeriAnchoredChoice<LocalePreference>(
+                        values: LocalePreference.values,
+                        selected: _locale,
+                        idOf: (value) => 'settings_locale_${value.name}',
+                        labelOf: (value) =>
+                            value.label(AppLocalizations.of(context)),
+                        iconOf: (value) => switch (value) {
+                          LocalePreference.system => Icons.language_outlined,
+                          LocalePreference.zh => Icons.translate_outlined,
+                          LocalePreference.en => Icons.abc_rounded,
+                        },
+                        onSelected: (value) => setState(() => _locale = value),
+                        semanticLabel: AppLocalizations.of(
+                          context,
+                        ).languagePickerTitle,
+                        width: 208,
+                        builder: (context, openMenu, menuOpen) => SettingsRow(
+                          icon: Icons.translate_outlined,
+                          title: AppLocalizations.of(context).settingsLanguage,
+                          trailing: _locale.label(AppLocalizations.of(context)),
+                          trailingIcon: Icons.chevron_right,
+                          onTap: openMenu,
+                        ),
                       ),
                       const Divider(height: 1),
                       CompactSwitchRow(
@@ -130,15 +164,36 @@ class _SettingsPageState extends State<SettingsPage> {
                             setState(() => _twoDecimals = value),
                       ),
                       const Divider(height: 1),
-                      SettingsRow(
-                        icon: Icons.currency_exchange_outlined,
-                        title: AppLocalizations.of(context).moneyUnitStyleLabel,
-                        trailing: _moneyUnitStyleLabel(
+                      VeriAnchoredChoice<MoneyUnitStyle>(
+                        values: MoneyUnitStyle.values,
+                        selected: _moneyUnitStyle,
+                        idOf: (value) => 'settings_money_unit_${value.name}',
+                        labelOf: (value) => _moneyUnitStyleLabel(
                           AppLocalizations.of(context),
-                          _moneyUnitStyle,
+                          value,
                         ),
-                        trailingIcon: Icons.chevron_right,
-                        onTap: _pickMoneyUnitStyle,
+                        iconOf: (value) => switch (value) {
+                          MoneyUnitStyle.symbol => Icons.currency_yen_rounded,
+                          MoneyUnitStyle.code => Icons.code_rounded,
+                        },
+                        onSelected: (value) =>
+                            setState(() => _moneyUnitStyle = value),
+                        semanticLabel: AppLocalizations.of(
+                          context,
+                        ).moneyUnitStyleLabel,
+                        width: 220,
+                        builder: (context, openMenu, menuOpen) => SettingsRow(
+                          icon: Icons.currency_exchange_outlined,
+                          title: AppLocalizations.of(
+                            context,
+                          ).moneyUnitStyleLabel,
+                          trailing: _moneyUnitStyleLabel(
+                            AppLocalizations.of(context),
+                            _moneyUnitStyle,
+                          ),
+                          trailingIcon: Icons.chevron_right,
+                          onTap: openMenu,
+                        ),
                       ),
                       const Divider(height: 1),
                       CompactSwitchRow(
@@ -185,14 +240,33 @@ class _SettingsPageState extends State<SettingsPage> {
                 VeriCard(
                   child: Column(
                     children: <Widget>[
-                      SettingsRow(
-                        icon: Icons.bolt_outlined,
-                        title: AppLocalizations.of(context).fabActionTitle,
-                        trailing: _fabAction.label(
-                          AppLocalizations.of(context),
+                      VeriAnchoredChoice<FabActionMode>(
+                        values: FabActionMode.values,
+                        selected: _fabAction,
+                        idOf: (value) => 'settings_fab_${value.name}',
+                        labelOf: (value) =>
+                            value.label(AppLocalizations.of(context)),
+                        iconOf: (value) => switch (value) {
+                          FabActionMode.manual => Icons.edit_outlined,
+                          FabActionMode.ai => Icons.auto_awesome_outlined,
+                          FabActionMode.manualTapAiLongPress =>
+                            Icons.touch_app_outlined,
+                        },
+                        onSelected: (value) =>
+                            setState(() => _fabAction = value),
+                        semanticLabel: AppLocalizations.of(
+                          context,
+                        ).fabActionPickerTitle,
+                        width: 244,
+                        builder: (context, openMenu, menuOpen) => SettingsRow(
+                          icon: Icons.bolt_outlined,
+                          title: AppLocalizations.of(context).fabActionTitle,
+                          trailing: _fabAction.label(
+                            AppLocalizations.of(context),
+                          ),
+                          trailingIcon: Icons.chevron_right,
+                          onTap: openMenu,
                         ),
-                        trailingIcon: Icons.chevron_right,
-                        onTap: _pickFabActionMode,
                       ),
                       const Divider(height: 1),
                       SettingsRow(
@@ -313,66 +387,11 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Future<void> _pickThemePreference() async {
-    final selected = await showOptionSheet<ThemePreference>(
-      context: context,
-      title: AppLocalizations.of(context).themePickerTitle,
-      values: ThemePreference.values,
-      selected: _theme,
-      labelOf: (value) => value.label(AppLocalizations.of(context)),
-    );
-    if (selected != null && mounted) {
-      setState(() => _theme = selected);
-    }
-  }
-
-  Future<void> _pickLocalePreference() async {
-    final l10n = AppLocalizations.of(context);
-    final selected = await showOptionSheet<LocalePreference>(
-      context: context,
-      title: l10n.languagePickerTitle,
-      values: LocalePreference.values,
-      selected: _locale,
-      labelOf: (value) => value.label(l10n),
-    );
-    if (selected != null && mounted) {
-      setState(() => _locale = selected);
-    }
-  }
-
-  Future<void> _pickMoneyUnitStyle() async {
-    final l10n = AppLocalizations.of(context);
-    final selected = await showOptionSheet<MoneyUnitStyle>(
-      context: context,
-      title: l10n.moneyUnitStyleLabel,
-      values: MoneyUnitStyle.values,
-      selected: _moneyUnitStyle,
-      labelOf: (value) => _moneyUnitStyleLabel(l10n, value),
-    );
-    if (selected != null && mounted) {
-      setState(() => _moneyUnitStyle = selected);
-    }
-  }
-
   String _moneyUnitStyleLabel(AppLocalizations l10n, MoneyUnitStyle style) =>
       switch (style) {
         MoneyUnitStyle.symbol => l10n.moneyUnitStyleSymbol,
         MoneyUnitStyle.code => l10n.moneyUnitStyleCode,
       };
-
-  Future<void> _pickFabActionMode() async {
-    final l10n = AppLocalizations.of(context);
-    final selected = await showOptionSheet<FabActionMode>(
-      context: context,
-      title: l10n.fabActionPickerTitle,
-      values: FabActionMode.values,
-      selected: _fabAction,
-      labelOf: (value) => value.label(l10n),
-    );
-    if (selected != null && mounted) {
-      setState(() => _fabAction = selected);
-    }
-  }
 
   String _defaultAccountTrailing(
     BuildContext context,

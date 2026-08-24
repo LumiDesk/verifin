@@ -320,14 +320,30 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                 VeriCard(
                   child: Column(
                     children: <Widget>[
-                      SettingsRow(
-                        icon: Icons.category_outlined,
-                        title: AppLocalizations.of(context).commonType,
-                        trailing: currentAccount.type.label(
-                          AppLocalizations.of(context),
+                      VeriAnchoredChoice<AccountType>(
+                        key: const Key('account_detail_type_choice'),
+                        values: AccountType.values,
+                        selected: currentAccount.type,
+                        idOf: (value) => 'account_detail_type_${value.name}',
+                        labelOf: (value) =>
+                            value.label(AppLocalizations.of(context)),
+                        subtitleOf: (value) =>
+                            value.capabilityHint(AppLocalizations.of(context)),
+                        onSelected: (value) =>
+                            _selectAccountType(currentAccount, value),
+                        semanticLabel: AppLocalizations.of(
+                          context,
+                        ).accountTypePickerTitle,
+                        width: 276,
+                        builder: (context, openMenu, menuOpen) => SettingsRow(
+                          icon: Icons.category_outlined,
+                          title: AppLocalizations.of(context).commonType,
+                          trailing: currentAccount.type.label(
+                            AppLocalizations.of(context),
+                          ),
+                          trailingIcon: Icons.chevron_right,
+                          onTap: openMenu,
                         ),
-                        trailingIcon: Icons.chevron_right,
-                        onTap: () => _pickAccountType(currentAccount),
                       ),
                       const Divider(height: 1),
                       SettingsRow(
@@ -648,27 +664,11 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
     );
   }
 
-  Future<void> _pickAccountType(Account account) async {
-    final selected = await showOptionSheet<AccountType>(
-      context: context,
-      title: AppLocalizations.of(context).accountTypePickerTitle,
-      values: AccountType.values,
-      selected: account.type,
-      labelOf: (value) => value.label(AppLocalizations.of(context)),
-    );
-    if (selected != null && mounted) {
-      final losesCredit = !selected.supportsCredit;
-      setState(() {
-        _draftAccount = account.copyWith(
-          type: selected,
-          cardLast4: selected.supportsCardLast4 ? account.cardLast4 : '',
-          cardNumber: selected.supportsCardLast4 ? account.cardNumber : '',
-          clearCreditLimit: losesCredit,
-          clearStatementDay: losesCredit,
-          clearDueDay: losesCredit,
-        );
-      });
-    }
+  void _selectAccountType(Account account, AccountType selected) {
+    if (account.type == selected) return;
+    // 切换期间保留暂时隐藏的卡片/信用草稿，用户切回原类型时不会丢输入；
+    // 只有最终保存为不支持该能力的类型时才清空对应字段。
+    setState(() => _draftAccount = account.copyWith(type: selected));
   }
 
   Future<void> _pickAccountCurrency(
@@ -889,7 +889,15 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
 
   Future<bool> _save() async {
     final controller = VeriFinScope.of(context);
-    if (!await controller.saveAccountDraft(_draftAccount)) {
+    final account = _draftAccount;
+    final normalized = account.copyWith(
+      cardLast4: account.type.supportsCardLast4 ? account.cardLast4 : '',
+      cardNumber: account.type.supportsCardLast4 ? account.cardNumber : '',
+      clearCreditLimit: !account.type.supportsCredit,
+      clearStatementDay: !account.type.supportsCredit,
+      clearDueDay: !account.type.supportsCredit,
+    );
+    if (!await controller.saveAccountDraft(normalized)) {
       return false;
     }
     if (_initialDefault != _draftDefault &&

@@ -207,6 +207,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get accountTypeCash => '现金';
 
   @override
+  String get accountTypeBasicHint => '基础余额账户';
+
+  @override
+  String get accountTypeCardHint => '支持卡号与后四位';
+
+  @override
+  String get accountTypeCreditHint => '支持额度、账单日与还款';
+
+  @override
+  String get accountTypeCardCreditHint => '支持卡号、额度、账单日与还款';
+
+  @override
   String get assetViewGroup => '分类视图';
 
   @override

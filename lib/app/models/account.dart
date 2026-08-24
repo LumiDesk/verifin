@@ -33,6 +33,19 @@ enum AccountType {
     }
   }
 
+  String capabilityHint(AppLocalizations l10n) {
+    if (supportsCardLast4 && supportsCredit) {
+      return l10n.accountTypeCardCreditHint;
+    }
+    if (supportsCardLast4) {
+      return l10n.accountTypeCardHint;
+    }
+    if (supportsCredit) {
+      return l10n.accountTypeCreditHint;
+    }
+    return l10n.accountTypeBasicHint;
+  }
+
   static AccountType fromStorage(String? value) {
     return AccountType.values.firstWhere(
       (type) => type.name == value,

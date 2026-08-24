@@ -75,7 +75,12 @@ void main() {
 
     await tester.tap(find.text('语言'));
     await tester.pumpAndSettle();
-    expect(find.text('选择语言'), findsOneWidget);
+    expect(
+      find.byKey(
+        const ValueKey<String>('veri_menu_item_settings_locale_system'),
+      ),
+      findsOneWidget,
+    );
     // 主题模式行的 trailing 也是「跟随系统」，弹窗里再出现一次。
     expect(find.text('跟随系统'), findsAtLeastNWidgets(1));
     await tester.tap(find.text('English'));

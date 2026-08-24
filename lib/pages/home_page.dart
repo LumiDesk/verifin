@@ -15,7 +15,6 @@ import '../l10n/app_localizations.dart';
 import 'budget_pages.dart';
 import 'home_metrics_settings_page.dart';
 import 'panel_settings_page.dart';
-import 'sheets.dart';
 import 'transactions_pages.dart';
 
 class HomePage extends StatelessWidget {
@@ -879,7 +878,23 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
                     onNext: () => _shiftFocus(1),
                   ),
                   const Spacer(),
-                  FilterPill(label: _type.label(l10n), onTap: _pickEntryType),
+                  VeriAnchoredChoice<EntryType>(
+                    values: EntryType.userSelectable,
+                    selected: _type,
+                    idOf: (value) => 'stats_type_${value.name}',
+                    labelOf: (value) => value.label(l10n),
+                    iconOf: (value) => switch (value) {
+                      EntryType.expense => Icons.arrow_upward_rounded,
+                      EntryType.income => Icons.arrow_downward_rounded,
+                      EntryType.transfer => Icons.swap_horiz_rounded,
+                      EntryType.refund => Icons.undo_rounded,
+                    },
+                    onSelected: (value) => setState(() => _type = value),
+                    semanticLabel: l10n.statTypeTitle,
+                    width: 188,
+                    builder: (context, openMenu, menuOpen) =>
+                        FilterPill(label: _type.label(l10n), onTap: openMenu),
+                  ),
                 ],
               ),
               const SizedBox(height: 10),
@@ -1020,19 +1035,6 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
         builder: (context) => TransactionsPage(initialDate: row.date),
       ),
     );
-  }
-
-  Future<void> _pickEntryType() async {
-    final selected = await showOptionSheet<EntryType>(
-      context: context,
-      title: AppLocalizations.of(context).statTypeTitle,
-      values: EntryType.userSelectable,
-      selected: _type,
-      labelOf: (value) => value.label(AppLocalizations.of(context)),
-    );
-    if (selected != null) {
-      setState(() => _type = selected);
-    }
   }
 }
 

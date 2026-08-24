@@ -3,7 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/app_theme.dart';
 import 'package:verifin/app/common_widgets.dart';
 import 'package:verifin/app/models.dart';
+import 'package:verifin/app/veri_fin_scope.dart';
 import 'package:verifin/local_storage/local_storage.dart';
+import 'package:verifin/pages/transactions_pages.dart';
 
 import 'support/test_harness.dart';
 
@@ -21,6 +23,63 @@ void main() {
     expect(find.text('收支统计'), findsOneWidget);
     expect(find.text('-0'), findsNothing);
     expect(find.text('0'), findsWidgets);
+  });
+
+  testWidgets('收支统计类型筛选使用锚点菜单', (tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.text('概览'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(FilterPill));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey<String>('veri_menu_item_stats_type_income')),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('收入').last);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey<String>('veri_menu_item_stats_type_income')),
+      findsNothing,
+    );
+    expect(find.textContaining('收入'), findsWidgets);
+  });
+
+  testWidgets('交易时间、排序和报销短筛选使用锚点菜单', (tester) async {
+    final controller = await makeController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(home: const TransactionsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('全部时间'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(
+        const ValueKey<String>('veri_menu_item_transaction_time_month'),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('本月').last);
+    await tester.pumpAndSettle();
+    expect(find.text('${DateTime.now().month}月'), findsOneWidget);
+
+    await tester.tap(find.text('日期降序'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('金额升序'));
+    await tester.pumpAndSettle();
+    expect(find.text('金额升序'), findsOneWidget);
+
+    await tester.tap(find.text('报销'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('无需报销'));
+    await tester.pumpAndSettle();
+    expect(find.text('无需报销'), findsOneWidget);
   });
 
   testWidgets('收支统计页可切换周/月/季/年视图', (WidgetTester tester) async {

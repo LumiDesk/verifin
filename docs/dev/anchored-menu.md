@@ -48,6 +48,24 @@ Header 图标入口的快捷封装。
 | `width` | `double` | `224` | 根菜单宽度 |
 | `submenuWidth` | `double` | `232` | 默认子菜单宽度 |
 
+### `VeriAnchoredChoice<T>`
+
+短静态单选的受控适配层，底层仍使用 `VeriAnchoredMenuAnchor`。适合主题、语言、排序、筛选、重复频率等 2–8 项枚举；调用方只提供选项、当前值、稳定 id、文案和选择回调，并通过 `builder` 复用现有 `SettingsRow`、`FilterPill`、`SelectField` 或 `DetailInfoRow`。
+
+它有意不支持搜索、分区、动态增删和危险确认：账户、分类、货币、标签等长列表继续使用专用 Picker Sheet。
+
+| 参数 | 类型 | 默认值 | 作用 |
+|---|---|---:|---|
+| `values` | `List<T>` | 必填 | 静态候选值 |
+| `selected` | `T` | 必填 | 当前选中值 |
+| `idOf` | `String Function(T)` | 必填 | 菜单树内稳定唯一 id |
+| `labelOf` | `String Function(T)` | 必填 | 本地化主标题 |
+| `onSelected` | `ValueChanged<T>` | 必填 | 菜单关闭后更新页面草稿或筛选状态 |
+| `builder` | `VeriMenuAnchorBuilder` | 必填 | 构造原页面触发控件 |
+| `semanticLabel` | `String` | 必填 | 弹层语义标签 |
+| `iconOf` / `subtitleOf` / `enabledOf` | 可空回调 | `null` | 可选图标、副标题和禁用态 |
+| `width` | `double` | `224` | 菜单宽度 |
+
 ### `VeriMenuItem`
 
 叶子操作或递进父项。

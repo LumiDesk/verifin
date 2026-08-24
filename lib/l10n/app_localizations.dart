@@ -482,6 +482,30 @@ abstract class AppLocalizations {
   /// **'现金'**
   String get accountTypeCash;
 
+  /// No description provided for @accountTypeBasicHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'基础余额账户'**
+  String get accountTypeBasicHint;
+
+  /// No description provided for @accountTypeCardHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'支持卡号与后四位'**
+  String get accountTypeCardHint;
+
+  /// No description provided for @accountTypeCreditHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'支持额度、账单日与还款'**
+  String get accountTypeCreditHint;
+
+  /// No description provided for @accountTypeCardCreditHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'支持卡号、额度、账单日与还款'**
+  String get accountTypeCardCreditHint;
+
   /// No description provided for @assetViewGroup.
   ///
   /// In zh, this message translates to:

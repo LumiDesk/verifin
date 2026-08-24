@@ -234,11 +234,40 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                 VeriCard(
                   child: Column(
                     children: <Widget>[
-                      DetailInfoRow(
-                        label: AppLocalizations.of(context).commonType,
-                        value: _type.label(AppLocalizations.of(context)),
-                        onTap: _pickType,
-                      ),
+                      if (_refunds.isNotEmpty)
+                        DetailInfoRow(
+                          label: AppLocalizations.of(context).commonType,
+                          value: _type.label(AppLocalizations.of(context)),
+                        )
+                      else
+                        VeriAnchoredChoice<EntryType>(
+                          key: const Key('transaction_type_choice'),
+                          values: EntryType.userSelectable,
+                          selected: _type,
+                          idOf: (value) =>
+                              'transaction_detail_type_${value.name}',
+                          labelOf: (value) =>
+                              value.label(AppLocalizations.of(context)),
+                          iconOf: (value) => switch (value) {
+                            EntryType.expense => Icons.arrow_upward_rounded,
+                            EntryType.income => Icons.arrow_downward_rounded,
+                            EntryType.transfer => Icons.swap_horiz_rounded,
+                            EntryType.refund => Icons.undo_rounded,
+                          },
+                          onSelected: _selectType,
+                          semanticLabel: AppLocalizations.of(
+                            context,
+                          ).pickTypeTitle,
+                          width: 188,
+                          builder: (context, openMenu, menuOpen) =>
+                              DetailInfoRow(
+                                label: AppLocalizations.of(context).commonType,
+                                value: _type.label(
+                                  AppLocalizations.of(context),
+                                ),
+                                onTap: openMenu,
+                              ),
+                        ),
                       DetailInfoRow(
                         label: AppLocalizations.of(context).commonCategory,
                         value: category.label,
@@ -758,20 +787,8 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     });
   }
 
-  Future<void> _pickType() async {
-    final values = _refunds.isEmpty
-        ? EntryType.userSelectable
-        : const <EntryType>[EntryType.expense];
-    final selected = await showOptionSheet<EntryType>(
-      context: context,
-      title: AppLocalizations.of(context).pickTypeTitle,
-      values: values,
-      selected: _type,
-      labelOf: (value) => value.label(AppLocalizations.of(context)),
-    );
-    if (selected == null || !mounted) {
-      return;
-    }
+  void _selectType(EntryType selected) {
+    if (_type == selected || _refunds.isNotEmpty) return;
     setState(() {
       _type = selected;
       final controller = VeriFinScope.of(context);

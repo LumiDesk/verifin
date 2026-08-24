@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:verifin/app/models.dart';
 import 'package:verifin/app/veri_fin_scope.dart';
 import 'package:verifin/pages/profile_pages.dart';
 
@@ -49,6 +50,31 @@ void main() {
       find.widgetWithIcon(IconButton, Icons.save_outlined),
     );
     expect(saveButton.onPressed, isNull);
+  });
+
+  testWidgets('性别使用锚点菜单并在保存后提交', (tester) async {
+    final controller = await makeController();
+    addTearDown(controller.dispose);
+    await pumpProfilePage(tester, controller);
+
+    final genderChoice = find.byKey(const Key('profile_gender_choice'));
+    await tester.ensureVisible(genderChoice);
+    await tester.pumpAndSettle();
+    await tester.tap(genderChoice);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(
+        const ValueKey<String>('veri_menu_item_profile_gender_female'),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('女').last);
+    await tester.pumpAndSettle();
+    expect(controller.profile.gender, ProfileGender.unset);
+
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+    expect(controller.profile.gender, ProfileGender.female);
   });
 
   testWidgets('昵称留空保存时弹确认框，取消则不保存', (tester) async {

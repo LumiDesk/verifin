@@ -125,6 +125,73 @@ void main() {
     expect(find.text('卡片'), findsNothing);
   });
 
+  testWidgets('choice adapter maps controlled option state and callbacks', (
+    tester,
+  ) async {
+    var selected = _Choice.first;
+    await tester.pumpWidget(
+      StatefulBuilder(
+        builder: (context, setState) => MaterialApp(
+          theme: buildVeriFinTheme(Brightness.light),
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: VeriAnchoredChoice<_Choice>(
+                  values: _Choice.values,
+                  selected: selected,
+                  idOf: (value) => 'choice_${value.name}',
+                  labelOf: (value) => switch (value) {
+                    _Choice.first => '首选项',
+                    _Choice.second => '次选项',
+                    _Choice.disabled => '不可用选项',
+                  },
+                  subtitleOf: (value) =>
+                      value == _Choice.second ? '带副标题' : null,
+                  iconOf: (value) =>
+                      value == _Choice.first ? Icons.looks_one_outlined : null,
+                  enabledOf: (value) => value != _Choice.disabled,
+                  onSelected: (value) => setState(() => selected = value),
+                  semanticLabel: '选择测试项',
+                  width: 208,
+                  builder: (context, openMenu, menuOpen) => TextButton(
+                    onPressed: openMenu,
+                    child: Text(menuOpen ? '选择中' : '打开选择'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('打开选择'));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.looks_one_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    expect(find.text('带副标题'), findsOneWidget);
+    final disabledInk = tester.widget<InkWell>(
+      find
+          .ancestor(of: find.text('不可用选项'), matching: find.byType(InkWell))
+          .first,
+    );
+    expect(disabledInk.onTap, isNull);
+
+    await tester.tap(find.text('次选项'));
+    await tester.pumpAndSettle();
+
+    expect(selected, _Choice.second);
+    expect(find.text('次选项'), findsNothing);
+
+    await tester.tap(find.text('打开选择'));
+    await tester.pumpAndSettle();
+    final secondText = tester.widget<Text>(find.text('次选项'));
+    expect(secondText.style?.color, veriRoyal.withValues(alpha: 0.92));
+  });
+
   testWidgets('back closes submenu before closing the whole menu', (
     tester,
   ) async {
@@ -337,6 +404,8 @@ void main() {
 }
 
 void _noop() {}
+
+enum _Choice { first, second, disabled }
 
 class _MenuTestApp extends StatelessWidget {
   const _MenuTestApp({

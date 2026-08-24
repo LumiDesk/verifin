@@ -45,6 +45,62 @@ class VeriMenuDivider extends VeriMenuEntry {
 typedef VeriMenuAnchorBuilder =
     Widget Function(BuildContext context, VoidCallback openMenu, bool menuOpen);
 
+/// A controlled single-choice menu built on top of
+/// [VeriAnchoredMenuAnchor].
+///
+/// This convenience adapter is intentionally limited to short, static option
+/// lists. Dynamic, searchable or grouped choices should continue to use their
+/// dedicated picker sheets.
+class VeriAnchoredChoice<T> extends StatelessWidget {
+  const VeriAnchoredChoice({
+    super.key,
+    required this.values,
+    required this.selected,
+    required this.idOf,
+    required this.labelOf,
+    required this.onSelected,
+    required this.builder,
+    required this.semanticLabel,
+    this.iconOf,
+    this.subtitleOf,
+    this.enabledOf,
+    this.width = 224,
+  });
+
+  final List<T> values;
+  final T selected;
+  final String Function(T value) idOf;
+  final String Function(T value) labelOf;
+  final ValueChanged<T> onSelected;
+  final IconData? Function(T value)? iconOf;
+  final String? Function(T value)? subtitleOf;
+  final bool Function(T value)? enabledOf;
+  final VeriMenuAnchorBuilder builder;
+  final String semanticLabel;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    return VeriAnchoredMenuAnchor(
+      entries: <VeriMenuEntry>[
+        for (final value in values)
+          VeriMenuItem(
+            id: idOf(value),
+            icon: iconOf?.call(value),
+            title: labelOf(value),
+            subtitle: subtitleOf?.call(value),
+            selected: value == selected,
+            enabled: enabledOf?.call(value) ?? true,
+            onPressed: () => onSelected(value),
+          ),
+      ],
+      semanticLabel: semanticLabel,
+      width: width,
+      builder: builder,
+    );
+  }
+}
+
 const double _veriMenuPanelPadding = 6;
 const double _veriMenuDividerExtent = 9;
 

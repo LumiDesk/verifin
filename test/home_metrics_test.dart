@@ -276,5 +276,39 @@ void main() {
       await tester.pumpAndSettle();
       expect(controller.homeTrendConfig, HomeTrendConfig.defaults);
     });
+
+    testWidgets('曲线数据使用锚点菜单且保存前只改草稿', (tester) async {
+      final controller = await makeController();
+      addTearDown(controller.dispose);
+      await pumpPage(tester, controller);
+
+      await tester.fling(
+        firstVerticalScrollable(),
+        const Offset(0, -1200),
+        1000,
+      );
+      await tester.pumpAndSettle();
+      final seriesChoice = find.byKey(const Key('home_trend_series_choice'));
+      expect(seriesChoice, findsOneWidget);
+      await tester.tap(seriesChoice);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey<String>('veri_menu_item_home_series_income')),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('收入').last);
+      await tester.pumpAndSettle();
+
+      expect(controller.homeTrendConfig.series, HomeTrendSeries.expense);
+      await tester.fling(
+        firstVerticalScrollable(),
+        const Offset(0, 1200),
+        1000,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('保存'));
+      await tester.pumpAndSettle();
+      expect(controller.homeTrendConfig.series, HomeTrendSeries.income);
+    });
   });
 }

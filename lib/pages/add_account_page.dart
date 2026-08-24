@@ -85,11 +85,26 @@ class _AddAccountPageState extends State<AddAccountPage> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  SelectField(
-                    label: AppLocalizations.of(context).accountTypeLabel,
-                    value: _type.label(AppLocalizations.of(context)),
-                    icon: Icons.category_outlined,
-                    onTap: _pickAccountType,
+                  VeriAnchoredChoice<AccountType>(
+                    key: const Key('add_account_type_choice'),
+                    values: AccountType.values,
+                    selected: _type,
+                    idOf: (value) => 'add_account_type_${value.name}',
+                    labelOf: (value) =>
+                        value.label(AppLocalizations.of(context)),
+                    subtitleOf: (value) =>
+                        value.capabilityHint(AppLocalizations.of(context)),
+                    onSelected: (value) => setState(() => _type = value),
+                    semanticLabel: AppLocalizations.of(
+                      context,
+                    ).accountTypePickerTitle,
+                    width: 276,
+                    builder: (context, openMenu, menuOpen) => SelectField(
+                      label: AppLocalizations.of(context).accountTypeLabel,
+                      value: _type.label(AppLocalizations.of(context)),
+                      icon: Icons.category_outlined,
+                      onTap: openMenu,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   TextFormField(
@@ -170,26 +185,6 @@ class _AddAccountPageState extends State<AddAccountPage> {
         ),
       ),
     );
-  }
-
-  Future<void> _pickAccountType() async {
-    final selected = await showOptionSheet<AccountType>(
-      context: context,
-      title: AppLocalizations.of(context).accountTypePickerTitle,
-      values: AccountType.values,
-      selected: _type,
-      labelOf: (value) => value.label(AppLocalizations.of(context)),
-    );
-    if (selected != null) {
-      setState(() {
-        _type = selected;
-        if (!_type.supportsCardLast4) {
-          _cardLast4Controller.clear();
-          _cardNumberController.clear();
-          _cardLast4Follows = true;
-        }
-      });
-    }
   }
 
   Future<void> _pickAccountIcon() async {
