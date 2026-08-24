@@ -24,7 +24,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `SectionTitle` | Widget | `common_widgets.dart` | 区块标题 + 可选 trailing |
 | `EmptyState` | Widget | `common_widgets.dart` | 空状态（图标+标题+描述） |
 | `HeaderAction` / `HeaderTextAction` / `HeaderInline` / `VeriSectionAction` | Widget | `common_widgets.dart` | 页眉动作族（图标钮/文字钮/宽度约束/填充色小图标钮）；需要弹出操作菜单时使用 `VeriAnchoredMenuButton` |
-| `VeriAnchoredMenuAnchor` / `VeriAnchoredMenuButton` / `VeriMenuItem` / `VeriMenuDivider` | Widget / 菜单模型 | `common_widgets.dart` | Veri Fin 锚点菜单：图标、标题、副标题、分割线、选中/禁用态、根/默认子菜单/单项子菜单独立宽度、从点击行原位展开的容器变换，以及缩放/压暗但不丢失的完整祖先卡片栈；任意触发器用 `Anchor`，Header 图标入口用 `Button`；完整用法见 [anchored-menu.md](anchored-menu.md) |
+| `VeriAnchoredMenuAnchor` / `VeriAnchoredMenuButton` / `VeriAnchoredChoice<T>` / `VeriMenuItem` / `VeriMenuDivider` | Widget / 菜单模型 | `common_widgets.dart` | Veri Fin 锚点菜单：图标、标题、副标题、分割线、选中/禁用态、根/默认子菜单/单项子菜单独立宽度、从点击行原位展开的容器变换，以及缩放/压暗但不丢失的完整祖先卡片栈；任意触发器用 `Anchor`，Header 图标入口用 `Button`，2–8 项静态受控单选优先用 `Choice`；完整用法见 [anchored-menu.md](anchored-menu.md) |
 | `SaveHeaderAction` | Widget | `common_widgets.dart` | 全屏编辑页统一保存动作；固定软碟语义的 `Icons.save_outlined` 和本地化 tooltip，支持禁用态 |
 | `SortModeHeaderActions` | Widget | `common_widgets.dart` | 管理页显式排序模式的统一 Header 动作；普通态进入排序，排序态提供取消与软碟保存，未改动时禁用保存 |
 
