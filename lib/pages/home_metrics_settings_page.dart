@@ -66,41 +66,6 @@ class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
     }
   }
 
-  Future<void> _pickSeries() async {
-    final l10n = AppLocalizations.of(context);
-    final selected = await showModalBottomSheet<HomeTrendSeries>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text(
-                l10n.pickChartSeriesTitle,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ),
-            for (final series in HomeTrendSeries.values)
-              ListTile(
-                title: Text(homeTrendSeriesLabel(l10n, series)),
-                trailing: series == _config.series
-                    ? const Icon(Icons.check, color: veriRoyal)
-                    : null,
-                onTap: () => Navigator.of(context).pop(series),
-              ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-    if (selected != null && mounted) {
-      _update(_config.copyWith(series: selected));
-    }
-  }
-
   Future<HomeMetric?> _showMetricPicker(HomeMetric current) {
     final l10n = AppLocalizations.of(context);
     return showModalBottomSheet<HomeMetric>(
@@ -290,11 +255,27 @@ class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
                 SectionTitle(title: l10n.trendCustomizeChart),
                 const SizedBox(height: 8),
                 VeriCard(
-                  child: _SlotField(
-                    label: l10n.trendSlotChart,
-                    value: homeTrendSeriesLabel(l10n, config.series),
-                    onTap: _pickSeries,
-                    last: true,
+                  child: VeriAnchoredChoice<HomeTrendSeries>(
+                    key: const Key('home_trend_series_choice'),
+                    values: HomeTrendSeries.values,
+                    selected: config.series,
+                    idOf: (value) => 'home_series_${value.name}',
+                    labelOf: (value) => homeTrendSeriesLabel(l10n, value),
+                    iconOf: (value) => switch (value) {
+                      HomeTrendSeries.expense => Icons.trending_down_rounded,
+                      HomeTrendSeries.income => Icons.trending_up_rounded,
+                      HomeTrendSeries.net => Icons.show_chart_rounded,
+                    },
+                    onSelected: (value) =>
+                        _update(_config.copyWith(series: value)),
+                    semanticLabel: l10n.pickChartSeriesTitle,
+                    width: 196,
+                    builder: (context, openMenu, menuOpen) => _SlotField(
+                      label: l10n.trendSlotChart,
+                      value: homeTrendSeriesLabel(l10n, config.series),
+                      onTap: openMenu,
+                      last: true,
+                    ),
                   ),
                 ),
               ],

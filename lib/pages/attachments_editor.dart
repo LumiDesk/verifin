@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
 import '../app/attachment_picker.dart';
+import '../app/common_widgets.dart';
 import '../app/image_sources.dart';
 import '../l10n/app_localizations.dart';
 
@@ -19,31 +22,7 @@ class AttachmentsEditor extends StatelessWidget {
   final ValueChanged<String> onAddDataUrl;
   final ValueChanged<int> onRemoveIndex;
 
-  Future<void> _add(BuildContext context) async {
-    final fromCamera = await showModalBottomSheet<bool>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: Text(AppLocalizations.of(context).attachTakePhoto),
-              onTap: () => Navigator.of(sheetContext).pop(true),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: Text(AppLocalizations.of(context).attachFromGallery),
-              onTap: () => Navigator.of(sheetContext).pop(false),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (fromCamera == null || !context.mounted) {
-      return;
-    }
+  Future<void> _add(BuildContext context, {required bool fromCamera}) async {
     final dataUrl = await pickAttachmentDataUrl(fromCamera: fromCamera);
     if (dataUrl == null || dataUrl.isEmpty) {
       return;
@@ -92,7 +71,29 @@ class AttachmentsEditor extends StatelessWidget {
             separatorBuilder: (_, _) => const SizedBox(width: 10),
             itemBuilder: (context, index) {
               if (index == dataUrls.length) {
-                return _AddButton(onTap: () => _add(context));
+                final l10n = AppLocalizations.of(context);
+                return VeriAnchoredMenuAnchor(
+                  entries: <VeriMenuEntry>[
+                    VeriMenuItem(
+                      id: 'attachment_camera',
+                      icon: Icons.photo_camera_outlined,
+                      title: l10n.attachTakePhoto,
+                      onPressed: () =>
+                          unawaited(_add(context, fromCamera: true)),
+                    ),
+                    VeriMenuItem(
+                      id: 'attachment_gallery',
+                      icon: Icons.photo_library_outlined,
+                      title: l10n.attachFromGallery,
+                      onPressed: () =>
+                          unawaited(_add(context, fromCamera: false)),
+                    ),
+                  ],
+                  semanticLabel: l10n.attachTitle,
+                  width: 196,
+                  builder: (context, openMenu, menuOpen) =>
+                      _AddButton(onTap: openMenu),
+                );
               }
               final dataUrl = dataUrls[index];
               return _Thumb(

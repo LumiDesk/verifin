@@ -350,49 +350,43 @@ class _TransactionsPageState extends State<TransactionsPage> {
                         if (_dateMode)
                           Row(
                             children: <Widget>[
-                              _DateFilterBar(
-                                date: _visibleDate,
-                                onPrevious: () => setState(() {
-                                  _visibleDate = addCalendarDays(
-                                    _visibleDate,
-                                    -1,
-                                  );
-                                }),
-                                onNext: () => setState(() {
-                                  _visibleDate = addCalendarDays(
-                                    _visibleDate,
-                                    1,
-                                  );
-                                }),
-                                onTap: _pickTimeFilter,
+                              _buildTimeFilterAnchor(
+                                builder: (openMenu) => _DateFilterBar(
+                                  date: _visibleDate,
+                                  onPrevious: () => setState(() {
+                                    _visibleDate = addCalendarDays(
+                                      _visibleDate,
+                                      -1,
+                                    );
+                                  }),
+                                  onNext: () => setState(() {
+                                    _visibleDate = addCalendarDays(
+                                      _visibleDate,
+                                      1,
+                                    );
+                                  }),
+                                  onTap: openMenu,
+                                ),
                               ),
                               const SizedBox(width: 10),
-                              FilterPill(
-                                label: _sortOrder.label(
-                                  AppLocalizations.of(context),
-                                ),
-                                onTap: _pickSortOrder,
-                              ),
+                              _buildSortOrderAnchor(),
                             ],
                           )
                         else
                           Row(
                             children: <Widget>[
-                              _TransactionFilterBar(
-                                label: _periodLabel(),
-                                showNavigation:
-                                    _timeFilter != TransactionTimeFilter.all,
-                                onPrevious: () => _movePeriod(-1),
-                                onNext: () => _movePeriod(1),
-                                onTap: _pickTimeFilter,
+                              _buildTimeFilterAnchor(
+                                builder: (openMenu) => _TransactionFilterBar(
+                                  label: _periodLabel(),
+                                  showNavigation:
+                                      _timeFilter != TransactionTimeFilter.all,
+                                  onPrevious: () => _movePeriod(-1),
+                                  onNext: () => _movePeriod(1),
+                                  onTap: openMenu,
+                                ),
                               ),
                               const SizedBox(width: 10),
-                              FilterPill(
-                                label: _sortOrder.label(
-                                  AppLocalizations.of(context),
-                                ),
-                                onTap: _pickSortOrder,
-                              ),
+                              _buildSortOrderAnchor(),
                             ],
                           ),
                         const SizedBox(height: 10),
@@ -427,10 +421,9 @@ class _TransactionsPageState extends State<TransactionsPage> {
                                   });
                                 }
                               : null,
-                          reimbursementLabel: _reimbursementFilterLabel(),
-                          reimbursementActive:
-                              _reimbursementFilter != ReimbursementFilter.all,
-                          onPickReimbursement: _pickReimbursementFilter,
+                          reimbursementFilter: _reimbursementFilter,
+                          onSelectReimbursement: (value) =>
+                              setState(() => _reimbursementFilter = value),
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -685,34 +678,47 @@ class _TransactionsPageState extends State<TransactionsPage> {
     return sorted;
   }
 
-  Future<void> _pickTimeFilter() async {
-    final selected = await showOptionSheet<TransactionTimeFilter>(
-      context: context,
-      title: AppLocalizations.of(context).filterTimeTitle,
+  Widget _buildTimeFilterAnchor({
+    required Widget Function(VoidCallback openMenu) builder,
+  }) {
+    final l10n = AppLocalizations.of(context);
+    return VeriAnchoredChoice<TransactionTimeFilter>(
       values: TransactionTimeFilter.values,
       selected: _timeFilter,
-      labelOf: (value) => value.label(AppLocalizations.of(context)),
+      idOf: (value) => 'transaction_time_${value.name}',
+      labelOf: (value) => value.label(l10n),
+      onSelected: (value) {
+        setState(() {
+          _dateMode = false;
+          _timeFilter = value;
+          _periodAnchor = DateTime.now();
+        });
+      },
+      semanticLabel: l10n.filterTimeTitle,
+      width: 208,
+      builder: (context, openMenu, menuOpen) => builder(openMenu),
     );
-    if (selected != null) {
-      setState(() {
-        _dateMode = false;
-        _timeFilter = selected;
-        _periodAnchor = DateTime.now();
-      });
-    }
   }
 
-  Future<void> _pickSortOrder() async {
-    final selected = await showOptionSheet<TransactionSortOrder>(
-      context: context,
-      title: AppLocalizations.of(context).sortTitle,
+  Widget _buildSortOrderAnchor() {
+    final l10n = AppLocalizations.of(context);
+    return VeriAnchoredChoice<TransactionSortOrder>(
       values: TransactionSortOrder.values,
       selected: _sortOrder,
-      labelOf: (value) => value.label(AppLocalizations.of(context)),
+      idOf: (value) => 'transaction_sort_${value.name}',
+      labelOf: (value) => value.label(l10n),
+      iconOf: (value) => switch (value) {
+        TransactionSortOrder.dateDesc => Icons.arrow_downward_rounded,
+        TransactionSortOrder.dateAsc => Icons.arrow_upward_rounded,
+        TransactionSortOrder.amountDesc => Icons.trending_down_rounded,
+        TransactionSortOrder.amountAsc => Icons.trending_up_rounded,
+      },
+      onSelected: (value) => setState(() => _sortOrder = value),
+      semanticLabel: l10n.sortTitle,
+      width: 204,
+      builder: (context, openMenu, menuOpen) =>
+          FilterPill(label: _sortOrder.label(l10n), onTap: openMenu),
     );
-    if (selected != null) {
-      setState(() => _sortOrder = selected);
-    }
   }
 
   Future<void> _pickAccountFilter(VeriFinController controller) async {
@@ -811,27 +817,6 @@ class _TransactionsPageState extends State<TransactionsPage> {
         return l10n.hasTagFilter;
       default:
         return controller.tagById(tagId)?.label ?? l10n.tagLabel;
-    }
-  }
-
-  /// 报销筛选胶囊的文案：未筛选时显示维度名「报销」，否则显示所选状态。
-  String _reimbursementFilterLabel() {
-    final l10n = AppLocalizations.of(context);
-    return _reimbursementFilter == ReimbursementFilter.all
-        ? l10n.reimbursementFilterName
-        : _reimbursementFilter.label(l10n);
-  }
-
-  Future<void> _pickReimbursementFilter() async {
-    final selected = await showOptionSheet<ReimbursementFilter>(
-      context: context,
-      title: AppLocalizations.of(context).reimbursementFilterTitle,
-      values: ReimbursementFilter.values,
-      selected: _reimbursementFilter,
-      labelOf: (value) => value.label(AppLocalizations.of(context)),
-    );
-    if (selected != null) {
-      setState(() => _reimbursementFilter = selected);
     }
   }
 
@@ -1087,9 +1072,8 @@ class _TransactionSearchFilters extends StatelessWidget {
     this.tagLabel,
     this.tagSelected = false,
     this.onPickTag,
-    required this.reimbursementLabel,
-    this.reimbursementActive = false,
-    this.onPickReimbursement,
+    required this.reimbursementFilter,
+    required this.onSelectReimbursement,
     this.onClear,
   });
 
@@ -1105,9 +1089,8 @@ class _TransactionSearchFilters extends StatelessWidget {
   final String? tagLabel;
   final bool tagSelected;
   final VoidCallback? onPickTag;
-  final String reimbursementLabel;
-  final bool reimbursementActive;
-  final VoidCallback? onPickReimbursement;
+  final ReimbursementFilter reimbursementFilter;
+  final ValueChanged<ReimbursementFilter> onSelectReimbursement;
   final VoidCallback? onClear;
 
   @override
@@ -1190,12 +1173,27 @@ class _TransactionSearchFilters extends StatelessWidget {
                     icon: tagSelected ? Icons.label : Icons.label_outline,
                     onTap: onPickTag,
                   ),
-                FilterPill(
-                  label: reimbursementLabel,
-                  icon: reimbursementActive
-                      ? Icons.check_circle
-                      : Icons.receipt_long_outlined,
-                  onTap: onPickReimbursement,
+                VeriAnchoredChoice<ReimbursementFilter>(
+                  values: ReimbursementFilter.values,
+                  selected: reimbursementFilter,
+                  idOf: (value) => 'reimbursement_${value.name}',
+                  labelOf: (value) => value.label(AppLocalizations.of(context)),
+                  onSelected: onSelectReimbursement,
+                  semanticLabel: AppLocalizations.of(
+                    context,
+                  ).reimbursementFilterTitle,
+                  width: 208,
+                  builder: (context, openMenu, menuOpen) => FilterPill(
+                    label: reimbursementFilter == ReimbursementFilter.all
+                        ? AppLocalizations.of(context).reimbursementFilterName
+                        : reimbursementFilter.label(
+                            AppLocalizations.of(context),
+                          ),
+                    icon: reimbursementFilter != ReimbursementFilter.all
+                        ? Icons.check_circle
+                        : Icons.receipt_long_outlined,
+                    onTap: openMenu,
+                  ),
                 ),
               ],
             ),
