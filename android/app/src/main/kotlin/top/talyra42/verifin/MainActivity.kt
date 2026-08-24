@@ -25,6 +25,7 @@ import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.atomic.AtomicBoolean
 
 // local_auth 需要宿主是 FragmentActivity，故继承 FlutterFragmentActivity。
 class MainActivity : FlutterFragmentActivity() {
@@ -34,6 +35,7 @@ class MainActivity : FlutterFragmentActivity() {
     private var pendingCaptureText: String? = null
     private var pendingDownloadsWrite: PendingDownloadsWrite? = null
     private var pendingDirectoryPick: MethodChannel.Result? = null
+    private val updateDownloadInProgress = AtomicBoolean(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         rememberQuickEntryIntent(intent)
@@ -269,6 +271,18 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     private fun downloadLatestUpdate(includePrerelease: Boolean, result: MethodChannel.Result) {
+        // Dart 层已有 single-flight；原生层仍独立加锁，避免生命周期重建、未来新增入口
+        // 或异常重复调用并发删除 / 写入同一个更新 APK。
+        if (!updateDownloadInProgress.compareAndSet(false, true)) {
+            result.success(
+                mapOf(
+                    "status" to "error",
+                    "message" to "已有更新下载正在进行，请稍候。",
+                    "currentVersion" to BuildConfig.VERSION_NAME,
+                ),
+            )
+            return
+        }
         Thread {
             try {
                 val response = downloadLatestReleaseAndInstall(includePrerelease)
@@ -281,6 +295,8 @@ class MainActivity : FlutterFragmentActivity() {
                         null,
                     )
                 }
+            } finally {
+                updateDownloadInProgress.set(false)
             }
         }.start()
     }
@@ -289,6 +305,16 @@ class MainActivity : FlutterFragmentActivity() {
     /// 找不到已下载文件时回 noAsset，供 Flutter 侧回退到重新下载。
     private fun installDownloadedUpdate(result: MethodChannel.Result) {
         val currentVersion = BuildConfig.VERSION_NAME
+        if (updateDownloadInProgress.get()) {
+            result.success(
+                mapOf(
+                    "status" to "error",
+                    "message" to "更新仍在下载，请稍候。",
+                    "currentVersion" to currentVersion,
+                ),
+            )
+            return
+        }
         val apkFile = downloadedApkFile()
         if (apkFile == null) {
             result.success(
@@ -300,8 +326,31 @@ class MainActivity : FlutterFragmentActivity() {
             )
             return
         }
-        // 文件名形如 verifin-v1.2.3.apk，回带版本号让弹窗版本行保持正确。
-        val latestTag = apkFile.name.removePrefix("verifin-").removeSuffix(".apk")
+        val latestVersion = try {
+            validateUpdateApk(apkFile)
+        } catch (error: Exception) {
+            apkFile.delete()
+            result.success(
+                mapOf(
+                    "status" to "noAsset",
+                    "message" to "已下载的安装包不完整，请重新下载。",
+                    "currentVersion" to currentVersion,
+                ),
+            )
+            return
+        }
+        if (!isNewerVersion(latestVersion, currentVersion)) {
+            apkFile.delete()
+            result.success(
+                mapOf(
+                    "status" to "upToDate",
+                    "message" to "当前已经是最新版本：v$currentVersion。",
+                    "currentVersion" to currentVersion,
+                    "latestVersion" to "v$latestVersion",
+                ),
+            )
+            return
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
             !packageManager.canRequestPackageInstalls()
         ) {
@@ -316,7 +365,7 @@ class MainActivity : FlutterFragmentActivity() {
                     "status" to "error",
                     "message" to "请先允许 VeriFin 安装未知应用，授权后再次点击立即安装。",
                     "currentVersion" to currentVersion,
-                    "latestVersion" to latestTag,
+                    "latestVersion" to "v$latestVersion",
                 ),
             )
             return
@@ -327,19 +376,31 @@ class MainActivity : FlutterFragmentActivity() {
                 "status" to "installing",
                 "message" to "已重新打开安装确认。",
                 "currentVersion" to currentVersion,
-                "latestVersion" to latestTag,
+                "latestVersion" to "v$latestVersion",
             ),
         )
     }
 
     /// 返回缓存目录中已下载的更新 APK（downloadApk 每次只保留一个），不存在则 null。
-    private fun downloadedApkFile(): File? {
+    private fun downloadedApkFile(expectedVersion: String? = null): File? {
         val updatesDir = File(cacheDir, "updates")
         if (!updatesDir.isDirectory) {
             return null
         }
-        return updatesDir.listFiles()
-            ?.firstOrNull { it.isFile && it.name.endsWith(".apk", ignoreCase = true) && it.length() > 0 }
+        val candidates = updatesDir.listFiles()
+            ?.filter { it.isFile && it.name.endsWith(".apk", ignoreCase = true) }
+            ?.sortedByDescending { it.lastModified() }
+            ?: return null
+        for (candidate in candidates) {
+            try {
+                validateUpdateApk(candidate, expectedVersion)
+                return candidate
+            } catch (error: Exception) {
+                // 半成品、错包或旧版本缓存都不能再暴露给安装入口。
+                candidate.delete()
+            }
+        }
+        return null
     }
 
     private fun checkLatestReleaseInfo(includePrerelease: Boolean): Map<String, Any> {
@@ -371,6 +432,15 @@ class MainActivity : FlutterFragmentActivity() {
                 "currentVersion" to currentVersion,
                 "latestVersion" to latestTag,
             )
+        if (downloadedApkFile(latestVersion) != null) {
+            return mapOf(
+                "status" to "downloaded",
+                "message" to "新版本 $latestTag 已下载，可以立即安装。",
+                "currentVersion" to currentVersion,
+                "latestVersion" to latestTag,
+                "isPrerelease" to isPrerelease,
+            )
+        }
         return mapOf(
             "status" to "available",
             "message" to "发现新版本 $latestTag，可以下载并安装。",
@@ -451,7 +521,7 @@ class MainActivity : FlutterFragmentActivity() {
                 "currentVersion" to currentVersion,
                 "latestVersion" to latestTag,
             )
-        val apkFile = downloadApk(apkUrl, latestTag)
+        val apkFile = downloadApk(apkUrl, latestTag, latestVersion)
         startApkInstall(apkFile)
         return mapOf(
             "status" to "installing",
@@ -496,50 +566,101 @@ class MainActivity : FlutterFragmentActivity() {
         return null
     }
 
-    private fun downloadApk(downloadUrl: String, tag: String): File {
+    private fun downloadApk(downloadUrl: String, tag: String, expectedVersion: String): File {
         val updatesDir = File(cacheDir, "updates").apply { mkdirs() }
-        updatesDir.listFiles()?.forEach { it.delete() }
-        val apkFile = File(updatesDir, "verifin-$tag.apk")
+        // 下载阶段只写 incoming 子目录；根目录中的 .apk 均是完整校验并提交后的文件。
+        // 这样即使下载中断，FileProvider / 重新安装入口也不会碰到半成品。
+        val incomingDir = File(updatesDir, "incoming").apply { mkdirs() }
+        incomingDir.listFiles()?.forEach { it.delete() }
+        val safeTag = tag.replace(Regex("[^A-Za-z0-9._-]"), "_")
+        val incomingFile = File(incomingDir, "verifin-$safeTag.apk")
+        val apkFile = File(updatesDir, "verifin-$safeTag.apk")
         val connection = URL(downloadUrl).openConnection() as HttpURLConnection
         connection.requestMethod = "GET"
         connection.setRequestProperty("User-Agent", "VeriFin/${BuildConfig.VERSION_NAME}")
         connection.connectTimeout = 15_000
         connection.readTimeout = 60_000
-        val code = connection.responseCode
-        if (code !in 200..299) {
-            connection.disconnect()
-            throw IllegalStateException("APK 下载失败：HTTP $code")
-        }
-        val totalBytes = connection.contentLengthLong.takeIf { it > 0 } ?: 0
-        sendDownloadProgress(0, totalBytes)
-        connection.inputStream.use { input ->
-            apkFile.outputStream().use { output ->
-                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                var received = 0L
-                var lastProgress = -1
-                while (true) {
-                    val read = input.read(buffer)
-                    if (read == -1) {
-                        break
-                    }
-                    output.write(buffer, 0, read)
-                    received += read
-                    val progress = if (totalBytes > 0) {
-                        ((received * 100) / totalBytes).toInt()
-                    } else {
-                        0
-                    }
-                    if (progress != lastProgress) {
-                        lastProgress = progress
-                        sendDownloadProgress(received, totalBytes)
+        try {
+            val code = connection.responseCode
+            if (code !in 200..299) {
+                throw IllegalStateException("APK 下载失败：HTTP $code")
+            }
+            val totalBytes = connection.contentLengthLong.takeIf { it > 0 } ?: 0
+            sendDownloadProgress(0, totalBytes)
+            connection.inputStream.use { input ->
+                incomingFile.outputStream().use { output ->
+                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                    var received = 0L
+                    var lastProgress = -1
+                    while (true) {
+                        val read = input.read(buffer)
+                        if (read == -1) {
+                            break
+                        }
+                        output.write(buffer, 0, read)
+                        received += read
+                        val progress = if (totalBytes > 0) {
+                            ((received * 100) / totalBytes).toInt()
+                        } else {
+                            0
+                        }
+                        if (progress != lastProgress) {
+                            lastProgress = progress
+                            sendDownloadProgress(received, totalBytes)
+                        }
                     }
                 }
             }
+            val finalSize = incomingFile.length()
+            if (totalBytes > 0 && finalSize != totalBytes) {
+                throw IllegalStateException(
+                    "APK 下载不完整：应为 $totalBytes 字节，实际为 $finalSize 字节。",
+                )
+            }
+            validateUpdateApk(incomingFile, expectedVersion)
+
+            // 校验完成后才替换旧缓存；同一文件系统内 rename 是原子提交，不把复制中的
+            // 文件暴露给安装入口。rename 失败时宁可报错，也不降级为非原子复制。
+            if (apkFile.exists() && !apkFile.delete()) {
+                throw IllegalStateException("无法替换旧更新安装包。")
+            }
+            if (!incomingFile.renameTo(apkFile)) {
+                throw IllegalStateException("无法提交已下载的更新安装包。")
+            }
+            updatesDir.listFiles()?.forEach { file ->
+                if (file.isFile &&
+                    file != apkFile &&
+                    file.name.endsWith(".apk", ignoreCase = true)
+                ) {
+                    file.delete()
+                }
+            }
+            sendDownloadProgress(finalSize, totalBytes.takeIf { it > 0 } ?: finalSize)
+            return apkFile
+        } catch (error: Exception) {
+            incomingFile.delete()
+            throw error
+        } finally {
+            connection.disconnect()
         }
-        val finalSize = apkFile.length()
-        sendDownloadProgress(finalSize, totalBytes.takeIf { it > 0 } ?: finalSize)
-        connection.disconnect()
-        return apkFile
+    }
+
+    /// 校验 APK 至少能被系统解析、包名属于当前应用，且版本与目标 Release 一致。
+    /// 最终安装时 Android 仍会再次校验签名；这里负责在拉起安装器前拦住残包/错包。
+    @Suppress("DEPRECATION")
+    private fun validateUpdateApk(apkFile: File, expectedVersion: String? = null): String {
+        val packageInfo = packageManager.getPackageArchiveInfo(apkFile.absolutePath, 0)
+            ?: throw IllegalStateException("下载的文件不是有效 APK。")
+        if (packageInfo.packageName != packageName) {
+            throw IllegalStateException("下载的 APK 包名与 VeriFin 不一致。")
+        }
+        val version = packageInfo.versionName?.removePrefix("v")
+            ?.takeIf { it.isNotBlank() }
+            ?: throw IllegalStateException("下载的 APK 缺少版本号。")
+        if (expectedVersion != null && version != expectedVersion.removePrefix("v")) {
+            throw IllegalStateException("下载的 APK 版本与目标 Release 不一致。")
+        }
+        return version
     }
 
     private fun sendDownloadProgress(receivedBytes: Long, totalBytes: Long) {

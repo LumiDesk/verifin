@@ -440,6 +440,9 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _checkForUpdate(BuildContext context) async {
     await showDialog<void>(
       context: context,
+      // 下载任务由原生线程继续执行，不能让遮罩点击把弹窗关掉后再次发起下载。
+      // 空闲态仍可用弹窗内的「关闭」按钮退出。
+      barrierDismissible: false,
       builder: (context) => const _UpdateCheckDialog(),
     );
   }
@@ -528,6 +531,9 @@ class _UpdateCheckDialogState extends State<_UpdateCheckDialog> {
     setState(() {
       _result = result;
       _checking = false;
+      // 弹窗关闭后重新检查时，原生会识别已校验的缓存 APK；恢复「立即安装」
+      // 状态，避免再次下载同一版本。
+      _downloaded = result.status == UpdateCheckStatus.downloaded;
     });
   }
 
@@ -581,8 +587,9 @@ class _UpdateCheckDialogState extends State<_UpdateCheckDialog> {
     setState(() {
       _installing = false;
       _result = result;
-      // 已下载文件不在了（缓存被系统清理），回退到重新下载。
-      if (result.status == UpdateCheckStatus.noAsset) {
+      // 已下载文件不在了，或当前版本已经完成更新时，不再保留安装按钮。
+      if (result.status == UpdateCheckStatus.noAsset ||
+          result.status == UpdateCheckStatus.upToDate) {
         _downloaded = false;
       }
     });
@@ -593,153 +600,159 @@ class _UpdateCheckDialogState extends State<_UpdateCheckDialog> {
     final result = _result;
     final hasUpdate = result?.status == UpdateCheckStatus.available;
 
-    return AlertDialog(
-      title: Text(AppLocalizations.of(context).checkUpdate),
-      content: SizedBox(
-        width: 360,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            _VersionInfoRow(
-              label: AppLocalizations.of(context).currentVersion,
-              value: appVersionLabel,
-            ),
-            const SizedBox(height: 8),
-            _VersionInfoRow(
-              label: AppLocalizations.of(context).latestVersion,
-              value: _checking
-                  ? AppLocalizations.of(context).checkingLabel
-                  : _displayVersion(result),
-            ),
-            const SizedBox(height: 14),
-            if (_checking)
-              Row(
-                children: <Widget>[
-                  const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(AppLocalizations.of(context).queryingGithub),
-                ],
-              )
-            else
-              Text(
-                result?.message ??
-                    AppLocalizations.of(context).updateCheckFailed,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.72),
-                ),
+    return PopScope(
+      // 「关闭」按钮虽已在忙碌时禁用，仍需单独拦截 Android 系统返回键。
+      // 否则原生下载继续运行，用户可重开弹窗触发第二条下载线程。
+      canPop: !_downloading && !_installing,
+      child: AlertDialog(
+        title: Text(AppLocalizations.of(context).checkUpdate),
+        content: SizedBox(
+          width: 360,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              _VersionInfoRow(
+                label: AppLocalizations.of(context).currentVersion,
+                value: appVersionLabel,
               ),
-            if (hasUpdate && (result?.isPrerelease ?? false)) ...<Widget>[
-              const SizedBox(height: 10),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const Icon(
-                    Icons.warning_amber_rounded,
-                    size: 16,
-                    color: veriExpense,
+              const SizedBox(height: 8),
+              _VersionInfoRow(
+                label: AppLocalizations.of(context).latestVersion,
+                value: _checking
+                    ? AppLocalizations.of(context).checkingLabel
+                    : _displayVersion(result),
+              ),
+              const SizedBox(height: 14),
+              if (_checking)
+                Row(
+                  children: <Widget>[
+                    const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(AppLocalizations.of(context).queryingGithub),
+                  ],
+                )
+              else
+                Text(
+                  result?.message ??
+                      AppLocalizations.of(context).updateCheckFailed,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.72),
                   ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      AppLocalizations.of(context).prereleaseNoticeInline,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: veriExpense,
-                        fontWeight: FontWeight.w600,
+                ),
+              if (hasUpdate && (result?.isPrerelease ?? false)) ...<Widget>[
+                const SizedBox(height: 10),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const Icon(
+                      Icons.warning_amber_rounded,
+                      size: 16,
+                      color: veriExpense,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        AppLocalizations.of(context).prereleaseNoticeInline,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: veriExpense,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
+                  ],
+                ),
+              ],
+              if (_downloading) ...<Widget>[
+                const SizedBox(height: 14),
+                ValueListenableBuilder<UpdateDownloadProgress?>(
+                  valueListenable: AppUpdateBridge.updateProgress,
+                  builder: (context, progress, _) {
+                    final knownSize =
+                        progress != null && progress.totalBytes > 0;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        LinearProgressIndicator(
+                          value: knownSize ? progress.progress : null,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          knownSize
+                              ? AppLocalizations.of(
+                                  context,
+                                ).downloadingPercent(progress.percent)
+                              : AppLocalizations.of(context).downloadingLabel,
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ],
+              const SizedBox(height: 6),
+              const Divider(height: 18),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      AppLocalizations.of(context).includePrereleaseLabel,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                  Switch(
+                    value: _includePrerelease,
+                    onChanged: (_checking || _downloading)
+                        ? null
+                        : (value) {
+                            setState(() => _includePrerelease = value);
+                            _check();
+                          },
                   ),
                 ],
               ),
             ],
-            if (_downloading) ...<Widget>[
-              const SizedBox(height: 14),
-              ValueListenableBuilder<UpdateDownloadProgress?>(
-                valueListenable: AppUpdateBridge.updateProgress,
-                builder: (context, progress, _) {
-                  final knownSize = progress != null && progress.totalBytes > 0;
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      LinearProgressIndicator(
-                        value: knownSize ? progress.progress : null,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        knownSize
-                            ? AppLocalizations.of(
-                                context,
-                              ).downloadingPercent(progress.percent)
-                            : AppLocalizations.of(context).downloadingLabel,
-                        style: Theme.of(context).textTheme.labelMedium
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ],
-            const SizedBox(height: 6),
-            const Divider(height: 18),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    AppLocalizations.of(context).includePrereleaseLabel,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ),
-                Switch(
-                  value: _includePrerelease,
-                  onChanged: (_checking || _downloading)
-                      ? null
-                      : (value) {
-                          setState(() => _includePrerelease = value);
-                          _check();
-                        },
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
-      ),
-      actions: <Widget>[
-        TextButton(
-          onPressed: (_downloading || _installing)
-              ? null
-              : () => Navigator.of(context).pop(),
-          child: Text(AppLocalizations.of(context).closeLabel),
-        ),
-        if (!_checking &&
-            !_downloaded &&
-            result?.status == UpdateCheckStatus.error)
+        actions: <Widget>[
           TextButton(
-            onPressed: _downloading ? null : _check,
-            child: Text(AppLocalizations.of(context).retryLabel),
+            onPressed: (_downloading || _installing)
+                ? null
+                : () => Navigator.of(context).pop(),
+            child: Text(AppLocalizations.of(context).closeLabel),
           ),
-        if (_downloaded)
-          // 下载已完成：主按钮转为「立即安装」，可反复点击重新拉起系统安装器，无需重下。
-          FilledButton(
-            onPressed: (_downloading || _installing) ? null : _install,
-            child: Text(AppLocalizations.of(context).installNow),
-          )
-        // hasUpdate 或已下载文件丢失（noAsset 回退）时，都提供「下载新版本」入口。
-        else if (hasUpdate || result?.status == UpdateCheckStatus.noAsset)
-          FilledButton(
-            onPressed: _downloading ? null : _download,
-            child: Text(
-              _downloading
-                  ? AppLocalizations.of(context).downloadingShort
-                  : AppLocalizations.of(context).downloadNewVersion,
+          if (!_checking &&
+              !_downloaded &&
+              result?.status == UpdateCheckStatus.error)
+            TextButton(
+              onPressed: _downloading ? null : _check,
+              child: Text(AppLocalizations.of(context).retryLabel),
             ),
-          ),
-      ],
+          if (_downloaded)
+            // 下载已完成：主按钮转为「立即安装」，可反复点击重新拉起系统安装器，无需重下。
+            FilledButton(
+              onPressed: (_downloading || _installing) ? null : _install,
+              child: Text(AppLocalizations.of(context).installNow),
+            )
+          // hasUpdate 或已下载文件丢失（noAsset 回退）时，都提供「下载新版本」入口。
+          else if (hasUpdate || result?.status == UpdateCheckStatus.noAsset)
+            FilledButton(
+              onPressed: _downloading ? null : _download,
+              child: Text(
+                _downloading
+                    ? AppLocalizations.of(context).downloadingShort
+                    : AppLocalizations.of(context).downloadNewVersion,
+              ),
+            ),
+        ],
+      ),
     );
   }
 

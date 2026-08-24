@@ -7,6 +7,7 @@ class AppUpdateBridge {
 
   static final ValueNotifier<UpdateDownloadProgress?> updateProgress =
       ValueNotifier<UpdateDownloadProgress?>(null);
+  static Future<UpdateCheckResult>? _activeDownload;
 
   static Future<UpdateCheckResult> checkForUpdate({
     bool includePrerelease = false,
@@ -51,8 +52,30 @@ class AppUpdateBridge {
     }
   }
 
+  /// 同一 Flutter 进程内的下载采用 single-flight：更新弹窗即使因生命周期变化被
+  /// 重建，后续调用也只会等待现有任务，不会再让原生层并发写同一个 APK。
   static Future<UpdateCheckResult> downloadLatestUpdate({
     bool includePrerelease = false,
+  }) {
+    final active = _activeDownload;
+    if (active != null) {
+      return active;
+    }
+    late final Future<UpdateCheckResult> operation;
+    operation =
+        _performDownloadLatestUpdate(
+          includePrerelease: includePrerelease,
+        ).whenComplete(() {
+          if (identical(_activeDownload, operation)) {
+            _activeDownload = null;
+          }
+        });
+    _activeDownload = operation;
+    return operation;
+  }
+
+  static Future<UpdateCheckResult> _performDownloadLatestUpdate({
+    required bool includePrerelease,
   }) async {
     updateProgress.value = const UpdateDownloadProgress(progress: 0);
     try {
@@ -77,6 +100,7 @@ class AppUpdateBridge {
 
 enum UpdateCheckStatus {
   available,
+  downloaded,
   installing,
   upToDate,
   noAsset,
