@@ -75,8 +75,12 @@ class _LedgerBookRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
+    final l10n = AppLocalizations.of(context);
     final selected = controller.activeBook.id == book.id;
     final entryCount = controller.entryCountForBook(book.id);
+    final currencyLocked =
+        book.currencySetupStatus != CurrencySetupStatus.legacyUnconfirmed &&
+        controller.ledgerBookHasFinancialData(book.id);
 
     return Material(
       color: Colors.transparent,
@@ -121,40 +125,38 @@ class _LedgerBookRow extends StatelessWidget {
               ),
               if (selected)
                 const Icon(Icons.check_circle, color: veriRoyal, size: 18),
-              PopupMenuButton<String>(
-                tooltip: AppLocalizations.of(context).bookActions,
-                onSelected: (value) async {
-                  if (value == 'rename') {
-                    await _renameBook(context);
-                    return;
-                  }
-                  if (value == 'currency') {
-                    await _editBookCurrency(context);
-                    return;
-                  }
-                  if (value == 'delete') {
-                    await _deleteBook(context);
-                  }
-                },
-                itemBuilder: (context) => <PopupMenuEntry<String>>[
-                  PopupMenuItem<String>(
-                    value: 'rename',
-                    child: Text(AppLocalizations.of(context).commonRename),
+              VeriAnchoredMenuButton(
+                icon: Icons.more_vert,
+                tooltip: l10n.bookActions,
+                width: 216,
+                entries: <VeriMenuEntry>[
+                  VeriMenuItem(
+                    id: 'book_rename',
+                    icon: Icons.drive_file_rename_outline,
+                    title: l10n.commonRename,
+                    onPressed: () async => _renameBook(context),
                   ),
-                  PopupMenuItem<String>(
-                    value: 'currency',
-                    child: Text(
-                      AppLocalizations.of(context).ledgerBaseCurrency,
-                    ),
+                  VeriMenuItem(
+                    id: 'book_currency',
+                    icon: Icons.currency_exchange_outlined,
+                    title: l10n.ledgerBaseCurrency,
+                    subtitle: currencyLocked
+                        ? l10n.ledgerCurrencyLockedShort
+                        : book.baseCurrencyCode,
+                    enabled: !currencyLocked,
+                    onPressed: () async => _editBookCurrency(context),
                   ),
-                  PopupMenuItem<String>(
-                    value: 'delete',
+                  const VeriMenuDivider(),
+                  VeriMenuItem(
+                    id: 'book_delete',
+                    icon: Icons.delete_outline,
+                    title: l10n.commonDelete,
+                    subtitle: book.isDefault
+                        ? l10n.defaultBookUndeletable
+                        : null,
                     enabled: !book.isDefault,
-                    child: Text(
-                      book.isDefault
-                          ? AppLocalizations.of(context).defaultBookUndeletable
-                          : AppLocalizations.of(context).commonDelete,
-                    ),
+                    foregroundColor: Theme.of(context).colorScheme.error,
+                    onPressed: () async => _deleteBook(context),
                   ),
                 ],
               ),

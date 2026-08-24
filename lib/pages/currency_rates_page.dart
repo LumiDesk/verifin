@@ -361,35 +361,50 @@ class _RateHistoryRow extends StatelessWidget {
           currencyCode: rate.currencyCode,
           existing: rate,
         ),
-        trailing: PopupMenuButton<String>(
-          tooltip: l10n.bookActions,
-          onSelected: (value) async {
-            if (value != 'delete') return;
-            final confirmed = await showConfirmDialog(
-              context,
-              title: l10n.exchangeRateDeleteTitle,
-              message: l10n.exchangeRateDeleteMessage,
-              confirmLabel: l10n.commonDelete,
-              destructive: true,
-            );
-            if (!context.mounted || !confirmed) return;
-            final deleted = await VeriFinScope.of(
-              context,
-            ).deleteExchangeRate(rate.id);
-            if (!context.mounted || deleted) return;
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(l10n.saveFailed)));
-          },
-          itemBuilder: (context) => <PopupMenuEntry<String>>[
-            PopupMenuItem<String>(
-              value: 'delete',
-              child: Text(l10n.commonDelete),
+        trailing: VeriAnchoredMenuButton(
+          icon: Icons.more_vert,
+          tooltip: l10n.exchangeRateHistory(rate.currencyCode),
+          width: 188,
+          entries: <VeriMenuEntry>[
+            VeriMenuItem(
+              id: 'rate_edit',
+              icon: Icons.edit_outlined,
+              title: l10n.commonEdit,
+              onPressed: () async => editExchangeRate(
+                context: context,
+                currencyCode: rate.currencyCode,
+                existing: rate,
+              ),
+            ),
+            const VeriMenuDivider(),
+            VeriMenuItem(
+              id: 'rate_delete',
+              icon: Icons.delete_outline,
+              title: l10n.commonDelete,
+              foregroundColor: Theme.of(context).colorScheme.error,
+              onPressed: () async => _deleteRate(context),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _deleteRate(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showConfirmDialog(
+      context,
+      title: l10n.exchangeRateDeleteTitle,
+      message: l10n.exchangeRateDeleteMessage,
+      confirmLabel: l10n.commonDelete,
+      destructive: true,
+    );
+    if (!context.mounted || !confirmed) return;
+    final deleted = await VeriFinScope.of(context).deleteExchangeRate(rate.id);
+    if (!context.mounted || deleted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.saveFailed)));
   }
 }
 

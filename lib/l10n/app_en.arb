@@ -18,6 +18,7 @@
   "localeFollowSystem": "Follow system",
   "commonCancel": "Cancel",
   "commonConfirm": "Confirm",
+  "commonEdit": "Edit",
   "commonDelete": "Delete",
   "commonBack": "Back",
   "commonProcessing": "Processing…",
@@ -1499,6 +1500,7 @@
   "selectAccountCurrency": "Select account currency",
   "selectRateCurrency": "Select a currency for exchange rates",
   "ledgerCurrencyLocked": "This ledger contains financial data, so its base currency is locked. Create another ledger to use a different base currency.",
+  "ledgerCurrencyLockedShort": "Locked by financial data",
   "ledgerCurrencyChangeTitle": "Change base currency?",
   "ledgerCurrencyChangeMessage": "This empty ledger will use {code} ({name}); its zero-balance accounts will change to the same currency.",
   "@ledgerCurrencyChangeMessage": {

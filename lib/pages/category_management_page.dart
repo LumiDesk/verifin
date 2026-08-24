@@ -125,29 +125,56 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
         final category = siblings[index];
         final children = childrenOf(allCategories, category.id);
         final collapsed = _collapsed.contains(category.id);
+        final row = _sorting
+            ? _CategoryManageRow(
+                index: index,
+                depth: depth,
+                category: category,
+                childCount: children.length,
+                usageCount: controller.categoryUsageCountInTree(category.id),
+                collapsed: collapsed,
+                onToggle: children.isEmpty
+                    ? null
+                    : () => setState(() {
+                        if (collapsed) {
+                          _collapsed.remove(category.id);
+                        } else {
+                          _collapsed.add(category.id);
+                        }
+                      }),
+                sorting: true,
+              )
+            : VeriAnchoredMenuAnchor(
+                entries: _categoryMenuEntries(category),
+                semanticLabel: category.label,
+                width: 220,
+                submenuWidth: 208,
+                builder: (context, openMenu, menuOpen) => _CategoryManageRow(
+                  index: index,
+                  depth: depth,
+                  category: category,
+                  childCount: children.length,
+                  usageCount: controller.categoryUsageCountInTree(category.id),
+                  collapsed: collapsed,
+                  onToggle: children.isEmpty
+                      ? null
+                      : () => setState(() {
+                          if (collapsed) {
+                            _collapsed.remove(category.id);
+                          } else {
+                            _collapsed.add(category.id);
+                          }
+                        }),
+                  onTap: openMenu,
+                  onActions: openMenu,
+                  sorting: false,
+                ),
+              );
         return Column(
           key: ValueKey<String>(category.id),
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            _CategoryManageRow(
-              index: index,
-              depth: depth,
-              category: category,
-              childCount: children.length,
-              usageCount: controller.categoryUsageCountInTree(category.id),
-              collapsed: collapsed,
-              onToggle: children.isEmpty
-                  ? null
-                  : () => setState(() {
-                      if (collapsed) {
-                        _collapsed.remove(category.id);
-                      } else {
-                        _collapsed.add(category.id);
-                      }
-                    }),
-              onTap: () => _showCategoryActions(category),
-              sorting: _sorting,
-            ),
+            row,
             if (children.isNotEmpty && !collapsed)
               _buildLevel(
                 controller,
@@ -280,57 +307,72 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
     }
   }
 
-  Future<void> _showCategoryActions(Category category) async {
+  List<VeriMenuEntry> _categoryMenuEntries(Category category) {
     final protected = _isProtectedCategory(category.id);
-    final selected = await showOptionSheet<String>(
-      context: context,
-      title: category.label,
-      values: <String>[
-        'view_entries',
-        'rename',
-        'icon',
-        'add_sub',
-        if (!protected) 'move',
-        if (!protected) 'merge',
-        if (!protected) 'delete',
-      ],
-      selected: 'view_entries',
-      showSelectedMarker: false,
-      labelOf: (value) => switch (value) {
-        'view_entries' => AppLocalizations.of(context).viewCategoryEntries,
-        'rename' => AppLocalizations.of(context).commonRename,
-        'icon' => AppLocalizations.of(context).changeIcon,
-        'add_sub' => AppLocalizations.of(context).addSubCategory,
-        'move' => AppLocalizations.of(context).moveTo,
-        'merge' => AppLocalizations.of(context).mergeCategory,
-        'delete' => AppLocalizations.of(context).deleteCategory,
-        _ => value,
-      },
-    );
-    if (!mounted || selected == null) {
-      return;
-    }
-    switch (selected) {
-      case 'view_entries':
-        await Navigator.of(context).push<void>(
-          MaterialPageRoute<void>(
-            builder: (context) =>
-                TransactionsPage(initialCategoryId: category.id),
+    final l10n = AppLocalizations.of(context);
+    return <VeriMenuEntry>[
+      VeriMenuItem(
+        id: 'category_view_entries',
+        icon: Icons.receipt_long_outlined,
+        title: l10n.viewCategoryEntries,
+        onPressed: () async {
+          await Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(
+              builder: (context) =>
+                  TransactionsPage(initialCategoryId: category.id),
+            ),
+          );
+        },
+      ),
+      VeriMenuItem(
+        id: 'category_edit',
+        icon: Icons.edit_outlined,
+        title: l10n.commonEdit,
+        children: <VeriMenuEntry>[
+          VeriMenuItem(
+            id: 'category_rename',
+            icon: Icons.drive_file_rename_outline,
+            title: l10n.commonRename,
+            onPressed: () async => _renameCategory(category),
           ),
-        );
-      case 'rename':
-        await _renameCategory(category);
-      case 'icon':
-        await _changeCategoryIcon(category);
-      case 'add_sub':
-        await _createCategory(parent: category);
-      case 'move':
-        await _moveCategory(category);
-      case 'merge':
-        await _mergeCategory(category);
-      case 'delete':
-        await _deleteCategory(category);
-    }
+          VeriMenuItem(
+            id: 'category_icon',
+            icon: Icons.palette_outlined,
+            title: l10n.changeIcon,
+            onPressed: () async => _changeCategoryIcon(category),
+          ),
+          VeriMenuItem(
+            id: 'category_add_sub',
+            icon: Icons.create_new_folder_outlined,
+            title: l10n.addSubCategory,
+            onPressed: () async => _createCategory(parent: category),
+          ),
+          if (!protected)
+            VeriMenuItem(
+              id: 'category_move',
+              icon: Icons.drive_file_move_outline,
+              title: l10n.moveTo,
+              onPressed: () async => _moveCategory(category),
+            ),
+          if (!protected)
+            VeriMenuItem(
+              id: 'category_merge',
+              icon: Icons.merge_type_rounded,
+              title: l10n.mergeCategory,
+              onPressed: () async => _mergeCategory(category),
+            ),
+        ],
+      ),
+      if (!protected) const VeriMenuDivider(),
+      if (!protected)
+        VeriMenuItem(
+          id: 'category_delete',
+          icon: Icons.delete_outline,
+          title: l10n.deleteCategory,
+          foregroundColor: Theme.of(context).colorScheme.error,
+          onPressed: () async => _deleteCategory(category),
+        ),
+    ];
   }
 
   /// 把该分类的全部交易并入另一个同类型分类，随后删除该分类（统一同义分类）。
@@ -541,8 +583,9 @@ class _CategoryManageRow extends StatelessWidget {
     required this.usageCount,
     required this.collapsed,
     required this.onToggle,
-    required this.onTap,
     required this.sorting,
+    this.onTap,
+    this.onActions,
   });
 
   final int index;
@@ -554,7 +597,8 @@ class _CategoryManageRow extends StatelessWidget {
 
   /// 展开/收起子分类；无子分类时为 null（不显示折叠箭头）。
   final VoidCallback? onToggle;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final VoidCallback? onActions;
   final bool sorting;
 
   @override
@@ -643,6 +687,12 @@ class _CategoryManageRow extends StatelessWidget {
                       ).colorScheme.onSurface.withValues(alpha: 0.38),
                     ),
                   ),
+                )
+              else
+                IconButton(
+                  tooltip: category.label,
+                  onPressed: onActions,
+                  icon: const Icon(Icons.more_vert),
                 ),
             ],
           ),

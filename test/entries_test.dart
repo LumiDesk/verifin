@@ -378,8 +378,10 @@ void main() {
     await tester.tap(find.text('分类管理'));
     await tester.pumpAndSettle();
 
-    // 点击「餐饮」打开操作表，选择「新增子分类」。
+    // 点击「餐饮」打开操作菜单，再从「编辑」子菜单选择「新增子分类」。
     await tester.tap(find.text('餐饮'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('编辑'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('新增子分类'));
     await tester.pumpAndSettle();
@@ -404,14 +406,10 @@ void main() {
     await tester.tap(find.text('分类管理'));
     await tester.pumpAndSettle();
 
-    // 点「交通」→「合并到其他分类」。菜单项较多、在小屏测试视口里靠下的项需先滚动到可见。
+    // 点「交通」→「编辑」→「合并到其他分类」。
     await tester.tap(find.text('交通').first);
     await tester.pumpAndSettle();
-    await tester.dragUntilVisible(
-      find.text('合并到其他分类'),
-      find.byType(ListView).last,
-      const Offset(0, -60),
-    );
+    await tester.tap(find.text('编辑'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('合并到其他分类'));
     await tester.pumpAndSettle();

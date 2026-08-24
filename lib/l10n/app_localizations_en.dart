@@ -65,6 +65,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonConfirm => 'Confirm';
 
   @override
+  String get commonEdit => 'Edit';
+
+  @override
   String get commonDelete => 'Delete';
 
   @override
@@ -3947,6 +3950,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get ledgerCurrencyLocked =>
       'This ledger contains financial data, so its base currency is locked. Create another ledger to use a different base currency.';
+
+  @override
+  String get ledgerCurrencyLockedShort => 'Locked by financial data';
 
   @override
   String get ledgerCurrencyChangeTitle => 'Change base currency?';

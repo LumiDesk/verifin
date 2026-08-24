@@ -91,13 +91,29 @@ class _TagManagementPageState extends State<TagManagementPage> {
                       },
                       itemBuilder: (context, index) {
                         final tag = tags[index];
-                        return _TagManageRow(
+                        if (_sorting) {
+                          return _TagManageRow(
+                            key: ValueKey<String>(tag.id),
+                            index: index,
+                            tag: tag,
+                            usageCount: controller.tagUsageCount(tag.id),
+                            sorting: true,
+                          );
+                        }
+                        return VeriAnchoredMenuAnchor(
                           key: ValueKey<String>(tag.id),
-                          index: index,
-                          tag: tag,
-                          usageCount: controller.tagUsageCount(tag.id),
-                          sorting: _sorting,
-                          onTap: () => _showTagActions(tag),
+                          entries: _tagMenuEntries(tag),
+                          semanticLabel: tag.label,
+                          width: 188,
+                          builder: (context, openMenu, menuOpen) =>
+                              _TagManageRow(
+                                index: index,
+                                tag: tag,
+                                usageCount: controller.tagUsageCount(tag.id),
+                                sorting: false,
+                                onTap: openMenu,
+                                onActions: openMenu,
+                              ),
                         );
                       },
                     ),
@@ -190,28 +206,24 @@ class _TagManagementPageState extends State<TagManagementPage> {
     VeriFinScope.of(context).addTag(label);
   }
 
-  Future<void> _showTagActions(Tag tag) async {
-    final selected = await showOptionSheet<String>(
-      context: context,
-      title: tag.label,
-      values: const <String>['rename', 'delete'],
-      selected: 'rename',
-      showSelectedMarker: false,
-      labelOf: (value) => switch (value) {
-        'rename' => AppLocalizations.of(context).commonRename,
-        'delete' => AppLocalizations.of(context).deleteTag,
-        _ => value,
-      },
-    );
-    if (!mounted || selected == null) {
-      return;
-    }
-    switch (selected) {
-      case 'rename':
-        await _renameTag(tag);
-      case 'delete':
-        await _deleteTag(tag);
-    }
+  List<VeriMenuEntry> _tagMenuEntries(Tag tag) {
+    final l10n = AppLocalizations.of(context);
+    return <VeriMenuEntry>[
+      VeriMenuItem(
+        id: 'tag_rename',
+        icon: Icons.drive_file_rename_outline,
+        title: l10n.commonRename,
+        onPressed: () async => _renameTag(tag),
+      ),
+      const VeriMenuDivider(),
+      VeriMenuItem(
+        id: 'tag_delete',
+        icon: Icons.delete_outline,
+        title: l10n.deleteTag,
+        foregroundColor: Theme.of(context).colorScheme.error,
+        onPressed: () async => _deleteTag(tag),
+      ),
+    ];
   }
 
   Future<void> _renameTag(Tag tag) async {
@@ -253,14 +265,16 @@ class _TagManageRow extends StatelessWidget {
     required this.tag,
     required this.usageCount,
     required this.sorting,
-    required this.onTap,
+    this.onTap,
+    this.onActions,
   });
 
   final int index;
   final Tag tag;
   final int usageCount;
   final bool sorting;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final VoidCallback? onActions;
 
   @override
   Widget build(BuildContext context) {
@@ -315,6 +329,12 @@ class _TagManageRow extends StatelessWidget {
                       ).colorScheme.onSurface.withValues(alpha: 0.38),
                     ),
                   ),
+                )
+              else
+                IconButton(
+                  tooltip: tag.label,
+                  onPressed: onActions,
+                  icon: const Icon(Icons.more_vert),
                 ),
             ],
           ),
