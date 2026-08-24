@@ -22,6 +22,7 @@ import 'models.dart';
 
 part 'common_widgets_display.dart';
 part 'common_widgets_forms.dart';
+part 'common_widgets_menu.dart';
 part 'common_widgets_panels.dart';
 part 'common_widgets_scaffold.dart';
 part 'common_widgets_transactions.dart';

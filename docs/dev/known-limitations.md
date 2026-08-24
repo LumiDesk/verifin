@@ -59,7 +59,7 @@
 - （已完成，2026-07）**结构审查整改轮**（问题清单与整改记录见 `docs/dev/code-review-2026-07.md`）：
   源文件裸 NUL 字节修复；新增模型字段往返 / 仓储双实现契约 / 全版本迁移矩阵 / xls_reader·plan_builder 专项四组测试；
   数据库迁移改按版本注册表（缺段升级即抛错）；备份字节编解码收口 `BackupService.decodeBackupBytes`/`decryptEnvelope`（controller 只认明文 JSON）；
-  `platform_bridge` 按域拆五个 Bridge 类；`models.dart` 按域拆 `models/` 六文件（barrel 兼容）；`common_widgets` 按域拆五个 part；
+  `platform_bridge` 按域拆五个 Bridge 类；`models.dart` 按域拆 `models/` 六文件（barrel 兼容）；`common_widgets` 按域拆六个 part；
   `demo_data` 拆出 `icon_catalog`/`model_lookup`；`Category.normalizeParentId` 收拢两处反序列化重复。
 
 拆分方式备忘（供后续参考）：**独立页面**（无共享私有符号、可能被外部引用）→ 独立库 + `export` barrel，调用点 import 不变；
