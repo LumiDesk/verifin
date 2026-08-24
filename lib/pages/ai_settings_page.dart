@@ -197,15 +197,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     }
   }
 
-  Future<void> _selectToolCallMode() async {
-    final selected = await showOptionSheet<AiToolCallMode>(
-      context: context,
-      title: AppLocalizations.of(context).aiToolModeTitle,
-      values: AiToolCallMode.values,
-      selected: _toolCallMode,
-      labelOf: _toolModeLabel,
-    );
-    if (selected == null || !mounted) return;
+  void _selectToolCallMode(AiToolCallMode selected) {
     setState(() {
       _toolCallMode = selected;
       final profile = _detectedProfile;
@@ -354,17 +346,32 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      Material(
-                        color: Colors.transparent,
-                        child: ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(l10n.aiToolModeTitle),
-                          subtitle: Text(
-                            '${_toolModeLabel(_toolCallMode)} · '
-                            '${_toolModeHint(_toolCallMode)}',
+                      VeriAnchoredChoice<AiToolCallMode>(
+                        values: AiToolCallMode.values,
+                        selected: _toolCallMode,
+                        idOf: (value) => 'ai_tool_mode_${value.name}',
+                        labelOf: _toolModeLabel,
+                        subtitleOf: _toolModeHint,
+                        iconOf: (value) => switch (value) {
+                          AiToolCallMode.auto => Icons.auto_awesome_outlined,
+                          AiToolCallMode.native => Icons.extension_outlined,
+                          AiToolCallMode.prompt => Icons.text_snippet_outlined,
+                        },
+                        onSelected: _selectToolCallMode,
+                        semanticLabel: l10n.aiToolModeTitle,
+                        width: 276,
+                        builder: (context, openMenu, menuOpen) => Material(
+                          color: Colors.transparent,
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(l10n.aiToolModeTitle),
+                            subtitle: Text(
+                              '${_toolModeLabel(_toolCallMode)} · '
+                              '${_toolModeHint(_toolCallMode)}',
+                            ),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: _testing ? null : openMenu,
                           ),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: _testing ? null : _selectToolCallMode,
                         ),
                       ),
                       Text(

@@ -65,6 +65,36 @@ void main() {
     expect(controller.aiSettings.model, 'model');
   });
 
+  testWidgets('工具调用协议使用锚点菜单并在保存后提交', (tester) async {
+    final controller = await makeController()
+      ..setAiSettings(
+        const AiSettings(
+          baseUrl: 'https://example.com/v1',
+          apiKey: 'secret',
+          model: 'model',
+        ),
+      );
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(home: const AiSettingsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('工具调用协议'));
+    await tester.pumpAndSettle();
+    expect(find.text('用于不支持原生工具调用的模型或中转服务'), findsOneWidget);
+    await tester.tap(find.text('兼容模式'));
+    await tester.pumpAndSettle();
+
+    expect(controller.aiSettings.toolCallMode, AiToolCallMode.auto);
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+    expect(controller.aiSettings.toolCallMode, AiToolCallMode.prompt);
+  });
+
   group('AiSettings', () {
     test('isConfigured requires all three fields', () {
       expect(const AiSettings().isConfigured, isFalse);

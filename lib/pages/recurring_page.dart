@@ -594,24 +594,67 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
                               : () => _pickAccount(true),
                         ),
                       ..._currencyAmountFields(controller, accounts),
-                      DetailInfoRow(
-                        label: AppLocalizations.of(
-                          context,
-                        ).recurringRatePolicyLabel,
-                        value:
-                            _ratePolicy == RecurringRatePolicy.latestAvailable
+                      VeriAnchoredChoice<RecurringRatePolicy>(
+                        values: RecurringRatePolicy.values,
+                        selected: _ratePolicy,
+                        idOf: (value) => 'recurring_rate_${value.name}',
+                        labelOf: (value) =>
+                            value == RecurringRatePolicy.latestAvailable
                             ? AppLocalizations.of(
                                 context,
                               ).recurringRatePolicyLatest
                             : AppLocalizations.of(
                                 context,
                               ).recurringRatePolicyFixed,
-                        onTap: _pickRatePolicy,
+                        iconOf: (value) =>
+                            value == RecurringRatePolicy.latestAvailable
+                            ? Icons.currency_exchange_outlined
+                            : Icons.lock_clock_outlined,
+                        onSelected: (value) =>
+                            setState(() => _ratePolicy = value),
+                        semanticLabel: AppLocalizations.of(
+                          context,
+                        ).recurringRatePolicyLabel,
+                        width: 252,
+                        builder: (context, openMenu, menuOpen) => DetailInfoRow(
+                          label: AppLocalizations.of(
+                            context,
+                          ).recurringRatePolicyLabel,
+                          value:
+                              _ratePolicy == RecurringRatePolicy.latestAvailable
+                              ? AppLocalizations.of(
+                                  context,
+                                ).recurringRatePolicyLatest
+                              : AppLocalizations.of(
+                                  context,
+                                ).recurringRatePolicyFixed,
+                          onTap: openMenu,
+                        ),
                       ),
-                      DetailInfoRow(
-                        label: AppLocalizations.of(context).frequencyLabel,
-                        value: _frequency.label(AppLocalizations.of(context)),
-                        onTap: _pickFrequency,
+                      VeriAnchoredChoice<RecurringFrequency>(
+                        values: RecurringFrequency.values,
+                        selected: _frequency,
+                        idOf: (value) => 'recurring_frequency_${value.name}',
+                        labelOf: (value) =>
+                            value.label(AppLocalizations.of(context)),
+                        iconOf: (value) => switch (value) {
+                          RecurringFrequency.daily => Icons.today_outlined,
+                          RecurringFrequency.weekly => Icons.view_week_outlined,
+                          RecurringFrequency.monthly =>
+                            Icons.calendar_month_outlined,
+                          RecurringFrequency.yearly => Icons.event_outlined,
+                        },
+                        onSelected: (value) =>
+                            setState(() => _frequency = value),
+                        semanticLabel: AppLocalizations.of(
+                          context,
+                        ).pickFrequencyTitle,
+                        width: 196,
+                        builder: (context, openMenu, menuOpen) => DetailInfoRow(
+                          label: AppLocalizations.of(context).frequencyLabel,
+                          value: _frequency.label(AppLocalizations.of(context)),
+                          onTap: openMenu,
+                        ),
                       ),
                       DetailInfoRow(
                         label: AppLocalizations.of(context).startDateLabel,
@@ -841,21 +884,6 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
     });
   }
 
-  Future<void> _pickRatePolicy() async {
-    final selected = await showOptionSheet<RecurringRatePolicy>(
-      context: context,
-      title: AppLocalizations.of(context).recurringRatePolicyLabel,
-      values: RecurringRatePolicy.values,
-      selected: _ratePolicy,
-      labelOf: (value) => value == RecurringRatePolicy.latestAvailable
-          ? AppLocalizations.of(context).recurringRatePolicyLatest
-          : AppLocalizations.of(context).recurringRatePolicyFixed,
-    );
-    if (selected != null && mounted) {
-      setState(() => _ratePolicy = selected);
-    }
-  }
-
   Future<void> _pickCategory() async {
     final controller = VeriFinScope.of(context);
     final selected = await showCategoryPickerSheet(
@@ -923,19 +951,6 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
         forceBase: !toAccount,
       );
     });
-  }
-
-  Future<void> _pickFrequency() async {
-    final selected = await showOptionSheet<RecurringFrequency>(
-      context: context,
-      title: AppLocalizations.of(context).pickFrequencyTitle,
-      values: RecurringFrequency.values,
-      selected: _frequency,
-      labelOf: (value) => value.label(AppLocalizations.of(context)),
-    );
-    if (selected != null && mounted) {
-      setState(() => _frequency = selected);
-    }
   }
 
   Future<void> _pickStartDate() async {

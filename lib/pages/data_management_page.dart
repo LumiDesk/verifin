@@ -23,6 +23,9 @@ import 'sheets.dart';
 
 part 'data_management_dialogs.dart';
 
+const List<int> _backupIntervalOptions = <int>[1, 3, 6, 12, 24, 48, 72];
+const List<int> _backupRetentionOptions = <int>[3, 5, 10, 20, 50];
+
 class DataManagementPage extends StatefulWidget {
   const DataManagementPage({super.key});
 
@@ -150,41 +153,97 @@ class _DataManagementPageState extends State<DataManagementPage> {
                   VeriCard(
                     child: Column(
                       children: <Widget>[
-                        SettingsRow(
-                          icon: Icons.schedule_outlined,
-                          title: AppLocalizations.of(
+                        VeriAnchoredChoice<BackupFrequency>(
+                          values: BackupFrequency.values,
+                          selected: _draftFrequency,
+                          idOf: (value) => 'backup_frequency_${value.name}',
+                          labelOf: (value) =>
+                              value.label(AppLocalizations.of(context)),
+                          iconOf: (value) => switch (value) {
+                            BackupFrequency.manual => Icons.touch_app_outlined,
+                            BackupFrequency.onOpen => Icons.launch_outlined,
+                            BackupFrequency.onEntry => Icons.post_add_outlined,
+                            BackupFrequency.everyNHours =>
+                              Icons.schedule_outlined,
+                          },
+                          onSelected: (value) =>
+                              setState(() => _draftFrequency = value),
+                          semanticLabel: AppLocalizations.of(
                             context,
-                          ).backupFrequencyLabel,
-                          trailing: _draftFrequency.label(
-                            AppLocalizations.of(context),
+                          ).pickBackupFrequency,
+                          width: 236,
+                          builder: (context, openMenu, menuOpen) => SettingsRow(
+                            icon: Icons.schedule_outlined,
+                            title: AppLocalizations.of(
+                              context,
+                            ).backupFrequencyLabel,
+                            trailing: _draftFrequency.label(
+                              AppLocalizations.of(context),
+                            ),
+                            trailingIcon: Icons.chevron_right,
+                            onTap: openMenu,
                           ),
-                          trailingIcon: Icons.chevron_right,
-                          onTap: _pickBackupFrequency,
                         ),
                         if (_draftFrequency ==
                             BackupFrequency.everyNHours) ...<Widget>[
                           const Divider(),
-                          SettingsRow(
-                            icon: Icons.hourglass_bottom_outlined,
-                            title: AppLocalizations.of(
+                          VeriAnchoredChoice<int>(
+                            values: _backupIntervalOptions,
+                            selected:
+                                _backupIntervalOptions.contains(
+                                  _draftIntervalHours,
+                                )
+                                ? _draftIntervalHours
+                                : 24,
+                            idOf: (value) => 'backup_interval_$value',
+                            labelOf: (value) => AppLocalizations.of(
                               context,
-                            ).backupIntervalLabel,
-                            trailing: AppLocalizations.of(
+                            ).everyNHoursLabel(value),
+                            onSelected: (value) =>
+                                setState(() => _draftIntervalHours = value),
+                            semanticLabel: AppLocalizations.of(
                               context,
-                            ).everyNHoursLabel(_draftIntervalHours),
-                            trailingIcon: Icons.chevron_right,
-                            onTap: _pickBackupInterval,
+                            ).backupIntervalTitle,
+                            width: 196,
+                            builder: (context, openMenu, menuOpen) =>
+                                SettingsRow(
+                                  icon: Icons.hourglass_bottom_outlined,
+                                  title: AppLocalizations.of(
+                                    context,
+                                  ).backupIntervalLabel,
+                                  trailing: AppLocalizations.of(
+                                    context,
+                                  ).everyNHoursLabel(_draftIntervalHours),
+                                  trailingIcon: Icons.chevron_right,
+                                  onTap: openMenu,
+                                ),
                           ),
                         ],
                         const Divider(),
-                        SettingsRow(
-                          icon: Icons.inventory_2_outlined,
-                          title: AppLocalizations.of(context).retentionLabel,
-                          trailing: AppLocalizations.of(
+                        VeriAnchoredChoice<int>(
+                          values: _backupRetentionOptions,
+                          selected:
+                              _backupRetentionOptions.contains(_draftRetention)
+                              ? _draftRetention
+                              : 10,
+                          idOf: (value) => 'backup_retention_$value',
+                          labelOf: (value) =>
+                              AppLocalizations.of(context).latestNCopies(value),
+                          onSelected: (value) =>
+                              setState(() => _draftRetention = value),
+                          semanticLabel: AppLocalizations.of(
                             context,
-                          ).latestNCopies(_draftRetention),
-                          trailingIcon: Icons.chevron_right,
-                          onTap: _pickBackupRetention,
+                          ).retentionTitle,
+                          width: 196,
+                          builder: (context, openMenu, menuOpen) => SettingsRow(
+                            icon: Icons.inventory_2_outlined,
+                            title: AppLocalizations.of(context).retentionLabel,
+                            trailing: AppLocalizations.of(
+                              context,
+                            ).latestNCopies(_draftRetention),
+                            trailingIcon: Icons.chevron_right,
+                            onTap: openMenu,
+                          ),
                         ),
                       ],
                     ),
@@ -481,49 +540,6 @@ class _DataManagementPageState extends State<DataManagementPage> {
       return l10n.backupInvalidFile;
     }
     return l10n.backupFailedRetry;
-  }
-
-  Future<void> _pickBackupFrequency() async {
-    final selected = await showOptionSheet<BackupFrequency>(
-      context: context,
-      title: AppLocalizations.of(context).pickBackupFrequency,
-      values: BackupFrequency.values,
-      selected: _draftFrequency,
-      labelOf: (value) => value.label(AppLocalizations.of(context)),
-    );
-    if (selected != null && mounted) {
-      setState(() => _draftFrequency = selected);
-    }
-  }
-
-  Future<void> _pickBackupInterval() async {
-    const options = <int>[1, 3, 6, 12, 24, 48, 72];
-    final selected = await showOptionSheet<int>(
-      context: context,
-      title: AppLocalizations.of(context).backupIntervalTitle,
-      values: options,
-      selected: options.contains(_draftIntervalHours)
-          ? _draftIntervalHours
-          : 24,
-      labelOf: (value) => AppLocalizations.of(context).everyNHoursLabel(value),
-    );
-    if (selected != null && mounted) {
-      setState(() => _draftIntervalHours = selected);
-    }
-  }
-
-  Future<void> _pickBackupRetention() async {
-    const options = <int>[3, 5, 10, 20, 50];
-    final selected = await showOptionSheet<int>(
-      context: context,
-      title: AppLocalizations.of(context).retentionTitle,
-      values: options,
-      selected: options.contains(_draftRetention) ? _draftRetention : 10,
-      labelOf: (value) => AppLocalizations.of(context).latestNCopies(value),
-    );
-    if (selected != null && mounted) {
-      setState(() => _draftRetention = selected);
-    }
   }
 
   Future<void> _exportData(
