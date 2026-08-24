@@ -586,7 +586,7 @@ class _ChatMessage {
 - 失败步骤提供简短原因，底层 detail 仅进日志；
 - 已有 `AiResultView` 放在对应完成步骤之后或统一放在步骤列表下方；
 - 工具名和状态文案必须走中英文 ARB；
-- 不直接写新弹窗；需要选择协议时用既有 `showOptionSheet`。
+- 不直接写新弹窗；工具调用协议是三项静态受控单选，使用 `VeriAnchoredChoice<AiToolCallMode>` 贴近设置行展开。
 
 ### 8.4 工具步骤的本地化
 

@@ -627,7 +627,7 @@ enum CurrencyFractionStyle {
 - 页面使用 `Scaffold > SafeArea > VeriPage`、`VeriHeader` 和 `SaveHeaderAction`；
 - 编辑页使用 `UnsavedChangesGuard`；
 - 金额输入复用/参数化 `showNumberPadSheet`；
-- 简单选择器复用 `showOptionSheet`，货币搜索较复杂时新增统一 `showCurrencyPickerSheet`；
+- 2–8 项静态受控单选使用 `VeriAnchoredChoice<T>`；动态/分区简单列表保留 `showOptionSheet`，货币搜索使用统一 `showCurrencyPickerSheet`；
 - 账户选择继续走 `showAccountPickerSheet`；
 - 确认框继续走 `showConfirmDialog`；
 - 带币种换算行复用 `CurrencyAmountField`，聚合卡片的单位提示复用 `MoneyUnitLabel`；新增共享件后同步登记 `docs/dev/components.md`，不能在多个页面复制实现。
