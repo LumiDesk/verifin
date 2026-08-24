@@ -3,8 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/app_theme.dart';
 import 'package:verifin/app/common_widgets.dart';
 import 'package:verifin/app/models.dart';
+import 'package:verifin/app/veri_fin_scope.dart';
 import 'package:verifin/local_storage/local_storage.dart';
 import 'package:verifin/main.dart';
+import 'package:verifin/pages/account_detail_page.dart';
 
 import 'support/test_harness.dart';
 
@@ -70,6 +72,38 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('临时账户'), findsNothing);
     expect(controller.accounts, isEmpty);
+  });
+
+  testWidgets('新建账户切换类型后可恢复暂时隐藏的卡号草稿', (tester) async {
+    await pumpApp(tester);
+    await tapBottomTab(tester, 1);
+    await tester.tap(find.byTooltip('资产操作'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('添加账户'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('add_account_type_choice')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('信用卡').last);
+    await tester.pumpAndSettle();
+    final cardNumber = find.widgetWithText(TextFormField, '完整卡号（选填）');
+    await tester.enterText(cardNumber, '6222333344445678');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('add_account_type_choice')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('现金').last);
+    await tester.pumpAndSettle();
+    expect(cardNumber, findsNothing);
+
+    await tester.tap(find.byKey(const Key('add_account_type_choice')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('信用卡').last);
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<TextFormField>(cardNumber).controller?.text,
+      '6222333344445678',
+    );
   });
 
   testWidgets('资产背景入口先进入显式保存的显示设置页', (WidgetTester tester) async {
@@ -385,6 +419,68 @@ void main() {
 
     numberController.dispose();
     last4Controller.dispose();
+  });
+
+  testWidgets('账户类型锚点菜单切换期间保留隐藏草稿，保存时再清理', (tester) async {
+    final controller = await makeController();
+    addTearDown(controller.dispose);
+    final account = Account(
+      id: 'type-draft-account',
+      bookId: controller.activeBook.id,
+      name: '测试信用卡',
+      type: AccountType.creditCard,
+      groupId: null,
+      initialBalance: 0,
+      iconCode: 'credit',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+      cardNumber: '6222333344445678',
+      cardLast4: '5678',
+      creditLimit: 10000,
+      statementDay: 5,
+      dueDay: 25,
+    );
+    controller.addAccount(account);
+    await tester.binding.setSurfaceSize(const Size(460, 2600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(home: AccountDetailPage(account: account)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('类型'));
+    await tester.pumpAndSettle();
+    expect(find.text('支持卡号、额度、账单日与还款'), findsOneWidget);
+    await tester.tap(find.text('现金').last);
+    await tester.pumpAndSettle();
+    expect(find.text('卡片信息'), findsNothing);
+
+    await tester.tap(find.text('类型'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('信用卡').last);
+    await tester.pumpAndSettle();
+    expect(find.text('6222333344445678'), findsOneWidget);
+
+    await tester.tap(find.text('类型'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('现金').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+
+    final saved = controller.accounts.firstWhere(
+      (item) => item.id == account.id,
+    );
+    expect(saved.type, AccountType.cash);
+    expect(saved.cardNumber, isEmpty);
+    expect(saved.cardLast4, isEmpty);
+    expect(saved.creditLimit, isNull);
+    expect(saved.statementDay, isNull);
+    expect(saved.dueDay, isNull);
   });
 
   testWidgets('资产视图保存前不生效，普通折叠不再持久化', (WidgetTester tester) async {

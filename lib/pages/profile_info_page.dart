@@ -7,7 +7,6 @@ import '../l10n/app_localizations.dart';
 import '../app/models.dart';
 import '../app/veri_fin_scope.dart';
 import 'profile_widgets.dart';
-import 'sheets.dart';
 
 class ProfileInfoPage extends StatefulWidget {
   const ProfileInfoPage({super.key});
@@ -113,11 +112,26 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                SelectField(
-                  label: AppLocalizations.of(context).genderLabel,
-                  value: _gender.label(AppLocalizations.of(context)),
-                  icon: Icons.person_outline,
-                  onTap: _pickGender,
+                VeriAnchoredChoice<ProfileGender>(
+                  key: const Key('profile_gender_choice'),
+                  values: ProfileGender.values,
+                  selected: _gender,
+                  idOf: (value) => 'profile_gender_${value.name}',
+                  labelOf: (value) => value.label(AppLocalizations.of(context)),
+                  iconOf: (value) => switch (value) {
+                    ProfileGender.unset => Icons.remove_circle_outline,
+                    ProfileGender.male => Icons.male_rounded,
+                    ProfileGender.female => Icons.female_rounded,
+                  },
+                  onSelected: (value) => setState(() => _gender = value),
+                  semanticLabel: AppLocalizations.of(context).pickGenderTitle,
+                  width: 188,
+                  builder: (context, openMenu, menuOpen) => SelectField(
+                    label: AppLocalizations.of(context).genderLabel,
+                    value: _gender.label(AppLocalizations.of(context)),
+                    icon: Icons.person_outline,
+                    onTap: openMenu,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 SelectField(
@@ -150,19 +164,6 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
         ),
       ),
     );
-  }
-
-  Future<void> _pickGender() async {
-    final selected = await showOptionSheet<ProfileGender>(
-      context: context,
-      title: AppLocalizations.of(context).pickGenderTitle,
-      values: ProfileGender.values,
-      selected: _gender,
-      labelOf: (value) => value.label(AppLocalizations.of(context)),
-    );
-    if (selected != null && mounted) {
-      setState(() => _gender = selected);
-    }
   }
 
   Future<void> _pickBirthday() async {

@@ -126,11 +126,69 @@ void main() {
     // 打开类型选择器：只有支出/收入/转账，没有「退款」。
     await tester.tap(find.text('类型'));
     await tester.pumpAndSettle();
+    expect(
+      find.byKey(
+        const ValueKey<String>('veri_menu_item_transaction_detail_type_income'),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('支出'), findsWidgets);
     expect(find.text('收入'), findsWidgets);
     expect(find.text('转账'), findsWidgets);
     // 「退款」不作为可选类型（选项弹窗里不出现）。
     expect(find.widgetWithText(ListTile, '退款'), findsNothing);
+  });
+
+  testWidgets('存在关联退款时交易类型入口锁定', (WidgetTester tester) async {
+    final controller = await makeController();
+    addTearDown(controller.dispose);
+    final bookId = controller.activeBook.id;
+    controller
+      ..addEntry(
+        LedgerEntry(
+          id: 'locked-expense',
+          bookId: bookId,
+          type: EntryType.expense,
+          amount: 50,
+          categoryId: 'dining',
+          accountId: '',
+          note: '',
+          occurredAt: DateTime(2026, 7, 4),
+          refundedBaseAmount: 10,
+        ),
+      )
+      ..addEntry(
+        LedgerEntry(
+          id: 'linked-refund',
+          bookId: bookId,
+          type: EntryType.refund,
+          amount: 10,
+          categoryId: 'dining',
+          accountId: '',
+          note: '',
+          occurredAt: DateTime(2026, 7, 5),
+          refundOf: 'locked-expense',
+          settledAt: DateTime(2026, 7, 5),
+          baseAmount: 10,
+        ),
+      );
+
+    await tester.binding.setSurfaceSize(const Size(460, 2600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(
+          home: const TransactionDetailPage(entryId: 'locked-expense'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('transaction_type_choice')), findsNothing);
+    await tester.tap(find.text('类型'));
+    await tester.pumpAndSettle();
+    expect(find.text('收入'), findsNothing);
   });
 
   testWidgets('待退款清单：显示待到账退款并可标记已到账', (WidgetTester tester) async {

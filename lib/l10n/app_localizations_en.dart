@@ -209,6 +209,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountTypeCash => 'Cash';
 
   @override
+  String get accountTypeBasicHint => 'Basic balance account';
+
+  @override
+  String get accountTypeCardHint => 'Supports card number and last four digits';
+
+  @override
+  String get accountTypeCreditHint =>
+      'Supports credit limit, billing dates, and repayment';
+
+  @override
+  String get accountTypeCardCreditHint =>
+      'Supports card number, credit limit, billing dates, and repayment';
+
+  @override
   String get assetViewGroup => 'Group view';
 
   @override
