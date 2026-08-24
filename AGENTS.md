@@ -76,7 +76,20 @@ flutter test --plain-name "关键字"
 dart format .
 ```
 
-- 本地预览只在 Android 模拟器或真机进行。项目已定义 `github` / `play` flavor，任何 Android 运行或构建都必须显式选择 flavor；日常本地预览/调试使用 `--flavor github`，只有明确验证 Play 渠道时才使用 `--flavor play --dart-define=SELF_UPDATE=false`。
+电脑端 UI 方案预览使用仓库内独立工程，不给正式应用增加 Web 平台：
+
+```bash
+cd tool/ui_lab
+flutter pub get
+flutter run -d chrome
+```
+
+`tool/ui_lab` 只能使用静态演示数据并复用纯主题/纯展示代码，不得导入
+`main.dart`、Controller、repository、SQLite、KV、备份、AI 或平台桥；正式产品仍是
+Android-only，根目录不得新增 `web/`。UI Lab 自行运行 `flutter analyze`、
+`flutter test` 和 `flutter build web`，根 `analysis_options.yaml` 故意排除该嵌套 package。
+
+- **正式应用**的本地预览与验收只在 Android 模拟器或真机进行。项目已定义 `github` / `play` flavor，任何 Android 运行或构建都必须显式选择 flavor；日常本地预览/调试使用 `--flavor github`，只有明确验证 Play 渠道时才使用 `--flavor play --dart-define=SELF_UPDATE=false`。`tool/ui_lab` 的浏览器预览不构成 Web 支持或产品验收。
 - 提交前执行 `dart format .`、`flutter analyze` 和 `flutter test`。只改文档时至少做 diff/链接/路径校验，可不运行 Flutter 测试，但要在汇报中说明。
 - 不把本地 `flutter build apk` 当成交付依据；正式 APK/AAB 由 GitHub Actions 构建。
 

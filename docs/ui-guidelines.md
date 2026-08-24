@@ -1,5 +1,12 @@
 # Veri Fin UI 规范
 
+## UI Lab 预览边界
+
+电脑端的视觉方案先在 `tool/ui_lab` 独立 Flutter Web 工程中验证。该工程不是产品
+Web 版，只允许静态演示数据与纯主题/纯展示依赖；不得为了浏览器预览给正式 Controller、
+SQLite、KV、备份、AI 或平台桥补 Web 兼容分支。方案确认后迁入正式 `lib/`，最终交互、
+性能、权限与生命周期仍以 Android 模拟器/真机验收为准。
+
 ## 顶部 Header 与页面骨架
 所有页面顶部统一使用 `VeriHeader` 或 `PageHeader`。Header 固定高度（`veriHeaderHeight`），支持返回、标题、副标题和右侧操作。不要在页面内手写顶部 `Row + IconButton + Text`，避免不同页面高度和对齐不一致。
 

@@ -16,7 +16,15 @@ flutter test --plain-name "关键字"      # 按名称运行单个测试
 dart format .                          # 提交前格式化
 ```
 
-本地预览与验收只能在 Android 模拟器或真机上进行；正式验收使用 GitHub CI 构建的 release APK（下载到手机安装测试）。
+电脑端 UI 方案使用独立的 `tool/ui_lab` Flutter Web 工程预览：
+
+```bash
+cd tool/ui_lab
+flutter pub get
+flutter run -d chrome
+```
+
+该工程只用静态演示数据并复用纯主题/纯展示代码，不导入产品入口、Controller、数据层或平台桥；根应用仍无 `web/`，正式应用的本地预览与验收只能在 Android 模拟器或真机上进行。UI Lab 单独执行 `flutter analyze`、`flutter test` 与 `flutter build web`，正式验收仍使用 GitHub CI 构建的 release APK（下载到手机安装测试）。
 
 ## 发布与 CI
 

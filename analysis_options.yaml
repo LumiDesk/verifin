@@ -9,6 +9,12 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+# 独立 Web UI 预览工程有自己的 analyzer 配置与 CI 步骤；根应用保持
+# Android-only，避免根分析上下文把嵌套 package 当作产品源码。
+analyzer:
+  exclude:
+    - tool/ui_lab/**
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`
