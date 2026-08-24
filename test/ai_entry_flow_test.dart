@@ -35,7 +35,10 @@ void main() {
     await tester.scrollUntilVisible(find.text('记一笔按钮'), 120);
     await tester.tap(find.text('记一笔按钮'));
     await tester.pumpAndSettle();
-    expect(find.text('记一笔按钮行为'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('veri_menu_item_settings_fab_ai')),
+      findsOneWidget,
+    );
     await tester.tap(find.text('AI 记账').last);
     await tester.pumpAndSettle();
 
