@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../app/app_theme.dart';
-import '../app/platform_bridge.dart';
-import '../app/veri_fin_scope.dart';
 import '../app/models.dart';
+import '../app/platform_bridge.dart';
+import '../app/root_navigation.dart';
+import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
 import 'ai_entry_sheet.dart';
 import 'assets_pages.dart';
@@ -85,11 +85,34 @@ class _VeriFinShellState extends State<VeriFinShell> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final pages = <Widget>[
       const HomePage(),
       const AssetsPage(),
       const ReportsPage(),
       const ProfilePage(),
+    ];
+    final destinations = <VeriNavigationDestination>[
+      VeriNavigationDestination(
+        icon: Icons.home_outlined,
+        selectedIcon: Icons.home_rounded,
+        label: l10n.tabHome,
+      ),
+      VeriNavigationDestination(
+        icon: Icons.account_balance_wallet_outlined,
+        selectedIcon: Icons.account_balance_wallet_rounded,
+        label: l10n.tabAssets,
+      ),
+      VeriNavigationDestination(
+        icon: Icons.bar_chart_outlined,
+        selectedIcon: Icons.bar_chart_rounded,
+        label: l10n.tabReports,
+      ),
+      VeriNavigationDestination(
+        icon: Icons.person_outline_rounded,
+        selectedIcon: Icons.person_rounded,
+        label: l10n.tabProfile,
+      ),
     ];
 
     return PopScope(
@@ -111,37 +134,15 @@ class _VeriFinShellState extends State<VeriFinShell> {
             children: pages,
           ),
         ),
-        // 自绘 FAB：由单个 InkWell 同时持有点击与长按（FloatingActionButton 内部
-        // InkWell 会吞掉外层 GestureDetector 的长按，故不用它）。外观沿用 FAB 主题
-        // 的 veriRoyal 圆角方形 + 白色加号。
-        floatingActionButton: _index == 0
-            ? Tooltip(
-                message: AppLocalizations.of(context).quickEntry,
-                child: SizedBox(
-                  width: 56,
-                  height: 56,
-                  child: Material(
-                    color: veriRoyal,
-                    elevation: 6,
-                    shadowColor: Colors.black.withValues(alpha: 0.3),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(veriRadiusLg),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      key: const Key('quick_entry_fab'),
-                      onTap: () => _startQuickEntry(context),
-                      onLongPress: () =>
-                          _startQuickEntry(context, longPress: true),
-                      child: const Icon(Icons.add, color: Colors.white),
-                    ),
-                  ),
-                ),
-              )
-            : null,
-        bottomNavigationBar: VeriBottomNav(
+        bottomNavigationBar: VeriRootNavigation(
           currentIndex: _index,
-          onTap: _goToTab,
+          destinations: destinations,
+          onDestinationSelected: _goToTab,
+          quickEntryLabel: l10n.quickEntry,
+          showQuickEntry: _index == 0,
+          onQuickEntryTap: () => _startQuickEntry(context),
+          onQuickEntryLongPress: () =>
+              _startQuickEntry(context, longPress: true),
         ),
       ),
     );
@@ -223,122 +224,5 @@ class _VeriFinShellState extends State<VeriFinShell> {
       return;
     }
     await startSharedCaptureEntry(context);
-  }
-}
-
-class VeriBottomNav extends StatelessWidget {
-  const VeriBottomNav({
-    super.key,
-    required this.currentIndex,
-    required this.onTap,
-  });
-
-  final int currentIndex;
-  final ValueChanged<int> onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final items = <_NavItem>[
-      _NavItem(Icons.home_outlined, Icons.home, l10n.tabHome),
-      _NavItem(
-        Icons.account_balance_wallet_outlined,
-        Icons.account_balance_wallet,
-        l10n.tabAssets,
-      ),
-      _NavItem(Icons.bar_chart_outlined, Icons.bar_chart, l10n.tabReports),
-      _NavItem(Icons.person_outline, Icons.person, l10n.tabProfile),
-    ];
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return DecoratedBox(
-      key: const Key('main_bottom_nav'),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0D0F12) : Colors.white,
-        border: Border(
-          top: BorderSide(color: isDark ? Colors.white10 : veriLine),
-        ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 56,
-          child: Row(
-            children: <Widget>[
-              for (var index = 0; index < items.length; index += 1)
-                Expanded(
-                  child: _BottomNavButton(
-                    key: Key('main_tab_$index'),
-                    item: items[index],
-                    selected: currentIndex == index,
-                    onTap: () => onTap(index),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NavItem {
-  const _NavItem(this.icon, this.activeIcon, this.label);
-
-  final IconData icon;
-  final IconData activeIcon;
-  final String label;
-}
-
-class _BottomNavButton extends StatelessWidget {
-  const _BottomNavButton({
-    super.key,
-    required this.item,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final _NavItem item;
-  final bool selected;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = selected
-        ? veriRoyal
-        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45);
-    return Tooltip(
-      message: item.label,
-      child: InkResponse(
-        onTap: onTap,
-        radius: 28,
-        child: Semantics(
-          label: item.label,
-          selected: selected,
-          button: true,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOutCubic,
-                width: selected ? 42 : 38,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: selected
-                      ? veriRoyal.withValues(alpha: 0.12)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Icon(
-                  selected ? item.activeIcon : item.icon,
-                  color: color,
-                  size: selected ? 22 : 21,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

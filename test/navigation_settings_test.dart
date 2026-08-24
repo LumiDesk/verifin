@@ -23,7 +23,7 @@ void main() {
     expect(find.text('数据看板 · 单位：¥'), findsOneWidget);
 
     await tapBottomTab(tester, 3);
-    expect(find.text('我的'), findsOneWidget);
+    expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
   });
 
   testWidgets('changes theme preference from the profile page', (
@@ -97,7 +97,7 @@ void main() {
     expect(store.read('verifin.locale.v1'), 'en');
 
     // 模拟重启：先卸载旧树（同类型根组件会被框架复用 State），再用同一
-    // store 重建，语言仍是英文且底部导航渲染英文。
+    // store 重建，语言仍是英文且底部导航渲染英文标签与 Tooltip。
     await tester.pumpWidget(const SizedBox.shrink());
     final restarted = await pumpApp(tester, store);
     await tester.pumpAndSettle();

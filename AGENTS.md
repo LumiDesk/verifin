@@ -20,6 +20,7 @@
 - `docs/dev/category-budget-override-design.md`：分类默认预算与单期覆盖的职责、Issue #28 兼容方案和验收范围。
 - `docs/dev/multi-currency-design.md`：已落地的多币种、离线汇率、跨币种交易/退款、迁移与验收依据；后续修改须保持三层金额和历史冻结口径。
 - `docs/dev/refund-design.md`、`docs/dev/auto-capture-plan.md`、`docs/dev/i18n-verification.md`、`docs/automation.md`：对应领域的设计与验收资料。`refund-design.md` 含历史方案，退款当前行为以源码、测试和 `docs/dev/known-limitations.md` 为准。
+- `docs/dev/liquid-glass-navigation.md`：浮动根导航的材质边界、指针拖动状态机、窄屏适配、UI Lab 验证与后续 Shader 取舍；修改根导航或新增类似玻璃控件前必读。
 - `README.md`、`docs/product.md`、`docs/acceptance-checklist.md`：用于理解产品和验收范围；其中少量历史描述可能落后，必须与当前实现交叉核对。
 
 ## 产品原则
