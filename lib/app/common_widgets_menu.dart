@@ -275,8 +275,21 @@ class _VeriAnchoredMenuRouteState extends State<_VeriAnchoredMenuRoute>
 
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    final viewport = mediaQuery.size;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final mediaSize = MediaQuery.sizeOf(context);
+        final viewport = Size(
+          constraints.hasBoundedWidth ? constraints.maxWidth : mediaSize.width,
+          constraints.hasBoundedHeight
+              ? constraints.maxHeight
+              : mediaSize.height,
+        );
+        return _buildMenu(context, viewport);
+      },
+    );
+  }
+
+  Widget _buildMenu(BuildContext context, Size viewport) {
     const edgePadding = 12.0;
     const anchorGap = 6.0;
     final availableWidth = viewport.width - edgePadding * 2;

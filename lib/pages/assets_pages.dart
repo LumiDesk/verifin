@@ -175,10 +175,11 @@ class _AssetsPageState extends State<AssetsPage> {
             subtitle: AppLocalizations.of(
               context,
             ).baseCurrencyAmountLabel(displayCurrencyUnit(baseCurrencyCode)),
-            trailing: HeaderAction(
+            trailing: VeriAnchoredMenuButton(
               icon: Icons.add,
               tooltip: AppLocalizations.of(context).assetsActions,
-              onPressed: () => _showAssetActions(context),
+              width: 208,
+              entries: _assetActionMenuEntries(context),
             ),
           ),
           const SizedBox(height: 10),
@@ -485,49 +486,40 @@ class _AssetsPageState extends State<AssetsPage> {
     );
   }
 
-  Future<void> _showAssetActions(BuildContext context) async {
-    final selected = await showOptionSheet<String>(
-      context: context,
-      title: AppLocalizations.of(context).assetsActions,
-      values: const <String>[
-        'add_account',
-        'manage_groups',
-        'display_settings',
-      ],
-      selected: 'add_account',
-      labelOf: (value) {
-        return switch (value) {
-          'add_account' => AppLocalizations.of(context).accountAdd,
-          'manage_groups' => AppLocalizations.of(context).groupManage,
-          'display_settings' => AppLocalizations.of(
-            context,
-          ).assetDisplaySettingsTitle,
-          _ => value,
-        };
-      },
-    );
-    if (selected == null || !context.mounted) {
-      return;
-    }
-    if (selected == 'add_account') {
-      unawaited(
-        Navigator.of(context).push<void>(
-          MaterialPageRoute<void>(builder: (context) => const AddAccountPage()),
-        ),
-      );
-    }
-    if (selected == 'manage_groups') {
-      unawaited(
-        Navigator.of(context).push<void>(
-          MaterialPageRoute<void>(
-            builder: (context) => const AccountGroupsPage(),
+  List<VeriMenuEntry> _assetActionMenuEntries(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return <VeriMenuEntry>[
+      VeriMenuItem(
+        id: 'asset_add_account',
+        icon: Icons.add_card_outlined,
+        title: l10n.accountAdd,
+        onPressed: () => unawaited(
+          Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(
+              builder: (context) => const AddAccountPage(),
+            ),
           ),
         ),
-      );
-    }
-    if (selected == 'display_settings') {
-      _openDisplaySettings(context);
-    }
+      ),
+      VeriMenuItem(
+        id: 'asset_manage_groups',
+        icon: Icons.folder_outlined,
+        title: l10n.groupManage,
+        onPressed: () => unawaited(
+          Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(
+              builder: (context) => const AccountGroupsPage(),
+            ),
+          ),
+        ),
+      ),
+      VeriMenuItem(
+        id: 'asset_display_settings',
+        icon: Icons.tune_rounded,
+        title: l10n.assetDisplaySettingsTitle,
+        onPressed: () => _openDisplaySettings(context),
+      ),
+    ];
   }
 }
 

@@ -88,6 +88,34 @@ void main() {
     expect(find.text('选择本地图片'), findsOneWidget);
   });
 
+  testWidgets('资产背景在线预设在二级菜单中选择且保存前不落库', (tester) async {
+    final controller = await pumpApp(tester);
+    await tapBottomTab(tester, 1);
+    await tester.tap(find.byTooltip('资产操作'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('资产显示设置'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('资产卡片背景'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('使用线上图片'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('蓝色城市'), findsOneWidget);
+    expect(find.text('极光夜色'), findsOneWidget);
+    expect(find.text('金融办公'), findsOneWidget);
+    expect(find.text('深蓝渐层'), findsOneWidget);
+    await tester.tap(find.text('蓝色城市'));
+    await tester.pumpAndSettle();
+
+    expect(controller.assetCoverUrl, isEmpty);
+    final saveButton = find.ancestor(
+      of: find.byIcon(Icons.save_outlined),
+      matching: find.byType(IconButton),
+    );
+    expect(tester.widget<IconButton>(saveButton).onPressed, isNotNull);
+  });
+
   testWidgets('starts with no default accounts', (WidgetTester tester) async {
     await pumpApp(tester);
 
