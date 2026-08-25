@@ -20,7 +20,7 @@ extension FeedbackTonePreview on VeriFeedbackTone {
   String get message => switch (this) {
     VeriFeedbackTone.info => '再按一次退出',
     VeriFeedbackTone.success => '备份已保存',
-    VeriFeedbackTone.warning => '请至少保留一个面板',
+    VeriFeedbackTone.warning => '已有 12 笔交易使用该分类，不能删除；请先移动或合并相关交易后再试',
     VeriFeedbackTone.error => '保存失败，请重试',
   };
 }

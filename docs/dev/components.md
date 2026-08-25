@@ -23,7 +23,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `VeriHeader` | Widget | `common_widgets.dart` | 页眉（标题+副标题+返回+actions，固定高 52） |
 | `PageHeader` | Widget | `common_widgets.dart` | `VeriHeader` 的薄封装（单 trailing） |
 | `VeriRootNavigation` / `VeriRootNavigationBody` / `VeriNavigationDestination` / `veriRootPageListPadding` | Widget / 值类 / 布局 helper | `root_navigation.dart` | 四个根页面的中性玻璃导航胶囊；Body 隔离 `extendBody` 注入的底栏 padding，避免嵌套日历/宫格增高；根列表再用 helper 按真实底栏高度避让，完整约定见 `liquid-glass-navigation.md` |
-| `VeriFeedbackHost` / `VeriFeedbackController` / `VeriFeedbackRequest` / `VeriFeedbackResult` | 根级 Widget / Controller / 模型 | `feedback.dart` | 跨路由应用内轻提示：四条可见栈、优先级等待队列、2/4/8 秒与常驻、单操作 Future 结果、显式去重、前后台暂停；完整规范见 `feedback-system.md` |
+| `VeriFeedbackHost` / `VeriFeedbackController` / `VeriFeedbackRequest` / `VeriFeedbackResult` | 根级 Widget / Controller / 模型 | `feedback.dart` | 跨路由应用内轻提示：内容自适应宽高与三行正文、四条可见栈、优先级等待队列、2/4/8 秒与常驻、单操作 Future 结果、显式去重、前后台暂停；完整规范见 `feedback-system.md` |
 | `SectionTitle` | Widget | `common_widgets.dart` | 区块标题 + 可选 trailing |
 | `EmptyState` | Widget | `common_widgets.dart` | 空状态（图标+标题+描述） |
 | `HeaderAction` / `HeaderTextAction` / `HeaderInline` / `VeriSectionAction` | Widget | `common_widgets.dart` | 页眉动作族（图标钮/文字钮/宽度约束/填充色小图标钮）；需要弹出操作菜单时使用 `VeriAnchoredMenuButton` |
