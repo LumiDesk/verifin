@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../app/ai/ai_capabilities.dart';
@@ -5,6 +7,7 @@ import '../app/ai/ai_client.dart';
 import '../app/ai/ai_settings.dart';
 import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
+import '../app/feedback.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
 import 'sheets.dart';
@@ -132,9 +135,12 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       _statusIsError = false;
       _statusText = null;
     });
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(l10n.aiConfigCleared)));
+    unawaited(
+      VeriFeedbackHost.of(context).showMessage(
+        message: l10n.aiConfigCleared,
+        tone: VeriFeedbackTone.success,
+      ),
+    );
   }
 
   Future<void> _detectCapabilities() async {

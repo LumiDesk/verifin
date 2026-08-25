@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../app/common_widgets.dart';
 import '../app/credit_card.dart';
 import '../app/currency_catalog.dart';
 import '../app/currency_math.dart';
+import '../app/feedback.dart';
 import '../app/models.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
@@ -344,8 +347,11 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
       return false;
     }
     _saved = true;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AppLocalizations.of(context).creditRepaySuccess)),
+    unawaited(
+      VeriFeedbackHost.of(context).showMessage(
+        message: AppLocalizations.of(context).creditRepaySuccess,
+        tone: VeriFeedbackTone.success,
+      ),
     );
     return true;
   }

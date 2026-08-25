@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
+import '../app/feedback.dart';
 import '../app/logging/app_logger.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
@@ -119,9 +122,15 @@ class AppLogPage extends StatelessWidget {
     AppLocalizations l10n,
     AppLogger logger,
   ) async {
-    final messenger = ScaffoldMessenger.of(context);
+    final feedback = VeriFeedbackHost.of(context);
     await Clipboard.setData(ClipboardData(text: logger.exportText()));
-    messenger.showSnackBar(SnackBar(content: Text(l10n.appLogCopied)));
+    unawaited(
+      feedback.showMessage(
+        message: l10n.appLogCopied,
+        tone: VeriFeedbackTone.success,
+        duration: VeriFeedbackDuration.short,
+      ),
+    );
   }
 
   Future<void> _confirmClear(

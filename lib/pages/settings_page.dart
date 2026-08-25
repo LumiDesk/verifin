@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
 import '../app/app_version.dart';
 import '../app/build_config.dart';
 import '../app/common_widgets.dart';
+import '../app/feedback.dart';
 import '../app/legal_content.dart';
 import '../l10n/app_localizations.dart';
 import '../app/models.dart';
@@ -413,9 +416,12 @@ class _SettingsPageState extends State<SettingsPage> {
         .where((account) => !account.hidden)
         .toList();
     if (accounts.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.noUsableAccountTitle)));
+      unawaited(
+        VeriFeedbackHost.of(context).showMessage(
+          message: l10n.noUsableAccountTitle,
+          tone: VeriFeedbackTone.warning,
+        ),
+      );
       return;
     }
     final selected = await showAccountPickerSheet(

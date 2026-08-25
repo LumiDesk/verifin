@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../app/ai/ai_client.dart';
 import '../app/ai/ai_entry_parser.dart';
+import '../app/feedback.dart';
 import '../app/models.dart';
 import '../app/platform_bridge.dart';
 import '../app/screenshot_recognizer.dart';
@@ -107,9 +108,13 @@ Future<void> startScreenshotEntry(
 }) async {
   final l10n = AppLocalizations.of(context);
   if (!screenshotRecognitionSupported) {
-    ScaffoldMessenger.maybeOf(
-      context,
-    )?.showSnackBar(SnackBar(content: Text(l10n.screenshotEntryUnsupported)));
+    unawaited(
+      VeriFeedbackHost.of(context).showMessage(
+        message: l10n.screenshotEntryUnsupported,
+        tone: VeriFeedbackTone.warning,
+        duration: VeriFeedbackDuration.long,
+      ),
+    );
     return;
   }
   if (!await ensureAiConfigured(context) || !context.mounted) {
