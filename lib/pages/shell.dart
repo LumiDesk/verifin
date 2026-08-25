@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -24,7 +26,10 @@ class VeriFinShell extends StatefulWidget {
 }
 
 class _VeriFinShellState extends State<VeriFinShell> {
+  static const _rootPageCount = 4;
+
   int _index = 0;
+  int? _programmaticPageTarget;
   DateTime? _lastBackPressedAt;
   final PageController _pageController = PageController();
 
@@ -72,15 +77,53 @@ class _VeriFinShellState extends State<VeriFinShell> {
     super.dispose();
   }
 
-  /// 切换到指定 Tab：底部导航点击与返回键均走此入口，带一段短动画；
-  /// 页面索引由 [PageView.onPageChanged] 统一回写 [_index]，不在此处 setState，
-  /// 避免与手势滑动产生双写。
+  /// 切换到指定 Tab：底部导航点击与返回键均走此入口，带一段短动画。
+  ///
+  /// 跨多页动画会依次触发中间页的 [PageView.onPageChanged]；这些页只是过场，
+  /// 不能反向覆盖导航滑块正在吸附的最终目标。直接手势翻页时没有 programmatic
+  /// target，仍由 [_handlePageChanged] 正常同步导航。
   void _goToTab(int index) {
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 260),
-      curve: Curves.easeOutCubic,
+    if (_programmaticPageTarget == null && index == _index) {
+      return;
+    }
+    setState(() {
+      _index = index;
+      _programmaticPageTarget = index;
+    });
+    unawaited(
+      _pageController
+          .animateToPage(
+            index,
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeOutCubic,
+          )
+          .whenComplete(() {
+            if (!mounted || _programmaticPageTarget != index) {
+              return;
+            }
+            final settledIndex = (_pageController.page ?? index).round().clamp(
+              0,
+              _rootPageCount - 1,
+            );
+            setState(() {
+              _index = settledIndex;
+              _programmaticPageTarget = null;
+            });
+          }),
     );
+  }
+
+  void _handlePageChanged(int value) {
+    final target = _programmaticPageTarget;
+    if (target != null) {
+      if (value == target) {
+        _programmaticPageTarget = null;
+      }
+      return;
+    }
+    if (_index != value) {
+      setState(() => _index = value);
+    }
   }
 
   @override
@@ -135,7 +178,7 @@ class _VeriFinShellState extends State<VeriFinShell> {
           child: VeriRootNavigationBody(
             child: PageView(
               controller: _pageController,
-              onPageChanged: (value) => setState(() => _index = value),
+              onPageChanged: _handlePageChanged,
               children: pages,
             ),
           ),

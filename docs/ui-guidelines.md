@@ -17,6 +17,8 @@ SQLite、KV、备份、AI 或平台桥补 Web 兼容分支。方案确认后迁�
 
 滑块按下缩放到 94%，按住非当前 Tab 时以 280ms 柔顺追向手指，移动超过 2px 后连续跟随，松手以 240ms 吸附最近目的地，缩放回弹 160ms。不得退回到 `GestureDetector` 默认水平拖动阈值，否则会重现“起步卡一下”和远距离按下直接跳转。完整状态机、研究记录和测试范围见 `docs/dev/liquid-glass-navigation.md`。
 
+导航触发 PageView 跨页动画时，Shell 只认最终目的地，不得用 `onPageChanged` 途经的中间页覆盖导航状态；用户直接左右滑动 PageView 时才逐页同步。否则松手吸附会被中间页重启，看起来像滑块从原 Tab 重新出发。
+
 ## 顶部 Header 与页面骨架
 所有页面顶部统一使用 `VeriHeader` 或 `PageHeader`。Header 固定高度（`veriHeaderHeight`），支持返回、标题、副标题和右侧操作。不要在页面内手写顶部 `Row + IconButton + Text`，避免不同页面高度和对齐不一致。
 

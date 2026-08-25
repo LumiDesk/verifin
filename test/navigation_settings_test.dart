@@ -110,6 +110,54 @@ void main() {
     );
   });
 
+  testWidgets('drag release keeps snapping from the finger position', (
+    WidgetTester tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+
+    final capsuleRect = tester.getRect(
+      find.byKey(const Key('main_nav_capsule')),
+    );
+    final slotWidth = capsuleRect.width / 4;
+    final firstCenter = capsuleRect.left + slotWidth * 0.5;
+    final gesture = await tester.startGesture(
+      Offset(firstCenter, capsuleRect.center.dy),
+    );
+    await gesture.moveTo(
+      Offset(firstCenter + slotWidth * 2.7, capsuleRect.center.dy),
+    );
+    await tester.pump();
+
+    final beforeRelease = tester
+        .getRect(find.byKey(const Key('main_nav_indicator')))
+        .center
+        .dx;
+    await gesture.up();
+    var previousPosition = beforeRelease;
+    for (var frame = 0; frame < 10; frame += 1) {
+      await tester.pump(const Duration(milliseconds: 16));
+      final currentPosition = tester
+          .getRect(find.byKey(const Key('main_nav_indicator')))
+          .center
+          .dx;
+      expect(
+        currentPosition,
+        greaterThanOrEqualTo(previousPosition - 0.1),
+        reason: '吸附到右侧目标时，第 $frame 帧不应向原 Tab 回退',
+      );
+      previousPosition = currentPosition;
+    }
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
+
+    await tester.fling(find.byType(PageView), const Offset(300, 0), 1000);
+    await tester.pumpAndSettle();
+    expect(find.text('数据看板 · 单位：¥'), findsOneWidget);
+  });
+
   testWidgets('changes theme preference from the profile page', (
     WidgetTester tester,
   ) async {
