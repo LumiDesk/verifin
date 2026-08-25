@@ -7214,6 +7214,12 @@ abstract class AppLocalizations {
   /// **'账户已有余额、信用额度或交易记录，币种已锁定。'**
   String get accountCurrencyLocked;
 
+  /// No description provided for @entryCurrencyLockedByRefund.
+  ///
+  /// In zh, this message translates to:
+  /// **'交易已有退款，原币不可修改。请先处理关联退款。'**
+  String get entryCurrencyLockedByRefund;
+
   /// No description provided for @balanceAdjustMissingRate.
   ///
   /// In zh, this message translates to:

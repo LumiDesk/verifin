@@ -523,8 +523,29 @@ mixin _ControllerState on ChangeNotifier {
       if (e.type == EntryType.expense &&
           e.refundedBaseAmount > 0 &&
           !expensesWithRefundEntry.contains(e.id)) {
-        final amount = e.refundedBaseAmount.clamp(0.0, e.baseAmount).toDouble();
-        if (amount <= 0) continue;
+        final refundedBaseAmount = e.refundedBaseAmount
+            .clamp(0.0, e.baseAmount)
+            .toDouble();
+        if (refundedBaseAmount <= 0 || e.baseAmount <= 0 || e.amount <= 0) {
+          continue;
+        }
+        final ratio = (refundedBaseAmount / e.baseAmount).clamp(0.0, 1.0);
+        final amount = normalizeCurrencyAmount(
+          e.amount * ratio,
+          e.currencyCode,
+        );
+        final account = _accounts
+            .where(
+              (account) =>
+                  account.id == e.accountId && account.bookId == e.bookId,
+            )
+            .firstOrNull;
+        final accountAmount = e.accountAmount == null || account == null
+            ? null
+            : normalizeCurrencyAmount(
+                e.accountAmount! * ratio,
+                account.currencyCode,
+              );
         synthesized.add(
           LedgerEntry(
             id: _generateId('entry'),
@@ -532,8 +553,8 @@ mixin _ControllerState on ChangeNotifier {
             type: EntryType.refund,
             amount: amount,
             currencyCode: e.currencyCode,
-            accountAmount: e.accountId.isEmpty ? null : amount,
-            baseAmount: amount,
+            accountAmount: accountAmount,
+            baseAmount: refundedBaseAmount,
             conversionSource: ConversionSource.legacy,
             categoryId: e.categoryId,
             accountId: e.accountId,

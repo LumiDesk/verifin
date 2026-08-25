@@ -13,6 +13,41 @@ import 'package:verifin/app/series_math.dart';
 import 'support/test_harness.dart';
 
 void main() {
+  test('退款在到账日而不是发起日改变账户余额趋势', () {
+    final now = DateTime.now();
+    final account = Account(
+      id: 'cash',
+      bookId: 'default',
+      name: '现金',
+      type: AccountType.cash,
+      groupId: null,
+      initialBalance: 0,
+      iconCode: 'wallet',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+    );
+    final refund = LedgerEntry(
+      id: 'refund',
+      bookId: 'default',
+      type: EntryType.refund,
+      amount: 10,
+      accountAmount: 10,
+      baseAmount: 10,
+      categoryId: 'dining',
+      accountId: account.id,
+      note: '',
+      occurredAt: DateTime(now.year, now.month, 1),
+      refundOf: 'expense',
+      settledAt: DateTime(now.year, now.month, 4),
+    );
+
+    final values = accountBalanceSeries(account, <LedgerEntry>[refund]);
+    expect(values[0], 0);
+    expect(values[2], 0);
+    expect(values[3], 10);
+  });
+
   useTestDatabases();
 
   test('DateWindow.days 正常区间含首尾，逆序区间返回空不崩溃', () {

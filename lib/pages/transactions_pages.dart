@@ -95,7 +95,7 @@ enum ReimbursementFilter {
     }
   }
 
-  bool matches(LedgerEntry entry) {
+  bool matches(LedgerEntry entry, String baseCurrencyCode) {
     switch (this) {
       case ReimbursementFilter.all:
         return true;
@@ -104,10 +104,14 @@ enum ReimbursementFilter {
         return !entry.reimbursable;
       case ReimbursementFilter.pending:
         // 已标记待报销、且尚未完全冲抵的支出（还有钱没报回来）。
-        return entry.reimbursable && entry.refundedAmount < entry.amount;
+        return entry.reimbursable &&
+            !isZeroCurrencyAmount(entry.netBaseAmount, baseCurrencyCode);
       case ReimbursementFilter.reimbursed:
         // 已有退款/报销回款冲抵（含部分冲抵）。
-        return entry.refundedAmount > 0;
+        return !isZeroCurrencyAmount(
+          entry.refundedBaseAmount,
+          baseCurrencyCode,
+        );
     }
   }
 }
@@ -632,7 +636,10 @@ class _TransactionsPageState extends State<TransactionsPage> {
       return false;
     }
     // 报销状态：全部 / 待报销（未完全冲抵）/ 已报销（已有回款冲抵）。
-    if (!_reimbursementFilter.matches(entry)) {
+    if (!_reimbursementFilter.matches(
+      entry,
+      controller.activeBook.baseCurrencyCode,
+    )) {
       return false;
     }
     return true;

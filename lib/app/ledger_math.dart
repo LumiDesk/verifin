@@ -50,6 +50,12 @@ double accountDeltaForEntry(LedgerEntry entry, String accountId) {
   }
 }
 
+/// 账户余额真正发生变化的日期。退款在到账日才进入账户；其它交易沿用发生日。
+DateTime accountEffectDate(LedgerEntry entry) =>
+    entry.type == EntryType.refund && entry.settledAt != null
+    ? entry.settledAt!
+    : entry.occurredAt;
+
 bool entryTouchesAccount(LedgerEntry entry, String accountId) {
   return entry.accountId == accountId || entry.toAccountId == accountId;
 }

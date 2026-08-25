@@ -59,11 +59,11 @@ List<double> accountBalanceSeries(Account account, List<LedgerEntry> entries) {
     if (delta == 0) {
       continue;
     }
-    if (entry.occurredAt.isBefore(monthStart)) {
+    final effectDate = accountEffectDate(entry);
+    if (effectDate.isBefore(monthStart)) {
       runningBalance += delta;
-    } else if (entry.occurredAt.year == now.year &&
-        entry.occurredAt.month == now.month) {
-      dailyDeltas[entry.occurredAt.day - 1] += delta;
+    } else if (effectDate.year == now.year && effectDate.month == now.month) {
+      dailyDeltas[effectDate.day - 1] += delta;
     }
   }
   final values = List<double>.filled(days, 0);
@@ -89,10 +89,11 @@ List<double> accountMonthlyBalanceSeries(
     if (delta == 0) {
       continue;
     }
-    if (entry.occurredAt.isBefore(yearStart)) {
+    final effectDate = accountEffectDate(entry);
+    if (effectDate.isBefore(yearStart)) {
       runningBalance += delta;
-    } else if (entry.occurredAt.year == now.year) {
-      monthlyDeltas[entry.occurredAt.month - 1] += delta;
+    } else if (effectDate.year == now.year) {
+      monthlyDeltas[effectDate.month - 1] += delta;
     }
   }
   final values = List<double>.filled(12, 0);
@@ -130,10 +131,11 @@ List<double> monthlyNetAssetSeries(
     if (delta == 0) {
       continue;
     }
-    if (entry.occurredAt.isBefore(yearStart)) {
+    final effectDate = accountEffectDate(entry);
+    if (effectDate.isBefore(yearStart)) {
       baseline += delta;
-    } else if (entry.occurredAt.year == now.year) {
-      monthlyDeltas[entry.occurredAt.month - 1] += delta;
+    } else if (effectDate.year == now.year) {
+      monthlyDeltas[effectDate.month - 1] += delta;
     }
   }
   final values = List<double>.filled(12, 0);

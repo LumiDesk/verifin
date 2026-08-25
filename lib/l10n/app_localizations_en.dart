@@ -4048,6 +4048,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'The account currency is locked because it has a balance, credit limit, or transaction history.';
 
   @override
+  String get entryCurrencyLockedByRefund =>
+      'The original currency is locked because this transaction has refunds. Resolve the linked refunds first.';
+
+  @override
   String balanceAdjustMissingRate(String code) {
     return 'No valid $code-to-base exchange rate is available, so the balance adjustment transaction cannot be created.';
   }

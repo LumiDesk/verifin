@@ -281,7 +281,16 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                         value: _currencyCode,
                         onTap: _type == EntryType.transfer
                             ? null
-                            : _pickCurrency,
+                            : _refunds.isEmpty
+                            ? _pickCurrency
+                            : () => unawaited(
+                                VeriFeedbackHost.of(context).showMessage(
+                                  message: AppLocalizations.of(
+                                    context,
+                                  ).entryCurrencyLockedByRefund,
+                                  tone: VeriFeedbackTone.warning,
+                                ),
+                              ),
                       ),
                       if (_type == EntryType.transfer) ...<Widget>[
                         DetailInfoRow(
@@ -934,8 +943,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
         _occurredAt.hour,
         _occurredAt.minute,
       );
-      final controller = VeriFinScope.of(context);
-      _resolveCurrencyAmounts(controller, controller.accounts);
+      // 已保存交易的三层金额是历史事实；只改日期不得按新日期汇率静默重算。
     });
   }
 

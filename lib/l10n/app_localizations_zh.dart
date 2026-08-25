@@ -3940,6 +3940,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get accountCurrencyLocked => '账户已有余额、信用额度或交易记录，币种已锁定。';
 
   @override
+  String get entryCurrencyLockedByRefund => '交易已有退款，原币不可修改。请先处理关联退款。';
+
+  @override
   String balanceAdjustMissingRate(String code) {
     return '缺少 $code 对本位币的有效汇率，无法生成余额调整交易。';
   }
