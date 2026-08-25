@@ -8,6 +8,7 @@ class AppUpdateBridge {
   static final ValueNotifier<UpdateDownloadProgress?> updateProgress =
       ValueNotifier<UpdateDownloadProgress?>(null);
   static Future<UpdateCheckResult>? _activeDownload;
+  static UpdateCheckResult? _lastKnownUpdate;
 
   static Future<UpdateCheckResult> checkForUpdate({
     bool includePrerelease = false,
@@ -17,7 +18,11 @@ class AppUpdateBridge {
         'checkLatestRelease',
         <String, Object?>{'includePrerelease': includePrerelease},
       );
-      return UpdateCheckResult.fromMap(result ?? const <String, Object?>{});
+      final parsed = UpdateCheckResult.fromMap(
+        result ?? const <String, Object?>{},
+      );
+      _lastKnownUpdate = parsed;
+      return parsed;
     } on MissingPluginException {
       return const UpdateCheckResult(
         status: UpdateCheckStatus.unsupported,
@@ -27,6 +32,9 @@ class AppUpdateBridge {
       return UpdateCheckResult(
         status: UpdateCheckStatus.error,
         message: error.message ?? '检查更新失败，请稍后再试。',
+        currentVersion: _lastKnownUpdate?.currentVersion ?? '',
+        latestVersion: _lastKnownUpdate?.latestVersion ?? '',
+        isPrerelease: _lastKnownUpdate?.isPrerelease ?? false,
       );
     }
   }
@@ -38,7 +46,11 @@ class AppUpdateBridge {
       final result = await _channel.invokeMapMethod<String, Object?>(
         'installDownloadedUpdate',
       );
-      return UpdateCheckResult.fromMap(result ?? const <String, Object?>{});
+      final parsed = UpdateCheckResult.fromMap(
+        result ?? const <String, Object?>{},
+      );
+      _lastKnownUpdate = parsed;
+      return parsed;
     } on MissingPluginException {
       return const UpdateCheckResult(
         status: UpdateCheckStatus.unsupported,
@@ -48,6 +60,9 @@ class AppUpdateBridge {
       return UpdateCheckResult(
         status: UpdateCheckStatus.error,
         message: error.message ?? '安装失败，请稍后再试。',
+        currentVersion: _lastKnownUpdate?.currentVersion ?? '',
+        latestVersion: _lastKnownUpdate?.latestVersion ?? '',
+        isPrerelease: _lastKnownUpdate?.isPrerelease ?? false,
       );
     }
   }
@@ -83,7 +98,11 @@ class AppUpdateBridge {
         'downloadLatestUpdate',
         <String, Object?>{'includePrerelease': includePrerelease},
       );
-      return UpdateCheckResult.fromMap(result ?? const <String, Object?>{});
+      final parsed = UpdateCheckResult.fromMap(
+        result ?? const <String, Object?>{},
+      );
+      _lastKnownUpdate = parsed;
+      return parsed;
     } on MissingPluginException {
       return const UpdateCheckResult(
         status: UpdateCheckStatus.unsupported,
@@ -93,6 +112,9 @@ class AppUpdateBridge {
       return UpdateCheckResult(
         status: UpdateCheckStatus.error,
         message: error.message ?? '下载更新失败，请稍后再试。',
+        currentVersion: _lastKnownUpdate?.currentVersion ?? '',
+        latestVersion: _lastKnownUpdate?.latestVersion ?? '',
+        isPrerelease: _lastKnownUpdate?.isPrerelease ?? false,
       );
     }
   }
@@ -100,6 +122,7 @@ class AppUpdateBridge {
 
 enum UpdateCheckStatus {
   available,
+  paused,
   downloaded,
   installing,
   upToDate,
@@ -115,6 +138,8 @@ class UpdateCheckResult {
     this.currentVersion = '',
     this.latestVersion = '',
     this.isPrerelease = false,
+    this.receivedBytes = 0,
+    this.totalBytes = 0,
   });
 
   final UpdateCheckStatus status;
@@ -124,6 +149,12 @@ class UpdateCheckResult {
 
   /// 命中的目标 Release 是否为预发布版本（供 UI 在下载前提示不稳定风险）。
   final bool isPrerelease;
+  final int receivedBytes;
+  final int totalBytes;
+
+  double get progress => totalBytes > 0
+      ? (receivedBytes / totalBytes).clamp(0.0, 1.0).toDouble()
+      : 0;
 
   static UpdateCheckResult fromMap(Map<String, Object?> map) {
     final statusName = map['status'] as String? ?? 'error';
@@ -136,6 +167,8 @@ class UpdateCheckResult {
       currentVersion: map['currentVersion'] as String? ?? '',
       latestVersion: map['latestVersion'] as String? ?? '',
       isPrerelease: map['isPrerelease'] as bool? ?? false,
+      receivedBytes: (map['receivedBytes'] as num? ?? 0).toInt(),
+      totalBytes: (map['totalBytes'] as num? ?? 0).toInt(),
     );
   }
 }

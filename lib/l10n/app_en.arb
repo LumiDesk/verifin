@@ -1299,6 +1299,11 @@
   "closeLabel": "Close",
   "retryLabel": "Retry",
   "downloadingShort": "Downloading",
+  "continueDownload": "Continue download",
+  "downloadPausedPercent": "Saved {percent}% · ready to resume",
+  "@downloadPausedPercent": {
+    "placeholders": {"percent": {"type": "int"}}
+  },
   "downloadNewVersion": "Download update",
   "installNow": "Install now",
   "includePrereleaseLabel": "Include pre-release (Beta)",

@@ -6296,6 +6296,18 @@ abstract class AppLocalizations {
   /// **'下载中'**
   String get downloadingShort;
 
+  /// No description provided for @continueDownload.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续下载'**
+  String get continueDownload;
+
+  /// No description provided for @downloadPausedPercent.
+  ///
+  /// In zh, this message translates to:
+  /// **'已保留 {percent}% · 等待继续'**
+  String downloadPausedPercent(int percent);
+
   /// No description provided for @downloadNewVersion.
   ///
   /// In zh, this message translates to:

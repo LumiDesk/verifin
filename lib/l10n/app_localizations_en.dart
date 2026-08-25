@@ -3518,6 +3518,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get downloadingShort => 'Downloading';
 
   @override
+  String get continueDownload => 'Continue download';
+
+  @override
+  String downloadPausedPercent(int percent) {
+    return 'Saved $percent% · ready to resume';
+  }
+
+  @override
   String get downloadNewVersion => 'Download update';
 
   @override
