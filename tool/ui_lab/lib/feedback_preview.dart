@@ -45,19 +45,19 @@ extension FeedbackPriorityPreview on VeriFeedbackPriority {
 class FeedbackPreview extends StatefulWidget {
   const FeedbackPreview({
     super.key,
+    required this.controller,
     required this.tone,
     required this.lifetime,
     required this.priority,
-    required this.requestToken,
     required this.actionEnabled,
     required this.dedupeEnabled,
     this.onResult,
   });
 
+  final VeriFeedbackController controller;
   final VeriFeedbackTone tone;
   final VeriFeedbackDuration lifetime;
   final VeriFeedbackPriority priority;
-  final int requestToken;
   final bool actionEnabled;
   final bool dedupeEnabled;
   final ValueChanged<VeriFeedbackResult>? onResult;
@@ -67,24 +67,20 @@ class FeedbackPreview extends StatefulWidget {
 }
 
 class _FeedbackPreviewState extends State<FeedbackPreview> {
-  final VeriFeedbackController _controller = VeriFeedbackController();
-
   @override
   void initState() {
     super.initState();
-    _show();
+    _scheduleShow();
   }
 
-  @override
-  void didUpdateWidget(covariant FeedbackPreview oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.requestToken != widget.requestToken) {
-      _show();
-    }
+  void _scheduleShow() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _show();
+    });
   }
 
   void _show() {
-    final result = _controller.showMessage(
+    final result = widget.controller.showMessage(
       message: widget.tone.message,
       tone: widget.tone,
       duration: widget.lifetime,
@@ -100,17 +96,10 @@ class _FeedbackPreviewState extends State<FeedbackPreview> {
   }
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return VeriFeedbackHost(
-      key: const Key('feedback_preview'),
-      controller: _controller,
-      child: const _FeedbackRouteDemo(),
+    return const KeyedSubtree(
+      key: Key('feedback_preview'),
+      child: _FeedbackRouteDemo(),
     );
   }
 }

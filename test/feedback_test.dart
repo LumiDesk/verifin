@@ -313,14 +313,14 @@ void main() {
     expect(await result, VeriFeedbackResult.cleared);
   });
 
-  testWidgets('首页首次返回使用根级轻提示而不是 SnackBar', (tester) async {
+  testWidgets('首页首次返回使用根级轻提示', (tester) async {
     await pumpApp(tester);
 
     await tester.binding.handlePopRoute();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 240));
     expect(find.text('再次返回退出程序'), findsOneWidget);
-    expect(find.byType(SnackBar), findsNothing);
+    expect(find.byKey(const Key('veri_feedback_card_0')), findsOneWidget);
   });
 
   testWidgets('全局持久化失败使用高优先级去重错误提示', (tester) async {
@@ -333,7 +333,7 @@ void main() {
 
     expect(find.textContaining('保存失败', findRichText: true), findsOneWidget);
     expect(find.textContaining('×2', findRichText: true), findsOneWidget);
-    expect(find.byType(SnackBar), findsNothing);
+    expect(find.byKey(const Key('veri_feedback_card_0')), findsOneWidget);
   });
 }
 

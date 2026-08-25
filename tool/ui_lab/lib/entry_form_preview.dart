@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:verifin/app/app_theme.dart';
 import 'package:verifin/app/common_widgets.dart';
 import 'package:verifin/app/entry_sheets.dart';
+import 'package:verifin/app/feedback.dart';
 import 'package:verifin/app/models.dart';
 
 /// “记一笔”页面的静态交互方案。
@@ -326,14 +329,13 @@ class _EntryFormPreviewBodyState extends State<_EntryFormPreviewBody> {
   }
 
   void _showPreviewFeedback(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          duration: const Duration(milliseconds: 900),
-          content: Text(message),
-        ),
-      );
+    unawaited(
+      VeriFeedbackHost.of(context).showMessage(
+        message: message,
+        duration: VeriFeedbackDuration.short,
+        dedupeKey: 'entry-preview',
+      ),
+    );
   }
 }
 

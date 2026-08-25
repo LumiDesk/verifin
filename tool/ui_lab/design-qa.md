@@ -98,7 +98,7 @@ No actionable P0, P1, or P2 findings remain.
 
 - Fonts and typography: 消息与 `×N` 使用同一 `Text.rich` 字体基线；撤销操作改为无默认垂直 padding 的内联点击区域，关闭图标由触控盒居中。最终浏览器截图中四者对齐稳定，无固定像素文字偏移。
 - Spacing and layout rhythm: 卡片保持 168 × 40 px（带操作时 240 × 40 px）、8 px 圆角、24 px 图标盒和 1.5 px 进度线；常驻态完全移除进度区域并在全高内垂直居中。提示与根导航间距清晰。
-- Colors and visual tokens: 深浅主题均使用稳定实体表面、单一轮廓和轻阴影；品牌/语义色只出现在图标底、图标和进度线，没有退回整宽高饱和 `SnackBar`。
+- Colors and visual tokens: 深浅主题均使用稳定实体表面、单一轮廓和轻阴影；品牌/语义色只出现在图标底、图标和进度线，没有退回整宽高饱和横条。
 - Image quality and asset fidelity: 组件不需要位图资产；所有图标来自项目现用 Material 图标族，没有占位图、自绘 SVG 或模拟资产。
 - Copy and content: 信息态进一步压缩为“再按一次退出”；其余三种样例分别覆盖成功、操作受限和保存失败。
 - Behavior and accessibility: 最新提示宿主最多同时显示四条并向上堆叠，更多消息进入 FIFO 等待队列；每条可独立关闭，可选 2/4/8 秒或常驻，Web 悬停暂停倒计时。常驻态不再创建进度区域，内容垂直居中。关闭动画由每条提示自身的 `SizeTransition` 收缩，列表直接子项使用稳定 Key，剩余提示不重建且倒计时不会重置。状态、时长、堆叠、排队、手动关闭、逐帧收拢和恢复计时均已有 Widget 测试覆盖。

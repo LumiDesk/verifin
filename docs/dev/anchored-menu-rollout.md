@@ -256,7 +256,7 @@ List<VeriMenuEntry> _bookMenuEntries(
 - `commonEdit`：`编辑` / `Edit`。
 - `ledgerCurrencyLockedShort`：账本本位币菜单禁用态的短说明。
 
-如果账本本位币禁用态还缺少可直接放进副标题的短文案，再新增专用中英文键；不要复用过长的 SnackBar 文案导致菜单宽度失控。
+如果账本本位币禁用态还缺少可直接放进副标题的短文案，再新增专用中英文键；不要复用过长的旧提示文案导致菜单宽度失控。
 
 ## 可访问性
 

@@ -105,7 +105,7 @@ SafeArea(child: VeriPage(child: Column(children: [
 
 ## 轻提示
 
-应用内短反馈统一使用根级 `VeriFeedbackHost`，不新增裸 `SnackBar` 或 Android
+应用内短反馈统一使用根级 `VeriFeedbackHost`，不新增旧式 Material 横条或 Android
 Toast。默认提示为 168×40dp；带唯一操作按钮时可扩展到 240×40dp。消息、重复计数
 和操作文字必须由同一字体基线或等价布局对齐，禁止用 `Transform.translate`、额外
 top padding 等像素补丁修正单个字形；关闭图标在自身触控盒内居中。

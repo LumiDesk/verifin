@@ -28,7 +28,7 @@
 - **首页**：走势卡（Spending trend / Net / Income / Days tracked / Daily average）、预算卡（Jul budget / Remaining / Budget …）、日历卡（Calendar，周表头 Mon–Sun）、最近交易、空态文案；图表点按气泡的日期应为「Jul 5」样式（中文为「7月5日」）。
 - **资产**：资产卡（Net worth / Assets / Liabilities）、分区标题（账户类型 Online payment / Cash…）、资产操作菜单、添加账户表单（含校验错误 Account name is required）、账户详情（Balance trend / Statement day / Due day / 还款提醒条）、隐藏账户页、分组管理页、账户报告页。
 - **看板**：预算执行 / 分类统计 / 分类明细 / 标签统计 / 日趋势 / 月度收支各面板与空态；右上角统计分析页（时间范围、YoY · MoM 表、分类排行）；面板管理页（开关、排序、恢复默认弹窗）。
-- **我的**：宫格入口、账本 / 分类 / 标签管理（含各删除确认弹窗与 SnackBar 提示）、周期记账、个人信息编辑、设置页、数据管理页全链路（导出 / 导入 / CSV / 本地备份 / 加密 / WebDAV / 初始化双重确认 / 检查更新弹窗）。
+- **我的**：宫格入口、账本 / 分类 / 标签管理（含各删除确认弹窗与轻提示）、周期记账、个人信息编辑、设置页、数据管理页全链路（导出 / 导入 / CSV / 本地备份 / 加密 / WebDAV / 初始化双重确认 / 检查更新弹窗）。
 
 ## 三、记账链路（英文模式，5 分钟）
 

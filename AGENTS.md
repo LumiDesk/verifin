@@ -133,7 +133,7 @@ Android-only，根目录不得新增 `web/`。UI Lab 自行运行 `flutter analy
 - 分类图标只用 `CategoryIconBox` / `CategoryGlyph`，账户图标只用 `AccountIconBox`。渲染点禁止直接调用 `iconForCode`，否则 emoji 分类会回退钱包图标。
 - Row 内“居中列 label + value [+ detail]”的标准指标块使用 `SummaryMetric`。明显不同的卡片/排行可保留局部组件，不把一个组件过度参数化成配置怪物。
 - 图表优先复用 `InteractiveTrendChart` / `InteractiveBarChart`，必须支持点按或滑动查看数据；位于可跳转卡片内时，图表区域要拦截点击，避免误触卡片跳转。
-- 应用内短反馈只用 `VeriFeedbackHost.of(context)` / 根级 `VeriFeedbackController`，不得新增裸 `SnackBar` 或 Android Toast。破坏性确认、字段校验、阻塞进度和系统通知不迁入轻提示；完整规则见 `docs/dev/feedback-system.md`。
+- 应用内短反馈只用 `VeriFeedbackHost.of(context)` / 根级 `VeriFeedbackController`，不得新增旧式 Material 横条提示或 Android Toast。破坏性确认、字段校验、阻塞进度和系统通知不迁入轻提示；完整规则见 `docs/dev/feedback-system.md`。
 
 ### 弹窗与输入
 

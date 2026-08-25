@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:verifin/app/app_theme.dart';
 import 'package:verifin/app/feedback.dart';
@@ -27,6 +29,7 @@ class VeriFinUiLabApp extends StatefulWidget {
 }
 
 class _VeriFinUiLabAppState extends State<VeriFinUiLabApp> {
+  final VeriFeedbackController _feedbackController = VeriFeedbackController();
   ThemeMode _themeMode = ThemeMode.dark;
   late UiLabExperiment _experiment = widget.initialExperiment;
   FeedbackTone _feedbackTone = FeedbackTone.info;
@@ -35,7 +38,28 @@ class _VeriFinUiLabAppState extends State<VeriFinUiLabApp> {
   bool _feedbackActionEnabled = false;
   bool _feedbackDedupeEnabled = false;
   VeriFeedbackResult? _feedbackLastResult;
-  int _feedbackRequestToken = 0;
+
+  void _showFeedback() {
+    final result = _feedbackController.showMessage(
+      message: _feedbackTone.message,
+      tone: _feedbackTone,
+      duration: _feedbackLifetime,
+      priority: _feedbackPriority,
+      actionLabel: _feedbackActionEnabled ? '撤销' : null,
+      dedupeKey: _feedbackDedupeEnabled ? 'ui-lab-${_feedbackTone.name}' : null,
+    );
+    unawaited(
+      result.then((value) {
+        if (mounted) setState(() => _feedbackLastResult = value);
+      }),
+    );
+  }
+
+  @override
+  void dispose() {
+    _feedbackController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +81,7 @@ class _VeriFinUiLabAppState extends State<VeriFinUiLabApp> {
         feedbackActionEnabled: _feedbackActionEnabled,
         feedbackDedupeEnabled: _feedbackDedupeEnabled,
         feedbackLastResult: _feedbackLastResult,
-        feedbackRequestToken: _feedbackRequestToken,
+        feedbackController: _feedbackController,
         onExperimentChanged: (value) {
           setState(() => _experiment = value);
         },
@@ -79,9 +103,7 @@ class _VeriFinUiLabAppState extends State<VeriFinUiLabApp> {
         onFeedbackResult: (value) {
           setState(() => _feedbackLastResult = value);
         },
-        onAddFeedback: () {
-          setState(() => _feedbackRequestToken += 1);
-        },
+        onAddFeedback: _showFeedback,
         onToggleTheme: () {
           setState(() {
             _themeMode = _themeMode == ThemeMode.dark
@@ -104,7 +126,7 @@ class _UiLabWorkbench extends StatelessWidget {
     required this.feedbackActionEnabled,
     required this.feedbackDedupeEnabled,
     required this.feedbackLastResult,
-    required this.feedbackRequestToken,
+    required this.feedbackController,
     required this.onExperimentChanged,
     required this.onFeedbackToneChanged,
     required this.onFeedbackLifetimeChanged,
@@ -124,7 +146,7 @@ class _UiLabWorkbench extends StatelessWidget {
   final bool feedbackActionEnabled;
   final bool feedbackDedupeEnabled;
   final VeriFeedbackResult? feedbackLastResult;
-  final int feedbackRequestToken;
+  final VeriFeedbackController feedbackController;
   final ValueChanged<UiLabExperiment> onExperimentChanged;
   final ValueChanged<FeedbackTone> onFeedbackToneChanged;
   final ValueChanged<FeedbackLifetime> onFeedbackLifetimeChanged;
@@ -380,21 +402,24 @@ class _UiLabWorkbench extends StatelessWidget {
                                 key: Key('phone_viewport'),
                                 width: 390,
                                 height: 844,
-                                child: switch (experiment) {
-                                  UiLabExperiment.entryForm =>
-                                    const EntryFormPreview(),
-                                  UiLabExperiment.navigation =>
-                                    const NavigationPreview(),
-                                  UiLabExperiment.feedback => FeedbackPreview(
-                                    tone: feedbackTone,
-                                    lifetime: feedbackLifetime,
-                                    priority: feedbackPriority,
-                                    requestToken: feedbackRequestToken,
-                                    actionEnabled: feedbackActionEnabled,
-                                    dedupeEnabled: feedbackDedupeEnabled,
-                                    onResult: onFeedbackResult,
-                                  ),
-                                },
+                                child: VeriFeedbackHost(
+                                  controller: feedbackController,
+                                  child: switch (experiment) {
+                                    UiLabExperiment.entryForm =>
+                                      const EntryFormPreview(),
+                                    UiLabExperiment.navigation =>
+                                      const NavigationPreview(),
+                                    UiLabExperiment.feedback => FeedbackPreview(
+                                      controller: feedbackController,
+                                      tone: feedbackTone,
+                                      lifetime: feedbackLifetime,
+                                      priority: feedbackPriority,
+                                      actionEnabled: feedbackActionEnabled,
+                                      dedupeEnabled: feedbackDedupeEnabled,
+                                      onResult: onFeedbackResult,
+                                    ),
+                                  },
+                                ),
                               ),
                             ),
                           ),

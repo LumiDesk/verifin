@@ -8,10 +8,7 @@ import 'package:verifin_ui_lab/main.dart';
 
 void main() {
   testWidgets('轻提示保持紧凑并提供单条关闭入口', (tester) async {
-    await tester.pumpWidget(
-      const VeriFinUiLabApp(initialExperiment: UiLabExperiment.feedback),
-    );
-    await tester.pump(const Duration(milliseconds: 240));
+    await _pumpFeedbackApp(tester);
 
     expect(find.byKey(const Key('veri_feedback_card_0')), findsOneWidget);
     expect(find.text('再按一次退出'), findsOneWidget);
@@ -32,10 +29,7 @@ void main() {
   });
 
   testWidgets('最多堆叠四条并把更多提示放入等待队列', (tester) async {
-    await tester.pumpWidget(
-      const VeriFinUiLabApp(initialExperiment: UiLabExperiment.feedback),
-    );
-    await tester.pump(const Duration(milliseconds: 240));
+    await _pumpFeedbackApp(tester);
 
     for (final tone in <FeedbackTone>[
       FeedbackTone.success,
@@ -75,10 +69,7 @@ void main() {
   });
 
   testWidgets('提示支持短时长、常驻与手动关闭', (tester) async {
-    await tester.pumpWidget(
-      const VeriFinUiLabApp(initialExperiment: UiLabExperiment.feedback),
-    );
-    await tester.pump(const Duration(milliseconds: 240));
+    await _pumpFeedbackApp(tester);
 
     await tester.tap(find.byKey(const Key('veri_feedback_close_0')));
     await tester.pump();
@@ -130,10 +121,7 @@ void main() {
   });
 
   testWidgets('关闭一条时其他提示保持倒计时并逐帧收拢', (tester) async {
-    await tester.pumpWidget(
-      const VeriFinUiLabApp(initialExperiment: UiLabExperiment.feedback),
-    );
-    await tester.pump(const Duration(milliseconds: 240));
+    await _pumpFeedbackApp(tester);
 
     await tester.tap(find.text(FeedbackLifetime.long.label));
     await tester.pump();
@@ -185,10 +173,7 @@ void main() {
   });
 
   testWidgets('Web 悬停会暂停倒计时，移开后继续', (tester) async {
-    await tester.pumpWidget(
-      const VeriFinUiLabApp(initialExperiment: UiLabExperiment.feedback),
-    );
-    await tester.pump(const Duration(milliseconds: 240));
+    await _pumpFeedbackApp(tester);
     await tester.tap(find.byKey(const Key('veri_feedback_close_0')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 320));
@@ -219,10 +204,7 @@ void main() {
   });
 
   testWidgets('操作按钮和重复合并直接使用正式组件能力', (tester) async {
-    await tester.pumpWidget(
-      const VeriFinUiLabApp(initialExperiment: UiLabExperiment.feedback),
-    );
-    await tester.pump(const Duration(milliseconds: 240));
+    await _pumpFeedbackApp(tester);
 
     await tester.tap(find.byKey(const Key('feedback_action_toggle')));
     await tester.tap(find.byKey(const Key('feedback_dedupe_toggle')));
@@ -247,10 +229,7 @@ void main() {
   });
 
   testWidgets('嵌套 Navigator 跳转时根级提示保持显示', (tester) async {
-    await tester.pumpWidget(
-      const VeriFinUiLabApp(initialExperiment: UiLabExperiment.feedback),
-    );
-    await tester.pump(const Duration(milliseconds: 240));
+    await _pumpFeedbackApp(tester);
     expect(find.byKey(const Key('veri_feedback_card_0')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('feedback_push_route')));
@@ -273,4 +252,12 @@ Finder _feedbackCards() {
     return key is ValueKey<String> &&
         key.value.startsWith('veri_feedback_card_');
   });
+}
+
+Future<void> _pumpFeedbackApp(WidgetTester tester) async {
+  await tester.pumpWidget(
+    const VeriFinUiLabApp(initialExperiment: UiLabExperiment.feedback),
+  );
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 240));
 }
