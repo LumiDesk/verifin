@@ -16,11 +16,15 @@ class AttachmentsEditor extends StatelessWidget {
     required this.dataUrls,
     required this.onAddDataUrl,
     required this.onRemoveIndex,
+    this.showHeader = true,
+    this.showAddButton = true,
   });
 
   final List<String> dataUrls;
   final ValueChanged<String> onAddDataUrl;
   final ValueChanged<int> onRemoveIndex;
+  final bool showHeader;
+  final bool showAddButton;
 
   Future<void> _add(BuildContext context, {required bool fromCamera}) async {
     final dataUrl = await pickAttachmentDataUrl(fromCamera: fromCamera);
@@ -35,39 +39,43 @@ class AttachmentsEditor extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Row(
-          children: <Widget>[
-            Icon(
-              Icons.image_outlined,
-              size: 20,
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              AppLocalizations.of(context).attachTitle,
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const Spacer(),
-            Text(
-              AppLocalizations.of(context).attachCount(dataUrls.length),
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+        if (showHeader) ...<Widget>[
+          Row(
+            children: <Widget>[
+              Icon(
+                Icons.image_outlined,
+                size: 20,
                 color: Theme.of(
                   context,
-                ).colorScheme.onSurface.withValues(alpha: 0.5),
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
+              const SizedBox(width: 8),
+              Text(
+                AppLocalizations.of(context).attachTitle,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const Spacer(),
+              Text(
+                AppLocalizations.of(context).attachCount(dataUrls.length),
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+        ],
         SizedBox(
           height: 76,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: dataUrls.length + (attachmentPickingSupported ? 1 : 0),
+            itemCount:
+                dataUrls.length +
+                (showAddButton && attachmentPickingSupported ? 1 : 0),
             separatorBuilder: (_, _) => const SizedBox(width: 10),
             itemBuilder: (context, index) {
               if (index == dataUrls.length) {
@@ -97,6 +105,7 @@ class AttachmentsEditor extends StatelessWidget {
               }
               final dataUrl = dataUrls[index];
               return _Thumb(
+                index: index,
                 dataUrl: dataUrl,
                 onView: () => _viewFullScreen(context, index),
                 onRemove: () => onRemoveIndex(index),
@@ -104,7 +113,7 @@ class AttachmentsEditor extends StatelessWidget {
             },
           ),
         ),
-        if (!attachmentPickingSupported)
+        if (showAddButton && !attachmentPickingSupported)
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Text(
@@ -166,11 +175,13 @@ class _AddButton extends StatelessWidget {
 
 class _Thumb extends StatelessWidget {
   const _Thumb({
+    required this.index,
     required this.dataUrl,
     required this.onView,
     required this.onRemove,
   });
 
+  final int index;
   final String dataUrl;
   final VoidCallback onView;
   final VoidCallback onRemove;
@@ -191,17 +202,28 @@ class _Thumb extends StatelessWidget {
           ),
         ),
         Positioned(
-          top: 2,
-          right: 2,
+          top: 0,
+          right: 0,
           child: GestureDetector(
             onTap: onRemove,
-            child: Container(
-              padding: const EdgeInsets.all(2),
-              decoration: const BoxDecoration(
-                color: Colors.black54,
-                shape: BoxShape.circle,
+            behavior: HitTestBehavior.opaque,
+            child: SizedBox(
+              width: 28,
+              height: 28,
+              child: Align(
+                alignment: Alignment.topRight,
+                child: Container(
+                  key: Key('attachment_remove_visual_$index'),
+                  width: 16,
+                  height: 16,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, size: 10, color: Colors.white),
+                ),
               ),
-              child: const Icon(Icons.close, size: 14, color: Colors.white),
             ),
           ),
         ),

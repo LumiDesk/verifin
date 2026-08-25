@@ -2162,6 +2162,30 @@ abstract class AppLocalizations {
   /// **'记账详情'**
   String get entryDetailSubtitle;
 
+  /// No description provided for @entryMoreInfo.
+  ///
+  /// In zh, this message translates to:
+  /// **'更多信息'**
+  String get entryMoreInfo;
+
+  /// No description provided for @entryTagCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'标签 {count}'**
+  String entryTagCount(int count);
+
+  /// No description provided for @entryAttachmentCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'附件 {count}'**
+  String entryAttachmentCount(int count);
+
+  /// No description provided for @entryCategoryBranchTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择{category}分类'**
+  String entryCategoryBranchTitle(String category);
+
   /// No description provided for @commonCategory.
   ///
   /// In zh, this message translates to:

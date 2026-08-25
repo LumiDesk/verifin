@@ -646,6 +646,25 @@
   "attachUnsupported": "当前平台不支持添加图片附件",
   "attachDeleteTooltip": "删除这张",
   "entryDetailSubtitle": "记账详情",
+  "entryMoreInfo": "更多信息",
+  "entryTagCount": "标签 {count}",
+  "@entryTagCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "entryAttachmentCount": "附件 {count}",
+  "@entryAttachmentCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "entryCategoryBranchTitle": "选择{category}分类",
+  "@entryCategoryBranchTitle": {
+    "placeholders": {
+      "category": {"type": "String"}
+    }
+  },
   "commonCategory": "分类",
   "allLabel": "全部",
   "transferOutAccount": "转出账户",

@@ -1105,6 +1105,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get entryDetailSubtitle => '记账详情';
 
   @override
+  String get entryMoreInfo => '更多信息';
+
+  @override
+  String entryTagCount(int count) {
+    return '标签 $count';
+  }
+
+  @override
+  String entryAttachmentCount(int count) {
+    return '附件 $count';
+  }
+
+  @override
+  String entryCategoryBranchTitle(String category) {
+    return '选择$category分类';
+  }
+
+  @override
   String get commonCategory => '分类';
 
   @override

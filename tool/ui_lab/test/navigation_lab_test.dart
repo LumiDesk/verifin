@@ -8,7 +8,9 @@ void main() {
   testWidgets('renders the isolated phone viewport and navigation', (
     tester,
   ) async {
-    await tester.pumpWidget(const VeriFinUiLabApp());
+    await tester.pumpWidget(
+      const VeriFinUiLabApp(initialExperiment: UiLabExperiment.navigation),
+    );
 
     expect(find.byKey(const Key('phone_viewport')), findsOneWidget);
     expect(find.byKey(const Key('lab_tab_0')), findsOneWidget);
@@ -23,7 +25,9 @@ void main() {
   });
 
   testWidgets('switches between preview destinations', (tester) async {
-    await tester.pumpWidget(const VeriFinUiLabApp());
+    await tester.pumpWidget(
+      const VeriFinUiLabApp(initialExperiment: UiLabExperiment.navigation),
+    );
 
     await tester.tap(find.byKey(const Key('lab_tab_1')));
     await tester.pumpAndSettle();
@@ -49,7 +53,9 @@ void main() {
   testWidgets('navigation and hover surfaces are clipped as capsules', (
     tester,
   ) async {
-    await tester.pumpWidget(const VeriFinUiLabApp());
+    await tester.pumpWidget(
+      const VeriFinUiLabApp(initialExperiment: UiLabExperiment.navigation),
+    );
 
     final material = tester.widget<Material>(
       find.byKey(const Key('lab_nav_material')),
@@ -111,7 +117,9 @@ void main() {
   testWidgets('selected destination uses neutral foreground in both themes', (
     tester,
   ) async {
-    await tester.pumpWidget(const VeriFinUiLabApp());
+    await tester.pumpWidget(
+      const VeriFinUiLabApp(initialExperiment: UiLabExperiment.navigation),
+    );
 
     Color selectedIconColor() {
       final tab = find.byKey(const Key('lab_tab_0'));
@@ -140,7 +148,9 @@ void main() {
   testWidgets('pressing the current slider gives a subtle compression', (
     tester,
   ) async {
-    await tester.pumpWidget(const VeriFinUiLabApp());
+    await tester.pumpWidget(
+      const VeriFinUiLabApp(initialExperiment: UiLabExperiment.navigation),
+    );
 
     final capsuleRect = tester.getRect(
       find.byKey(const Key('lab_nav_capsule')),
@@ -183,7 +193,9 @@ void main() {
   testWidgets('a tap on a tab boundary always resolves to one tab', (
     tester,
   ) async {
-    await tester.pumpWidget(const VeriFinUiLabApp());
+    await tester.pumpWidget(
+      const VeriFinUiLabApp(initialExperiment: UiLabExperiment.navigation),
+    );
 
     final capsuleRect = tester.getRect(
       find.byKey(const Key('lab_nav_capsule')),
@@ -214,7 +226,9 @@ void main() {
   testWidgets(
     'pressing a distant tab moves toward the finger without jumping',
     (tester) async {
-      await tester.pumpWidget(const VeriFinUiLabApp());
+      await tester.pumpWidget(
+        const VeriFinUiLabApp(initialExperiment: UiLabExperiment.navigation),
+      );
 
       final capsuleRect = tester.getRect(
         find.byKey(const Key('lab_nav_capsule')),
@@ -254,7 +268,9 @@ void main() {
   testWidgets('hover changes content color without painting a background', (
     tester,
   ) async {
-    await tester.pumpWidget(const VeriFinUiLabApp());
+    await tester.pumpWidget(
+      const VeriFinUiLabApp(initialExperiment: UiLabExperiment.navigation),
+    );
 
     final tab = find.byKey(const Key('lab_tab_3'));
     final iconFinder = find
@@ -288,7 +304,9 @@ void main() {
   testWidgets('dragging the glass slider selects a destination', (
     tester,
   ) async {
-    await tester.pumpWidget(const VeriFinUiLabApp());
+    await tester.pumpWidget(
+      const VeriFinUiLabApp(initialExperiment: UiLabExperiment.navigation),
+    );
 
     final capsuleRect = tester.getRect(
       find.byKey(const Key('lab_nav_capsule')),
@@ -321,7 +339,9 @@ void main() {
   });
 
   testWidgets('quick entry remains a separate primary action', (tester) async {
-    await tester.pumpWidget(const VeriFinUiLabApp());
+    await tester.pumpWidget(
+      const VeriFinUiLabApp(initialExperiment: UiLabExperiment.navigation),
+    );
 
     await tester.tap(find.byKey(const Key('lab_quick_entry')));
     await tester.pump();

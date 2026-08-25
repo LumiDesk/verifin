@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:verifin/app/app_theme.dart';
+import 'package:verifin/l10n/app_localizations.dart';
 
+import 'entry_form_preview.dart';
 import 'navigation_preview.dart';
 
 void main() {
@@ -8,8 +10,15 @@ void main() {
   runApp(const VeriFinUiLabApp());
 }
 
+enum UiLabExperiment { entryForm, navigation }
+
 class VeriFinUiLabApp extends StatefulWidget {
-  const VeriFinUiLabApp({super.key});
+  const VeriFinUiLabApp({
+    super.key,
+    this.initialExperiment = UiLabExperiment.entryForm,
+  });
+
+  final UiLabExperiment initialExperiment;
 
   @override
   State<VeriFinUiLabApp> createState() => _VeriFinUiLabAppState();
@@ -17,17 +26,25 @@ class VeriFinUiLabApp extends StatefulWidget {
 
 class _VeriFinUiLabAppState extends State<VeriFinUiLabApp> {
   ThemeMode _themeMode = ThemeMode.dark;
+  late UiLabExperiment _experiment = widget.initialExperiment;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Veri Fin UI Lab',
       debugShowCheckedModeBanner: false,
+      locale: const Locale('zh'),
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
       theme: buildVeriFinTheme(Brightness.light),
       darkTheme: buildVeriFinTheme(Brightness.dark),
       themeMode: _themeMode,
       home: _UiLabWorkbench(
         themeMode: _themeMode,
+        experiment: _experiment,
+        onExperimentChanged: (value) {
+          setState(() => _experiment = value);
+        },
         onToggleTheme: () {
           setState(() {
             _themeMode = _themeMode == ThemeMode.dark
@@ -41,9 +58,16 @@ class _VeriFinUiLabAppState extends State<VeriFinUiLabApp> {
 }
 
 class _UiLabWorkbench extends StatelessWidget {
-  const _UiLabWorkbench({required this.themeMode, required this.onToggleTheme});
+  const _UiLabWorkbench({
+    required this.themeMode,
+    required this.experiment,
+    required this.onExperimentChanged,
+    required this.onToggleTheme,
+  });
 
   final ThemeMode themeMode;
+  final UiLabExperiment experiment;
+  final ValueChanged<UiLabExperiment> onExperimentChanged;
   final VoidCallback onToggleTheme;
 
   @override
@@ -87,6 +111,27 @@ class _UiLabWorkbench extends StatelessWidget {
                           ],
                         ),
                       ),
+                      SegmentedButton<UiLabExperiment>(
+                        key: const Key('experiment_switcher'),
+                        showSelectedIcon: false,
+                        segments: const <ButtonSegment<UiLabExperiment>>[
+                          ButtonSegment<UiLabExperiment>(
+                            value: UiLabExperiment.entryForm,
+                            icon: Icon(Icons.edit_note_rounded, size: 18),
+                            label: Text('记一笔'),
+                          ),
+                          ButtonSegment<UiLabExperiment>(
+                            value: UiLabExperiment.navigation,
+                            icon: Icon(Icons.dock_rounded, size: 18),
+                            label: Text('根导航'),
+                          ),
+                        ],
+                        selected: <UiLabExperiment>{experiment},
+                        onSelectionChanged: (selection) {
+                          onExperimentChanged(selection.first);
+                        },
+                      ),
+                      const SizedBox(width: 6),
                       IconButton(
                         key: const Key('theme_toggle'),
                         tooltip: isDark ? '切换浅色模式' : '切换深色模式',
@@ -125,11 +170,16 @@ class _UiLabWorkbench extends StatelessWidget {
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(28),
-                              child: const SizedBox(
+                              child: SizedBox(
                                 key: Key('phone_viewport'),
                                 width: 390,
                                 height: 844,
-                                child: NavigationPreview(),
+                                child: switch (experiment) {
+                                  UiLabExperiment.entryForm =>
+                                    const EntryFormPreview(),
+                                  UiLabExperiment.navigation =>
+                                    const NavigationPreview(),
+                                },
                               ),
                             ),
                           ),

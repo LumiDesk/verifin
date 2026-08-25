@@ -372,6 +372,25 @@
   "attachUnsupported": "Adding attachments isn't supported on this platform",
   "attachDeleteTooltip": "Remove this image",
   "entryDetailSubtitle": "Entry detail",
+  "entryMoreInfo": "More details",
+  "entryTagCount": "Tags {count}",
+  "@entryTagCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "entryAttachmentCount": "Attachments {count}",
+  "@entryAttachmentCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "entryCategoryBranchTitle": "Choose a {category} category",
+  "@entryCategoryBranchTitle": {
+    "placeholders": {
+      "category": {"type": "String"}
+    }
+  },
   "commonCategory": "Category",
   "allLabel": "All",
   "transferOutAccount": "From account",
