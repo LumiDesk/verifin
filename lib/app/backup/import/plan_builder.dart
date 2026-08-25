@@ -33,7 +33,9 @@ class ImportPlan {
   /// 里的资产账户（含零余额、无流水的账户）标记为独立账户一并落库。
   final Set<String> standaloneAccountIds;
 
-  int get importedCount => entries.length;
+  /// 用户在预览页看到并确认的根交易数；关联退款随原支出一起导入，不单独计数。
+  int get importedCount =>
+      entries.where((entry) => entry.type != EntryType.refund).length;
   int get errorCount => errors.length + conversionIssues.length;
   bool get isEmpty =>
       entries.isEmpty && errors.isEmpty && conversionIssues.isEmpty;
@@ -334,7 +336,7 @@ ImportPlan buildImportPlanFromRecords({
     required ExchangeRate? providedRate,
   }) {
     final result = convertCurrencyAmount(
-      amount: record.amount,
+      amount: normalizeCurrencyAmount(record.amount, sourceCurrencyCode),
       sourceCurrencyCode: sourceCurrencyCode,
       targetCurrencyCode: targetCurrencyCode,
       baseCurrencyCode: baseCurrencyCode,
@@ -386,11 +388,17 @@ ImportPlan buildImportPlanFromRecords({
           record.accountAmount,
           record.toAccountAmount,
         ].any((value) => value != null && (!value.isFinite || value <= 0)) ||
+        !record.fee.isFinite ||
+        record.fee < 0 ||
         record.baseAmount != null &&
             (!record.baseAmount!.isFinite || record.baseAmount! < 0)) {
       errors.add(ImportRowError(line: line, message: '换算金额无效'));
       continue;
     }
+    final normalizedAmount = normalizeCurrencyAmount(
+      record.amount,
+      currencyCode,
+    );
 
     ExchangeRate? providedRate;
     String? candidateRateKey;
@@ -473,7 +481,7 @@ ImportPlan buildImportPlanFromRecords({
           ? null
           : record.accountAmount ??
                 (fromCurrency == currencyCode
-                    ? record.amount
+                    ? normalizedAmount
                     : convertedRecordAmount(
                         record: record,
                         sourceCurrencyCode: currencyCode,
@@ -484,7 +492,7 @@ ImportPlan buildImportPlanFromRecords({
           ? null
           : record.toAccountAmount ??
                 (toCurrency == currencyCode
-                    ? record.amount
+                    ? normalizedAmount
                     : convertedRecordAmount(
                         record: record,
                         sourceCurrencyCode: currencyCode,
@@ -503,10 +511,14 @@ ImportPlan buildImportPlanFromRecords({
         id: nextId('entry'),
         bookId: bookId,
         type: EntryType.transfer,
-        amount: record.amount,
+        amount: normalizedAmount,
         currencyCode: currencyCode,
-        accountAmount: accountAmount,
-        toAccountAmount: toAccountAmount,
+        accountAmount: accountAmount == null
+            ? null
+            : normalizeCurrencyAmount(accountAmount, fromCurrency!),
+        toAccountAmount: toAccountAmount == null
+            ? null
+            : normalizeCurrencyAmount(toAccountAmount, toCurrency!),
         baseAmount: 0,
         conversionSource: ConversionSource.imported,
         categoryId: transferCategoryId,
@@ -514,7 +526,7 @@ ImportPlan buildImportPlanFromRecords({
         toAccountId: toId,
         note: record.note,
         occurredAt: record.date,
-        fee: record.fee,
+        fee: normalizeCurrencyAmount(record.fee, fromCurrency ?? currencyCode),
         tagIds: tagIds,
       );
       entries.add(entry);
@@ -539,7 +551,7 @@ ImportPlan buildImportPlanFromRecords({
         ? null
         : record.accountAmount ??
               (accountCurrency == currencyCode
-                  ? record.amount
+                  ? normalizedAmount
                   : convertedRecordAmount(
                       record: record,
                       sourceCurrencyCode: currencyCode,
@@ -558,15 +570,16 @@ ImportPlan buildImportPlanFromRecords({
             targetCurrencyCode: baseCurrencyCode,
             providedRate: providedRate,
           );
-    final baseAmount = record.baseAmount ?? convertedBaseAmount;
-    if (baseAmount == null) {
+    final rawBaseAmount = record.baseAmount ?? convertedBaseAmount;
+    if (rawBaseAmount == null) {
       addConversionIssue(record, currencyCode, '缺少本位币金额或可用汇率');
       continue;
     }
-    if (!baseAmount.isFinite || baseAmount <= 0) {
+    if (!rawBaseAmount.isFinite || rawBaseAmount <= 0) {
       errors.add(ImportRowError(line: line, message: '本位币金额无效'));
       continue;
     }
+    final baseAmount = normalizeCurrencyAmount(rawBaseAmount, baseCurrencyCode);
     if (record.baseAmount != null &&
         convertedBaseAmount != null &&
         (record.baseAmount! - convertedBaseAmount).abs() >=
@@ -582,21 +595,26 @@ ImportPlan buildImportPlanFromRecords({
     // 支出可带退款（部分/全额）：钳制在 [0, 金额]，使净额=金额−退款、退款回原账户
     // （与 App 内退款冲抵语义一致）。收入行忽略。
     final refundedOriginal = record.type == EntryType.expense
-        ? record.refunded.clamp(0, record.amount).toDouble()
+        ? normalizeCurrencyAmount(
+            record.refunded.clamp(0, normalizedAmount),
+            currencyCode,
+          )
         : 0.0;
-    final refundedBase = record.amount == 0
+    final refundedBase = normalizedAmount == 0
         ? 0.0
         : normalizeCurrencyAmount(
-            refundedOriginal / record.amount * baseAmount,
+            refundedOriginal / normalizedAmount * baseAmount,
             baseCurrencyCode,
           );
     final entry = LedgerEntry(
       id: nextId('entry'),
       bookId: bookId,
       type: record.type,
-      amount: record.amount,
+      amount: normalizedAmount,
       currencyCode: currencyCode,
-      accountAmount: accountAmount,
+      accountAmount: accountAmount == null
+          ? null
+          : normalizeCurrencyAmount(accountAmount, accountCurrency!),
       baseAmount: baseAmount,
       conversionSource: ConversionSource.imported,
       categoryId: categoryId,
@@ -608,6 +626,32 @@ ImportPlan buildImportPlanFromRecords({
       tagIds: tagIds,
     );
     entries.add(entry);
+    if (refundedOriginal > 0) {
+      final ratio = refundedOriginal / normalizedAmount;
+      entries.add(
+        LedgerEntry(
+          id: nextId('refund'),
+          bookId: bookId,
+          type: EntryType.refund,
+          amount: refundedOriginal,
+          currencyCode: currencyCode,
+          accountAmount: accountAmount == null
+              ? null
+              : normalizeCurrencyAmount(
+                  accountAmount * ratio,
+                  accountCurrency!,
+                ),
+          baseAmount: refundedBase,
+          conversionSource: ConversionSource.imported,
+          categoryId: categoryId,
+          accountId: accountId,
+          note: '',
+          occurredAt: record.date,
+          refundOf: entry.id,
+          settledAt: record.date,
+        ),
+      );
+    }
     registerCandidateRate(providedRate, candidateRateKey, entry.id);
   }
 
@@ -693,7 +737,10 @@ Set<String> _applyAccountMetadata({
       final account = newAccounts[newIndex];
       final delta = deltaByAccount[account.id] ?? 0;
       newAccounts[newIndex] = account.copyWith(
-        initialBalance: asset.signedBalance - delta,
+        initialBalance: normalizeCurrencyAmount(
+          asset.signedBalance - delta,
+          currencyCode,
+        ),
         includeInAssets: asset.includeInAssets,
         type: asset.type,
       );
@@ -716,7 +763,10 @@ Set<String> _applyAccountMetadata({
         name: assetName,
         type: asset.type,
         groupId: null,
-        initialBalance: asset.signedBalance,
+        initialBalance: normalizeCurrencyAmount(
+          asset.signedBalance,
+          currencyCode,
+        ),
         iconCode: 'wallet',
         note: '',
         includeInAssets: asset.includeInAssets,

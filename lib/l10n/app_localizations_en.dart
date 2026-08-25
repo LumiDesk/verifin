@@ -4048,6 +4048,38 @@ class AppLocalizationsEn extends AppLocalizations {
       'The account currency is locked because it has a balance, credit limit, or transaction history.';
 
   @override
+  String get entryCurrencyLockedByRefund =>
+      'The original currency is locked because this transaction has refunds. Resolve the linked refunds first.';
+
+  @override
+  String get entrySaveValidationFailed =>
+      'The transaction amounts, currencies, or linked data are incomplete. Review them and try again.';
+
+  @override
+  String get importValidationFailed =>
+      'The imported amounts, currencies, or links are incomplete. No ledger data was written.';
+
+  @override
+  String entryConversionRateTrace(String date, String status) {
+    return 'Using local rates effective $date$status';
+  }
+
+  @override
+  String assetValuationRateTrace(String date, String status) {
+    return 'Oldest asset valuation rate: $date$status';
+  }
+
+  @override
+  String homeRecurringRatePending(int count) {
+    return '$count recurring entries are waiting for rates';
+  }
+
+  @override
+  String homeRecurringRatePendingDesc(String codes) {
+    return 'Missing $codes. Tap to resolve.';
+  }
+
+  @override
   String balanceAdjustMissingRate(String code) {
     return 'No valid $code-to-base exchange rate is available, so the balance adjustment transaction cannot be created.';
   }

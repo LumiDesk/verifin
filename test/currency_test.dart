@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/amount_format.dart' as amount_format;
 import 'package:verifin/app/currency_catalog.dart';
 import 'package:verifin/app/currency_math.dart';
+import 'package:verifin/app/ledger_math.dart';
 import 'package:verifin/app/models.dart';
 
 void main() {
@@ -62,6 +63,7 @@ void main() {
       amount_format.moneyUnitStyle = MoneyUnitStyle.symbol;
       amount_format.hideUnitInSingleCurrency = true;
       amount_format.activeBookUsesMultipleCurrencies = false;
+      amount_format.activeBaseCurrencyCode = defaultCurrencyCode;
     });
 
     test('按各自 minor unit 规整', () {
@@ -111,6 +113,16 @@ void main() {
       );
     });
 
+    test('无 context 聚合格式化跟随活动账本本位币精度', () {
+      amount_format.activeBaseCurrencyCode = 'KWD';
+      expect(formatAmount(0.001), '0.001');
+      expect(isZeroAmount(0.001), isFalse);
+
+      amount_format.currencyFractionStyle = CurrencyFractionStyle.standard;
+      amount_format.activeBaseCurrencyCode = 'JPY';
+      expect(formatAmount(12), '12');
+    });
+
     test('货币代码与符号显示无歧义', () {
       expect(formatMoney(12.3, 'CNY'), 'CNY 12.3');
       expect(
@@ -147,6 +159,67 @@ void main() {
   });
 
   group('ExchangeRate', () {
+    test('跨币种转账可临时折算为本位币用于排序', () {
+      const usdAccount = Account(
+        id: 'usd',
+        bookId: 'book',
+        name: '美元',
+        type: AccountType.cash,
+        groupId: null,
+        initialBalance: 0,
+        iconCode: 'cash',
+        note: '',
+        includeInAssets: true,
+        hidden: false,
+        currencyCode: 'USD',
+      );
+      final transfer = LedgerEntry(
+        id: 'transfer',
+        bookId: 'book',
+        type: EntryType.transfer,
+        amount: 100,
+        currencyCode: 'USD',
+        accountAmount: 100,
+        toAccountAmount: 720,
+        baseAmount: 0,
+        categoryId: 'transfer_out',
+        accountId: usdAccount.id,
+        toAccountId: 'cny',
+        note: '',
+        occurredAt: DateTime(2026, 8, 2),
+      );
+      final rate = ExchangeRate(
+        id: 'rate',
+        bookId: 'book',
+        baseCurrencyCode: 'CNY',
+        currencyCode: 'USD',
+        effectiveDate: DateTime(2026, 8, 1),
+        rateToBase: 7.2,
+        source: ExchangeRateSource.manual,
+        createdAt: DateTime(2026, 8, 1),
+        updatedAt: DateTime(2026, 8, 1),
+      );
+
+      expect(
+        comparableEntryAmountInBase(
+          entry: transfer,
+          accounts: const <Account>[usdAccount],
+          baseCurrencyCode: 'CNY',
+          rates: <ExchangeRate>[rate],
+        ),
+        720,
+      );
+      expect(
+        comparableEntryAmountInBase(
+          entry: transfer,
+          accounts: const <Account>[usdAccount],
+          baseCurrencyCode: 'CNY',
+          rates: const <ExchangeRate>[],
+        ),
+        isNull,
+      );
+    });
+
     final createdAt = DateTime.utc(2026, 8, 18, 8);
 
     ExchangeRate rate(

@@ -214,7 +214,7 @@ Color accountBalanceColor(
   if (!account.includeInAssets) {
     return Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.42);
   }
-  if (isZeroAmount(balance)) {
+  if (isZeroCurrencyAmount(balance, account.currencyCode)) {
     return Theme.of(context).colorScheme.onSurface;
   }
   return balance < 0 ? veriExpense : veriIncome;

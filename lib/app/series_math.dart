@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'ledger_math.dart';
+import 'currency_math.dart';
 import 'models.dart';
 import '../l10n/app_localizations.dart';
 
@@ -23,14 +24,16 @@ List<String> reportAxisLabels(double maxValue) {
   return <String>['0', _formatAxisAmount(top / 2), _formatAxisAmount(top)];
 }
 
-String _formatAxisAmount(num value) {
+String _formatAxisAmount(num value, {String? currencyCode}) {
   final abs = value.abs();
   if (abs >= 10000) {
     final compact = value / 10000;
     final decimals = compact.abs() >= 10 || compact % 1 == 0 ? 0 : 1;
     return '${compact.toStringAsFixed(decimals)}w';
   }
-  return formatAmount(value);
+  return currencyCode == null
+      ? formatAmount(value)
+      : formatCurrencyNumber(value, currencyCode);
 }
 
 String twoDigitYear(int year) => (year % 100).toString().padLeft(2, '0');
@@ -59,11 +62,11 @@ List<double> accountBalanceSeries(Account account, List<LedgerEntry> entries) {
     if (delta == 0) {
       continue;
     }
-    if (entry.occurredAt.isBefore(monthStart)) {
+    final effectDate = accountEffectDate(entry);
+    if (effectDate.isBefore(monthStart)) {
       runningBalance += delta;
-    } else if (entry.occurredAt.year == now.year &&
-        entry.occurredAt.month == now.month) {
-      dailyDeltas[entry.occurredAt.day - 1] += delta;
+    } else if (effectDate.year == now.year && effectDate.month == now.month) {
+      dailyDeltas[effectDate.day - 1] += delta;
     }
   }
   final values = List<double>.filled(days, 0);
@@ -89,10 +92,11 @@ List<double> accountMonthlyBalanceSeries(
     if (delta == 0) {
       continue;
     }
-    if (entry.occurredAt.isBefore(yearStart)) {
+    final effectDate = accountEffectDate(entry);
+    if (effectDate.isBefore(yearStart)) {
       runningBalance += delta;
-    } else if (entry.occurredAt.year == now.year) {
-      monthlyDeltas[entry.occurredAt.month - 1] += delta;
+    } else if (effectDate.year == now.year) {
+      monthlyDeltas[effectDate.month - 1] += delta;
     }
   }
   final values = List<double>.filled(12, 0);
@@ -130,10 +134,11 @@ List<double> monthlyNetAssetSeries(
     if (delta == 0) {
       continue;
     }
-    if (entry.occurredAt.isBefore(yearStart)) {
+    final effectDate = accountEffectDate(entry);
+    if (effectDate.isBefore(yearStart)) {
       baseline += delta;
-    } else if (entry.occurredAt.year == now.year) {
-      monthlyDeltas[entry.occurredAt.month - 1] += delta;
+    } else if (effectDate.year == now.year) {
+      monthlyDeltas[effectDate.month - 1] += delta;
     }
   }
   final values = List<double>.filled(12, 0);
@@ -147,7 +152,7 @@ List<double> monthlyNetAssetSeries(
 
 /// 余额类序列的纵轴刻度:范围取序列实际的 [min, max](含 0)。
 
-List<String> balanceAxisLabels(List<double> values) {
+List<String> balanceAxisLabels(List<double> values, String currencyCode) {
   var maxValue = 0.0;
   var minValue = 0.0;
   for (final value in values) {
@@ -159,12 +164,16 @@ List<String> balanceAxisLabels(List<double> values) {
     }
   }
   if (maxValue - minValue <= 0) {
-    return reportAxisLabels(0);
+    return <String>[
+      formatCurrencyNumber(0, currencyCode),
+      formatCurrencyNumber(50, currencyCode),
+      formatCurrencyNumber(100, currencyCode),
+    ];
   }
   return <String>[
-    _formatAxisAmount(minValue),
-    _formatAxisAmount((minValue + maxValue) / 2),
-    _formatAxisAmount(maxValue),
+    _formatAxisAmount(minValue, currencyCode: currencyCode),
+    _formatAxisAmount((minValue + maxValue) / 2, currencyCode: currencyCode),
+    _formatAxisAmount(maxValue, currencyCode: currencyCode),
   ];
 }
 

@@ -1401,7 +1401,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
           !context.mounted) {
         return;
       }
-      controller.applyImportEntries(
+      final applied = controller.applyImportEntries(
         entries: result.entries,
         candidateAccounts: result.candidateAccounts,
         candidateCategories: result.candidateCategories,
@@ -1410,6 +1410,16 @@ class _DataManagementPageState extends State<DataManagementPage> {
         candidateExchangeRates: result.candidateExchangeRates,
       );
       if (!context.mounted) {
+        return;
+      }
+      if (!applied) {
+        unawaited(
+          VeriFeedbackHost.of(context).showMessage(
+            message: AppLocalizations.of(context).importValidationFailed,
+            tone: VeriFeedbackTone.error,
+            duration: VeriFeedbackDuration.long,
+          ),
+        );
         return;
       }
       final l10n = AppLocalizations.of(context);

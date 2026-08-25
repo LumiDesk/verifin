@@ -95,7 +95,7 @@ enum ReimbursementFilter {
     }
   }
 
-  bool matches(LedgerEntry entry) {
+  bool matches(LedgerEntry entry, String baseCurrencyCode) {
     switch (this) {
       case ReimbursementFilter.all:
         return true;
@@ -104,10 +104,14 @@ enum ReimbursementFilter {
         return !entry.reimbursable;
       case ReimbursementFilter.pending:
         // 已标记待报销、且尚未完全冲抵的支出（还有钱没报回来）。
-        return entry.reimbursable && entry.refundedAmount < entry.amount;
+        return entry.reimbursable &&
+            !isZeroCurrencyAmount(entry.netBaseAmount, baseCurrencyCode);
       case ReimbursementFilter.reimbursed:
         // 已有退款/报销回款冲抵（含部分冲抵）。
-        return entry.refundedAmount > 0;
+        return !isZeroCurrencyAmount(
+          entry.refundedBaseAmount,
+          baseCurrencyCode,
+        );
     }
   }
 }
@@ -201,6 +205,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
     _deriveSignature = signature;
     final entries = _sortedEntries(
       _filteredEntries(controller.entries),
+      controller,
     ).where((entry) => entry.type != EntryType.refund).toList();
     _derivedEntries = entries;
     _derivedExpense = sumByType(entries, EntryType.expense);
@@ -632,7 +637,10 @@ class _TransactionsPageState extends State<TransactionsPage> {
       return false;
     }
     // 报销状态：全部 / 待报销（未完全冲抵）/ 已报销（已有回款冲抵）。
-    if (!_reimbursementFilter.matches(entry)) {
+    if (!_reimbursementFilter.matches(
+      entry,
+      controller.activeBook.baseCurrencyCode,
+    )) {
       return false;
     }
     return true;
@@ -652,7 +660,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
       if (entry.toAccountId != null && entry.toAccountId!.isNotEmpty)
         accountById(controller.accounts, entry.toAccountId!).name,
       entry.type.label(AppLocalizations.of(context)),
-      formatAmount(entry.amount),
+      formatCurrencyNumber(entry.amount, entry.currencyCode),
       formatSignedAmount(signedAmount(entry)),
       for (final id in entry.tagIds)
         if (controller.tagById(id) case final Tag tag) tag.label,
@@ -666,7 +674,10 @@ class _TransactionsPageState extends State<TransactionsPage> {
     return searchable.contains(query);
   }
 
-  List<LedgerEntry> _sortedEntries(List<LedgerEntry> entries) {
+  List<LedgerEntry> _sortedEntries(
+    List<LedgerEntry> entries,
+    VeriFinController controller,
+  ) {
     final sorted = List<LedgerEntry>.from(entries);
     switch (_sortOrder) {
       case TransactionSortOrder.dateDesc:
@@ -674,11 +685,40 @@ class _TransactionsPageState extends State<TransactionsPage> {
       case TransactionSortOrder.dateAsc:
         sorted.sort((a, b) => a.occurredAt.compareTo(b.occurredAt));
       case TransactionSortOrder.amountDesc:
-        sorted.sort((a, b) => b.amount.compareTo(a.amount));
+        sorted.sort(
+          (a, b) => _compareBookAmounts(a, b, controller, descending: true),
+        );
       case TransactionSortOrder.amountAsc:
-        sorted.sort((a, b) => a.amount.compareTo(b.amount));
+        sorted.sort(
+          (a, b) => _compareBookAmounts(a, b, controller, descending: false),
+        );
     }
     return sorted;
+  }
+
+  int _compareBookAmounts(
+    LedgerEntry a,
+    LedgerEntry b,
+    VeriFinController controller, {
+    required bool descending,
+  }) {
+    double? valueOf(LedgerEntry entry) => comparableEntryAmountInBase(
+      entry: entry,
+      accounts: controller.accounts,
+      baseCurrencyCode: controller.activeBook.baseCurrencyCode,
+      rates: controller.exchangeRates,
+    );
+
+    final aValue = valueOf(a);
+    final bValue = valueOf(b);
+    if (aValue == null && bValue != null) return 1;
+    if (aValue != null && bValue == null) return -1;
+    final byAmount = aValue == null || bValue == null
+        ? 0
+        : (descending ? bValue.compareTo(aValue) : aValue.compareTo(bValue));
+    if (byAmount != 0) return byAmount;
+    final byDate = b.occurredAt.compareTo(a.occurredAt);
+    return byDate != 0 ? byDate : b.id.compareTo(a.id);
   }
 
   Widget _buildTimeFilterAnchor({

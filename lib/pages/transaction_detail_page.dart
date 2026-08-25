@@ -7,6 +7,7 @@ import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
 import '../app/currency_catalog.dart';
 import '../app/currency_math.dart';
+import '../app/entry_currency_draft.dart';
 import '../app/feedback.dart';
 import '../app/model_lookup.dart';
 import '../app/ledger_math.dart';
@@ -281,7 +282,16 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                         value: _currencyCode,
                         onTap: _type == EntryType.transfer
                             ? null
-                            : _pickCurrency,
+                            : _refunds.isEmpty
+                            ? _pickCurrency
+                            : () => unawaited(
+                                VeriFeedbackHost.of(context).showMessage(
+                                  message: AppLocalizations.of(
+                                    context,
+                                  ).entryCurrencyLockedByRefund,
+                                  tone: VeriFeedbackTone.warning,
+                                ),
+                              ),
                       ),
                       if (_type == EntryType.transfer) ...<Widget>[
                         DetailInfoRow(
@@ -615,6 +625,40 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
           ),
         ),
       );
+    } else if (fields.isNotEmpty) {
+      final baseCode = controller.activeBook.baseCurrencyCode;
+      final involvedCodes = <String>{
+        _currencyCode,
+        if (!_noAccount) account.currencyCode,
+        if (toAccount != null) toAccount.currencyCode,
+      }..remove(baseCode);
+      final rateDates = <DateTime>{
+        for (final code in involvedCodes)
+          ?controller.exchangeRateFor(code, _occurredAt)?.effectiveDate,
+      }.toList()..sort();
+      final stale = rateDates.any(
+        (date) => calendarDaysBetween(date, _occurredAt) > 30,
+      );
+      fields.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Text(
+            _conversionSource == ConversionSource.manual
+                ? l10n.entryConversionSourceManual
+                : rateDates.isEmpty
+                ? l10n.entryConversionSourceRateTable
+                : l10n.entryConversionRateTrace(
+                    rateDates.map(currencyDateKey).join(' / '),
+                    stale ? ' · ${l10n.exchangeRateStale}' : '',
+                  ),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.55),
+            ),
+          ),
+        ),
+      );
     }
     return fields;
   }
@@ -658,9 +702,44 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       return;
     }
     setState(() {
-      _amount = normalizeCurrencyAmount(amount, _currencyCode);
       final controller = VeriFinScope.of(context);
-      _resolveCurrencyAmounts(controller, controller.accounts);
+      final previousAmount = _amount;
+      _amount = normalizeCurrencyAmount(amount, _currencyCode);
+      if (_conversionSource == ConversionSource.manual ||
+          _conversionSource == ConversionSource.imported ||
+          _conversionSource == ConversionSource.legacy) {
+        final account = _findAccount(controller.accounts, _accountId);
+        final toAccount = _findAccount(controller.accounts, _toAccountId);
+        if (!_noAccount && account != null) {
+          _accountAmount = scaleDependentCurrencyAmount(
+            dependentAmount: _accountAmount,
+            previousOriginalAmount: previousAmount,
+            nextOriginalAmount: _amount,
+            targetCurrencyCode: account.currencyCode,
+          );
+          _accountAmountTouched = true;
+        }
+        if (toAccount != null) {
+          _toAccountAmount = scaleDependentCurrencyAmount(
+            dependentAmount: _toAccountAmount,
+            previousOriginalAmount: previousAmount,
+            nextOriginalAmount: _amount,
+            targetCurrencyCode: toAccount.currencyCode,
+          );
+          _toAccountAmountTouched = true;
+        }
+        _baseAmount =
+            scaleDependentCurrencyAmount(
+              dependentAmount: _baseAmount,
+              previousOriginalAmount: previousAmount,
+              nextOriginalAmount: _amount,
+              targetCurrencyCode: controller.activeBook.baseCurrencyCode,
+            ) ??
+            0;
+        _baseAmountTouched = true;
+      } else {
+        _resolveCurrencyAmounts(controller, controller.accounts);
+      }
     });
   }
 
@@ -934,8 +1013,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
         _occurredAt.hour,
         _occurredAt.minute,
       );
-      final controller = VeriFinScope.of(context);
-      _resolveCurrencyAmounts(controller, controller.accounts);
+      // 已保存交易的三层金额是历史事实；只改日期不得按新日期汇率静默重算。
     });
   }
 
@@ -1075,7 +1153,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       return false;
     }
     _saving = true;
-    final saved = await VeriFinScope.of(context).saveEntryAggregateDraft(
+    final result = await VeriFinScope.of(context).saveEntryAggregateDraftResult(
       entry: _buildEntry(),
       isNew: false,
       refunds: _refunds,
@@ -1087,7 +1165,16 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     if (mounted) {
       _saving = false;
     }
-    return saved;
+    if (result is EntrySaveValidationFailure && mounted) {
+      unawaited(
+        VeriFeedbackHost.of(context).showMessage(
+          message: AppLocalizations.of(context).entrySaveValidationFailed,
+          tone: VeriFeedbackTone.warning,
+          duration: VeriFeedbackDuration.long,
+        ),
+      );
+    }
+    return result.isSuccess;
   }
 
   Future<void> _delete() async {

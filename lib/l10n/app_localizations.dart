@@ -7214,6 +7214,48 @@ abstract class AppLocalizations {
   /// **'账户已有余额、信用额度或交易记录，币种已锁定。'**
   String get accountCurrencyLocked;
 
+  /// No description provided for @entryCurrencyLockedByRefund.
+  ///
+  /// In zh, this message translates to:
+  /// **'交易已有退款，原币不可修改。请先处理关联退款。'**
+  String get entryCurrencyLockedByRefund;
+
+  /// No description provided for @entrySaveValidationFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'交易金额、币种或关联数据不完整，请检查后重试。'**
+  String get entrySaveValidationFailed;
+
+  /// No description provided for @importValidationFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入数据的金额、币种或关联关系不完整，未写入任何账目。'**
+  String get importValidationFailed;
+
+  /// No description provided for @entryConversionRateTrace.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用 {date} 生效的本地汇率{status}'**
+  String entryConversionRateTrace(String date, String status);
+
+  /// No description provided for @assetValuationRateTrace.
+  ///
+  /// In zh, this message translates to:
+  /// **'资产估值最旧汇率：{date}{status}'**
+  String assetValuationRateTrace(String date, String status);
+
+  /// No description provided for @homeRecurringRatePending.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 条周期记账等待汇率'**
+  String homeRecurringRatePending(int count);
+
+  /// No description provided for @homeRecurringRatePendingDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'缺少 {codes}，点按前往处理'**
+  String homeRecurringRatePendingDesc(String codes);
+
   /// No description provided for @balanceAdjustMissingRate.
   ///
   /// In zh, this message translates to:

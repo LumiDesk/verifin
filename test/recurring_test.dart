@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/recurring.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/app/veri_fin_scope.dart';
+import 'package:verifin/pages/home_page.dart';
 import 'package:verifin/pages/recurring_page.dart';
 
 import 'support/test_harness.dart';
@@ -29,6 +30,58 @@ RecurringRule _rule({
 
 void main() {
   useTestDatabases();
+
+  testWidgets('首页显示等待汇率的周期规则并可进入处理页', (tester) async {
+    final controller = await makeController();
+    final now = DateTime.now();
+    final bookId = controller.activeBook.id;
+    controller.addAccount(
+      Account(
+        id: 'usd-cash',
+        bookId: bookId,
+        name: '美元现金',
+        type: AccountType.cash,
+        groupId: null,
+        initialBalance: 0,
+        iconCode: 'cash',
+        note: '',
+        includeInAssets: true,
+        hidden: false,
+        currencyCode: 'USD',
+      ),
+    );
+    await controller.saveRecurringRuleDraft(
+      RecurringRule(
+        id: 'usd-rule',
+        bookId: bookId,
+        type: EntryType.income,
+        amount: 100,
+        currencyCode: 'USD',
+        accountAmount: 100,
+        baseAmount: 720,
+        ratePolicy: RecurringRatePolicy.latestAvailable,
+        categoryId: 'salary',
+        accountId: 'usd-cash',
+        note: '美元工资',
+        frequency: RecurringFrequency.monthly,
+        startDate: now,
+        nextRunDate: now,
+      ),
+      isNew: true,
+    );
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(home: const Scaffold(body: HomePage())),
+      ),
+    );
+
+    expect(find.text('1 条周期记账等待汇率'), findsOneWidget);
+    expect(find.textContaining('缺少 USD'), findsOneWidget);
+    await tester.tap(find.text('1 条周期记账等待汇率'));
+    await tester.pumpAndSettle();
+    expect(find.text('周期记账'), findsOneWidget);
+  });
 
   test('advanceRecurring 各频率', () {
     expect(

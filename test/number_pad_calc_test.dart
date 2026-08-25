@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/calc_expression.dart';
 import 'package:verifin/app/entry_sheets.dart';
+import 'package:verifin/main.dart';
 
 import 'support/test_harness.dart';
 
@@ -100,5 +101,52 @@ void main() {
       find.byKey(const Key('number_pad_ok')),
     );
     expect(ok.onPressed, isNull);
+  });
+
+  testWidgets('KWD 快速记账按本位币允许三位小数', (tester) async {
+    final controller = await makeController();
+    await controller.changeEmptyLedgerBookBaseCurrency(
+      controller.activeBook.id,
+      'KWD',
+    );
+    await tester.pumpWidget(VeriFinApp(controller: controller));
+    await tapBottomTab(tester, 0);
+    await tester.tap(find.byKey(const Key('quick_entry_fab')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('number_key_0')));
+    await tester.tap(find.byKey(const Key('number_key_.')));
+    await tester.tap(find.byKey(const Key('number_key_0')));
+    await tester.tap(find.byKey(const Key('number_key_0')));
+    await tester.tap(find.byKey(const Key('number_key_1')));
+    await tester.pump();
+
+    expect(find.text('0.001'), findsOneWidget);
+    final ok = tester.widget<FilledButton>(
+      find.byKey(const Key('number_pad_ok')),
+    );
+    expect(ok.onPressed, isNotNull);
+  });
+
+  testWidgets('JPY 金额键盘禁用小数点', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(500, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      zhMaterialApp(
+        home: const Scaffold(
+          body: NumberPadSheet(
+            title: '日元金额',
+            maxFractionDigits: 0,
+            currencyCode: 'JPY',
+            hapticsEnabled: false,
+          ),
+        ),
+      ),
+    );
+
+    final dot = tester.widget<FilledButton>(
+      find.byKey(const Key('number_key_.')),
+    );
+    expect(dot.onPressed, isNull);
   });
 }

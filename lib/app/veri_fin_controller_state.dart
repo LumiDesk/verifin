@@ -12,6 +12,10 @@ mixin _ControllerState on ChangeNotifier {
   /// SQLite 落库失败时回调（由 UI 层挂钩弹出「保存失败」提示）。
   void Function(Object error)? onPersistError;
 
+  /// 任一 Controller 状态变化后通知根组件刷新桌面小组件投影。根组件负责去抖与
+  /// 平台调用；Controller 不直接依赖 Android Bridge。
+  VoidCallback? onWidgetProjectionInvalidated;
+
   /// 应用锁开关变化时回调（由 main 挂钩，据此开关 Android FLAG_SECURE）。
   void Function(bool appLockEnabled)? onAppLockChanged;
 
@@ -66,6 +70,7 @@ mixin _ControllerState on ChangeNotifier {
   void notifyListeners() {
     _syncAmountFormatContext();
     _invalidateDerivedViews();
+    onWidgetProjectionInvalidated?.call();
     super.notifyListeners();
   }
 
@@ -256,6 +261,11 @@ mixin _ControllerState on ChangeNotifier {
     amount_format.hideUnitInSingleCurrency = _hideUnitInSingleCurrency;
     amount_format.activeBookUsesMultipleCurrencies =
         activeBookUsesMultipleCurrencies;
+    final book = _ledgerBooks
+        .where((item) => item.id == _activeBookId)
+        .firstOrNull;
+    amount_format.activeBaseCurrencyCode =
+        book?.baseCurrencyCode ?? defaultCurrencyCode;
   }
 
   /// 从 SQLite 载入账目类数据；全新数据库首启动写入默认账本/账户/分组/分类。
@@ -523,8 +533,29 @@ mixin _ControllerState on ChangeNotifier {
       if (e.type == EntryType.expense &&
           e.refundedBaseAmount > 0 &&
           !expensesWithRefundEntry.contains(e.id)) {
-        final amount = e.refundedBaseAmount.clamp(0.0, e.baseAmount).toDouble();
-        if (amount <= 0) continue;
+        final refundedBaseAmount = e.refundedBaseAmount
+            .clamp(0.0, e.baseAmount)
+            .toDouble();
+        if (refundedBaseAmount <= 0 || e.baseAmount <= 0 || e.amount <= 0) {
+          continue;
+        }
+        final ratio = (refundedBaseAmount / e.baseAmount).clamp(0.0, 1.0);
+        final amount = normalizeCurrencyAmount(
+          e.amount * ratio,
+          e.currencyCode,
+        );
+        final account = _accounts
+            .where(
+              (account) =>
+                  account.id == e.accountId && account.bookId == e.bookId,
+            )
+            .firstOrNull;
+        final accountAmount = e.accountAmount == null || account == null
+            ? null
+            : normalizeCurrencyAmount(
+                e.accountAmount! * ratio,
+                account.currencyCode,
+              );
         synthesized.add(
           LedgerEntry(
             id: _generateId('entry'),
@@ -532,8 +563,8 @@ mixin _ControllerState on ChangeNotifier {
             type: EntryType.refund,
             amount: amount,
             currencyCode: e.currencyCode,
-            accountAmount: e.accountId.isEmpty ? null : amount,
-            baseAmount: amount,
+            accountAmount: accountAmount,
+            baseAmount: refundedBaseAmount,
             conversionSource: ConversionSource.legacy,
             categoryId: e.categoryId,
             accountId: e.accountId,

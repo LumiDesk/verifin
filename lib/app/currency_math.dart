@@ -278,6 +278,40 @@ CurrencyConversionResult convertCurrencyAmount({
   );
 }
 
+/// 交易列表/只读查询用于跨币种比较的本位币金额；不写回模型、不进入收支统计。
+/// 收支使用保存时冻结的本位币金额，转账才按交易日汇率临时折算转出端实际金额。
+double? comparableEntryAmountInBase({
+  required LedgerEntry entry,
+  required Iterable<Account> accounts,
+  required String baseCurrencyCode,
+  required Iterable<ExchangeRate> rates,
+}) {
+  switch (entry.type) {
+    case EntryType.expense:
+      return entry.netBaseAmount;
+    case EntryType.income:
+      return entry.baseAmount;
+    case EntryType.refund:
+      return entry.baseAmount;
+    case EntryType.transfer:
+      final sourceAccount = accounts
+          .where((account) => account.id == entry.accountId)
+          .firstOrNull;
+      final sourceCode = sourceAccount?.currencyCode ?? entry.currencyCode;
+      final sourceAmount = entry.accountAmount ?? entry.amount;
+      final result = convertCurrencyAmount(
+        amount: sourceAmount,
+        sourceCurrencyCode: sourceCode,
+        targetCurrencyCode: baseCurrencyCode,
+        baseCurrencyCode: baseCurrencyCode,
+        bookId: entry.bookId,
+        date: entry.occurredAt,
+        rates: rates,
+      );
+      return result is ConvertedCurrencyAmount ? result.amount : null;
+  }
+}
+
 bool isExchangeRateStale(
   ExchangeRate rate,
   DateTime asOf, {
@@ -294,11 +328,15 @@ class ConvertedAccountBalances {
     required this.amountsByAccountId,
     required this.missingCurrencyCodes,
     required this.affectedAccountIds,
+    required this.rateDatesByAccountId,
+    required this.staleAccountIds,
   });
 
   final Map<String, double> amountsByAccountId;
   final Set<String> missingCurrencyCodes;
   final Set<String> affectedAccountIds;
+  final Map<String, DateTime> rateDatesByAccountId;
+  final Set<String> staleAccountIds;
 
   bool get isComplete => missingCurrencyCodes.isEmpty;
 
@@ -320,6 +358,8 @@ ConvertedAccountBalances convertAccountBalancesToBase({
   final amounts = <String, double>{};
   final missingCodes = <String>{};
   final affectedIds = <String>{};
+  final rateDates = <String, DateTime>{};
+  final staleAccountIds = <String>{};
   for (final account in accounts) {
     final balance = balanceOf(account);
     if (isZeroCurrencyAmount(balance, account.currencyCode)) {
@@ -337,6 +377,13 @@ ConvertedAccountBalances convertAccountBalancesToBase({
     );
     if (result is ConvertedCurrencyAmount) {
       amounts[account.id] = result.amount;
+      final rateDate = result.sourceRateDate;
+      if (rateDate != null) {
+        rateDates[account.id] = rateDate;
+        if (calendarDaysBetween(rateDate, date) > 30) {
+          staleAccountIds.add(account.id);
+        }
+      }
     } else if (result is MissingCurrencyRate) {
       missingCodes.addAll(result.currencyCodes);
       affectedIds.add(account.id);
@@ -346,5 +393,7 @@ ConvertedAccountBalances convertAccountBalancesToBase({
     amountsByAccountId: Map<String, double>.unmodifiable(amounts),
     missingCurrencyCodes: Set<String>.unmodifiable(missingCodes),
     affectedAccountIds: Set<String>.unmodifiable(affectedIds),
+    rateDatesByAccountId: Map<String, DateTime>.unmodifiable(rateDates),
+    staleAccountIds: Set<String>.unmodifiable(staleAccountIds),
   );
 }

@@ -1564,6 +1564,31 @@
     "placeholders": {"code": {"type": "String"}}
   },
   "accountCurrencyLocked": "The account currency is locked because it has a balance, credit limit, or transaction history.",
+  "entryCurrencyLockedByRefund": "The original currency is locked because this transaction has refunds. Resolve the linked refunds first.",
+  "entrySaveValidationFailed": "The transaction amounts, currencies, or linked data are incomplete. Review them and try again.",
+  "importValidationFailed": "The imported amounts, currencies, or links are incomplete. No ledger data was written.",
+  "entryConversionRateTrace": "Using local rates effective {date}{status}",
+  "@entryConversionRateTrace": {
+    "placeholders": {
+      "date": {"type": "String"},
+      "status": {"type": "String"}
+    }
+  },
+  "assetValuationRateTrace": "Oldest asset valuation rate: {date}{status}",
+  "@assetValuationRateTrace": {
+    "placeholders": {
+      "date": {"type": "String"},
+      "status": {"type": "String"}
+    }
+  },
+  "homeRecurringRatePending": "{count} recurring entries are waiting for rates",
+  "@homeRecurringRatePending": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "homeRecurringRatePendingDesc": "Missing {codes}. Tap to resolve.",
+  "@homeRecurringRatePendingDesc": {
+    "placeholders": {"codes": {"type": "String"}}
+  },
   "balanceAdjustMissingRate": "No valid {code}-to-base exchange rate is available, so the balance adjustment transaction cannot be created.",
   "@balanceAdjustMissingRate": {
     "placeholders": {"code": {"type": "String"}}

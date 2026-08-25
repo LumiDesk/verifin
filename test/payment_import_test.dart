@@ -382,6 +382,68 @@ void main() {
       expect(plan.newAccounts.single.currencyCode, 'CNY');
     });
 
+    test('外币退款 CSV 导出后重新导入保留三层退款金额', () {
+      final account = Account(
+        id: 'usd',
+        bookId: 'book_default',
+        name: '美元现金',
+        type: AccountType.cash,
+        groupId: null,
+        initialBalance: 0,
+        iconCode: 'wallet',
+        note: '',
+        includeInAssets: true,
+        hidden: false,
+        currencyCode: 'USD',
+      );
+      const category = Category(
+        id: 'dining',
+        label: '餐饮',
+        type: EntryType.expense,
+        iconCode: 'dining',
+      );
+      final csv = transactionCsvExport(
+        entries: <LedgerEntry>[
+          LedgerEntry(
+            id: 'expense-usd',
+            bookId: 'book_default',
+            type: EntryType.expense,
+            amount: 10,
+            currencyCode: 'USD',
+            accountAmount: 10,
+            baseAmount: 72,
+            conversionSource: ConversionSource.manual,
+            categoryId: category.id,
+            accountId: account.id,
+            note: '',
+            occurredAt: DateTime(2026, 7, 1),
+            refundedBaseAmount: 36,
+          ),
+        ],
+        accounts: <Account>[account],
+        categories: const <Category>[category],
+        tags: const <Tag>[],
+        baseCurrencyCode: 'CNY',
+      );
+      final plan = run(
+        ImportPlatform.csvTemplate,
+        Uint8List.fromList(utf8.encode(csv)),
+      );
+
+      final expense = plan.entries.singleWhere(
+        (entry) => entry.type == EntryType.expense,
+      );
+      final refund = plan.entries.singleWhere(
+        (entry) => entry.type == EntryType.refund,
+      );
+      expect(expense.refundedBaseAmount, 36);
+      expect(refund.currencyCode, 'USD');
+      expect(refund.amount, 5);
+      expect(refund.accountAmount, 5);
+      expect(refund.baseAmount, 36);
+      expect(refund.refundOf, expense.id);
+    });
+
     test('跨币转账 CSV 重建不同币种的两端账户', () {
       final from = Account(
         id: 'from-cny',

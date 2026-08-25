@@ -13,6 +13,21 @@ import 'support/test_harness.dart';
 void main() {
   useTestDatabases();
 
+  test('预算写入按账本本位币 minor unit 规整', () async {
+    final controller = await makeController();
+    await controller.changeEmptyLedgerBookBaseCurrency(
+      controller.activeBook.id,
+      'KWD',
+    );
+
+    controller
+      ..setDefaultMonthlyBudget(1.2346)
+      ..setDailyBudget(0.0014);
+
+    expect(controller.defaultMonthlyBudget, 1.235);
+    expect(controller.dailyBudget(), 0.001);
+  });
+
   testWidgets('home trend chart tap shows data instead of navigating', (
     WidgetTester tester,
   ) async {

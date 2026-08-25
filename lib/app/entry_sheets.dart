@@ -5,6 +5,7 @@ import 'app_theme.dart';
 import 'calc_expression.dart';
 import 'category_tree.dart';
 import 'common_widgets.dart';
+import 'currency_math.dart';
 import 'ledger_math.dart';
 import 'models.dart';
 import '../l10n/app_localizations.dart';
@@ -21,6 +22,7 @@ class NumberPadSheet extends StatefulWidget {
     this.hapticsEnabled = true,
     this.maxAmount,
     this.maxFractionDigits = 2,
+    this.currencyCode,
   }) : assert(maxFractionDigits >= 0 && maxFractionDigits <= 12);
 
   final String title;
@@ -31,6 +33,7 @@ class NumberPadSheet extends StatefulWidget {
 
   /// 单个操作数允许的小数位数。普通金额默认为 2；本地汇率可提高到 10。
   final int maxFractionDigits;
+  final String? currencyCode;
 
   /// 可选金额上限：非空时输入框下方展示「最多 {max}」提示（超上限时变红），
   /// 点 OK 确认的结果会被封顶到该值。用于退款「剩余可退」等有上限的输入。
@@ -125,16 +128,21 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
                   Padding(
                     padding: const EdgeInsets.only(top: 6, left: 4),
                     child: Text(
-                      AppLocalizations.of(
-                        context,
-                      ).numberPadMax(formatAmount(widget.maxAmount!)),
+                      AppLocalizations.of(context).numberPadMax(
+                        widget.currencyCode == null
+                            ? formatAmount(widget.maxAmount!)
+                            : formatCurrencyNumber(
+                                widget.maxAmount!,
+                                widget.currencyCode!,
+                              ),
+                      ),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: _amount > widget.maxAmount! + 0.0001
+                        color: _amount > widget.maxAmount! + _maxTolerance
                             ? veriExpense
                             : Theme.of(
                                 context,
                               ).colorScheme.onSurface.withValues(alpha: 0.55),
-                        fontWeight: _amount > widget.maxAmount! + 0.0001
+                        fontWeight: _amount > widget.maxAmount! + _maxTolerance
                             ? FontWeight.w700
                             : FontWeight.w400,
                       ),
@@ -220,7 +228,8 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
         ? Colors.white.withValues(alpha: 0.94)
         : veriInk;
     final canSubmit = _canSubmit;
-    final enabled = !isOk || canSubmit;
+    final enabled =
+        (!isOk || canSubmit) && (!isDot || widget.maxFractionDigits > 0);
     final okDisabledBackground = isDark
         ? Colors.white.withValues(alpha: 0.10)
         : const Color(0xFFD9E5F3);
@@ -273,7 +282,7 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
           borderRadius: BorderRadius.circular(veriRadiusMd),
         ),
       ),
-      onPressed: isOk && !canSubmit ? null : () => _handleKey(value),
+      onPressed: enabled ? () => _handleKey(value) : null,
       child: value == '⌫'
           ? Icon(Icons.backspace_outlined, color: buttonForeground)
           : Text(
@@ -294,10 +303,17 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
       return _input.isEmpty && widget.allowZero;
     }
     if (widget.allowNegative) {
-      return widget.allowZero || !isZeroAmount(result);
+      final isZero = widget.currencyCode == null
+          ? isZeroAmount(result)
+          : isZeroCurrencyAmount(result, widget.currencyCode!);
+      return widget.allowZero || !isZero;
     }
     return widget.allowZero ? result >= 0 : result > 0;
   }
+
+  double get _maxTolerance => widget.currencyCode == null
+      ? 0.0001
+      : currencyAmountTolerance(widget.currencyCode!);
 
   static const String _operators = '+-×÷';
 

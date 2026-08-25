@@ -205,7 +205,10 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                           xLabels: _monthlyTrend
                               ? evenMonthAxisLabels()
                               : monthAxisLabels(DateTime.now()),
-                          yLabels: balanceAxisLabels(balanceTrendValues),
+                          yLabels: balanceAxisLabels(
+                            balanceTrendValues,
+                            currentAccount.currencyCode,
+                          ),
                           labelColor: Theme.of(
                             context,
                           ).colorScheme.onSurface.withValues(alpha: 0.50),
@@ -573,6 +576,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
       initialAmount: balance,
       allowNegative: true,
       allowZero: true,
+      currencyCode: account.currencyCode,
     );
     if (amount == null || !mounted) {
       return;
@@ -653,6 +657,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
     final amount = await showNumberPadSheet(
       context,
       title: AppLocalizations.of(context).quickEntry,
+      currencyCode: account.currencyCode,
     );
     if (!context.mounted || amount == null || amount <= 0) {
       return;
@@ -789,6 +794,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
       title: AppLocalizations.of(context).creditLimitEditTitle,
       initialAmount: account.creditLimit,
       allowZero: true,
+      currencyCode: account.currencyCode,
     );
     if (amount == null || !mounted) {
       return;
@@ -1084,7 +1090,10 @@ class AccountReportPage extends StatelessWidget {
                         color: veriRoyal,
                         values: reportBalanceValues,
                         xLabels: monthAxisLabels(DateTime.now()),
-                        yLabels: balanceAxisLabels(reportBalanceValues),
+                        yLabels: balanceAxisLabels(
+                          reportBalanceValues,
+                          currentAccount.currencyCode,
+                        ),
                         labelColor: Theme.of(
                           context,
                         ).colorScheme.onSurface.withValues(alpha: 0.50),

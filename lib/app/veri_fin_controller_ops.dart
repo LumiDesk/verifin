@@ -803,12 +803,16 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   double get defaultMonthlyBudget =>
       _monthlyBudgets[_defaultMonthlyBudgetKey(_activeBookId)] ?? 0;
 
+  double _normalizeActiveBaseAmount(double amount) =>
+      normalizeCurrencyAmount(amount, activeBook.baseCurrencyCode);
+
   void setDefaultMonthlyBudget(double amount) {
+    final normalized = _normalizeActiveBaseAmount(amount);
     final key = _defaultMonthlyBudgetKey(_activeBookId);
-    if (amount <= 0) {
+    if (normalized <= 0) {
       _monthlyBudgets.remove(key);
     } else {
-      _monthlyBudgets[key] = amount;
+      _monthlyBudgets[key] = normalized;
     }
     _persistBudgets();
     notifyListeners();
@@ -826,9 +830,10 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   /// 设某键月的单月覆盖（amount 可为 0，表示「本月不设预算」；恢复默认沿用请用
   /// [clearMonthlyBudgetOverride]）。
   void setMonthlyBudget(DateTime month, double amount) {
-    _monthlyBudgets['$_activeBookId:${_monthKey(month)}'] = amount <= 0
+    final normalized = _normalizeActiveBaseAmount(amount);
+    _monthlyBudgets['$_activeBookId:${_monthKey(month)}'] = normalized <= 0
         ? 0
-        : amount;
+        : normalized;
     _persistBudgets();
     notifyListeners();
   }
@@ -847,11 +852,12 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       0;
 
   void setDefaultCategoryBudget(String categoryId, double amount) {
+    final normalized = _normalizeActiveBaseAmount(amount);
     final key = _defaultCategoryBudgetKey(_activeBookId, categoryId);
-    if (amount <= 0) {
+    if (normalized <= 0) {
       _categoryBudgets.remove(key);
     } else {
-      _categoryBudgets[key] = amount;
+      _categoryBudgets[key] = normalized;
     }
     _persistCategoryBudgets();
     notifyListeners();
@@ -871,11 +877,12 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
 
   /// 设某键月某分类的单月覆盖（0 = 移除覆盖，回到沿用分类默认）。
   void setCategoryBudget(DateTime month, String categoryId, double amount) {
+    final normalized = _normalizeActiveBaseAmount(amount);
     final key = _categoryBudgetKey(_activeBookId, month, categoryId);
-    if (amount <= 0) {
+    if (normalized <= 0) {
       _categoryBudgets.remove(key);
     } else {
-      _categoryBudgets[key] = amount;
+      _categoryBudgets[key] = normalized;
     }
     _persistCategoryBudgets();
     notifyListeners();
@@ -896,10 +903,11 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   }
 
   void setDailyBudget(double amount) {
-    if (amount <= 0) {
+    final normalized = _normalizeActiveBaseAmount(amount);
+    if (normalized <= 0) {
       _dailyBudgets.remove(_activeBookId);
     } else {
-      _dailyBudgets[_activeBookId] = amount;
+      _dailyBudgets[_activeBookId] = normalized;
     }
     _persistDailyBudgets();
     notifyListeners();
@@ -997,12 +1005,14 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     required int cycleStartDay,
     required Map<String, double> defaultCategoryBudgets,
   }) async {
+    final normalizedMonthly = _normalizeActiveBaseAmount(defaultMonthlyBudget);
+    final normalizedDaily = _normalizeActiveBaseAmount(dailyBudget);
     final nextMonthly = Map<String, double>.of(_monthlyBudgets);
     final monthlyKey = _defaultMonthlyBudgetKey(_activeBookId);
-    if (defaultMonthlyBudget <= 0) {
+    if (normalizedMonthly <= 0) {
       nextMonthly.remove(monthlyKey);
     } else {
-      nextMonthly[monthlyKey] = defaultMonthlyBudget;
+      nextMonthly[monthlyKey] = normalizedMonthly;
     }
 
     final nextCategories = Map<String, double>.of(_categoryBudgets)
@@ -1011,17 +1021,18 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
             key.startsWith('$_activeBookId:$_budgetDefaultMonthSegment:'),
       );
     for (final entry in defaultCategoryBudgets.entries) {
-      if (entry.value > 0) {
+      final normalized = _normalizeActiveBaseAmount(entry.value);
+      if (normalized > 0) {
         nextCategories[_defaultCategoryBudgetKey(_activeBookId, entry.key)] =
-            entry.value;
+            normalized;
       }
     }
 
     final nextDaily = Map<String, double>.of(_dailyBudgets);
-    if (dailyBudget <= 0) {
+    if (normalizedDaily <= 0) {
       nextDaily.remove(_activeBookId);
     } else {
-      nextDaily[_activeBookId] = dailyBudget;
+      nextDaily[_activeBookId] = normalizedDaily;
     }
 
     final clampedStartDay = clampBudgetCycleStartDay(cycleStartDay);
@@ -1730,7 +1741,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   /// [entry.refundedBaseAmount] is ignored and derived again from the settled
   /// refunds, preventing an editor's stale entry snapshot from overwriting the
   /// controller-managed cache.
-  Future<bool> saveEntryAggregateDraft({
+  Future<EntrySaveResult> saveEntryAggregateDraftResult({
     required LedgerEntry entry,
     required bool isNew,
     List<LedgerEntry> refunds = const <LedgerEntry>[],
@@ -1741,28 +1752,36 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   }) async {
     final currentIndex = _entries.indexWhere((item) => item.id == entry.id);
     if ((isNew && currentIndex != -1) || (!isNew && currentIndex == -1)) {
-      return false;
+      return const EntrySaveValidationFailure(EntryValidationCode.staleDraft);
     }
     if (!isNew && _entries[currentIndex].bookId != entry.bookId) {
-      return false;
+      return const EntrySaveValidationFailure(EntryValidationCode.staleDraft);
     }
     final book = ledgerBooks
         .where((item) => item.id == entry.bookId)
         .firstOrNull;
     if (book == null || !_validEntryCurrencyAmounts(entry, book)) {
-      return false;
+      return const EntrySaveValidationFailure(
+        EntryValidationCode.invalidAmounts,
+      );
     }
     if (refunds.any(
-          (refund) =>
-              refund.type != EntryType.refund ||
-              refund.refundOf != entry.id ||
-              refund.bookId != entry.bookId ||
-              refund.currencyCode != entry.currencyCode ||
-              refund.amount <= 0 ||
-              !_validEntryCurrencyAmounts(refund, book),
-        ) ||
-        attachments.any((attachment) => attachment.entryId != entry.id)) {
-      return false;
+      (refund) =>
+          refund.type != EntryType.refund ||
+          refund.refundOf != entry.id ||
+          refund.bookId != entry.bookId ||
+          refund.currencyCode != entry.currencyCode ||
+          refund.amount <= 0 ||
+          !_validEntryCurrencyAmounts(refund, book),
+    )) {
+      return const EntrySaveValidationFailure(
+        EntryValidationCode.invalidRefund,
+      );
+    }
+    if (attachments.any((attachment) => attachment.entryId != entry.id)) {
+      return const EntrySaveValidationFailure(
+        EntryValidationCode.invalidAttachments,
+      );
     }
     final refundTotal = refunds.fold<double>(
       0,
@@ -1771,7 +1790,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     final refundTolerance = currencyAmountTolerance(entry.currencyCode);
     if (entry.type != EntryType.expense && refunds.isNotEmpty ||
         refundTotal > entry.amount + refundTolerance) {
-      return false;
+      return const EntrySaveValidationFailure(
+        EntryValidationCode.refundExceedsExpense,
+      );
     }
 
     final existingEntryIds = _entries.map((item) => item.id).toSet();
@@ -1810,6 +1831,28 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
           .toDouble();
       nextEntries[i] = current.copyWith(refundedBaseAmount: refundedBaseAmount);
     }
+    final aggregateEntries = nextEntries
+        .where(
+          (current) => current.id == entry.id || current.refundOf == entry.id,
+        )
+        .toList(growable: false);
+    final aggregateIssue = validateLedgerEntries(
+      books: <LedgerBook>[book],
+      accounts: _accounts.where((account) => account.bookId == book.id),
+      entries: aggregateEntries,
+      allowMissingAccounts: !isNew,
+      requireMinorUnitNormalization: true,
+    );
+    if (aggregateIssue != null) {
+      return EntrySaveValidationFailure(
+        aggregateIssue.code == LedgerDataValidationCode.invalidRefund ||
+                aggregateIssue.code ==
+                    LedgerDataValidationCode.refundExceedsExpense ||
+                aggregateIssue.code == LedgerDataValidationCode.staleRefundCache
+            ? EntryValidationCode.invalidRefund
+            : EntryValidationCode.invalidAmounts,
+      );
+    }
     nextEntries.sort(_compareEntriesLatestFirst);
 
     final nextAttachments = <Attachment>[
@@ -1824,7 +1867,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       if (rememberRateCurrencyCode == null ||
           rememberRateToBase == null ||
           rememberRateEffectiveDate == null) {
-        return false;
+        return const EntrySaveValidationFailure(
+          EntryValidationCode.invalidRememberedRate,
+        );
       }
       final code = rememberRateCurrencyCode.trim().toUpperCase();
       final baseCode = book.baseCurrencyCode.toUpperCase();
@@ -1832,7 +1877,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
           !CurrencyCatalog.isSupported(code) ||
           code == baseCode ||
           !isValidExchangeRate(rememberRateToBase)) {
-        return false;
+        return const EntrySaveValidationFailure(
+          EntryValidationCode.invalidRememberedRate,
+        );
       }
       final effectiveDate = dateOnly(rememberRateEffectiveDate);
       final existingIndex = _exchangeRates.indexWhere(
@@ -1873,7 +1920,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       );
     } catch (error, stackTrace) {
       _handlePersistError(error, stackTrace);
-      return false;
+      return const EntrySavePersistenceFailure();
     }
 
     _entries
@@ -1891,7 +1938,30 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     if (hasNewEntry) {
       onEntryAdded?.call();
     }
-    return true;
+    return const EntrySaveSuccess();
+  }
+
+  /// 兼容既有调用点的 bool 入口；新页面优先使用 [saveEntryAggregateDraftResult]
+  /// 获取稳定的校验失败原因。
+  Future<bool> saveEntryAggregateDraft({
+    required LedgerEntry entry,
+    required bool isNew,
+    List<LedgerEntry> refunds = const <LedgerEntry>[],
+    List<Attachment> attachments = const <Attachment>[],
+    String? rememberRateCurrencyCode,
+    double? rememberRateToBase,
+    DateTime? rememberRateEffectiveDate,
+  }) async {
+    final result = await saveEntryAggregateDraftResult(
+      entry: entry,
+      isNew: isNew,
+      refunds: refunds,
+      attachments: attachments,
+      rememberRateCurrencyCode: rememberRateCurrencyCode,
+      rememberRateToBase: rememberRateToBase,
+      rememberRateEffectiveDate: rememberRateEffectiveDate,
+    );
+    return result.isSuccess;
   }
 
   bool _validEntryCurrencyAmounts(LedgerEntry entry, LedgerBook book) {
@@ -2016,7 +2086,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   /// [candidateAccounts]/[candidateCategories] 为解析计划里待新建的账户/分类，
   /// 这里只创建被保留交易**实际引用到**、且当前尚不存在的那些，避免建出用不上的
   /// 空账户/空分类。空交易列表直接返回、不写库。
-  void applyImportEntries({
+  bool applyImportEntries({
     required List<LedgerEntry> entries,
     required List<Account> candidateAccounts,
     required List<Category> candidateCategories,
@@ -2025,7 +2095,20 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     List<ExchangeRate> candidateExchangeRates = const <ExchangeRate>[],
   }) {
     if (entries.isEmpty && alwaysCreateAccountIds.isEmpty) {
-      return;
+      return false;
+    }
+    final importIssue = validateLedgerEntries(
+      books: ledgerBooks,
+      accounts: <Account>[..._accounts, ...candidateAccounts],
+      entries: entries,
+      requireMinorUnitNormalization: true,
+    );
+    if (importIssue != null) {
+      _logger?.warning(
+        'Import validation failed: ${importIssue.code.name}',
+        source: 'import',
+      );
+      return false;
     }
     final referencedAccountIds = <String>{};
     final referencedCategoryIds = <String>{};
@@ -2110,7 +2193,11 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
 
     // 名称去首尾空格：候选账户经预览页改名后可能带空格，与 addAccount 同规则。
     _accounts.addAll(
-      newAccounts.map((account) => account.copyWith(name: account.name.trim())),
+      newAccounts.map(
+        (account) => _normalizeAccountCurrencyAmounts(
+          account.copyWith(name: account.name.trim()),
+        ),
+      ),
     );
     if (newCategories.isNotEmpty) {
       // 首次导入前若仍是默认分类占位，先落地为真实列表再追加。
@@ -2142,6 +2229,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
     // 导入也新增了交易：触发自动备份与小组件刷新，与手动记账一致。
     onEntryAdded?.call();
+    return true;
   }
 
   void updateEntry(LedgerEntry entry) {
@@ -3726,6 +3814,16 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       categoryBudgets: nextCategoryBudgets,
       dailyBudgets: nextDailyBudgets,
     );
+    final ledgerIssue = validateLedgerEntries(
+      books: nextLedgerBooks,
+      accounts: nextAccounts,
+      entries: nextEntries,
+      allowMissingAccounts: true,
+    );
+    if (ledgerIssue != null &&
+        ledgerIssue.code != LedgerDataValidationCode.staleRefundCache) {
+      throw FormatException('账目关联或金额不合法：${ledgerIssue.code.name}');
+    }
 
     _ledgerBooks
       ..clear()

@@ -236,9 +236,17 @@ class _VeriFinShellState extends State<VeriFinShell> {
       await startAiEntry(context);
       return;
     }
+    final defaultAccount = controller.defaultAccountId == null
+        ? null
+        : controller.accounts
+              .where((account) => account.id == controller.defaultAccountId)
+              .firstOrNull;
+    final inputCurrencyCode =
+        defaultAccount?.currencyCode ?? controller.activeBook.baseCurrencyCode;
     final amount = await showNumberPadSheet(
       context,
       title: AppLocalizations.of(context).quickEntry,
+      currencyCode: inputCurrencyCode,
     );
 
     if (!context.mounted || amount == null || amount <= 0) {

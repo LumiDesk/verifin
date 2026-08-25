@@ -143,10 +143,14 @@ void main() {
 
   group('ReimbursementFilter.matches 筛选语义', () {
     test('all 匹配所有交易', () {
-      expect(ReimbursementFilter.all.matches(_expense(amount: 10)), isTrue);
+      expect(
+        ReimbursementFilter.all.matches(_expense(amount: 10), 'CNY'),
+        isTrue,
+      );
       expect(
         ReimbursementFilter.all.matches(
           _expense(amount: 10, reimbursable: true),
+          'CNY',
         ),
         isTrue,
       );
@@ -157,6 +161,7 @@ void main() {
       expect(
         ReimbursementFilter.pending.matches(
           _expense(amount: 100, reimbursable: true),
+          'CNY',
         ),
         isTrue,
       );
@@ -164,6 +169,7 @@ void main() {
       expect(
         ReimbursementFilter.pending.matches(
           _expense(amount: 100, reimbursable: true, refunded: 40),
+          'CNY',
         ),
         isTrue,
       );
@@ -171,12 +177,13 @@ void main() {
       expect(
         ReimbursementFilter.pending.matches(
           _expense(amount: 100, reimbursable: true, refunded: 100),
+          'CNY',
         ),
         isFalse,
       );
       // 未标记：不命中。
       expect(
-        ReimbursementFilter.pending.matches(_expense(amount: 100)),
+        ReimbursementFilter.pending.matches(_expense(amount: 100), 'CNY'),
         isFalse,
       );
     });
@@ -185,12 +192,14 @@ void main() {
       expect(
         ReimbursementFilter.reimbursed.matches(
           _expense(amount: 100, refunded: 30),
+          'CNY',
         ),
         isTrue,
       );
       expect(
         ReimbursementFilter.reimbursed.matches(
           _expense(amount: 100, refunded: 0, reimbursable: true),
+          'CNY',
         ),
         isFalse,
       );
@@ -199,13 +208,17 @@ void main() {
     test('notReimbursable 只匹配从未标记待报销的交易', () {
       // 未标记待报销：命中（真实花销）。
       expect(
-        ReimbursementFilter.notReimbursable.matches(_expense(amount: 100)),
+        ReimbursementFilter.notReimbursable.matches(
+          _expense(amount: 100),
+          'CNY',
+        ),
         isTrue,
       );
       // 未标记、但退过货（有冲抵）：仍命中，净额已扣退款。
       expect(
         ReimbursementFilter.notReimbursable.matches(
           _expense(amount: 100, refunded: 30),
+          'CNY',
         ),
         isTrue,
       );
@@ -213,9 +226,21 @@ void main() {
       expect(
         ReimbursementFilter.notReimbursable.matches(
           _expense(amount: 100, reimbursable: true),
+          'CNY',
         ),
         isFalse,
       );
+    });
+
+    test('外币待报销状态只比较本位币金额', () {
+      final entry = _expense(
+        amount: 100,
+        reimbursable: true,
+        refunded: 360,
+      ).copyWith(baseAmount: 720);
+
+      expect(ReimbursementFilter.pending.matches(entry, 'CNY'), isTrue);
+      expect(ReimbursementFilter.reimbursed.matches(entry, 'CNY'), isTrue);
     });
   });
 

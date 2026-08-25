@@ -98,7 +98,18 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
     _initialFingerprint = _draftFingerprint;
   }
 
-  bool _isIncluded(LedgerEntry entry) => !_excluded.contains(entry.id);
+  Iterable<LedgerEntry> get _rootEntries =>
+      _entries.where((entry) => entry.type != EntryType.refund);
+
+  bool _isIncluded(LedgerEntry entry) {
+    if (entry.type == EntryType.refund) {
+      final parentId = entry.refundOf;
+      return parentId != null &&
+          _rootEntries.any((root) => root.id == parentId) &&
+          !_excluded.contains(parentId);
+    }
+    return !_excluded.contains(entry.id);
+  }
 
   /// 某待新建账户导入后的余额 = 初始余额 + 该账户在**当前保留且编辑后**的待导入交易
   /// 中的增量合计。只算保留交易，与落库（`applyImportEntries` 同样只加入保留交易）
@@ -183,7 +194,7 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
   void _deselectAll() => setState(() {
     _excluded
       ..clear()
-      ..addAll(_entries.map((entry) => entry.id));
+      ..addAll(_rootEntries.map((entry) => entry.id));
   });
 
   Future<void> _edit(
@@ -510,9 +521,9 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
     final categories = _mergedCategories(existingCategories);
 
     final displayGroups = groupEntriesByDate(
-      _entries.map(_resolved).toList(growable: false),
+      _rootEntries.map(_resolved).toList(growable: false),
     );
-    final selectedIds = _entries
+    final selectedIds = _rootEntries
         .where(_isIncluded)
         .map((entry) => entry.id)
         .toSet();
@@ -534,12 +545,12 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
                   subtitle: widget.sourceLabel,
                   showBack: true,
                   actions: <Widget>[
-                    if (_entries.isNotEmpty)
+                    if (_rootEntries.isNotEmpty)
                       HeaderTextAction(
-                        label: includedCount == _entries.length
+                        label: includedCount == _rootEntries.length
                             ? l10n.importPreviewDeselectAll
                             : l10n.importPreviewSelectAll,
-                        onPressed: includedCount == _entries.length
+                        onPressed: includedCount == _rootEntries.length
                             ? _deselectAll
                             : _selectAll,
                       ),
@@ -551,10 +562,10 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
                   padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
                   children: <Widget>[
                     // 有交易或有跳过行时才显示交易汇总卡；纯账户导入时略去。
-                    if (_entries.isNotEmpty || widget.plan.errorCount > 0)
+                    if (_rootEntries.isNotEmpty || widget.plan.errorCount > 0)
                       _SummaryCard(
                         included: includedCount,
-                        total: _entries.length,
+                        total: _rootEntries.length,
                         skipped: widget.plan.errorCount,
                         onViewSkipped: _showSkippedRows,
                       ),

@@ -443,6 +443,9 @@ Future<void> editExchangeRate({
     maxFractionDigits: 10,
   );
   if (!context.mounted || amount == null) return;
+  final hadWaitingRecurring = controller
+      .dueRecurringMissingRates(DateTime.now())
+      .isNotEmpty;
   final saved = await controller.saveExchangeRateDraft(
     id: existing?.id,
     currencyCode: currencyCode,
@@ -451,15 +454,35 @@ Future<void> editExchangeRate({
     source: existing?.source ?? ExchangeRateSource.manual,
   );
   if (!context.mounted) return;
+  if (!saved) {
+    unawaited(
+      VeriFeedbackHost.of(context).showMessage(
+        message: l10n.saveFailed,
+        tone: VeriFeedbackTone.error,
+        duration: VeriFeedbackDuration.long,
+        priority: VeriFeedbackPriority.high,
+        dedupeKey: 'exchange-rate-save',
+      ),
+    );
+    return;
+  }
+  final result = await VeriFeedbackHost.of(context).showMessage(
+    message: l10n.exchangeRateSaved,
+    tone: VeriFeedbackTone.success,
+    duration: hadWaitingRecurring
+        ? VeriFeedbackDuration.long
+        : VeriFeedbackDuration.standard,
+    actionLabel: hadWaitingRecurring ? l10n.recurringRetryNow : null,
+  );
+  if (!context.mounted || result != VeriFeedbackResult.action) return;
+  final generated = await controller.applyDueRecurring(DateTime.now());
+  if (!context.mounted) return;
   unawaited(
     VeriFeedbackHost.of(context).showMessage(
-      message: saved ? l10n.exchangeRateSaved : l10n.saveFailed,
-      tone: saved ? VeriFeedbackTone.success : VeriFeedbackTone.error,
-      duration: saved
-          ? VeriFeedbackDuration.standard
-          : VeriFeedbackDuration.long,
-      priority: saved ? VeriFeedbackPriority.normal : VeriFeedbackPriority.high,
-      dedupeKey: saved ? null : 'exchange-rate-save',
+      message: generated < 0
+          ? l10n.saveFailed
+          : l10n.recurringGeneratedCount(generated),
+      tone: generated < 0 ? VeriFeedbackTone.error : VeriFeedbackTone.success,
     ),
   );
 }

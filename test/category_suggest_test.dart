@@ -7,6 +7,7 @@ LedgerEntry _e({
   required String categoryId,
   required String note,
   double amount = 30,
+  String currencyCode = 'CNY',
   int hour = 12,
   List<String> tagIds = const <String>[],
 }) {
@@ -15,6 +16,7 @@ LedgerEntry _e({
     bookId: 'default',
     type: type,
     amount: amount,
+    currencyCode: currencyCode,
     categoryId: categoryId,
     accountId: 'cash',
     note: note,
@@ -30,6 +32,7 @@ EntrySuggestion _suggest({
   required List<LedgerEntry> history,
   String note = '',
   required double amount,
+  String currencyCode = 'CNY',
   int hour = 12,
   EntryType? forcedType,
 }) {
@@ -39,6 +42,7 @@ EntrySuggestion _suggest({
     incomeCategoryIds: _incomeIds,
     note: note,
     amount: amount,
+    currencyCode: currencyCode,
     hour: hour,
     forcedType: forcedType,
   );
@@ -46,6 +50,24 @@ EntrySuggestion _suggest({
 
 void main() {
   group('suggestEntry', () {
+    test('same numeric amount in another currency is not a strong match', () {
+      final suggestion = _suggest(
+        history: <LedgerEntry>[
+          _e(
+            type: EntryType.expense,
+            categoryId: 'coffee',
+            note: '',
+            amount: 100,
+            currencyCode: 'JPY',
+          ),
+        ],
+        amount: 100,
+        currencyCode: 'CNY',
+      );
+
+      expect(suggestion.isEmpty, isTrue);
+    });
+
     test('exact amount carries type, category, tags and note', () {
       final history = <LedgerEntry>[
         _e(

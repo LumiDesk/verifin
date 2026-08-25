@@ -6,6 +6,7 @@ import '../app/common_widgets.dart';
 import '../app/credit_card.dart';
 import '../app/currency_catalog.dart';
 import '../app/currency_math.dart';
+import '../app/entry_currency_draft.dart';
 import '../app/feedback.dart';
 import '../app/models.dart';
 import '../app/veri_fin_controller.dart';
@@ -216,8 +217,21 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
     );
     if (amount != null && mounted) {
       setState(() {
+        final previousAmount = _amount;
         _amount = normalizeCurrencyAmount(amount, widget.account.currencyCode);
-        _resolveFromAmount(VeriFinScope.of(context));
+        if (_fromAmountTouched) {
+          final source = _fromAccount(VeriFinScope.of(context));
+          if (source != null) {
+            _fromAmount = scaleDependentCurrencyAmount(
+              dependentAmount: _fromAmount,
+              previousOriginalAmount: previousAmount,
+              nextOriginalAmount: _amount,
+              targetCurrencyCode: source.currencyCode,
+            );
+          }
+        } else {
+          _resolveFromAmount(VeriFinScope.of(context));
+        }
       });
     }
   }
@@ -313,7 +327,7 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
         ? ''
         : transferCategories.first.id;
     _saving = true;
-    final saved = await controller.saveEntryAggregateDraft(
+    final result = await controller.saveEntryAggregateDraftResult(
       entry: LedgerEntry(
         id: _entryId,
         bookId: controller.activeBook.id,
@@ -342,8 +356,17 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
       ),
       isNew: true,
     );
-    if (!mounted || !saved) {
+    if (!mounted || !result.isSuccess) {
       _saving = false;
+      if (mounted && result is EntrySaveValidationFailure) {
+        unawaited(
+          VeriFeedbackHost.of(context).showMessage(
+            message: AppLocalizations.of(context).entrySaveValidationFailed,
+            tone: VeriFeedbackTone.warning,
+            duration: VeriFeedbackDuration.long,
+          ),
+        );
+      }
       return false;
     }
     _saved = true;

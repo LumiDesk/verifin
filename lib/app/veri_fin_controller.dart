@@ -21,6 +21,7 @@ import 'model_lookup.dart';
 import 'amount_format.dart' as amount_format;
 import 'home_metrics.dart';
 import 'ledger_math.dart';
+import 'ledger_data_validation.dart';
 import 'logging/app_logger.dart';
 import 'models.dart';
 import 'recurring.dart';
@@ -190,6 +191,35 @@ String _assetSectionKey(
 
 String _assetSectionOrderKeyForMode(String bookId, AssetAccountViewMode mode) {
   return '$bookId:${mode.name}';
+}
+
+enum EntryValidationCode {
+  staleDraft,
+  invalidAmounts,
+  invalidRefund,
+  refundExceedsExpense,
+  invalidAttachments,
+  invalidRememberedRate,
+}
+
+sealed class EntrySaveResult {
+  const EntrySaveResult();
+
+  bool get isSuccess => this is EntrySaveSuccess;
+}
+
+final class EntrySaveSuccess extends EntrySaveResult {
+  const EntrySaveSuccess();
+}
+
+final class EntrySaveValidationFailure extends EntrySaveResult {
+  const EntrySaveValidationFailure(this.code);
+
+  final EntryValidationCode code;
+}
+
+final class EntrySavePersistenceFailure extends EntrySaveResult {
+  const EntrySavePersistenceFailure();
 }
 
 int _defaultAccountCompare(Account a, Account b) {

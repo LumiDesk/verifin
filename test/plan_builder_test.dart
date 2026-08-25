@@ -333,18 +333,32 @@ void main() {
       final plan = _build(
         records: <RawImportRecord>[_record(amount: 30, refunded: 10)],
       );
-      final entry = plan.entries.single;
-      expect(entry.refundedAmount, 10);
-      expect(entry.netAmount, 20);
+      final expense = plan.entries.singleWhere(
+        (entry) => entry.type == EntryType.expense,
+      );
+      final refund = plan.entries.singleWhere(
+        (entry) => entry.type == EntryType.refund,
+      );
+      expect(expense.refundedAmount, 10);
+      expect(expense.netAmount, 20);
+      expect(refund.amount, 10);
+      expect(refund.baseAmount, 10);
+      expect(refund.refundOf, expense.id);
     });
 
     test('退款超过金额钳到金额（净额 0）', () {
       final plan = _build(
         records: <RawImportRecord>[_record(amount: 30, refunded: 50)],
       );
-      final entry = plan.entries.single;
-      expect(entry.refundedAmount, 30);
-      expect(entry.netAmount, 0);
+      final expense = plan.entries.singleWhere(
+        (entry) => entry.type == EntryType.expense,
+      );
+      final refund = plan.entries.singleWhere(
+        (entry) => entry.type == EntryType.refund,
+      );
+      expect(expense.refundedAmount, 30);
+      expect(expense.netAmount, 0);
+      expect(refund.amount, 30);
     });
 
     test('负数退款钳到 0', () {
@@ -635,7 +649,8 @@ void main() {
         records: mixedRecords(),
       );
       expect(plan.errors, isEmpty);
-      expect(plan.entries, hasLength(4));
+      expect(plan.importedCount, 4);
+      expect(plan.entries, hasLength(5));
 
       final accountIds = <String>{
         'acct_cash',
@@ -837,6 +852,39 @@ void main() {
   });
 
   group('多币种导入换算', () {
+    test('外币退款直接生成原币、账户币和本位币正确的关联条目', () {
+      final usd = _account('cash-usd', '美元现金', currencyCode: 'USD');
+      final plan = _build(
+        existingAccounts: <Account>[usd],
+        records: <RawImportRecord>[
+          _record(
+            amount: 10,
+            refunded: 5,
+            account: usd.name,
+            currencyCode: 'USD',
+            accountAmount: 10,
+            baseAmount: 72,
+          ),
+        ],
+      );
+
+      expect(plan.importedCount, 1);
+      final expense = plan.entries.singleWhere(
+        (entry) => entry.type == EntryType.expense,
+      );
+      final refund = plan.entries.singleWhere(
+        (entry) => entry.type == EntryType.refund,
+      );
+      expect(expense.refundedBaseAmount, 36);
+      expect(refund.refundOf, expense.id);
+      expect(refund.currencyCode, 'USD');
+      expect(refund.amount, 5);
+      expect(refund.accountAmount, 5);
+      expect(refund.baseAmount, 36);
+      expect(refund.accountId, usd.id);
+      expect(refund.settledAt, isNotNull);
+    });
+
     test('文件汇率生成冻结本位币金额与可选汇率候选', () {
       final plan = _build(
         records: <RawImportRecord>[

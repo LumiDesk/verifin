@@ -93,13 +93,14 @@ class _Scored {
 /// 从 [history]（应由调用方过滤为当前账本、含各类型）推断当前这笔。
 ///
 /// [expenseCategoryIds]/[incomeCategoryIds] 用于把推断出的分类校验到对应类型的清单；
-/// [note]/[amount]/[hour] 为当前正在录入的备注、金额与小时（0–23）。
+/// [note]/[amount]/[currencyCode]/[hour] 为当前正在录入的备注、金额、原币与小时（0–23）。
 EntrySuggestion suggestEntry({
   required List<LedgerEntry> history,
   required Set<String> expenseCategoryIds,
   required Set<String> incomeCategoryIds,
   required String note,
   required double amount,
+  required String currencyCode,
   required int hour,
   EntryType? forcedType,
 }) {
@@ -124,7 +125,9 @@ EntrySuggestion suggestEntry({
     final noteSim = noteTokens.isEmpty
         ? 0.0
         : _similarity(noteTokens, _tokenize(entry.note));
-    final amountAffinity = _amountAffinity(amount, entry.amount);
+    final amountAffinity = entry.currencyCode == currencyCode
+        ? _amountAffinity(amount, entry.amount)
+        : 0.0;
     if (noteSim <= 0 && amountAffinity <= 0) {
       continue;
     }

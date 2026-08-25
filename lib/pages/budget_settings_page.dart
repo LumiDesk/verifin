@@ -247,11 +247,15 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
 
   /// 预算金额输入统一走数字键盘（与记账一致，支持算式）；允许 0（清除该预算）。
   Future<double?> _promptBudgetAmount(String title, double current) {
+    final baseCurrencyCode = VeriFinScope.of(
+      context,
+    ).activeBook.baseCurrencyCode;
     return showNumberPadSheet(
       context,
       title: title,
       initialAmount: current > 0 ? current : null,
       allowZero: true,
+      currencyCode: baseCurrencyCode,
     );
   }
 

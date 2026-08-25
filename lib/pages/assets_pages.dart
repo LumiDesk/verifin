@@ -83,6 +83,9 @@ class _AssetsPageState extends State<AssetsPage> {
       accounts: valuedAccounts,
     );
     final baseCurrencyCode = controller.activeBook.baseCurrencyCode;
+    final valuationRateDates = valuation.rateDatesByAccountId.values.toList()
+      ..sort();
+    final oldestValuationRateDate = valuationRateDates.firstOrNull;
     final assets = valuation.isComplete
         ? valuedAccounts
               .map((account) => valuation.amountsByAccountId[account.id] ?? 0)
@@ -294,6 +297,19 @@ class _AssetsPageState extends State<AssetsPage> {
                           ),
                         ],
                       ),
+                      if (oldestValuationRateDate != null) ...<Widget>[
+                        const SizedBox(height: 8),
+                        Text(
+                          AppLocalizations.of(context).assetValuationRateTrace(
+                            currencyDateKey(oldestValuationRateDate),
+                            valuation.staleAccountIds.isEmpty
+                                ? ''
+                                : ' · ${AppLocalizations.of(context).exchangeRateStale}',
+                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: assetCardMutedColor),
+                        ),
+                      ],
                       const SizedBox(height: 14),
                       if (assetTrendValues == null)
                         SizedBox(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'amount_format.dart';
 import 'app_theme.dart';
 import 'calendar_days.dart';
+import 'currency_math.dart';
 import 'models.dart';
 import '../l10n/app_localizations.dart';
 
@@ -50,6 +51,12 @@ double accountDeltaForEntry(LedgerEntry entry, String accountId) {
   }
 }
 
+/// 账户余额真正发生变化的日期。退款在到账日才进入账户；其它交易沿用发生日。
+DateTime accountEffectDate(LedgerEntry entry) =>
+    entry.type == EntryType.refund && entry.settledAt != null
+    ? entry.settledAt!
+    : entry.occurredAt;
+
 bool entryTouchesAccount(LedgerEntry entry, String accountId) {
   return entry.accountId == accountId || entry.toAccountId == accountId;
 }
@@ -82,10 +89,12 @@ double sumByType(Iterable<LedgerEntry> entries, EntryType type) {
       );
 }
 
-bool isZeroAmount(num value) => value.abs() < 0.005;
+bool isZeroAmount(num value) =>
+    isZeroCurrencyAmount(value, activeBaseCurrencyCode);
 
 /// 将金额规整到最小货币单位（分），消除 `double` 连续加减留下的浮点残差。
-double normalizeAmount(num value) => (value * 100).round() / 100;
+double normalizeAmount(num value) =>
+    normalizeCurrencyAmount(value, activeBaseCurrencyCode);
 
 class DateWindow {
   const DateWindow({required this.start, required this.end});
@@ -273,16 +282,7 @@ List<double> monthlyExpenseValues(Iterable<LedgerEntry> entries) {
 }
 
 String formatAmount(num value) {
-  if (isZeroAmount(value)) {
-    return amountForceTwoDecimals ? '0.00' : '0';
-  }
-  final text = value.toStringAsFixed(2);
-  if (amountForceTwoDecimals) {
-    return text;
-  }
-  return text.endsWith('.00')
-      ? text.substring(0, text.length - 3)
-      : text.replaceFirst(RegExp(r'0$'), '');
+  return formatCurrencyNumber(value, activeBaseCurrencyCode);
 }
 
 String formatExpenseAmount(num value) {

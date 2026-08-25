@@ -209,6 +209,7 @@ void main() {
 
   testWidgets('外币普通交易同时保存原币、账户金额和冻结本位币金额', (tester) async {
     final controller = await makeController();
+    final rateDate = DateTime.now();
     controller.addAccount(
       Account(
         id: 'usd-cash',
@@ -226,7 +227,7 @@ void main() {
     );
     await controller.saveExchangeRateDraft(
       currencyCode: 'USD',
-      effectiveDate: DateTime.now(),
+      effectiveDate: rateDate,
       rateToBase: 7.2,
     );
     await pumpPage(
@@ -249,6 +250,7 @@ void main() {
     );
     expect(find.byKey(const Key('entry_base_amount')), findsOneWidget);
     expect(find.text('72 ¥'), findsOneWidget);
+    expect(find.textContaining(currencyDateKey(rateDate)), findsOneWidget);
     await tester.ensureVisible(find.byKey(const Key('save_entry_button')));
     await tester.tap(find.byKey(const Key('save_entry_button')));
     await tester.pumpAndSettle();
@@ -366,6 +368,191 @@ void main() {
     expect(find.text('单位：¥'), findsOneWidget);
     expect(find.text('-72'), findsAtLeastNWidgets(2));
     expect(find.text('-10'), findsNothing);
+  });
+
+  testWidgets('历史外币交易只改日期时保持冻结金额', (tester) async {
+    final controller = await makeController();
+    final bookId = controller.activeBook.id;
+    controller
+      ..addAccount(
+        Account(
+          id: 'usd-cash',
+          bookId: bookId,
+          name: '美元现金',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 0,
+          iconCode: 'cash',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+          currencyCode: 'USD',
+        ),
+      )
+      ..addEntry(
+        LedgerEntry(
+          id: 'usd-expense',
+          bookId: bookId,
+          type: EntryType.expense,
+          amount: 10,
+          currencyCode: 'USD',
+          accountAmount: 10,
+          baseAmount: 72,
+          conversionSource: ConversionSource.manual,
+          categoryId: 'dining',
+          accountId: 'usd-cash',
+          note: '',
+          occurredAt: DateTime(2026, 8, 1, 12),
+        ),
+      );
+    await controller.saveExchangeRateDraft(
+      currencyCode: 'USD',
+      effectiveDate: DateTime(2026, 8, 2),
+      rateToBase: 9,
+    );
+    await tester.binding.setSurfaceSize(const Size(460, 1800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await pumpPage(
+      tester,
+      controller,
+      const TransactionDetailPage(entryId: 'usd-expense'),
+    );
+
+    await tester.tap(find.text('日期'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('2').last);
+    await tester.tap(find.text('确定'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+
+    final saved = controller.entries.singleWhere(
+      (entry) => entry.id == 'usd-expense',
+    );
+    expect(saved.occurredAt.day, 2);
+    expect(saved.accountAmount, 10);
+    expect(saved.baseAmount, 72);
+    expect(saved.conversionSource, ConversionSource.manual);
+  });
+
+  testWidgets('手工结算交易改原币金额时保持既有结算比例', (tester) async {
+    final controller = await makeController();
+    final bookId = controller.activeBook.id;
+    controller
+      ..addAccount(
+        Account(
+          id: 'usd-cash',
+          bookId: bookId,
+          name: '美元现金',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 0,
+          iconCode: 'cash',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+          currencyCode: 'USD',
+        ),
+      )
+      ..addEntry(
+        LedgerEntry(
+          id: 'usd-expense',
+          bookId: bookId,
+          type: EntryType.expense,
+          amount: 10,
+          currencyCode: 'USD',
+          accountAmount: 10,
+          baseAmount: 72,
+          conversionSource: ConversionSource.manual,
+          categoryId: 'dining',
+          accountId: 'usd-cash',
+          note: '',
+          occurredAt: DateTime(2026, 8, 1),
+        ),
+      );
+    await tester.binding.setSurfaceSize(const Size(460, 1800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await pumpPage(
+      tester,
+      controller,
+      const TransactionDetailPage(entryId: 'usd-expense'),
+    );
+
+    await tester.tap(find.text('-10').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('number_key_C')));
+    await tester.tap(find.byKey(const Key('number_key_2')));
+    await tester.tap(find.byKey(const Key('number_key_0')));
+    await tester.tap(find.byKey(const Key('number_pad_ok')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+
+    final saved = controller.entries.singleWhere(
+      (entry) => entry.id == 'usd-expense',
+    );
+    expect(saved.amount, 20);
+    expect(saved.accountAmount, 20);
+    expect(saved.baseAmount, 144);
+    expect(saved.conversionSource, ConversionSource.manual);
+  });
+
+  testWidgets('已有退款的支出点击原币时解释锁定原因', (tester) async {
+    final controller = await makeController();
+    final bookId = controller.activeBook.id;
+    controller
+      ..addAccount(
+        Account(
+          id: 'usd-cash',
+          bookId: bookId,
+          name: '美元现金',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 100,
+          iconCode: 'cash',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+          currencyCode: 'USD',
+        ),
+      )
+      ..addEntry(
+        LedgerEntry(
+          id: 'usd-expense',
+          bookId: bookId,
+          type: EntryType.expense,
+          amount: 10,
+          currencyCode: 'USD',
+          accountAmount: 10,
+          baseAmount: 72,
+          conversionSource: ConversionSource.manual,
+          categoryId: 'dining',
+          accountId: 'usd-cash',
+          note: '',
+          occurredAt: DateTime.now(),
+        ),
+      )
+      ..addRefund(
+        expenseId: 'usd-expense',
+        amount: 5,
+        accountId: 'usd-cash',
+        initiatedAt: DateTime.now(),
+        settledAt: DateTime.now(),
+        accountAmount: 5,
+        baseAmount: 36,
+      );
+    await tester.binding.setSurfaceSize(const Size(460, 1800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await pumpPage(
+      tester,
+      controller,
+      const TransactionDetailPage(entryId: 'usd-expense'),
+    );
+
+    await tester.tap(find.byKey(const Key('transaction_currency_field')));
+    await tester.pump();
+
+    expect(find.text('交易已有退款，原币不可修改。请先处理关联退款。'), findsOneWidget);
   });
 
   testWidgets('外币退款锁定原币并分别保存到账与本位币冲抵额', (tester) async {

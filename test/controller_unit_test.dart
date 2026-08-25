@@ -10,6 +10,47 @@ import 'support/test_harness.dart';
 void main() {
   useTestDatabases();
 
+  test('Controller 状态变化统一使桌面小组件投影失效', () async {
+    final controller = await makeController();
+    var invalidations = 0;
+    controller.onWidgetProjectionInvalidated = () => invalidations++;
+
+    controller.setDefaultMonthlyBudget(123);
+    expect(invalidations, 1);
+
+    await controller.saveExchangeRateDraft(
+      currencyCode: 'USD',
+      effectiveDate: DateTime(2026, 8, 25),
+      rateToBase: 7.2,
+    );
+    expect(invalidations, 2);
+  });
+
+  test('交易聚合保存返回稳定的校验失败原因', () async {
+    final controller = await makeController();
+    final result = await controller.saveEntryAggregateDraftResult(
+      entry: LedgerEntry(
+        id: 'invalid',
+        bookId: controller.activeBook.id,
+        type: EntryType.expense,
+        amount: 0,
+        accountAmount: null,
+        baseAmount: 0,
+        categoryId: 'dining',
+        accountId: '',
+        note: '',
+        occurredAt: DateTime(2026, 8, 25),
+      ),
+      isNew: true,
+    );
+
+    expect(result, isA<EntrySaveValidationFailure>());
+    expect(
+      (result as EntrySaveValidationFailure).code,
+      EntryValidationCode.invalidAmounts,
+    );
+  });
+
   test('seeds English defaults when system locale is not Chinese', () async {
     // 不经 makeController（它预置中文），模拟英文系统的全新首启动。
     final controller = await VeriFinController.create(

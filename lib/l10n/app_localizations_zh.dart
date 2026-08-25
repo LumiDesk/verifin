@@ -3940,6 +3940,35 @@ class AppLocalizationsZh extends AppLocalizations {
   String get accountCurrencyLocked => '账户已有余额、信用额度或交易记录，币种已锁定。';
 
   @override
+  String get entryCurrencyLockedByRefund => '交易已有退款，原币不可修改。请先处理关联退款。';
+
+  @override
+  String get entrySaveValidationFailed => '交易金额、币种或关联数据不完整，请检查后重试。';
+
+  @override
+  String get importValidationFailed => '导入数据的金额、币种或关联关系不完整，未写入任何账目。';
+
+  @override
+  String entryConversionRateTrace(String date, String status) {
+    return '使用 $date 生效的本地汇率$status';
+  }
+
+  @override
+  String assetValuationRateTrace(String date, String status) {
+    return '资产估值最旧汇率：$date$status';
+  }
+
+  @override
+  String homeRecurringRatePending(int count) {
+    return '$count 条周期记账等待汇率';
+  }
+
+  @override
+  String homeRecurringRatePendingDesc(String codes) {
+    return '缺少 $codes，点按前往处理';
+  }
+
+  @override
   String balanceAdjustMissingRate(String code) {
     return '缺少 $code 对本位币的有效汇率，无法生成余额调整交易。';
   }
