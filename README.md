@@ -158,6 +158,7 @@ lib/
 | [`docs/dev/tech-decisions.md`](docs/dev/tech-decisions.md) | 关键技术决策与选型理由 |
 | [`docs/dev/known-limitations.md`](docs/dev/known-limitations.md) | 已知限制与技术债台账 |
 | [`docs/dev/multi-currency-design.md`](docs/dev/multi-currency-design.md) | 多币种与离线汇率设计、实现结果及验收记录 |
+| [`docs/dev/feedback-system.md`](docs/dev/feedback-system.md) | 应用内轻提示组件、操作结果、队列与迁移规范 |
 
 ## ❤️ 支持项目
 

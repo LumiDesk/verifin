@@ -21,6 +21,7 @@
 - `docs/dev/multi-currency-design.md`：已落地的多币种、离线汇率、跨币种交易/退款、迁移与验收依据；后续修改须保持三层金额和历史冻结口径。
 - `docs/dev/refund-design.md`、`docs/dev/auto-capture-plan.md`、`docs/dev/i18n-verification.md`、`docs/automation.md`：对应领域的设计与验收资料。`refund-design.md` 含历史方案，退款当前行为以源码、测试和 `docs/dev/known-limitations.md` 为准。
 - `docs/dev/liquid-glass-navigation.md`：浮动根导航的材质边界、指针拖动状态机、窄屏适配、UI Lab 验证与后续 Shader 取舍；修改根导航或新增类似玻璃控件前必读。
+- `docs/dev/feedback-system.md`：根级轻提示 Host 的调用、时长、操作结果、去重、优先级队列与迁移规范；新增或替换短反馈前必读。
 - `README.md`、`docs/product.md`、`docs/acceptance-checklist.md`：用于理解产品和验收范围；其中少量历史描述可能落后，必须与当前实现交叉核对。
 
 ## 产品原则
@@ -132,6 +133,7 @@ Android-only，根目录不得新增 `web/`。UI Lab 自行运行 `flutter analy
 - 分类图标只用 `CategoryIconBox` / `CategoryGlyph`，账户图标只用 `AccountIconBox`。渲染点禁止直接调用 `iconForCode`，否则 emoji 分类会回退钱包图标。
 - Row 内“居中列 label + value [+ detail]”的标准指标块使用 `SummaryMetric`。明显不同的卡片/排行可保留局部组件，不把一个组件过度参数化成配置怪物。
 - 图表优先复用 `InteractiveTrendChart` / `InteractiveBarChart`，必须支持点按或滑动查看数据；位于可跳转卡片内时，图表区域要拦截点击，避免误触卡片跳转。
+- 应用内短反馈只用 `VeriFeedbackHost.of(context)` / 根级 `VeriFeedbackController`，不得新增裸 `SnackBar` 或 Android Toast。破坏性确认、字段校验、阻塞进度和系统通知不迁入轻提示；完整规则见 `docs/dev/feedback-system.md`。
 
 ### 弹窗与输入
 
