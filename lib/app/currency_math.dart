@@ -328,11 +328,15 @@ class ConvertedAccountBalances {
     required this.amountsByAccountId,
     required this.missingCurrencyCodes,
     required this.affectedAccountIds,
+    required this.rateDatesByAccountId,
+    required this.staleAccountIds,
   });
 
   final Map<String, double> amountsByAccountId;
   final Set<String> missingCurrencyCodes;
   final Set<String> affectedAccountIds;
+  final Map<String, DateTime> rateDatesByAccountId;
+  final Set<String> staleAccountIds;
 
   bool get isComplete => missingCurrencyCodes.isEmpty;
 
@@ -354,6 +358,8 @@ ConvertedAccountBalances convertAccountBalancesToBase({
   final amounts = <String, double>{};
   final missingCodes = <String>{};
   final affectedIds = <String>{};
+  final rateDates = <String, DateTime>{};
+  final staleAccountIds = <String>{};
   for (final account in accounts) {
     final balance = balanceOf(account);
     if (isZeroCurrencyAmount(balance, account.currencyCode)) {
@@ -371,6 +377,13 @@ ConvertedAccountBalances convertAccountBalancesToBase({
     );
     if (result is ConvertedCurrencyAmount) {
       amounts[account.id] = result.amount;
+      final rateDate = result.sourceRateDate;
+      if (rateDate != null) {
+        rateDates[account.id] = rateDate;
+        if (calendarDaysBetween(rateDate, date) > 30) {
+          staleAccountIds.add(account.id);
+        }
+      }
     } else if (result is MissingCurrencyRate) {
       missingCodes.addAll(result.currencyCodes);
       affectedIds.add(account.id);
@@ -380,5 +393,7 @@ ConvertedAccountBalances convertAccountBalancesToBase({
     amountsByAccountId: Map<String, double>.unmodifiable(amounts),
     missingCurrencyCodes: Set<String>.unmodifiable(missingCodes),
     affectedAccountIds: Set<String>.unmodifiable(affectedIds),
+    rateDatesByAccountId: Map<String, DateTime>.unmodifiable(rateDates),
+    staleAccountIds: Set<String>.unmodifiable(staleAccountIds),
   );
 }

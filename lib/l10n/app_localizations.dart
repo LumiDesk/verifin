@@ -7220,6 +7220,30 @@ abstract class AppLocalizations {
   /// **'交易已有退款，原币不可修改。请先处理关联退款。'**
   String get entryCurrencyLockedByRefund;
 
+  /// No description provided for @entryConversionRateTrace.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用 {date} 生效的本地汇率{status}'**
+  String entryConversionRateTrace(String date, String status);
+
+  /// No description provided for @assetValuationRateTrace.
+  ///
+  /// In zh, this message translates to:
+  /// **'资产估值最旧汇率：{date}{status}'**
+  String assetValuationRateTrace(String date, String status);
+
+  /// No description provided for @homeRecurringRatePending.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 条周期记账等待汇率'**
+  String homeRecurringRatePending(int count);
+
+  /// No description provided for @homeRecurringRatePendingDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'缺少 {codes}，点按前往处理'**
+  String homeRecurringRatePendingDesc(String codes);
+
   /// No description provided for @balanceAdjustMissingRate.
   ///
   /// In zh, this message translates to:

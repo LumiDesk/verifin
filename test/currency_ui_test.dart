@@ -209,6 +209,7 @@ void main() {
 
   testWidgets('外币普通交易同时保存原币、账户金额和冻结本位币金额', (tester) async {
     final controller = await makeController();
+    final rateDate = DateTime.now();
     controller.addAccount(
       Account(
         id: 'usd-cash',
@@ -226,7 +227,7 @@ void main() {
     );
     await controller.saveExchangeRateDraft(
       currencyCode: 'USD',
-      effectiveDate: DateTime.now(),
+      effectiveDate: rateDate,
       rateToBase: 7.2,
     );
     await pumpPage(
@@ -249,6 +250,7 @@ void main() {
     );
     expect(find.byKey(const Key('entry_base_amount')), findsOneWidget);
     expect(find.text('72 ¥'), findsOneWidget);
+    expect(find.textContaining(currencyDateKey(rateDate)), findsOneWidget);
     await tester.ensureVisible(find.byKey(const Key('save_entry_button')));
     await tester.tap(find.byKey(const Key('save_entry_button')));
     await tester.pumpAndSettle();

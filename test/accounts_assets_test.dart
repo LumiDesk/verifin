@@ -218,6 +218,7 @@ void main() {
     expect(find.text('有 1 个账户待设置汇率'), findsNothing);
     expect(find.text('172 ¥'), findsNWidgets(2));
     expect(find.text('10 \$'), findsOneWidget);
+    expect(find.text('资产估值最旧汇率：2020-01-01 · 可能已过期'), findsOneWidget);
   });
 
   testWidgets('shows empty state on account groups page', (

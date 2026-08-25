@@ -624,6 +624,40 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
           ),
         ),
       );
+    } else if (fields.isNotEmpty) {
+      final baseCode = controller.activeBook.baseCurrencyCode;
+      final involvedCodes = <String>{
+        _currencyCode,
+        if (!_noAccount) account.currencyCode,
+        if (toAccount != null) toAccount.currencyCode,
+      }..remove(baseCode);
+      final rateDates = <DateTime>{
+        for (final code in involvedCodes)
+          ?controller.exchangeRateFor(code, _occurredAt)?.effectiveDate,
+      }.toList()..sort();
+      final stale = rateDates.any(
+        (date) => calendarDaysBetween(date, _occurredAt) > 30,
+      );
+      fields.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Text(
+            _conversionSource == ConversionSource.manual
+                ? l10n.entryConversionSourceManual
+                : rateDates.isEmpty
+                ? l10n.entryConversionSourceRateTable
+                : l10n.entryConversionRateTrace(
+                    rateDates.map(currencyDateKey).join(' / '),
+                    stale ? ' · ${l10n.exchangeRateStale}' : '',
+                  ),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.55),
+            ),
+          ),
+        ),
+      );
     }
     return fields;
   }

@@ -16,6 +16,7 @@ import '../l10n/app_localizations.dart';
 import 'budget_pages.dart';
 import 'home_metrics_settings_page.dart';
 import 'panel_settings_page.dart';
+import 'recurring_page.dart';
 import 'transactions_pages.dart';
 
 class HomePage extends StatelessWidget {
@@ -68,6 +69,10 @@ class HomePage extends StatelessWidget {
     );
     final categoryBudgetRisk = topCategoryBudgetRisk(categoryBudgetSnapshots);
     final panelIds = controller.enabledPanelIds(PanelPageKind.home);
+    final recurringMissingByRule = controller.dueRecurringMissingRates(now);
+    final recurringMissingCodes =
+        recurringMissingByRule.values.expand((codes) => codes).toSet().toList()
+          ..sort();
 
     // 面板 id 对应的卡片,渲染顺序与开关由面板管理页配置。
     Widget panelFor(String id) {
@@ -183,6 +188,54 @@ class HomePage extends StatelessWidget {
                 '${controller.activeBook.name} · '
                 '${AppLocalizations.of(context).moneyUnitLabel(displayCurrencyUnit(controller.activeBook.baseCurrencyCode))}',
           ),
+          if (recurringMissingByRule.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 10),
+            VeriCard(
+              onTap: () => Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (context) => const RecurringRulesPage(),
+                ),
+              ),
+              child: Row(
+                children: <Widget>[
+                  const VeriIconBox(
+                    icon: Icons.event_repeat_rounded,
+                    color: veriWarning,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          AppLocalizations.of(context).homeRecurringRatePending(
+                            recurringMissingByRule.length,
+                          ),
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          AppLocalizations.of(
+                            context,
+                          ).homeRecurringRatePendingDesc(
+                            recurringMissingCodes.join(', '),
+                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.58),
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right_rounded),
+                ],
+              ),
+            ),
+          ],
           for (final id in panelIds) ...<Widget>[
             const SizedBox(height: 10),
             panelFor(id),
