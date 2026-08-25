@@ -62,3 +62,64 @@ Separate focused crops were not needed: both comparison images normalize each ph
 - P3: validate the fixed bottom save bar with the Android IME open and test horizontal scrolling with a long attachment list before production migration.
 
 final result: passed
+
+---
+
+# Veri Fin “轻提示” UI Lab Design QA
+
+## Evidence
+
+- Source visual truth: `design-qa/reference-feedback-card-390.png`（选中的第二个 ImageGen 方案，853 × 1844 px）。
+- Normalized source: `design-qa/reference-feedback-card-390-normalized.png`（390 × 844 px）。
+- Browser-rendered implementation:
+  - `design-qa/implementation-feedback-dark.png`（信息态、深色）。
+  - `design-qa/implementation-feedback-light.png`（错误态、浅色）。
+- Side-by-side comparison:
+  - `design-qa/comparison-feedback-card.png`（完整手机画面）。
+  - `design-qa/comparison-feedback-card-focused.png`（轻提示与根导航局部）。
+- Browser viewport: 1400 × 1100 CSS px；UI Lab 手机画布以 390 × 844 CSS px、1× 像素密度渲染。
+- Density normalization: 源图先按宽度缩放到 390 × 847，再居中裁为 390 × 844；实现截图直接从浏览器 1× 画布裁取为 390 × 844。
+- States reviewed: 信息、成功、警告、错误；深色与浅色；进度进行中与两秒后自动消失。
+- Primary interactions tested: 切换四种语义、重播提示、观察两秒进度递减、确认自动消失、切换深浅主题。
+- Browser console: final pass 中无 warning 或 error。
+
+## Intentional Product Constraints
+
+- 本轮只验证轻提示组件，不把 ImageGen 中生成的首页卡片当作正式首页改版目标；背景继续复用 UI Lab 现有根导航预览。
+- 组件使用 Veri Fin 的 Roboto 字体、Material 图标和 `veriRoyal` / `veriIncome` / `veriWarning` / `veriExpense` 语义色，不复制生成图中的非项目字体或不稳定图形细节。
+- 状态切换与重播只存在于手机画布外的 UI Lab 工具栏，不会迁入正式应用画面。
+
+## Findings
+
+Latest compact revision is awaiting refreshed browser evidence.
+
+- Fonts and typography: 最新实现改用项目 `labelLarge` 和 700 字重；退出文案缩短为“再按一次退出”。Widget 测试已确认四种中文样例存在，仍待浏览器刷新后确认真实 Web 字形无挤压。
+- Spacing and layout rhythm: 用户反馈 274 × 64 px 仍不像轻提示后，卡片进一步缩至 168 × 40 px（面积为上一版约 38%）、8 px 圆角，图标盒缩至 24 px，进度线缩至 1.5 px；仍待最新浏览器截图确认视觉比例。
+- Colors and visual tokens: 深浅主题均使用稳定实体表面、单一轮廓和轻阴影；品牌/语义色只出现在图标底、图标和进度线，没有退回整宽高饱和 `SnackBar`。
+- Image quality and asset fidelity: 组件不需要位图资产；所有图标来自项目现用 Material 图标族，没有占位图、自绘 SVG 或模拟资产。
+- Copy and content: 信息态进一步压缩为“再按一次退出”；其余三种样例分别覆盖成功、操作受限和保存失败。
+- Behavior and accessibility: 最新提示宿主最多同时显示四条并向上堆叠，更多消息进入 FIFO 等待队列；每条可独立关闭，可选 2/4/8 秒或常驻，Web 悬停暂停倒计时。常驻态不再创建进度区域，内容垂直居中。关闭动画由每条提示自身的 `SizeTransition` 收缩，列表直接子项使用稳定 Key，剩余提示不重建且倒计时不会重置。状态、时长、堆叠、排队、手动关闭、逐帧收拢和恢复计时均已有 Widget 测试覆盖。
+
+## Focused Comparison
+
+`comparison-feedback-card-focused.png` 把选定方案与实现的提示区域放在同一张图中。实现保留了左侧小型语义图标、单行主文案、底部进度线、紧凑实体表面以及导航上方悬浮关系；为适配 Veri Fin 真实字号和四种中文样例，成品比生成图略宽，但仍明显窄于屏幕和旧版整宽 `SnackBar`。
+
+## Comparison History
+
+1. 初版浏览器截图发现 P2 宽度漂移：334 px 状态卡横向接近整块屏幕，也延伸到独立快捷记账按钮上方，不如选定方案轻巧。
+2. 修复：卡片收窄至 274 px并保持居中；单行中文样例仍完整，进度线与图标比例不变。
+3. 最终 pass 重新构建、在相同 390 × 844 画布捕获深色信息态，并与归一化源图做完整和局部合并对比；同时复核成功、警告、错误、浅色和自动消失状态。无剩余 P0/P1/P2。
+4. 用户复核后认为 274 × 64 px 仍过大。最新修订将卡片缩至 168 × 40 px，缩小图标、内边距、阴影、滑入距离和进度线，并补测试锁定面积小于上一版的 40%。Analyze、18 项测试和 Web build 已通过；当前浏览器安全策略拒绝自动刷新本地标签页，因此新尺寸尚缺浏览器渲染截图。
+5. 用户继续要求多提示堆叠、手动关闭和可配置时长。实现已升级为四条可见栈 + FIFO 等待队列，工具栏提供 2/4/8 秒与常驻，单条带关闭入口，Web 悬停暂停倒计时。Analyze、19 项全量测试与最新 Web build 已通过；当前打开标签页仍是旧 bundle，需要用户手动刷新后才能完成浏览器视觉 pass。
+6. 用户复核发现常驻态透明进度槽仍占高度，且关闭一条时其他提示会卡顿。修复后常驻态完全移除进度子树并按 40 px 全高居中内容；列表 Key 提升到直接子项，移除整组 `AnimatedSize`，改为单条 180 ms 收缩。新增回归测试逐帧检查被关闭项的尺寸递减，并确认其他提示的进度继续递减、不被重置。Analyze、20 项全量测试与 Web build 已通过。
+7. 原型已抽取为正式 `lib/app/feedback.dart`，`VeriFinApp` 在 `MaterialApp.builder` 的 Navigator 之上安装根级 Host；UI Lab 删除复制渲染并直接使用正式组件。通用 API 新增单操作 Future 结果、后台暂停/恢复、显式 `dedupeKey`、低/普通/高优先级、四条可见栈和 16 条等待上限。根项目 analyze、855 项全量测试，UI Lab analyze、22 项测试与 Web build 均通过。当前打开的浏览器仍是旧 bundle，缺少优先级、撤销、去重和跨路由入口，需要刷新后完成最终视觉与交互 pass。
+
+## Follow-up Polish
+
+- P3: 正式迁移前补英文长文案和窄屏 360 dp 验证，并决定超长信息是换行还是省略。
+- P3: Android 真机确认浮层与手势导航安全区、浮动根导航及系统返回预测动画的节奏。
+- P3: 根据首批真实调用点确认默认底部避让高度是否需要按根页/子页动态调整。
+
+final result: blocked
+
+Blocker: 需要用户手动刷新当前 UI Lab 标签页，之后才能重新捕获正式组件的优先级、撤销、去重、跨路由和等待队列状态并完成最终视觉比较。
