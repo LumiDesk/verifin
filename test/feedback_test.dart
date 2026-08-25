@@ -175,13 +175,23 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('仍在备份'), findsOneWidget);
-    expect(find.text('×2'), findsOneWidget);
+    expect(find.textContaining('仍在备份', findRichText: true), findsOneWidget);
+    expect(find.textContaining('×2', findRichText: true), findsOneWidget);
     expect(_progress(tester, 0), greaterThan(before));
-    final countOffset = tester.widget<Transform>(
-      find.byKey(const Key('veri_feedback_count_0')),
+    final messageRect = tester.getRect(
+      find.byKey(const Key('veri_feedback_message_0')),
     );
-    expect(countOffset.transform.storage[13], 2);
+    final actionRect = tester.getRect(
+      find.byKey(const Key('veri_feedback_action_label_0')),
+    );
+    final leadingIconRect = tester.getRect(
+      find.byKey(const Key('veri_feedback_icon_0')),
+    );
+    final closeIconRect = tester.getRect(
+      find.byKey(const Key('veri_feedback_close_icon_0')),
+    );
+    expect(actionRect.center.dy, closeTo(messageRect.center.dy, 0.1));
+    expect(closeIconRect.center.dy, closeTo(leadingIconRect.center.dy, 0.1));
     expect(await second, VeriFeedbackResult.replaced);
 
     await tester.tap(find.byKey(const Key('veri_feedback_action_0')));
@@ -207,8 +217,8 @@ void main() {
 
     await _pumpHost(tester, controller: controller);
     await tester.pump(const Duration(milliseconds: 240));
-    expect(find.text('仍在启动'), findsOneWidget);
-    expect(find.text('×2'), findsOneWidget);
+    expect(find.textContaining('仍在启动', findRichText: true), findsOneWidget);
+    expect(find.textContaining('×2', findRichText: true), findsOneWidget);
     expect(await second, VeriFeedbackResult.replaced);
 
     await _close(tester, 0);

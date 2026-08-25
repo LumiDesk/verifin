@@ -604,8 +604,23 @@ class _VeriFeedbackCardState extends State<_VeriFeedbackCard>
                         ),
                         const SizedBox(width: 6),
                         Expanded(
-                          child: Text(
-                            request.message,
+                          child: Text.rich(
+                            TextSpan(
+                              text: request.message,
+                              children: <InlineSpan>[
+                                if (widget.count > 1)
+                                  TextSpan(
+                                    text: '  ×${widget.count}',
+                                    style: theme.textTheme.labelMedium
+                                        ?.copyWith(
+                                          color: foreground.withValues(
+                                            alpha: 0.50,
+                                          ),
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                  ),
+                              ],
+                            ),
                             key: Key('veri_feedback_message_${widget.id}'),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -615,39 +630,33 @@ class _VeriFeedbackCardState extends State<_VeriFeedbackCard>
                             ),
                           ),
                         ),
-                        if (widget.count > 1)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 4),
-                            child: Transform.translate(
-                              key: Key('veri_feedback_count_${widget.id}'),
-                              offset: const Offset(0, 2),
-                              child: Text(
-                                '×${widget.count}',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: foreground.withValues(alpha: 0.50),
-                                  fontWeight: FontWeight.w700,
+                        if (hasAction)
+                          SizedBox(
+                            height: 28,
+                            child: InkWell(
+                              key: Key('veri_feedback_action_${widget.id}'),
+                              borderRadius: BorderRadius.circular(veriRadiusSm),
+                              onTap: () => _dismiss(VeriFeedbackResult.action),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    request.actionLabel!,
+                                    key: Key(
+                                      'veri_feedback_action_label_${widget.id}',
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.labelMedium
+                                        ?.copyWith(
+                                          color: toneColor,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                        if (hasAction)
-                          TextButton(
-                            key: Key('veri_feedback_action_${widget.id}'),
-                            onPressed: () =>
-                                _dismiss(VeriFeedbackResult.action),
-                            style: TextButton.styleFrom(
-                              foregroundColor: toneColor,
-                              minimumSize: const Size(0, 28),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                              ),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              visualDensity: VisualDensity.compact,
-                            ),
-                            child: Text(
-                              request.actionLabel!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         SizedBox(
@@ -657,10 +666,15 @@ class _VeriFeedbackCardState extends State<_VeriFeedbackCard>
                             key: Key('veri_feedback_close_${widget.id}'),
                             customBorder: const CircleBorder(),
                             onTap: () => _dismiss(VeriFeedbackResult.dismissed),
-                            child: Icon(
-                              Icons.close_rounded,
-                              size: 12,
-                              color: foreground.withValues(alpha: 0.46),
+                            child: Center(
+                              child: Icon(
+                                Icons.close_rounded,
+                                key: Key(
+                                  'veri_feedback_close_icon_${widget.id}',
+                                ),
+                                size: 12,
+                                color: foreground.withValues(alpha: 0.46),
+                              ),
                             ),
                           ),
                         ),

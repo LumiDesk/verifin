@@ -234,7 +234,7 @@ void main() {
     await tester.tap(find.byKey(const Key('feedback_add')));
     await tester.pump();
 
-    expect(find.text('×2'), findsOneWidget);
+    expect(find.textContaining('×2', findRichText: true), findsOneWidget);
     expect(
       tester.getSize(find.byKey(const Key('veri_feedback_card_1'))).width,
       240,
