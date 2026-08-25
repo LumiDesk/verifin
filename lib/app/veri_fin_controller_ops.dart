@@ -803,12 +803,16 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   double get defaultMonthlyBudget =>
       _monthlyBudgets[_defaultMonthlyBudgetKey(_activeBookId)] ?? 0;
 
+  double _normalizeActiveBaseAmount(double amount) =>
+      normalizeCurrencyAmount(amount, activeBook.baseCurrencyCode);
+
   void setDefaultMonthlyBudget(double amount) {
+    final normalized = _normalizeActiveBaseAmount(amount);
     final key = _defaultMonthlyBudgetKey(_activeBookId);
-    if (amount <= 0) {
+    if (normalized <= 0) {
       _monthlyBudgets.remove(key);
     } else {
-      _monthlyBudgets[key] = amount;
+      _monthlyBudgets[key] = normalized;
     }
     _persistBudgets();
     notifyListeners();
@@ -826,9 +830,10 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   /// 设某键月的单月覆盖（amount 可为 0，表示「本月不设预算」；恢复默认沿用请用
   /// [clearMonthlyBudgetOverride]）。
   void setMonthlyBudget(DateTime month, double amount) {
-    _monthlyBudgets['$_activeBookId:${_monthKey(month)}'] = amount <= 0
+    final normalized = _normalizeActiveBaseAmount(amount);
+    _monthlyBudgets['$_activeBookId:${_monthKey(month)}'] = normalized <= 0
         ? 0
-        : amount;
+        : normalized;
     _persistBudgets();
     notifyListeners();
   }
@@ -847,11 +852,12 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       0;
 
   void setDefaultCategoryBudget(String categoryId, double amount) {
+    final normalized = _normalizeActiveBaseAmount(amount);
     final key = _defaultCategoryBudgetKey(_activeBookId, categoryId);
-    if (amount <= 0) {
+    if (normalized <= 0) {
       _categoryBudgets.remove(key);
     } else {
-      _categoryBudgets[key] = amount;
+      _categoryBudgets[key] = normalized;
     }
     _persistCategoryBudgets();
     notifyListeners();
@@ -871,11 +877,12 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
 
   /// 设某键月某分类的单月覆盖（0 = 移除覆盖，回到沿用分类默认）。
   void setCategoryBudget(DateTime month, String categoryId, double amount) {
+    final normalized = _normalizeActiveBaseAmount(amount);
     final key = _categoryBudgetKey(_activeBookId, month, categoryId);
-    if (amount <= 0) {
+    if (normalized <= 0) {
       _categoryBudgets.remove(key);
     } else {
-      _categoryBudgets[key] = amount;
+      _categoryBudgets[key] = normalized;
     }
     _persistCategoryBudgets();
     notifyListeners();
@@ -896,10 +903,11 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   }
 
   void setDailyBudget(double amount) {
-    if (amount <= 0) {
+    final normalized = _normalizeActiveBaseAmount(amount);
+    if (normalized <= 0) {
       _dailyBudgets.remove(_activeBookId);
     } else {
-      _dailyBudgets[_activeBookId] = amount;
+      _dailyBudgets[_activeBookId] = normalized;
     }
     _persistDailyBudgets();
     notifyListeners();
@@ -997,12 +1005,14 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     required int cycleStartDay,
     required Map<String, double> defaultCategoryBudgets,
   }) async {
+    final normalizedMonthly = _normalizeActiveBaseAmount(defaultMonthlyBudget);
+    final normalizedDaily = _normalizeActiveBaseAmount(dailyBudget);
     final nextMonthly = Map<String, double>.of(_monthlyBudgets);
     final monthlyKey = _defaultMonthlyBudgetKey(_activeBookId);
-    if (defaultMonthlyBudget <= 0) {
+    if (normalizedMonthly <= 0) {
       nextMonthly.remove(monthlyKey);
     } else {
-      nextMonthly[monthlyKey] = defaultMonthlyBudget;
+      nextMonthly[monthlyKey] = normalizedMonthly;
     }
 
     final nextCategories = Map<String, double>.of(_categoryBudgets)
@@ -1011,17 +1021,18 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
             key.startsWith('$_activeBookId:$_budgetDefaultMonthSegment:'),
       );
     for (final entry in defaultCategoryBudgets.entries) {
-      if (entry.value > 0) {
+      final normalized = _normalizeActiveBaseAmount(entry.value);
+      if (normalized > 0) {
         nextCategories[_defaultCategoryBudgetKey(_activeBookId, entry.key)] =
-            entry.value;
+            normalized;
       }
     }
 
     final nextDaily = Map<String, double>.of(_dailyBudgets);
-    if (dailyBudget <= 0) {
+    if (normalizedDaily <= 0) {
       nextDaily.remove(_activeBookId);
     } else {
-      nextDaily[_activeBookId] = dailyBudget;
+      nextDaily[_activeBookId] = normalizedDaily;
     }
 
     final clampedStartDay = clampBudgetCycleStartDay(cycleStartDay);

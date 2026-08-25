@@ -22,6 +22,10 @@ bool hideUnitInSingleCurrency = true;
 /// 当前活动账本是否实际涉及多个币种，由 [VeriFinController] 随状态同步。
 bool activeBookUsesMultipleCurrencies = false;
 
+/// 当前活动账本本位币。无 context 的聚合格式化入口读取它，确保 JPY/KWD 等
+/// 非两位币种不会继续按 CNY 精度展示。
+String activeBaseCurrencyCode = defaultCurrencyCode;
+
 /// 用户选择的单位样式，不考虑单币种隐藏规则。
 MoneyCodeDisplay get preferredMoneyCodeDisplay => switch (moneyUnitStyle) {
   MoneyUnitStyle.symbol => MoneyCodeDisplay.symbol,

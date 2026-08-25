@@ -659,7 +659,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
       if (entry.toAccountId != null && entry.toAccountId!.isNotEmpty)
         accountById(controller.accounts, entry.toAccountId!).name,
       entry.type.label(AppLocalizations.of(context)),
-      formatAmount(entry.amount),
+      formatCurrencyNumber(entry.amount, entry.currencyCode),
       formatSignedAmount(signedAmount(entry)),
       for (final id in entry.tagIds)
         if (controller.tagById(id) case final Tag tag) tag.label,

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/amount_format.dart' as amount_format;
 import 'package:verifin/app/currency_catalog.dart';
 import 'package:verifin/app/currency_math.dart';
+import 'package:verifin/app/ledger_math.dart';
 import 'package:verifin/app/models.dart';
 
 void main() {
@@ -62,6 +63,7 @@ void main() {
       amount_format.moneyUnitStyle = MoneyUnitStyle.symbol;
       amount_format.hideUnitInSingleCurrency = true;
       amount_format.activeBookUsesMultipleCurrencies = false;
+      amount_format.activeBaseCurrencyCode = defaultCurrencyCode;
     });
 
     test('按各自 minor unit 规整', () {
@@ -109,6 +111,16 @@ void main() {
         amount_format.currencyFractionStyle,
         CurrencyFractionStyle.compact,
       );
+    });
+
+    test('无 context 聚合格式化跟随活动账本本位币精度', () {
+      amount_format.activeBaseCurrencyCode = 'KWD';
+      expect(formatAmount(0.001), '0.001');
+      expect(isZeroAmount(0.001), isFalse);
+
+      amount_format.currencyFractionStyle = CurrencyFractionStyle.standard;
+      amount_format.activeBaseCurrencyCode = 'JPY';
+      expect(formatAmount(12), '12');
     });
 
     test('货币代码与符号显示无歧义', () {

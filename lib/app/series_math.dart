@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'ledger_math.dart';
+import 'currency_math.dart';
 import 'models.dart';
 import '../l10n/app_localizations.dart';
 
@@ -23,14 +24,16 @@ List<String> reportAxisLabels(double maxValue) {
   return <String>['0', _formatAxisAmount(top / 2), _formatAxisAmount(top)];
 }
 
-String _formatAxisAmount(num value) {
+String _formatAxisAmount(num value, {String? currencyCode}) {
   final abs = value.abs();
   if (abs >= 10000) {
     final compact = value / 10000;
     final decimals = compact.abs() >= 10 || compact % 1 == 0 ? 0 : 1;
     return '${compact.toStringAsFixed(decimals)}w';
   }
-  return formatAmount(value);
+  return currencyCode == null
+      ? formatAmount(value)
+      : formatCurrencyNumber(value, currencyCode);
 }
 
 String twoDigitYear(int year) => (year % 100).toString().padLeft(2, '0');
@@ -149,7 +152,7 @@ List<double> monthlyNetAssetSeries(
 
 /// 余额类序列的纵轴刻度:范围取序列实际的 [min, max](含 0)。
 
-List<String> balanceAxisLabels(List<double> values) {
+List<String> balanceAxisLabels(List<double> values, String currencyCode) {
   var maxValue = 0.0;
   var minValue = 0.0;
   for (final value in values) {
@@ -161,12 +164,16 @@ List<String> balanceAxisLabels(List<double> values) {
     }
   }
   if (maxValue - minValue <= 0) {
-    return reportAxisLabels(0);
+    return <String>[
+      formatCurrencyNumber(0, currencyCode),
+      formatCurrencyNumber(50, currencyCode),
+      formatCurrencyNumber(100, currencyCode),
+    ];
   }
   return <String>[
-    _formatAxisAmount(minValue),
-    _formatAxisAmount((minValue + maxValue) / 2),
-    _formatAxisAmount(maxValue),
+    _formatAxisAmount(minValue, currencyCode: currencyCode),
+    _formatAxisAmount((minValue + maxValue) / 2, currencyCode: currencyCode),
+    _formatAxisAmount(maxValue, currencyCode: currencyCode),
   ];
 }
 

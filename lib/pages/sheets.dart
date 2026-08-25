@@ -620,6 +620,7 @@ Future<void> _showBudgetOverrideSheet({
     title: l10n.budgetOverrideAmountTitle(scope),
     initialAmount: currentBudget > 0 ? currentBudget : null,
     allowZero: true,
+    currencyCode: VeriFinScope.of(context).activeBook.baseCurrencyCode,
   );
   if (amount != null && context.mounted) {
     setOverride(amount);
@@ -636,9 +637,15 @@ Future<double?> showNumberPadSheet(
   bool allowNegative = false,
   bool allowZero = false,
   double? maxAmount,
-  int maxFractionDigits = 2,
+  int? maxFractionDigits,
+  String? currencyCode,
 }) {
   final hapticsEnabled = VeriFinScope.of(context).hapticsEnabled;
+  final resolvedFractionDigits =
+      maxFractionDigits ??
+      (currencyCode == null
+          ? 2
+          : CurrencyCatalog.require(currencyCode).minorUnit);
   return showModalBottomSheet<double>(
     context: context,
     showDragHandle: true,
@@ -650,7 +657,8 @@ Future<double?> showNumberPadSheet(
       allowZero: allowZero,
       hapticsEnabled: hapticsEnabled,
       maxAmount: maxAmount,
-      maxFractionDigits: maxFractionDigits,
+      maxFractionDigits: resolvedFractionDigits,
+      currencyCode: currencyCode,
     ),
   );
 }

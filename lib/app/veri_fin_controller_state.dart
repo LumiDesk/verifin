@@ -256,6 +256,11 @@ mixin _ControllerState on ChangeNotifier {
     amount_format.hideUnitInSingleCurrency = _hideUnitInSingleCurrency;
     amount_format.activeBookUsesMultipleCurrencies =
         activeBookUsesMultipleCurrencies;
+    final book = _ledgerBooks
+        .where((item) => item.id == _activeBookId)
+        .firstOrNull;
+    amount_format.activeBaseCurrencyCode =
+        book?.baseCurrencyCode ?? defaultCurrencyCode;
   }
 
   /// 从 SQLite 载入账目类数据；全新数据库首启动写入默认账本/账户/分组/分类。

@@ -428,6 +428,7 @@ class _RefundSheetState extends State<_RefundSheet> {
       maxFractionDigits: CurrencyCatalog.require(
         widget.expense.currencyCode,
       ).minorUnit,
+      currencyCode: widget.expense.currencyCode,
     );
     if (value == null || value <= 0 || !mounted) {
       return;
