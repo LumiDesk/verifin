@@ -737,7 +737,10 @@ Set<String> _applyAccountMetadata({
       final account = newAccounts[newIndex];
       final delta = deltaByAccount[account.id] ?? 0;
       newAccounts[newIndex] = account.copyWith(
-        initialBalance: asset.signedBalance - delta,
+        initialBalance: normalizeCurrencyAmount(
+          asset.signedBalance - delta,
+          currencyCode,
+        ),
         includeInAssets: asset.includeInAssets,
         type: asset.type,
       );
@@ -760,7 +763,10 @@ Set<String> _applyAccountMetadata({
         name: assetName,
         type: asset.type,
         groupId: null,
-        initialBalance: asset.signedBalance,
+        initialBalance: normalizeCurrencyAmount(
+          asset.signedBalance,
+          currencyCode,
+        ),
         iconCode: 'wallet',
         note: '',
         includeInAssets: asset.includeInAssets,

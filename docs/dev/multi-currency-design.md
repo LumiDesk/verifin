@@ -10,8 +10,8 @@
 
 > 2026-08-25 的落地后代码审查确认了退款导入、历史交易冻结金额、minor-unit
 > 展示/输入、跨币种比较和系统投影刷新等后续加固项。修复设计与测试矩阵见
-> [`multi-currency-hardening-design.md`](multi-currency-hardening-design.md)。该文档当前仅为设计，
-> 未实施部分不得视为现有行为。
+> [`multi-currency-hardening-design.md`](multi-currency-hardening-design.md)。该轮加固已完成自动化
+> 验收，Android release 真机项仍待发布后执行。
 
 本文是 Veri Fin 多币种功能的实现依据。它记录产品范围、金额语义、汇率方向、
 SQLite/备份兼容、交易/转账/退款/周期记账口径、UI 流程、测试矩阵和分阶段落地顺序。
