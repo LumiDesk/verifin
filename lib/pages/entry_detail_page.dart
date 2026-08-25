@@ -1687,7 +1687,8 @@ class _EntryBottomSaveBar extends StatelessWidget {
         key: const Key('entry_bottom_save_bar'),
         color: Theme.of(context).colorScheme.surface,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+          key: const Key('entry_bottom_save_padding'),
+          padding: const EdgeInsets.fromLTRB(22, 10, 22, 18),
           child: FilledButton(
             key: const Key('save_entry_button'),
             style: FilledButton.styleFrom(
@@ -1908,7 +1909,11 @@ class _EntryCategoryTile extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: <Widget>[
-                        CategoryGlyph(iconCode: category.iconCode, size: 16),
+                        CategoryGlyph(
+                          iconCode: category.iconCode,
+                          size: 16,
+                          color: accent,
+                        ),
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
