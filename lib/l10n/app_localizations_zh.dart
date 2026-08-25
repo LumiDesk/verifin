@@ -3434,6 +3434,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get downloadingShort => '下载中';
 
   @override
+  String get continueDownload => '继续下载';
+
+  @override
+  String downloadPausedPercent(int percent) {
+    return '已保留 $percent% · 等待继续';
+  }
+
+  @override
   String get downloadNewVersion => '下载新版本';
 
   @override

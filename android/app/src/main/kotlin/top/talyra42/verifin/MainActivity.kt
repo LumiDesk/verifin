@@ -23,8 +23,11 @@ import io.flutter.plugin.common.MethodChannel
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicBoolean
 
 // local_auth 需要宿主是 FragmentActivity，故继承 FlutterFragmentActivity。
@@ -35,7 +38,6 @@ class MainActivity : FlutterFragmentActivity() {
     private var pendingCaptureText: String? = null
     private var pendingDownloadsWrite: PendingDownloadsWrite? = null
     private var pendingDirectoryPick: MethodChannel.Result? = null
-    private val updateDownloadInProgress = AtomicBoolean(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         rememberQuickEntryIntent(intent)
@@ -273,7 +275,7 @@ class MainActivity : FlutterFragmentActivity() {
     private fun downloadLatestUpdate(includePrerelease: Boolean, result: MethodChannel.Result) {
         // Dart 层已有 single-flight；原生层仍独立加锁，避免生命周期重建、未来新增入口
         // 或异常重复调用并发删除 / 写入同一个更新 APK。
-        if (!updateDownloadInProgress.compareAndSet(false, true)) {
+        if (!UPDATE_DOWNLOAD_IN_PROGRESS.compareAndSet(false, true)) {
             result.success(
                 mapOf(
                     "status" to "error",
@@ -296,7 +298,7 @@ class MainActivity : FlutterFragmentActivity() {
                     )
                 }
             } finally {
-                updateDownloadInProgress.set(false)
+                UPDATE_DOWNLOAD_IN_PROGRESS.set(false)
             }
         }.start()
     }
@@ -305,7 +307,7 @@ class MainActivity : FlutterFragmentActivity() {
     /// 找不到已下载文件时回 noAsset，供 Flutter 侧回退到重新下载。
     private fun installDownloadedUpdate(result: MethodChannel.Result) {
         val currentVersion = BuildConfig.VERSION_NAME
-        if (updateDownloadInProgress.get()) {
+        if (UPDATE_DOWNLOAD_IN_PROGRESS.get()) {
             result.success(
                 mapOf(
                     "status" to "error",
@@ -425,7 +427,7 @@ class MainActivity : FlutterFragmentActivity() {
                 "latestVersion" to latestTag,
             )
         }
-        findApkAssetUrl(release)
+        val apkAsset = findApkAsset(release)
             ?: return mapOf(
                 "status" to "noAsset",
                 "message" to "发现 $latestTag，但 Release 中没有可安装的 APK。",
@@ -439,6 +441,31 @@ class MainActivity : FlutterFragmentActivity() {
                 "currentVersion" to currentVersion,
                 "latestVersion" to latestTag,
                 "isPrerelease" to isPrerelease,
+            )
+        }
+        recoverCompletedIncoming(apkAsset, latestTag, latestVersion)?.let {
+            return mapOf(
+                "status" to "downloaded",
+                "message" to "新版本 $latestTag 已下载，可以立即安装。",
+                "currentVersion" to currentVersion,
+                "latestVersion" to latestTag,
+                "isPrerelease" to isPrerelease,
+            )
+        }
+        partialUpdateDownload(latestTag, apkAsset.sizeBytes)?.let { partial ->
+            val percent = if (partial.totalBytes > 0) {
+                ((partial.receivedBytes * 100) / partial.totalBytes).coerceIn(0, 100)
+            } else {
+                0
+            }
+            return mapOf(
+                "status" to "paused",
+                "message" to "上次下载在 $percent% 处中断，已保留进度，可以继续下载。",
+                "currentVersion" to currentVersion,
+                "latestVersion" to latestTag,
+                "isPrerelease" to isPrerelease,
+                "receivedBytes" to partial.receivedBytes,
+                "totalBytes" to partial.totalBytes,
             )
         }
         return mapOf(
@@ -514,14 +541,32 @@ class MainActivity : FlutterFragmentActivity() {
                 "latestVersion" to latestTag,
             )
         }
-        val apkUrl = findApkAssetUrl(release)
+        val apkAsset = findApkAsset(release)
             ?: return mapOf(
                 "status" to "noAsset",
                 "message" to "发现 $latestTag，但 Release 中没有可安装的 APK。",
                 "currentVersion" to currentVersion,
                 "latestVersion" to latestTag,
             )
-        val apkFile = downloadApk(apkUrl, latestTag, latestVersion)
+        val apkFile = try {
+            downloadApk(apkAsset, latestTag, latestVersion)
+        } catch (error: UpdateDownloadPausedException) {
+            val percent = if (error.partial.totalBytes > 0) {
+                ((error.partial.receivedBytes * 100) / error.partial.totalBytes)
+                    .coerceIn(0, 100)
+            } else {
+                0
+            }
+            return mapOf(
+                "status" to "paused",
+                "message" to "下载暂时中断，已保留 $percent% 的进度，点击继续下载即可从断点恢复。",
+                "currentVersion" to currentVersion,
+                "latestVersion" to latestTag,
+                "isPrerelease" to isPrerelease,
+                "receivedBytes" to error.partial.receivedBytes,
+                "totalBytes" to error.partial.totalBytes,
+            )
+        }
         startApkInstall(apkFile)
         return mapOf(
             "status" to "installing",
@@ -553,45 +598,134 @@ class MainActivity : FlutterFragmentActivity() {
         return body
     }
 
-    private fun findApkAssetUrl(release: JSONObject): String? {
+    private fun findApkAsset(release: JSONObject): UpdateApkAsset? {
         val assets = release.optJSONArray("assets") ?: return null
         for (index in 0 until assets.length()) {
             val asset = assets.optJSONObject(index) ?: continue
             val name = asset.optString("name")
             val url = asset.optString("browser_download_url")
             if (name.endsWith(".apk", ignoreCase = true) && url.isNotBlank()) {
-                return url
+                val digest = asset.optString("digest")
+                    .removePrefix("sha256:")
+                    .takeIf { it.matches(Regex("[0-9a-fA-F]{64}")) }
+                    ?.lowercase()
+                return UpdateApkAsset(
+                    downloadUrl = url,
+                    sizeBytes = asset.optLong("size").takeIf { it > 0 } ?: 0,
+                    sha256 = digest,
+                )
             }
         }
         return null
     }
 
-    private fun downloadApk(downloadUrl: String, tag: String, expectedVersion: String): File {
-        val updatesDir = File(cacheDir, "updates").apply { mkdirs() }
-        // 下载阶段只写 incoming 子目录；根目录中的 .apk 均是完整校验并提交后的文件。
-        // 这样即使下载中断，FileProvider / 重新安装入口也不会碰到半成品。
-        val incomingDir = File(updatesDir, "incoming").apply { mkdirs() }
-        incomingDir.listFiles()?.forEach { it.delete() }
-        val safeTag = tag.replace(Regex("[^A-Za-z0-9._-]"), "_")
-        val incomingFile = File(incomingDir, "verifin-$safeTag.apk")
-        val apkFile = File(updatesDir, "verifin-$safeTag.apk")
-        val connection = URL(downloadUrl).openConnection() as HttpURLConnection
+    private fun downloadApk(asset: UpdateApkAsset, tag: String, expectedVersion: String): File {
+        val incomingFile = updateIncomingFile(tag)
+        incomingFile.parentFile?.listFiles()?.forEach { file ->
+            if (file != incomingFile) {
+                file.delete()
+            }
+        }
+        recoverCompletedIncoming(asset, tag, expectedVersion)?.let { return it }
+
+        var lastError: IOException? = null
+        var resetAfterCorruption = false
+        for (attempt in 1..UPDATE_MAX_AUTO_RESUME_ATTEMPTS) {
+            try {
+                return downloadApkAttempt(asset, tag, expectedVersion)
+            } catch (error: CorruptUpdateDownloadException) {
+                incomingFile.delete()
+                if (resetAfterCorruption) {
+                    throw error
+                }
+                resetAfterCorruption = true
+                lastError = error
+            } catch (error: IOException) {
+                lastError = error
+            }
+            if (attempt < UPDATE_MAX_AUTO_RESUME_ATTEMPTS) {
+                Thread.sleep((attempt * 1_000L).coerceAtMost(3_000L))
+            }
+        }
+        val partial = partialUpdateDownload(tag, asset.sizeBytes)
+            ?: PartialUpdateDownload(0, asset.sizeBytes)
+        throw UpdateDownloadPausedException(
+            "更新下载暂时中断，已保留断点。",
+            partial,
+            lastError ?: IOException("未知下载错误"),
+        )
+    }
+
+    private fun downloadApkAttempt(
+        asset: UpdateApkAsset,
+        tag: String,
+        expectedVersion: String,
+    ): File {
+        val incomingFile = updateIncomingFile(tag)
+        if (asset.sizeBytes > 0 && incomingFile.length() > asset.sizeBytes) {
+            incomingFile.delete()
+        }
+        val resumeOffset = incomingFile.length().coerceAtLeast(0)
+        val connection = URL(asset.downloadUrl).openConnection() as HttpURLConnection
         connection.requestMethod = "GET"
+        connection.instanceFollowRedirects = true
         connection.setRequestProperty("User-Agent", "VeriFin/${BuildConfig.VERSION_NAME}")
-        connection.connectTimeout = 15_000
-        connection.readTimeout = 60_000
+        connection.setRequestProperty("Accept-Encoding", "identity")
+        if (resumeOffset > 0) {
+            connection.setRequestProperty("Range", "bytes=$resumeOffset-")
+        }
+        connection.connectTimeout = UPDATE_CONNECT_TIMEOUT_MS
+        connection.readTimeout = UPDATE_READ_TIMEOUT_MS
         try {
             val code = connection.responseCode
+            if (code == 416 &&
+                asset.sizeBytes > 0 &&
+                resumeOffset == asset.sizeBytes
+            ) {
+                return finalizeDownloadedApk(asset, tag, expectedVersion)
+            }
+            if (code == 408 ||
+                code == 429 ||
+                code in 500..599
+            ) {
+                throw RetryableDownloadException("APK 下载暂时失败：HTTP $code")
+            }
             if (code !in 200..299) {
                 throw IllegalStateException("APK 下载失败：HTTP $code")
             }
-            val totalBytes = connection.contentLengthLong.takeIf { it > 0 } ?: 0
-            sendDownloadProgress(0, totalBytes)
+
+            val contentRange = connection.getHeaderField("Content-Range")
+            val rangeMatch = contentRange?.let {
+                Regex("bytes\\s+(\\d+)-(\\d+)/(\\d+|\\*)", RegexOption.IGNORE_CASE)
+                    .find(it)
+            }
+            val rangeStart = rangeMatch?.groupValues?.getOrNull(1)?.toLongOrNull()
+            val rangeTotal = rangeMatch?.groupValues?.getOrNull(3)
+                ?.takeUnless { it == "*" }
+                ?.toLongOrNull()
+                ?: 0
+            val append = resumeOffset > 0 &&
+                code == HttpURLConnection.HTTP_PARTIAL &&
+                rangeStart == resumeOffset
+            if (resumeOffset > 0 && code == HttpURLConnection.HTTP_PARTIAL && !append) {
+                throw RetryableDownloadException("服务器返回的断点位置不一致。")
+            }
+            val receivedBefore = if (append) resumeOffset else 0
+            val totalBytes = asset.sizeBytes.takeIf { it > 0 }
+                ?: rangeTotal.takeIf { it > 0 }
+                ?: connection.contentLengthLong.takeIf { it > 0 }
+                    ?.plus(receivedBefore)
+                ?: 0
+            sendDownloadProgress(receivedBefore, totalBytes)
             connection.inputStream.use { input ->
-                incomingFile.outputStream().use { output ->
+                FileOutputStream(incomingFile, append).buffered().use { output ->
                     val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                    var received = 0L
-                    var lastProgress = -1
+                    var received = receivedBefore
+                    var lastProgress = if (totalBytes > 0) {
+                        ((received * 100) / totalBytes).toInt()
+                    } else {
+                        -1
+                    }
                     while (true) {
                         val read = input.read(buffer)
                         if (read == -1) {
@@ -612,36 +746,126 @@ class MainActivity : FlutterFragmentActivity() {
                 }
             }
             val finalSize = incomingFile.length()
-            if (totalBytes > 0 && finalSize != totalBytes) {
-                throw IllegalStateException(
-                    "APK 下载不完整：应为 $totalBytes 字节，实际为 $finalSize 字节。",
+            if (totalBytes > 0 && finalSize < totalBytes) {
+                throw RetryableDownloadException(
+                    "APK 下载中断：应为 $totalBytes 字节，当前为 $finalSize 字节。",
                 )
             }
-            validateUpdateApk(incomingFile, expectedVersion)
-
-            // 校验完成后才替换旧缓存；同一文件系统内 rename 是原子提交，不把复制中的
-            // 文件暴露给安装入口。rename 失败时宁可报错，也不降级为非原子复制。
-            if (apkFile.exists() && !apkFile.delete()) {
-                throw IllegalStateException("无法替换旧更新安装包。")
+            if (totalBytes > 0 && finalSize > totalBytes) {
+                throw CorruptUpdateDownloadException(
+                    "APK 下载长度异常：应为 $totalBytes 字节，实际为 $finalSize 字节。",
+                )
             }
-            if (!incomingFile.renameTo(apkFile)) {
-                throw IllegalStateException("无法提交已下载的更新安装包。")
-            }
-            updatesDir.listFiles()?.forEach { file ->
-                if (file.isFile &&
-                    file != apkFile &&
-                    file.name.endsWith(".apk", ignoreCase = true)
-                ) {
-                    file.delete()
-                }
-            }
-            sendDownloadProgress(finalSize, totalBytes.takeIf { it > 0 } ?: finalSize)
-            return apkFile
-        } catch (error: Exception) {
-            incomingFile.delete()
-            throw error
+            return finalizeDownloadedApk(asset, tag, expectedVersion)
         } finally {
             connection.disconnect()
+        }
+    }
+
+    private fun recoverCompletedIncoming(
+        asset: UpdateApkAsset,
+        tag: String,
+        expectedVersion: String,
+    ): File? {
+        val incomingFile = updateIncomingFile(tag)
+        if (!incomingFile.isFile || incomingFile.length() <= 0) {
+            return null
+        }
+        if (asset.sizeBytes <= 0 || incomingFile.length() != asset.sizeBytes) {
+            return null
+        }
+        return try {
+            finalizeDownloadedApk(asset, tag, expectedVersion)
+        } catch (_: CorruptUpdateDownloadException) {
+            // 只有内容校验失败才丢弃；提交阶段的临时文件系统错误应保留完整文件，
+            // 让下一次检查/继续下载可以再次尝试原子提交。
+            incomingFile.delete()
+            null
+        }
+    }
+
+    private fun finalizeDownloadedApk(
+        asset: UpdateApkAsset,
+        tag: String,
+        expectedVersion: String,
+    ): File {
+        val updatesDir = File(cacheDir, "updates").apply { mkdirs() }
+        val incomingFile = updateIncomingFile(tag)
+        try {
+            if (asset.sizeBytes > 0 && incomingFile.length() != asset.sizeBytes) {
+                throw IllegalStateException("下载的 APK 长度与 Release 记录不一致。")
+            }
+            validateUpdateDigest(incomingFile, asset.sha256)
+            validateUpdateApk(incomingFile, expectedVersion)
+        } catch (error: Exception) {
+            throw CorruptUpdateDownloadException("下载的 APK 完整性校验失败。", error)
+        }
+        val apkFile = updateFinalFile(tag)
+        // 校验完成后才替换旧缓存；同一文件系统内 rename 是原子提交。
+        if (apkFile.exists() && !apkFile.delete()) {
+            throw IllegalStateException("无法替换旧更新安装包。")
+        }
+        if (!incomingFile.renameTo(apkFile)) {
+            throw IllegalStateException("无法提交已下载的更新安装包。")
+        }
+        updatesDir.listFiles()?.forEach { file ->
+            if (file.isFile &&
+                file != apkFile &&
+                file.name.endsWith(".apk", ignoreCase = true)
+            ) {
+                file.delete()
+            }
+        }
+        val finalSize = apkFile.length()
+        sendDownloadProgress(finalSize, asset.sizeBytes.takeIf { it > 0 } ?: finalSize)
+        return apkFile
+    }
+
+    private fun updateIncomingFile(tag: String): File {
+        val safeTag = tag.replace(Regex("[^A-Za-z0-9._-]"), "_")
+        val incomingDir = File(cacheDir, "updates/incoming").apply { mkdirs() }
+        return File(incomingDir, "verifin-$safeTag.apk")
+    }
+
+    private fun updateFinalFile(tag: String): File {
+        val safeTag = tag.replace(Regex("[^A-Za-z0-9._-]"), "_")
+        val updatesDir = File(cacheDir, "updates").apply { mkdirs() }
+        return File(updatesDir, "verifin-$safeTag.apk")
+    }
+
+    private fun partialUpdateDownload(tag: String, expectedTotal: Long): PartialUpdateDownload? {
+        val incomingFile = updateIncomingFile(tag)
+        val received = incomingFile.length()
+        if (!incomingFile.isFile || received <= 0) {
+            return null
+        }
+        if (expectedTotal > 0 && received > expectedTotal) {
+            incomingFile.delete()
+            return null
+        }
+        return PartialUpdateDownload(received, expectedTotal)
+    }
+
+    private fun validateUpdateDigest(apkFile: File, expectedSha256: String?) {
+        if (expectedSha256 == null) {
+            return
+        }
+        val digest = MessageDigest.getInstance("SHA-256")
+        apkFile.inputStream().buffered().use { input ->
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            while (true) {
+                val read = input.read(buffer)
+                if (read == -1) {
+                    break
+                }
+                digest.update(buffer, 0, read)
+            }
+        }
+        val actual = digest.digest().joinToString("") { byte ->
+            "%02x".format(byte.toInt() and 0xff)
+        }
+        if (actual != expectedSha256) {
+            throw IllegalStateException("下载的 APK SHA-256 与 Release 不一致。")
         }
     }
 
@@ -1030,6 +1254,30 @@ class MainActivity : FlutterFragmentActivity() {
         val result: MethodChannel.Result,
     )
 
+    private data class UpdateApkAsset(
+        val downloadUrl: String,
+        val sizeBytes: Long,
+        val sha256: String?,
+    )
+
+    private data class PartialUpdateDownload(
+        val receivedBytes: Long,
+        val totalBytes: Long,
+    )
+
+    private class UpdateDownloadPausedException(
+        message: String,
+        val partial: PartialUpdateDownload,
+        cause: Throwable,
+    ) : IOException(message, cause)
+
+    private class RetryableDownloadException(message: String) : IOException(message)
+
+    private class CorruptUpdateDownloadException(
+        message: String,
+        cause: Throwable? = null,
+    ) : IOException(message, cause)
+
     companion object {
         const val ACTION_QUICK_ENTRY = "top.talyra42.verifin.action.QUICK_ENTRY"
 
@@ -1049,5 +1297,9 @@ class MainActivity : FlutterFragmentActivity() {
         // 预发布检查用列表端点：/releases/latest 天然排除预发布，需拉列表自行筛选。
         private const val RELEASE_LIST_API_URL =
             "https://api.github.com/repos/LumiDesk/verifin/releases?per_page=20"
+        private const val UPDATE_CONNECT_TIMEOUT_MS = 15_000
+        private const val UPDATE_READ_TIMEOUT_MS = 60_000
+        private const val UPDATE_MAX_AUTO_RESUME_ATTEMPTS = 3
+        private val UPDATE_DOWNLOAD_IN_PROGRESS = AtomicBoolean(false)
     }
 }

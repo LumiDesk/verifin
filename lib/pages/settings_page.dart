@@ -545,7 +545,8 @@ class _UpdateCheckDialogState extends State<_UpdateCheckDialog> {
 
   Future<void> _download() async {
     // 预发布版本下载前先提示不稳定风险，用户确认后再继续。
-    if (_result?.isPrerelease ?? false) {
+    if ((_result?.isPrerelease ?? false) &&
+        _result?.status != UpdateCheckStatus.paused) {
       final proceed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -604,7 +605,8 @@ class _UpdateCheckDialogState extends State<_UpdateCheckDialog> {
   @override
   Widget build(BuildContext context) {
     final result = _result;
-    final hasUpdate = result?.status == UpdateCheckStatus.available;
+    final paused = result?.status == UpdateCheckStatus.paused;
+    final hasUpdate = result?.status == UpdateCheckStatus.available || paused;
 
     return PopScope(
       // 「关闭」按钮虽已在忙碌时禁用，仍需单独拦截 Android 系统返回键。
@@ -675,25 +677,41 @@ class _UpdateCheckDialogState extends State<_UpdateCheckDialog> {
                   ],
                 ),
               ],
-              if (_downloading) ...<Widget>[
+              if (_downloading || paused) ...<Widget>[
                 const SizedBox(height: 14),
                 ValueListenableBuilder<UpdateDownloadProgress?>(
                   valueListenable: AppUpdateBridge.updateProgress,
                   builder: (context, progress, _) {
-                    final knownSize =
-                        progress != null && progress.totalBytes > 0;
+                    final effectiveProgress =
+                        (_downloading
+                            ? progress
+                            : UpdateDownloadProgress(
+                                progress: result?.progress ?? 0,
+                                receivedBytes: result?.receivedBytes ?? 0,
+                                totalBytes: result?.totalBytes ?? 0,
+                              )) ??
+                        const UpdateDownloadProgress(progress: 0);
+                    final knownSize = effectiveProgress.totalBytes > 0;
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         LinearProgressIndicator(
-                          value: knownSize ? progress.progress : null,
+                          value: knownSize ? effectiveProgress.progress : null,
                         ),
                         const SizedBox(height: 8),
                         Text(
                           knownSize
-                              ? AppLocalizations.of(
-                                  context,
-                                ).downloadingPercent(progress.percent)
+                              ? paused
+                                    ? AppLocalizations.of(
+                                        context,
+                                      ).downloadPausedPercent(
+                                        effectiveProgress.percent,
+                                      )
+                                    : AppLocalizations.of(
+                                        context,
+                                      ).downloadingPercent(
+                                        effectiveProgress.percent,
+                                      )
                               : AppLocalizations.of(context).downloadingLabel,
                           style: Theme.of(context).textTheme.labelMedium
                               ?.copyWith(fontWeight: FontWeight.w700),
@@ -754,6 +772,8 @@ class _UpdateCheckDialogState extends State<_UpdateCheckDialog> {
               child: Text(
                 _downloading
                     ? AppLocalizations.of(context).downloadingShort
+                    : paused
+                    ? AppLocalizations.of(context).continueDownload
                     : AppLocalizations.of(context).downloadNewVersion,
               ),
             ),

@@ -2228,6 +2228,11 @@
   "closeLabel": "关闭",
   "retryLabel": "重试",
   "downloadingShort": "下载中",
+  "continueDownload": "继续下载",
+  "downloadPausedPercent": "已保留 {percent}% · 等待继续",
+  "@downloadPausedPercent": {
+    "placeholders": {"percent": {"type": "int"}}
+  },
   "downloadNewVersion": "下载新版本",
   "installNow": "立即安装",
   "includePrereleaseLabel": "包含预发布版本（Beta）",

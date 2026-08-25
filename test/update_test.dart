@@ -20,6 +20,13 @@ Map<String, Object?> _updateResult(String status) => <String, Object?>{
   'latestVersion': 'v9.9.9',
 };
 
+Map<String, Object?> _pausedUpdateResult() => <String, Object?>{
+  ..._updateResult('paused'),
+  'message': '下载暂时中断，已保留 40% 的进度。',
+  'receivedBytes': 40,
+  'totalBytes': 100,
+};
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   useTestDatabases();
@@ -128,5 +135,87 @@ void main() {
     await tester.tap(find.text('立即安装'));
     await tester.pumpAndSettle();
     expect(installCalls, 1);
+  });
+
+  testWidgets('下载中断后保留版本与进度，并从继续下载恢复', (tester) async {
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    var downloadCalls = 0;
+    messenger.setMockMethodCallHandler(_channel, (call) {
+      switch (call.method) {
+        case 'checkLatestRelease':
+          return Future<Object?>.value(_updateResult('available'));
+        case 'downloadLatestUpdate':
+          downloadCalls += 1;
+          return Future<Object?>.value(
+            downloadCalls == 1
+                ? _pausedUpdateResult()
+                : _updateResult('installing'),
+          );
+        case 'consumeQuickEntryIntent':
+          return Future<Object?>.value(false);
+        default:
+          return Future<Object?>.value(null);
+      }
+    });
+    addTearDown(() {
+      messenger.setMockMethodCallHandler(_channel, null);
+    });
+
+    await pumpApp(tester);
+    await tapBottomTab(tester, 3);
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('检查更新'), 160);
+    await tester.tap(find.text('检查更新'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('下载新版本'));
+    await tester.pumpAndSettle();
+
+    expect(downloadCalls, 1);
+    expect(find.text('v9.9.9'), findsOneWidget);
+    expect(find.text('已保留 40% · 等待继续'), findsOneWidget);
+    expect(find.text('继续下载'), findsOneWidget);
+    expect(find.text('重试'), findsNothing);
+
+    await tester.tap(find.text('继续下载'));
+    await tester.pumpAndSettle();
+    expect(downloadCalls, 2);
+    expect(find.text('立即安装'), findsOneWidget);
+  });
+
+  test('paused 结果保留断点字节与进度', () {
+    final result = UpdateCheckResult.fromMap(_pausedUpdateResult());
+    expect(result.status, UpdateCheckStatus.paused);
+    expect(result.latestVersion, 'v9.9.9');
+    expect(result.receivedBytes, 40);
+    expect(result.totalBytes, 100);
+    expect(result.progress, 0.4);
+  });
+
+  test('原生异常仍保留最近检查到的目标版本', () async {
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(_channel, (call) {
+      if (call.method == 'checkLatestRelease') {
+        return Future<Object?>.value(_updateResult('available'));
+      }
+      if (call.method == 'downloadLatestUpdate') {
+        throw PlatformException(
+          code: 'UPDATE_DOWNLOAD_FAILED',
+          message: '连接中断',
+        );
+      }
+      return Future<Object?>.value(null);
+    });
+    addTearDown(() {
+      messenger.setMockMethodCallHandler(_channel, null);
+    });
+
+    await AppUpdateBridge.checkForUpdate();
+    final result = await AppUpdateBridge.downloadLatestUpdate();
+    expect(result.status, UpdateCheckStatus.error);
+    expect(result.latestVersion, 'v9.9.9');
+    expect(result.message, '连接中断');
   });
 }
