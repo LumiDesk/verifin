@@ -71,8 +71,9 @@ class LedgerQuery {
 /// 按 [query] 筛选并排序交易，返回新列表（不改动入参）。
 List<LedgerEntry> queryLedgerEntries(
   Iterable<LedgerEntry> entries,
-  LedgerQuery query,
-) {
+  LedgerQuery query, {
+  double? Function(LedgerEntry entry)? amountOf,
+}) {
   final keyword = query.keyword.trim().toLowerCase();
   final result = <LedgerEntry>[];
   for (final entry in entries) {
@@ -83,11 +84,14 @@ List<LedgerEntry> queryLedgerEntries(
         entriesInWindow(<LedgerEntry>[entry], query.window!).isEmpty) {
       continue;
     }
-    final value = entry.netAmount;
-    if (query.minAmount != null && value < query.minAmount!) {
+    final value = amountOf == null ? entry.netAmount : amountOf(entry);
+    if (value == null && (query.minAmount != null || query.maxAmount != null)) {
       continue;
     }
-    if (query.maxAmount != null && value > query.maxAmount!) {
+    if (query.minAmount != null && value! < query.minAmount!) {
+      continue;
+    }
+    if (query.maxAmount != null && value! > query.maxAmount!) {
       continue;
     }
     if (query.categoryIds.isNotEmpty &&
@@ -116,7 +120,11 @@ List<LedgerEntry> queryLedgerEntries(
       case LedgerSortField.date:
         cmp = a.occurredAt.compareTo(b.occurredAt);
       case LedgerSortField.amount:
-        cmp = a.netAmount.compareTo(b.netAmount);
+        final aValue = amountOf == null ? a.netAmount : amountOf(a);
+        final bValue = amountOf == null ? b.netAmount : amountOf(b);
+        if (aValue == null && bValue != null) return 1;
+        if (aValue != null && bValue == null) return -1;
+        cmp = aValue == null || bValue == null ? 0 : aValue.compareTo(bValue);
     }
     return query.descending ? -cmp : cmp;
   });

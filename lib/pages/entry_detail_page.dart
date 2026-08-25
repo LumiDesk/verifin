@@ -425,6 +425,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
           .toSet(),
       note: _noteController.text,
       amount: _amount,
+      currencyCode: _currencyCode ?? controller.activeBook.baseCurrencyCode,
       hour: _occurredAt.hour,
       // 用户已手动选过类型：不再翻转类型，只在该类型内识别分类/标签/备注。
       forcedType: _typeTouched ? _type : null,

@@ -205,6 +205,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
     _deriveSignature = signature;
     final entries = _sortedEntries(
       _filteredEntries(controller.entries),
+      controller,
     ).where((entry) => entry.type != EntryType.refund).toList();
     _derivedEntries = entries;
     _derivedExpense = sumByType(entries, EntryType.expense);
@@ -673,7 +674,10 @@ class _TransactionsPageState extends State<TransactionsPage> {
     return searchable.contains(query);
   }
 
-  List<LedgerEntry> _sortedEntries(List<LedgerEntry> entries) {
+  List<LedgerEntry> _sortedEntries(
+    List<LedgerEntry> entries,
+    VeriFinController controller,
+  ) {
     final sorted = List<LedgerEntry>.from(entries);
     switch (_sortOrder) {
       case TransactionSortOrder.dateDesc:
@@ -681,11 +685,40 @@ class _TransactionsPageState extends State<TransactionsPage> {
       case TransactionSortOrder.dateAsc:
         sorted.sort((a, b) => a.occurredAt.compareTo(b.occurredAt));
       case TransactionSortOrder.amountDesc:
-        sorted.sort((a, b) => b.amount.compareTo(a.amount));
+        sorted.sort(
+          (a, b) => _compareBookAmounts(a, b, controller, descending: true),
+        );
       case TransactionSortOrder.amountAsc:
-        sorted.sort((a, b) => a.amount.compareTo(b.amount));
+        sorted.sort(
+          (a, b) => _compareBookAmounts(a, b, controller, descending: false),
+        );
     }
     return sorted;
+  }
+
+  int _compareBookAmounts(
+    LedgerEntry a,
+    LedgerEntry b,
+    VeriFinController controller, {
+    required bool descending,
+  }) {
+    double? valueOf(LedgerEntry entry) => comparableEntryAmountInBase(
+      entry: entry,
+      accounts: controller.accounts,
+      baseCurrencyCode: controller.activeBook.baseCurrencyCode,
+      rates: controller.exchangeRates,
+    );
+
+    final aValue = valueOf(a);
+    final bValue = valueOf(b);
+    if (aValue == null && bValue != null) return 1;
+    if (aValue != null && bValue == null) return -1;
+    final byAmount = aValue == null || bValue == null
+        ? 0
+        : (descending ? bValue.compareTo(aValue) : aValue.compareTo(bValue));
+    if (byAmount != 0) return byAmount;
+    final byDate = b.occurredAt.compareTo(a.occurredAt);
+    return byDate != 0 ? byDate : b.id.compareTo(a.id);
   }
 
   Widget _buildTimeFilterAnchor({

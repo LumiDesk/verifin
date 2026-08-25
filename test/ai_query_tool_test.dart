@@ -28,15 +28,18 @@ AiToolContext _ctx(
   List<LedgerEntry> entries, {
   List<Category> categories = const <Category>[],
   List<Tag> tags = const <Tag>[],
+  List<Account> accounts = const <Account>[],
+  List<ExchangeRate> exchangeRates = const <ExchangeRate>[],
   DateTime? now,
 }) {
   return AiToolContext(
     entries: entries,
-    accounts: const <Account>[],
+    accounts: accounts,
     categories: categories,
     tags: tags,
     balanceOf: (_) => 0,
     baseCurrencyCode: 'CNY',
+    exchangeRates: exchangeRates,
     now: now ?? DateTime(2026, 6, 20),
   );
 }
@@ -155,6 +158,57 @@ void main() {
     });
     final d = r.display as AiTransactionsDisplay;
     expect(d.entryIds, <String>['a']);
+  });
+
+  test('queryTransactions 转账摘要展示两端金额而不是本位币 0', () {
+    const cny = Account(
+      id: 'cny',
+      bookId: 'b',
+      name: '人民币',
+      type: AccountType.cash,
+      groupId: null,
+      initialBalance: 0,
+      iconCode: 'cash',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+    );
+    const usd = Account(
+      id: 'usd',
+      bookId: 'b',
+      name: '美元',
+      type: AccountType.cash,
+      groupId: null,
+      initialBalance: 0,
+      iconCode: 'cash',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+      currencyCode: 'USD',
+    );
+    final transfer = LedgerEntry(
+      id: 'transfer',
+      bookId: 'b',
+      type: EntryType.transfer,
+      amount: 720,
+      currencyCode: 'CNY',
+      accountAmount: 720,
+      toAccountAmount: 100,
+      baseAmount: 0,
+      categoryId: 'transfer_out',
+      accountId: cny.id,
+      toAccountId: usd.id,
+      note: '换汇',
+      occurredAt: DateTime(2026, 6, 15),
+    );
+    final result = _tool('queryTransactions').run(
+      _ctx(<LedgerEntry>[transfer], accounts: const <Account>[cny, usd]),
+      <String, Object?>{'range': 'all', 'type': 'transfer'},
+    );
+
+    expect(result.summary, contains('CNY 720'));
+    expect(result.summary, contains('USD 100'));
+    expect(result.summary, isNot(contains('CNY 0')));
   });
 
   test('缺省 / 非法参数优雅降级不抛异常', () {

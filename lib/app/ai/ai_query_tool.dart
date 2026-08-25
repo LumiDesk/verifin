@@ -26,6 +26,7 @@ class AiToolContext {
     required this.balanceOf,
     required this.baseCurrencyCode,
     required this.now,
+    this.exchangeRates = const <ExchangeRate>[],
   });
 
   /// 当前账本交易（时间倒序或任意序均可，工具自行排序）。
@@ -45,6 +46,9 @@ class AiToolContext {
 
   /// 统计、筛选与工具回传金额使用的当前账本本位币。
   final String baseCurrencyCode;
+
+  /// 当前账本本地汇率快照；只用于转账等非收支记录的只读本位币比较。
+  final List<ExchangeRate> exchangeRates;
 
   /// 当前时间（相对时间窗如「本月」的基准）。
   final DateTime now;
@@ -695,13 +699,38 @@ class QueryTransactionsTool extends AiQueryTool {
         sortBy: sortBy,
         limit: limit.clamp(1, 100),
       ),
+      amountOf: (entry) => comparableEntryAmountInBase(
+        entry: entry,
+        accounts: ctx.accounts,
+        baseCurrencyCode: ctx.baseCurrencyCode,
+        rates: ctx.exchangeRates,
+      ),
     );
+    String amountSummary(LedgerEntry entry) {
+      if (entry.type != EntryType.transfer) {
+        return _baseMoney(ctx, entry.netBaseAmount);
+      }
+      final from = ctx.accounts
+          .where((account) => account.id == entry.accountId)
+          .firstOrNull;
+      final to = ctx.accounts
+          .where((account) => account.id == entry.toAccountId)
+          .firstOrNull;
+      final fromCode = from?.currencyCode ?? entry.currencyCode;
+      final fromAmount = entry.accountAmount ?? entry.amount;
+      final fromText = formatMoney(fromAmount, fromCode);
+      if (to == null || entry.toAccountAmount == null) {
+        return fromText;
+      }
+      return '$fromText → ${formatMoney(entry.toAccountAmount!, to.currencyCode)}';
+    }
+
     final detail = results
         .take(10)
         .map(
           (e) =>
               '${e.occurredAt.year}-${e.occurredAt.month}-${e.occurredAt.day} '
-              '${_typeLabel(e.type)} ${_baseMoney(ctx, e.netBaseAmount)}'
+              '${_typeLabel(e.type)} ${amountSummary(e)}'
               '${e.note.isEmpty ? '' : '（${e.note}）'}',
         )
         .join('；');

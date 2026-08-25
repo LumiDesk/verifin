@@ -278,6 +278,40 @@ CurrencyConversionResult convertCurrencyAmount({
   );
 }
 
+/// 交易列表/只读查询用于跨币种比较的本位币金额；不写回模型、不进入收支统计。
+/// 收支使用保存时冻结的本位币金额，转账才按交易日汇率临时折算转出端实际金额。
+double? comparableEntryAmountInBase({
+  required LedgerEntry entry,
+  required Iterable<Account> accounts,
+  required String baseCurrencyCode,
+  required Iterable<ExchangeRate> rates,
+}) {
+  switch (entry.type) {
+    case EntryType.expense:
+      return entry.netBaseAmount;
+    case EntryType.income:
+      return entry.baseAmount;
+    case EntryType.refund:
+      return entry.baseAmount;
+    case EntryType.transfer:
+      final sourceAccount = accounts
+          .where((account) => account.id == entry.accountId)
+          .firstOrNull;
+      final sourceCode = sourceAccount?.currencyCode ?? entry.currencyCode;
+      final sourceAmount = entry.accountAmount ?? entry.amount;
+      final result = convertCurrencyAmount(
+        amount: sourceAmount,
+        sourceCurrencyCode: sourceCode,
+        targetCurrencyCode: baseCurrencyCode,
+        baseCurrencyCode: baseCurrencyCode,
+        bookId: entry.bookId,
+        date: entry.occurredAt,
+        rates: rates,
+      );
+      return result is ConvertedCurrencyAmount ? result.amount : null;
+  }
+}
+
 bool isExchangeRateStale(
   ExchangeRate rate,
   DateTime asOf, {
