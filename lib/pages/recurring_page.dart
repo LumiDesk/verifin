@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
 import '../app/currency_catalog.dart';
 import '../app/currency_math.dart';
+import '../app/feedback.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
 import '../app/veri_fin_controller.dart';
@@ -187,13 +190,19 @@ class _RecurringRulesPageState extends State<RecurringRulesPage> {
     final controller = VeriFinScope.of(context);
     final generated = await controller.applyDueRecurring(DateTime.now());
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          generated < 0
-              ? AppLocalizations.of(context).saveFailed
-              : AppLocalizations.of(context).recurringGeneratedCount(generated),
-        ),
+    unawaited(
+      VeriFeedbackHost.of(context).showMessage(
+        message: generated < 0
+            ? AppLocalizations.of(context).saveFailed
+            : AppLocalizations.of(context).recurringGeneratedCount(generated),
+        tone: generated < 0 ? VeriFeedbackTone.error : VeriFeedbackTone.success,
+        duration: generated < 0
+            ? VeriFeedbackDuration.long
+            : VeriFeedbackDuration.standard,
+        priority: generated < 0
+            ? VeriFeedbackPriority.high
+            : VeriFeedbackPriority.normal,
+        dedupeKey: generated < 0 ? 'recurring-generate' : null,
       ),
     );
   }

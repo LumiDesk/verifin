@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
@@ -5,6 +7,7 @@ import '../app/app_theme.dart';
 import '../app/category_tree.dart';
 import '../app/common_widgets.dart';
 import '../app/entry_sheets.dart';
+import '../app/feedback.dart';
 import '../app/ledger_math.dart';
 import '../l10n/app_localizations.dart';
 import '../app/models.dart';
@@ -392,8 +395,11 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
         )
         .toList();
     if (candidates.isEmpty && topLevelLabel == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).noMoveTarget)),
+      unawaited(
+        VeriFeedbackHost.of(context).showMessage(
+          message: AppLocalizations.of(context).noMoveTarget,
+          tone: VeriFeedbackTone.warning,
+        ),
       );
       return Future<String?>.value();
     }
@@ -411,9 +417,12 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
     final l10n = AppLocalizations.of(context);
     // 有子分类无法整体合并，先引导处理子分类。
     if (controller.childCategories(category.id).isNotEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.moveSubFirst)));
+      unawaited(
+        VeriFeedbackHost.of(context).showMessage(
+          message: l10n.moveSubFirst,
+          tone: VeriFeedbackTone.warning,
+        ),
+      );
       return;
     }
     final targetId = await _pickCategoryTarget(
@@ -442,13 +451,18 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          changed < 0
-              ? l10n.mergeCategoryFailed
-              : l10n.mergedCategoryResult(changed, targetLabel),
-        ),
+    unawaited(
+      VeriFeedbackHost.of(context).showMessage(
+        message: changed < 0
+            ? l10n.mergeCategoryFailed
+            : l10n.mergedCategoryResult(changed, targetLabel),
+        tone: changed < 0 ? VeriFeedbackTone.error : VeriFeedbackTone.success,
+        duration: changed < 0
+            ? VeriFeedbackDuration.long
+            : VeriFeedbackDuration.standard,
+        priority: changed < 0
+            ? VeriFeedbackPriority.high
+            : VeriFeedbackPriority.normal,
       ),
     );
   }
@@ -470,9 +484,12 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
       selected == categoryPickerTopLevel ? null : selected,
     );
     if (!moved && mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.cannotMoveHere)));
+      unawaited(
+        VeriFeedbackHost.of(context).showMessage(
+          message: l10n.cannotMoveHere,
+          tone: VeriFeedbackTone.warning,
+        ),
+      );
     }
   }
 
@@ -504,44 +521,52 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
   Future<void> _deleteCategory(Category category) async {
     final controller = VeriFinScope.of(context);
     if (_isProtectedCategory(category.id)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).systemCategoryUndeletable),
+      unawaited(
+        VeriFeedbackHost.of(context).showMessage(
+          message: AppLocalizations.of(context).systemCategoryUndeletable,
+          tone: VeriFeedbackTone.warning,
         ),
       );
       return;
     }
     final usageCount = controller.categoryUsageCount(category.id);
     if (usageCount > 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).categoryInUse(usageCount)),
+      unawaited(
+        VeriFeedbackHost.of(context).showMessage(
+          message: AppLocalizations.of(context).categoryInUse(usageCount),
+          tone: VeriFeedbackTone.warning,
         ),
       );
       return;
     }
     final recurringCount = controller.categoryRecurringRuleCount(category.id);
     if (recurringCount > 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(
-              context,
-            ).categoryUsedByRecurring(recurringCount),
-          ),
+      unawaited(
+        VeriFeedbackHost.of(context).showMessage(
+          message: AppLocalizations.of(
+            context,
+          ).categoryUsedByRecurring(recurringCount),
+          tone: VeriFeedbackTone.warning,
+          duration: VeriFeedbackDuration.long,
         ),
       );
       return;
     }
     if (controller.childCategories(category.id).isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).moveSubFirst)),
+      unawaited(
+        VeriFeedbackHost.of(context).showMessage(
+          message: AppLocalizations.of(context).moveSubFirst,
+          tone: VeriFeedbackTone.warning,
+        ),
       );
       return;
     }
     if (controller.categoriesForType(category.type).length <= 1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).keepOneCategory)),
+      unawaited(
+        VeriFeedbackHost.of(context).showMessage(
+          message: AppLocalizations.of(context).keepOneCategory,
+          tone: VeriFeedbackTone.warning,
+        ),
       );
       return;
     }
@@ -560,9 +585,10 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
     }
     final deleted = controller.deleteCategory(category.id);
     if (!deleted && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).categoryUndeletable),
+      unawaited(
+        VeriFeedbackHost.of(context).showMessage(
+          message: AppLocalizations.of(context).categoryUndeletable,
+          tone: VeriFeedbackTone.warning,
         ),
       );
     }

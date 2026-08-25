@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
 import '../app/currency_catalog.dart';
 import '../app/currency_math.dart';
+import '../app/feedback.dart';
 import '../app/models.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
@@ -402,9 +405,15 @@ class _RateHistoryRow extends StatelessWidget {
     if (!context.mounted || !confirmed) return;
     final deleted = await VeriFinScope.of(context).deleteExchangeRate(rate.id);
     if (!context.mounted || deleted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(l10n.saveFailed)));
+    unawaited(
+      VeriFeedbackHost.of(context).showMessage(
+        message: l10n.saveFailed,
+        tone: VeriFeedbackTone.error,
+        duration: VeriFeedbackDuration.long,
+        priority: VeriFeedbackPriority.high,
+        dedupeKey: 'exchange-rate-save',
+      ),
+    );
   }
 }
 
@@ -442,8 +451,16 @@ Future<void> editExchangeRate({
     source: existing?.source ?? ExchangeRateSource.manual,
   );
   if (!context.mounted) return;
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(saved ? l10n.exchangeRateSaved : l10n.saveFailed)),
+  unawaited(
+    VeriFeedbackHost.of(context).showMessage(
+      message: saved ? l10n.exchangeRateSaved : l10n.saveFailed,
+      tone: saved ? VeriFeedbackTone.success : VeriFeedbackTone.error,
+      duration: saved
+          ? VeriFeedbackDuration.standard
+          : VeriFeedbackDuration.long,
+      priority: saved ? VeriFeedbackPriority.normal : VeriFeedbackPriority.high,
+      dedupeKey: saved ? null : 'exchange-rate-save',
+    ),
   );
 }
 

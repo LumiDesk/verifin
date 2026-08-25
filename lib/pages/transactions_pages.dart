@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
@@ -8,6 +10,7 @@ import '../app/common_widgets.dart';
 import '../app/currency_math.dart';
 import '../app/model_lookup.dart';
 import '../app/entry_sheets.dart';
+import '../app/feedback.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
 import '../app/series_math.dart';
@@ -868,11 +871,10 @@ class _TransactionsPageState extends State<TransactionsPage> {
       selected,
     );
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context).changedCategoryCount(changed),
-          ),
+      unawaited(
+        VeriFeedbackHost.of(context).showMessage(
+          message: AppLocalizations.of(context).changedCategoryCount(changed),
+          tone: VeriFeedbackTone.success,
         ),
       );
     }
@@ -899,11 +901,10 @@ class _TransactionsPageState extends State<TransactionsPage> {
       selected.id,
     );
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context).changedAccountCount(changed),
-          ),
+      unawaited(
+        VeriFeedbackHost.of(context).showMessage(
+          message: AppLocalizations.of(context).changedAccountCount(changed),
+          tone: VeriFeedbackTone.success,
         ),
       );
     }

@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
 import '../app/currency_catalog.dart';
+import '../app/feedback.dart';
 import '../l10n/app_localizations.dart';
 import '../app/models.dart';
 import '../app/veri_fin_scope.dart';
@@ -187,9 +190,10 @@ class _LedgerBookRow extends StatelessWidget {
       return;
     }
     if (controller.ledgerBookHasFinancialData(book.id)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).ledgerCurrencyLocked),
+      unawaited(
+        VeriFeedbackHost.of(context).showMessage(
+          message: AppLocalizations.of(context).ledgerCurrencyLocked,
+          tone: VeriFeedbackTone.warning,
         ),
       );
       return;
@@ -219,8 +223,14 @@ class _LedgerBookRow extends StatelessWidget {
       selected.code,
     );
     if (!context.mounted || saved) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AppLocalizations.of(context).saveFailed)),
+    unawaited(
+      VeriFeedbackHost.of(context).showMessage(
+        message: AppLocalizations.of(context).saveFailed,
+        tone: VeriFeedbackTone.error,
+        duration: VeriFeedbackDuration.long,
+        priority: VeriFeedbackPriority.high,
+        dedupeKey: 'ledger-currency-save',
+      ),
     );
   }
 

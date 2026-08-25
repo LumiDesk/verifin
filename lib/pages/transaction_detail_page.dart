@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
 import '../app/currency_catalog.dart';
 import '../app/currency_math.dart';
+import '../app/feedback.dart';
 import '../app/model_lookup.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
@@ -1060,9 +1062,10 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     }
     if (_type == EntryType.transfer &&
         (_toAccountId == null || _toAccountId == _accountId)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).transferNeedsTwoAccounts),
+      unawaited(
+        VeriFeedbackHost.of(context).showMessage(
+          message: AppLocalizations.of(context).transferNeedsTwoAccounts,
+          tone: VeriFeedbackTone.warning,
         ),
       );
       return false;

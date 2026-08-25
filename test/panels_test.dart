@@ -42,7 +42,8 @@ void main() {
     await tester.tap(find.byKey(const Key('panel_switch_budget')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('panel_switch_trend')));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 240));
     expect(find.text('至少保留一个开启的首页面板'), findsOneWidget);
 
     // 恢复日历面板,返回首页验证渲染与数量文案。

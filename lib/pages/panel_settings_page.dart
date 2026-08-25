@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
+import '../app/feedback.dart';
 import '../app/models.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
@@ -219,9 +222,10 @@ class _PanelSettingsPageState extends State<PanelSettingsPage> {
     }
     if (!enabled && _draftPanels.where((panel) => panel.enabled).length <= 1) {
       final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.panelKeepOneMessage(widget.kind.label(l10n))),
+      unawaited(
+        VeriFeedbackHost.of(context).showMessage(
+          message: l10n.panelKeepOneMessage(widget.kind.label(l10n)),
+          tone: VeriFeedbackTone.warning,
         ),
       );
       return;
