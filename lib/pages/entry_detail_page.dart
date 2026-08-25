@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 import '../app/ai/ai_entry_parser.dart';
 import '../app/app_theme.dart';
+import '../app/attachment_picker.dart';
 import '../app/category_suggest.dart';
 import '../app/category_tree.dart';
 import '../app/common_widgets.dart';
@@ -100,9 +103,6 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   bool _categoryTouched = false;
   bool _tagsTouched = false;
   bool _noteTouched = false;
-  // 分类快捷区内联展开的顶级分类 id：非空时其子分类面板展开。null 表示「跟随选中」——
-  // 选中的是子分类时自动展开其顶级祖先（保证已选子分类可见）；选中顶级则不展开。
-  String? _expandedTopId;
   // 防重复提交：极快双击「保存」可能在 pop 生效前触发两次、落两条交易。
   bool _saving = false;
   bool _saved = false;
@@ -516,7 +516,8 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       // 这里只是最后一道防线。
       _categoryId = categories.isEmpty ? '' : categories.first.id;
     }
-    // 分类快捷区：顶级分类作 chip，点有子分类的会就地展开子分类面板。
+    // 分类快捷区：顶级分类使用三列紧凑胶囊；选中分支有子分类时，右下角
+    // 的省略号进入现有多级分类选择器，不把子分类常驻铺在主页面。
     final rootCategoriesForType = categories
         .where((category) => category.parentId == null)
         .toList();
@@ -524,9 +525,9 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     final selectedTopId = selectedAncestors.isEmpty
         ? _categoryId
         : selectedAncestors.last;
-    // 展开的顶级：用户显式展开优先；否则选中的是子分类时自动展开其顶级祖先。
-    final expandedTopId =
-        _expandedTopId ?? (selectedAncestors.isNotEmpty ? selectedTopId : null);
+    final selectedCategory = categories
+        .where((category) => category.id == _categoryId)
+        .firstOrNull;
     // 大金额颜色跟随类型:支出红、收入青绿、转账保持蓝色。
     final amountColor = switch (_type) {
       EntryType.expense => veriExpense,
@@ -534,6 +535,16 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       EntryType.transfer => veriBlue,
       // 退款不在此页手动选择，仅作穷尽兜底（正向流入用青绿）。
       EntryType.refund => veriIncome,
+    };
+    final amountNumber = formatCurrencyNumber(
+      _amount,
+      _currencyCode ?? controller.activeBook.baseCurrencyCode,
+    );
+    final amountText = switch (_type) {
+      EntryType.expense => '− $amountNumber',
+      EntryType.income => '+ $amountNumber',
+      EntryType.transfer => amountNumber,
+      EntryType.refund => '+ $amountNumber',
     };
     _captureInitialSnapshot();
 
@@ -543,6 +554,10 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       popResult: () => _savedResult,
       exitController: _exitController,
       child: Scaffold(
+        bottomNavigationBar: _EntryBottomSaveBar(
+          enabled: _isDirty && _canSave(accounts),
+          onPressed: _saveAndExit,
+        ),
         body: SafeArea(
           child: Column(
             children: <Widget>[
@@ -557,36 +572,18 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         context,
                       ).entryDetailSubtitle,
                       showBack: true,
-                      actions: <Widget>[
-                        SaveHeaderAction(
-                          key: const Key('save_entry_button'),
-                          onPressed: _isDirty && _canSave(accounts)
-                              ? _saveAndExit
-                              : null,
-                        ),
-                      ],
                     ),
                     if (widget.initialDraft != null) ...<Widget>[
                       const SizedBox(height: 12),
                       _AiReviewBanner(draft: widget.initialDraft!),
                     ],
                     const SizedBox(height: 12),
-                    SegmentedButton<EntryType>(
+                    _EntryTypeSelector(
                       key: const Key('entry_type_segmented_button'),
-                      segments: EntryType.userSelectable
-                          .map(
-                            (type) => ButtonSegment<EntryType>(
-                              value: type,
-                              label: Text(
-                                type.label(AppLocalizations.of(context)),
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      selected: <EntryType>{_type},
-                      onSelectionChanged: (selection) {
+                      selected: _type,
+                      onChanged: (type) {
                         setState(() {
-                          _type = selection.first;
+                          _type = type;
                           _typeTouched = true;
                           // 同上：空列表时留空，不取 `.first` 以免抛异常白屏。
                           final next = _categoriesForType(controller, _type);
@@ -615,11 +612,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Text(
-                          formatCurrencyNumber(
-                            _amount,
-                            _currencyCode ??
-                                controller.activeBook.baseCurrencyCode,
-                          ),
+                          amountText,
                           style: Theme.of(context).textTheme.displayLarge
                               ?.copyWith(
                                 color: amountColor,
@@ -628,95 +621,43 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: ActionChip(
-                        key: const Key('entry_currency_button'),
-                        avatar: const Icon(Icons.currency_exchange, size: 18),
-                        label: Text(
-                          '${AppLocalizations.of(context).entryCurrencyLabel}: ${_currencyCode ?? controller.activeBook.baseCurrencyCode}',
-                        ),
-                        onPressed: _type == EntryType.transfer
-                            ? null
-                            : _pickCurrency,
-                      ),
-                    ),
-                    const Divider(height: 24),
+                    const SizedBox(height: 12),
                     Text(
                       AppLocalizations.of(context).commonCategory,
-                      style: Theme.of(context).textTheme.titleMedium,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: <Widget>[
-                        ..._visibleTopChips(
-                          rootCategoriesForType,
-                          selectedTopId,
-                        ).map((top) {
-                          final hasKids = categories.any(
-                            (c) => c.parentId == top.id,
-                          );
-                          final isExpanded = expandedTopId == top.id;
-                          return ChoiceChip(
-                            avatar: CategoryGlyph(
-                              iconCode: top.iconCode,
-                              size: 18,
-                            ),
-                            label: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                Text(top.label),
-                                if (hasKids) ...<Widget>[
-                                  const SizedBox(width: 2),
-                                  Icon(
-                                    isExpanded
-                                        ? Icons.expand_more
-                                        : Icons.chevron_right,
-                                    size: 16,
-                                  ),
-                                ],
-                              ],
-                            ),
-                            selected: _categoryId == top.id,
-                            onSelected: (_) {
-                              setState(() {
-                                _categoryId = top.id;
-                                _categoryTouched = true;
-                                // 有子分类：点一下展开、再点收起；无子分类：选中并收起面板。
-                                _expandedTopId = hasKids && !isExpanded
-                                    ? top.id
-                                    : null;
-                              });
-                            },
-                          );
-                        }),
-                        ActionChip(
-                          avatar: const Icon(Icons.more_horiz, size: 18),
-                          label: Text(AppLocalizations.of(context).allLabel),
-                          onPressed: _showAllCategories,
-                        ),
-                      ],
-                    ),
-                    if (expandedTopId != null)
-                      _SubcategoryPanel(
-                        parent: categories.firstWhere(
-                          (c) => c.id == expandedTopId,
-                          orElse: () => categories.first,
-                        ),
-                        children: categories
-                            .where((c) => c.parentId == expandedTopId)
-                            .toList(),
-                        selectedId: _categoryId,
-                        onSelected: (id) {
-                          setState(() {
-                            _categoryId = id;
-                            _categoryTouched = true;
-                          });
-                        },
+                    _EntryCategoryGrid(
+                      categories: _visibleTopChips(
+                        rootCategoriesForType,
+                        selectedTopId,
                       ),
+                      selectedTopId: selectedTopId,
+                      selectedLabel: selectedCategory?.label,
+                      accent: amountColor,
+                      hasChildren: (category) => categories.any(
+                        (candidate) => candidate.parentId == category.id,
+                      ),
+                      onSelected: (category) {
+                        final hasKids = categories.any(
+                          (candidate) => candidate.parentId == category.id,
+                        );
+                        if (selectedTopId == category.id && hasKids) {
+                          unawaited(_showCategoryBranch(category, categories));
+                          return;
+                        }
+                        setState(() {
+                          _categoryId = category.id;
+                          _categoryTouched = true;
+                        });
+                      },
+                      onOpenBranch: (category) =>
+                          unawaited(_showCategoryBranch(category, categories)),
+                      onOpenAll: () => unawaited(_showAllCategories()),
+                      allLabel: AppLocalizations.of(context).allLabel,
+                    ),
                     const SizedBox(height: 18),
                     if (hasAccounts && _type == EntryType.transfer) ...<Widget>[
                       SelectField(
@@ -809,59 +750,143 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                       ),
                     ),
                     const SizedBox(height: 14),
+                    Text(
+                      AppLocalizations.of(context).entryMoreInfo,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.48),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                      key: const Key('entry_metadata_chips'),
+                      spacing: 7,
+                      runSpacing: 7,
                       children: <Widget>[
-                        ActionChip(
-                          avatar: const Icon(Icons.calendar_today, size: 18),
+                        _EntryMetadataChip(
+                          chipKey: const Key('entry_metadata_date'),
+                          icon: Icons.calendar_today_outlined,
                           label: Text(
                             AppLocalizations.of(
                               context,
                             ).dateMonthDay(_occurredAt),
                           ),
-                          onPressed: _pickDate,
+                          onTap: _pickDate,
                         ),
-                        ActionChip(
-                          avatar: const Icon(Icons.schedule, size: 18),
+                        _EntryMetadataChip(
+                          chipKey: const Key('entry_metadata_time'),
+                          icon: Icons.schedule_rounded,
                           label: Text(formatTime(_occurredAt)),
-                          onPressed: _pickTime,
+                          onTap: _pickTime,
+                        ),
+                        _EntryMetadataChip(
+                          chipKey: const Key('entry_metadata_tags'),
+                          icon: Icons.sell_outlined,
+                          label: Text(
+                            _tagIds.isEmpty
+                                ? AppLocalizations.of(context).tagLabel
+                                : AppLocalizations.of(
+                                    context,
+                                  ).entryTagCount(_tagIds.length),
+                          ),
+                          selected: _tagIds.isNotEmpty,
+                          onTap: _pickTags,
+                        ),
+                        if (_type == EntryType.expense)
+                          _EntryMetadataChip(
+                            chipKey: const Key('entry_metadata_reimbursable'),
+                            icon: Icons.receipt_long_outlined,
+                            label: Text(
+                              AppLocalizations.of(context).badgeReimbursable,
+                            ),
+                            selected: _reimbursable,
+                            onTap: () =>
+                                setState(() => _reimbursable = !_reimbursable),
+                          ),
+                        if (!_isDraft)
+                          VeriAnchoredMenuAnchor(
+                            entries: <VeriMenuEntry>[
+                              VeriMenuItem(
+                                id: 'entry_attachment_camera',
+                                icon: Icons.photo_camera_outlined,
+                                title: AppLocalizations.of(
+                                  context,
+                                ).attachTakePhoto,
+                                enabled: attachmentPickingSupported,
+                                onPressed: () =>
+                                    unawaited(_addAttachment(fromCamera: true)),
+                              ),
+                              VeriMenuItem(
+                                id: 'entry_attachment_gallery',
+                                icon: Icons.photo_library_outlined,
+                                title: AppLocalizations.of(
+                                  context,
+                                ).attachFromGallery,
+                                enabled: attachmentPickingSupported,
+                                onPressed: () => unawaited(
+                                  _addAttachment(fromCamera: false),
+                                ),
+                              ),
+                            ],
+                            semanticLabel: AppLocalizations.of(
+                              context,
+                            ).attachTitle,
+                            width: 196,
+                            builder: (context, openMenu, menuOpen) =>
+                                _EntryMetadataChip(
+                                  chipKey: const Key(
+                                    'entry_metadata_attachments',
+                                  ),
+                                  icon: Icons.add_photo_alternate_outlined,
+                                  label: Text(
+                                    _pendingAttachments.isEmpty
+                                        ? AppLocalizations.of(
+                                            context,
+                                          ).attachTitle
+                                        : AppLocalizations.of(
+                                            context,
+                                          ).entryAttachmentCount(
+                                            _pendingAttachments.length,
+                                          ),
+                                  ),
+                                  selected:
+                                      _pendingAttachments.isNotEmpty ||
+                                      menuOpen,
+                                  onTap: attachmentPickingSupported
+                                      ? openMenu
+                                      : null,
+                                ),
+                          ),
+                        _EntryMetadataChip(
+                          chipKey: const Key('entry_currency_button'),
+                          icon: Icons.currency_exchange_rounded,
+                          label: Text(
+                            _currencyCode ??
+                                controller.activeBook.baseCurrencyCode,
+                          ),
+                          selected:
+                              (_currencyCode ??
+                                  controller.activeBook.baseCurrencyCode) !=
+                              controller.activeBook.baseCurrencyCode,
+                          onTap: _type == EntryType.transfer
+                              ? null
+                              : _pickCurrency,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
-                    EntryTagField(
-                      tagIds: _tagIds,
-                      tagLabelOf: (id) =>
-                          controller.tagById(id)?.label ?? _extraTagLabel(id),
-                      onTap: _pickTags,
-                    ),
-                    if (_type == EntryType.expense) ...<Widget>[
-                      const SizedBox(height: 6),
-                      Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: Text(
-                              AppLocalizations.of(context).markReimbursable,
-                            ),
-                          ),
-                          Switch(
-                            value: _reimbursable,
-                            onChanged: (value) =>
-                                setState(() => _reimbursable = value),
-                          ),
-                        ],
-                      ),
-                    ],
-                    // 导入草稿编辑不涉及图片附件（附件在正式落库后按 id 关联）。
-                    if (!_isDraft) ...<Widget>[
-                      const Divider(height: 24),
+                    if (!_isDraft &&
+                        _pendingAttachments.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 10),
                       AttachmentsEditor(
                         dataUrls: _pendingAttachments,
                         onAddDataUrl: (dataUrl) =>
                             setState(() => _pendingAttachments.add(dataUrl)),
                         onRemoveIndex: (index) =>
                             setState(() => _pendingAttachments.removeAt(index)),
+                        showHeader: false,
+                        showAddButton: false,
                       ),
                     ],
                   ],
@@ -1231,6 +1256,26 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     });
   }
 
+  Future<void> _showCategoryBranch(
+    Category root,
+    List<Category> categories,
+  ) async {
+    final branchIds = <String>{root.id, ...descendantIds(categories, root.id)};
+    final selected = await showCategoryPickerSheet(
+      context,
+      categories: categories
+          .where((category) => branchIds.contains(category.id))
+          .toList(),
+      selectedId: _categoryId,
+      title: AppLocalizations.of(context).entryCategoryBranchTitle(root.label),
+    );
+    if (!mounted || selected == null) return;
+    setState(() {
+      _categoryId = selected;
+      _categoryTouched = true;
+    });
+  }
+
   Future<void> _pickAccount(List<Account> accounts) async {
     final isTransfer = _type == EntryType.transfer;
     final selected = await showAccountPickerSheet(
@@ -1392,19 +1437,10 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     });
   }
 
-  /// 草稿模式下临时标签（导入待新建）的名称，供展示解析——这些标签尚未落库，
-  /// controller 查不到，故回退到 [EntryDetailPage.draftExtraTags]。
-  String? _extraTagLabel(String id) {
-    final extras = widget.draftExtraTags;
-    if (extras == null) {
-      return null;
-    }
-    for (final tag in extras) {
-      if (tag.id == id) {
-        return tag.label;
-      }
-    }
-    return null;
+  Future<void> _addAttachment({required bool fromCamera}) async {
+    final dataUrl = await pickAttachmentDataUrl(fromCamera: fromCamera);
+    if (!mounted || dataUrl == null || dataUrl.isEmpty) return;
+    setState(() => _pendingAttachments.add(dataUrl));
   }
 
   Future<void> _pickTags() async {
@@ -1637,68 +1673,396 @@ String aiDraftWarningLabel(AppLocalizations l10n, AiDraftWarning warning) {
   }
 }
 
-/// 记账页分类快捷区里，某个顶级分类展开后的子分类面板：淡色卡片 + 父级名 + 子分类 chip。
-class _SubcategoryPanel extends StatelessWidget {
-  const _SubcategoryPanel({
-    required this.parent,
-    required this.children,
-    required this.selectedId,
-    required this.onSelected,
-  });
+class _EntryBottomSaveBar extends StatelessWidget {
+  const _EntryBottomSaveBar({required this.enabled, required this.onPressed});
 
-  final Category parent;
-  final List<Category> children;
-  final String selectedId;
-  final ValueChanged<String> onSelected;
+  final bool enabled;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    if (children.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      margin: const EdgeInsets.only(top: 10),
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.04)
-            : veriRoyal.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(veriRadiusMd),
-        border: Border.all(
-          color: Theme.of(
-            context,
-          ).colorScheme.onSurface.withValues(alpha: 0.06),
+    return SafeArea(
+      top: false,
+      child: ColoredBox(
+        key: const Key('entry_bottom_save_bar'),
+        color: Theme.of(context).colorScheme.surface,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+          child: FilledButton(
+            key: const Key('save_entry_button'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(50),
+              shape: const StadiumBorder(),
+              textStyle: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            onPressed: enabled ? onPressed : null,
+            child: Text(AppLocalizations.of(context).commonSave),
+          ),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            parent.label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.5),
-              fontWeight: FontWeight.w700,
+    );
+  }
+}
+
+class _EntryTypeSelector extends StatelessWidget {
+  const _EntryTypeSelector({
+    super.key,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final EntryType selected;
+  final ValueChanged<EntryType> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(veriRadiusMd),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(3),
+        child: Row(
+          children: <Widget>[
+            for (final type in EntryType.userSelectable)
+              Expanded(
+                child: _EntryTypeButton(
+                  type: type,
+                  selected: selected == type,
+                  onTap: () => onChanged(type),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EntryTypeButton extends StatelessWidget {
+  const _EntryTypeButton({
+    required this.type,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final EntryType type;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final accent = switch (type) {
+      EntryType.expense => veriExpense,
+      EntryType.income => veriIncome,
+      EntryType.transfer => veriRoyal,
+      EntryType.refund => veriIncome,
+    };
+    return Material(
+      key: selected ? Key('entry_type_selected_${type.name}') : null,
+      color: selected ? scheme.surface : Colors.transparent,
+      borderRadius: BorderRadius.circular(veriRadiusSm),
+      child: InkWell(
+        key: Key('entry_type_${type.name}'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(veriRadiusSm),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          child: Text(
+            type.label(AppLocalizations.of(context)),
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: selected
+                  ? accent
+                  : scheme.onSurface.withValues(alpha: 0.48),
+              fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: children
-                .map(
-                  (child) => ChoiceChip(
-                    avatar: CategoryGlyph(iconCode: child.iconCode, size: 18),
-                    label: Text(child.label),
-                    selected: selectedId == child.id,
-                    onSelected: (_) => onSelected(child.id),
+        ),
+      ),
+    );
+  }
+}
+
+class _EntryCategoryGrid extends StatelessWidget {
+  const _EntryCategoryGrid({
+    required this.categories,
+    required this.selectedTopId,
+    required this.selectedLabel,
+    required this.accent,
+    required this.hasChildren,
+    required this.onSelected,
+    required this.onOpenBranch,
+    required this.onOpenAll,
+    required this.allLabel,
+  });
+
+  final List<Category> categories;
+  final String selectedTopId;
+  final String? selectedLabel;
+  final Color accent;
+  final bool Function(Category category) hasChildren;
+  final ValueChanged<Category> onSelected;
+  final ValueChanged<Category> onOpenBranch;
+  final VoidCallback onOpenAll;
+  final String allLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      key: const Key('entry_category_grid'),
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: categories.length + 1,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 6,
+        mainAxisExtent: 40,
+      ),
+      itemBuilder: (context, index) {
+        if (index == categories.length) {
+          return _EntryAllCategoryTile(label: allLabel, onTap: onOpenAll);
+        }
+        final category = categories[index];
+        final selected = selectedTopId == category.id;
+        return _EntryCategoryTile(
+          category: category,
+          displayLabel:
+              selected && selectedLabel != null && selectedLabel!.isNotEmpty
+              ? selectedLabel!
+              : category.label,
+          selected: selected,
+          accent: accent,
+          onTap: () => onSelected(category),
+          onOpenBranch: selected && hasChildren(category)
+              ? () => onOpenBranch(category)
+              : null,
+        );
+      },
+    );
+  }
+}
+
+class _EntryCategoryTile extends StatelessWidget {
+  const _EntryCategoryTile({
+    required this.category,
+    required this.displayLabel,
+    required this.selected,
+    required this.accent,
+    required this.onTap,
+    required this.onOpenBranch,
+  });
+
+  final Category category;
+  final String displayLabel;
+  final bool selected;
+  final Color accent;
+  final VoidCallback onTap;
+  final VoidCallback? onOpenBranch;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        Align(
+          child: SizedBox(
+            height: 31,
+            width: double.infinity,
+            child: AnimatedContainer(
+              key: selected
+                  ? Key('entry_category_selected_${category.id}')
+                  : null,
+              duration: const Duration(milliseconds: 160),
+              decoration: ShapeDecoration(
+                color: selected
+                    ? accent.withValues(alpha: 0.08)
+                    : scheme.surfaceContainerLow,
+                shape: StadiumBorder(
+                  side: BorderSide(
+                    color: selected
+                        ? accent.withValues(alpha: 0.50)
+                        : scheme.outlineVariant.withValues(alpha: 0.58),
                   ),
-                )
-                .toList(),
+                ),
+              ),
+              child: Material(
+                key: Key('entry_category_capsule_${category.id}'),
+                color: Colors.transparent,
+                shape: const StadiumBorder(),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  key: Key('entry_category_${category.id}'),
+                  customBorder: const StadiumBorder(),
+                  onTap: onTap,
+                  child: Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        CategoryGlyph(iconCode: category.iconCode, size: 16),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            displayLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(
+                                  color: selected ? accent : scheme.onSurface,
+                                  fontWeight: selected
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
-        ],
+        ),
+        if (onOpenBranch != null)
+          Positioned(
+            right: -1,
+            bottom: 0,
+            child: Material(
+              color: accent,
+              elevation: 1,
+              shape: const CircleBorder(),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                key: Key('entry_category_more_${category.id}'),
+                customBorder: const CircleBorder(),
+                onTap: onOpenBranch,
+                child: const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: Icon(
+                    Icons.more_horiz_rounded,
+                    size: 13,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _EntryAllCategoryTile extends StatelessWidget {
+  const _EntryAllCategoryTile({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Align(
+      child: SizedBox(
+        height: 31,
+        width: double.infinity,
+        child: Material(
+          color: scheme.surfaceContainerLow,
+          shape: const StadiumBorder(),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            key: const Key('entry_category_all'),
+            customBorder: const StadiumBorder(),
+            onTap: onTap,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Icon(
+                  Icons.grid_view_rounded,
+                  size: 16,
+                  color: scheme.onSurface.withValues(alpha: 0.48),
+                ),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.56),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EntryMetadataChip extends StatelessWidget {
+  const _EntryMetadataChip({
+    required this.chipKey,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.selected = false,
+  });
+
+  final Key chipKey;
+  final IconData icon;
+  final Widget label;
+  final VoidCallback? onTap;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final color = selected ? veriRoyal : scheme.onSurface;
+    return Material(
+      color: selected
+          ? veriRoyal.withValues(alpha: 0.10)
+          : scheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(13),
+      child: InkWell(
+        key: chipKey,
+        borderRadius: BorderRadius.circular(13),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(
+                icon,
+                size: 16,
+                color: color.withValues(alpha: onTap == null ? 0.36 : 0.72),
+              ),
+              const SizedBox(width: 5),
+              DefaultTextStyle.merge(
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: color.withValues(
+                    alpha: onTap == null ? 0.36 : (selected ? 0.92 : 0.68),
+                  ),
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                ),
+                child: label,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

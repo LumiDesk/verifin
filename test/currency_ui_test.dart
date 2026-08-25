@@ -235,7 +235,18 @@ void main() {
       const EntryDetailPage(initialAmount: 10, initialAccountId: 'usd-cash'),
     );
 
-    expect(find.text('交易币种: USD'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('entry_currency_button')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('entry_currency_button')),
+        matching: find.text('USD'),
+      ),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('entry_base_amount')), findsOneWidget);
     expect(find.text('72 ¥'), findsOneWidget);
     await tester.ensureVisible(find.byKey(const Key('save_entry_button')));
@@ -295,6 +306,11 @@ void main() {
     await tester.tap(find.text('转账'));
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('entry_to_account_amount')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.byKey(const Key('entry_to_account_amount')), findsOneWidget);
     expect(find.text('72 ¥'), findsOneWidget);
     await tester.ensureVisible(find.byKey(const Key('save_entry_button')));

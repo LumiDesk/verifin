@@ -36,8 +36,8 @@ void main() {
     await tester.tap(find.byKey(const Key('number_pad_ok')));
     await tester.pumpAndSettle();
 
-    // 落到记账页，大金额为 1300。
-    expect(find.text('1300'), findsOneWidget);
+    // 落到记账页，默认支出的大金额带负号。
+    expect(find.text('− 1300'), findsOneWidget);
   });
 
   testWidgets('不完整算式提示且不可确认', (tester) async {

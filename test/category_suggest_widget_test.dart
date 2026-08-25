@@ -38,20 +38,25 @@ void main() {
     await tester.enterText(find.byKey(const Key('entry_note_field')), '打车上班');
     await tester.pump();
 
-    final chip = tester.widget<ChoiceChip>(
-      find.widgetWithText(ChoiceChip, '交通'),
+    expect(
+      find.byKey(const Key('entry_category_selected_transport')),
+      findsOneWidget,
     );
-    expect(chip.selected, isTrue);
 
     // 用户手动改选餐饮后，不再被自动识别覆盖。
-    await tester.tap(find.widgetWithText(ChoiceChip, '餐饮'));
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('entry_category_dining')),
+      -200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const Key('entry_category_dining')));
     await tester.pump();
     await tester.enterText(find.byKey(const Key('entry_note_field')), '打车回家');
     await tester.pump();
-    final dining = tester.widget<ChoiceChip>(
-      find.widgetWithText(ChoiceChip, '餐饮'),
+    expect(
+      find.byKey(const Key('entry_category_selected_dining')),
+      findsOneWidget,
     );
-    expect(dining.selected, isTrue);
   });
 
   testWidgets('re-entering a learned amount infers type, category and note', (
@@ -89,15 +94,12 @@ void main() {
     await tester.tap(find.byKey(const Key('number_pad_ok')));
     await tester.pumpAndSettle();
 
-    final segmented = tester.widget<SegmentedButton<EntryType>>(
-      find.byKey(const Key('entry_type_segmented_button')),
-    );
-    expect(segmented.selected, <EntryType>{EntryType.income});
+    expect(find.byKey(const Key('entry_type_selected_income')), findsOneWidget);
 
-    final interest = tester.widget<ChoiceChip>(
-      find.widgetWithText(ChoiceChip, '利息'),
+    expect(
+      find.byKey(const Key('entry_category_selected_interest')),
+      findsOneWidget,
     );
-    expect(interest.selected, isTrue);
 
     final note = tester.widget<TextField>(
       find.byKey(const Key('entry_note_field')),
@@ -144,15 +146,15 @@ void main() {
     await tester.pumpAndSettle();
 
     // 关掉后一切保持默认：类型仍是支出，备注仍为空。
-    final segmented = tester.widget<SegmentedButton<EntryType>>(
-      find.byKey(const Key('entry_type_segmented_button')),
+    expect(
+      find.byKey(const Key('entry_type_selected_expense')),
+      findsOneWidget,
     );
-    expect(segmented.selected, <EntryType>{EntryType.expense});
     final note = tester.widget<TextField>(
       find.byKey(const Key('entry_note_field')),
     );
     expect(note.controller?.text, isEmpty);
-    expect(find.widgetWithText(ChoiceChip, '利息'), findsNothing);
+    expect(find.byKey(const Key('entry_category_interest')), findsNothing);
   });
 
   // issue #26：历史里有金额相近的退款条目时，记账页此前会被自动识别翻成「退款」
@@ -206,10 +208,10 @@ void main() {
 
     // 页面正常渲染（不白屏），且类型没被翻成退款。
     expect(tester.takeException(), isNull);
-    final segmented = tester.widget<SegmentedButton<EntryType>>(
-      find.byKey(const Key('entry_type_segmented_button')),
+    expect(
+      find.byKey(const Key('entry_type_selected_expense')),
+      findsOneWidget,
     );
-    expect(segmented.selected, <EntryType>{EntryType.expense});
     // 退款条目的备注也不该被带出。
     final noteField = tester.widget<TextField>(
       find.byKey(const Key('entry_note_field')),

@@ -120,7 +120,7 @@ void main() {
     await createQuickEntry(tester);
 
     expect(find.byKey(const Key('save_entry_button')), findsOneWidget);
-    expect(find.text('45'), findsAtLeastNWidgets(1));
+    expect(find.text('− 45'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('save_entry_button')));
     await tester.pumpAndSettle();
@@ -518,8 +518,13 @@ void main() {
     await tapBottomTab(tester, 0);
     await createQuickEntry(tester);
 
-    // 记账表单里点击「添加标签」行，勾选「必要」，完成。
-    await tester.tap(find.text('添加标签'));
+    // 记账表单在「更多信息」中打开标签选择器，勾选「必要」，完成。
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('entry_metadata_tags')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const Key('entry_metadata_tags')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('必要'));
     await tester.pumpAndSettle();

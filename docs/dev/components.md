@@ -89,6 +89,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `groupEntriesByDate` / `relativeDay` | 纯函数 | `common_widgets.dart` | 按日分组、日期倒序 / 相对今天；`DateEntryGroup` 分组模型 |
 | `CalendarPreview` | Widget | `common_widgets.dart` | 月历预览（内建月份切换 + 日收支）；必传 `currencyCode`，卡片右下角显示轻量单位提示 |
 | `EntryTagField` | Widget | `common_widgets.dart` | 记账表单标签行 |
+| `AttachmentsEditor` | Widget | `attachments_editor.dart` | 多图片附件横向缩略图、全屏查看和逐张删除；默认自带标题与拍照/相册添加入口，记账页的轻量元数据布局通过 `showHeader:false` / `showAddButton:false` 只复用缩略图条，添加入口由页面标签触发 |
 | `TagSelectorSheet` / `pickEntryTags` | Widget / Sheet 函数 | `entry_sheets.dart` / `sheets.dart` | 交易标签多选（即时新建）/ 接 controller 的弹窗封装 |
 | `RefundSection` / `showRefundSheet` | Widget / Sheet 函数 | `refund_editor.dart` | 支出详情页的受控「退款」草稿区（列退款明细+净支出+添加）/ 添加·编辑退款弹窗（金额截剩余可退、到账账户、已到账开关+到账日期、发起日期、备注、删除）；Sheet 保存只回传父交易草稿，交易页最终与本体、附件原子保存。待退款清单独立编辑时由调用方在 Sheet 确认后提交 |
 | `PendingRefundsPage` | Widget | `pending_refunds_page.dart` | 「待退款」清单页（汇总当前账本所有待到账退款、一键标记已到账核销）；入口在交易列表页头 |

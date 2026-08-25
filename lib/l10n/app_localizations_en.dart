@@ -1126,6 +1126,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get entryDetailSubtitle => 'Entry detail';
 
   @override
+  String get entryMoreInfo => 'More details';
+
+  @override
+  String entryTagCount(int count) {
+    return 'Tags $count';
+  }
+
+  @override
+  String entryAttachmentCount(int count) {
+    return 'Attachments $count';
+  }
+
+  @override
+  String entryCategoryBranchTitle(String category) {
+    return 'Choose a $category category';
+  }
+
+  @override
   String get commonCategory => 'Category';
 
   @override

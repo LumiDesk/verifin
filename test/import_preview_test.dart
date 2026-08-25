@@ -621,13 +621,14 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      // 标签字段在表单下方（懒加载 ListView），滚动到可见处再断言。
+      // 标签入口在「更多信息」中；打开现有选择器后，临时标签仍按名称展示。
       await tester.scrollUntilVisible(
-        find.text('代购'),
+        find.byKey(const Key('entry_metadata_tags')),
         200,
         scrollable: find.byType(Scrollable).first,
       );
-      // 显示临时标签名，且未回退成空态占位。
+      await tester.tap(find.byKey(const Key('entry_metadata_tags')));
+      await tester.pumpAndSettle();
       expect(find.text('代购'), findsOneWidget);
     });
   });
