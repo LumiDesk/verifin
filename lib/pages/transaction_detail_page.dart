@@ -7,6 +7,7 @@ import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
 import '../app/currency_catalog.dart';
 import '../app/currency_math.dart';
+import '../app/entry_currency_draft.dart';
 import '../app/feedback.dart';
 import '../app/model_lookup.dart';
 import '../app/ledger_math.dart';
@@ -701,9 +702,44 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       return;
     }
     setState(() {
-      _amount = normalizeCurrencyAmount(amount, _currencyCode);
       final controller = VeriFinScope.of(context);
-      _resolveCurrencyAmounts(controller, controller.accounts);
+      final previousAmount = _amount;
+      _amount = normalizeCurrencyAmount(amount, _currencyCode);
+      if (_conversionSource == ConversionSource.manual ||
+          _conversionSource == ConversionSource.imported ||
+          _conversionSource == ConversionSource.legacy) {
+        final account = _findAccount(controller.accounts, _accountId);
+        final toAccount = _findAccount(controller.accounts, _toAccountId);
+        if (!_noAccount && account != null) {
+          _accountAmount = scaleDependentCurrencyAmount(
+            dependentAmount: _accountAmount,
+            previousOriginalAmount: previousAmount,
+            nextOriginalAmount: _amount,
+            targetCurrencyCode: account.currencyCode,
+          );
+          _accountAmountTouched = true;
+        }
+        if (toAccount != null) {
+          _toAccountAmount = scaleDependentCurrencyAmount(
+            dependentAmount: _toAccountAmount,
+            previousOriginalAmount: previousAmount,
+            nextOriginalAmount: _amount,
+            targetCurrencyCode: toAccount.currencyCode,
+          );
+          _toAccountAmountTouched = true;
+        }
+        _baseAmount =
+            scaleDependentCurrencyAmount(
+              dependentAmount: _baseAmount,
+              previousOriginalAmount: previousAmount,
+              nextOriginalAmount: _amount,
+              targetCurrencyCode: controller.activeBook.baseCurrencyCode,
+            ) ??
+            0;
+        _baseAmountTouched = true;
+      } else {
+        _resolveCurrencyAmounts(controller, controller.accounts);
+      }
     });
   }
 
@@ -1117,7 +1153,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       return false;
     }
     _saving = true;
-    final saved = await VeriFinScope.of(context).saveEntryAggregateDraft(
+    final result = await VeriFinScope.of(context).saveEntryAggregateDraftResult(
       entry: _buildEntry(),
       isNew: false,
       refunds: _refunds,
@@ -1129,7 +1165,16 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     if (mounted) {
       _saving = false;
     }
-    return saved;
+    if (result is EntrySaveValidationFailure && mounted) {
+      unawaited(
+        VeriFeedbackHost.of(context).showMessage(
+          message: AppLocalizations.of(context).entrySaveValidationFailed,
+          tone: VeriFeedbackTone.warning,
+          duration: VeriFeedbackDuration.long,
+        ),
+      );
+    }
+    return result.isSuccess;
   }
 
   Future<void> _delete() async {

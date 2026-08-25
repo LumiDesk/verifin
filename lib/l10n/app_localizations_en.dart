@@ -4052,6 +4052,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'The original currency is locked because this transaction has refunds. Resolve the linked refunds first.';
 
   @override
+  String get entrySaveValidationFailed =>
+      'The transaction amounts, currencies, or linked data are incomplete. Review them and try again.';
+
+  @override
+  String get importValidationFailed =>
+      'The imported amounts, currencies, or links are incomplete. No ledger data was written.';
+
+  @override
   String entryConversionRateTrace(String date, String status) {
     return 'Using local rates effective $date$status';
   }

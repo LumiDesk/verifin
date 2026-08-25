@@ -434,6 +434,36 @@ void main() {
 
   test('退款原币限额与本位币净额缓存分开计算', () async {
     final controller = await controllerWith(InMemoryLedgerRepository());
+    controller
+      ..addAccount(
+        Account(
+          id: 'usd-account',
+          bookId: controller.activeBook.id,
+          name: '美元账户',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 0,
+          iconCode: 'cash',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+          currencyCode: 'USD',
+        ),
+      )
+      ..addAccount(
+        Account(
+          id: 'cny-account',
+          bookId: controller.activeBook.id,
+          name: '人民币账户',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 0,
+          iconCode: 'cash',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+        ),
+      );
     final expense = LedgerEntry(
       id: 'expense',
       bookId: controller.activeBook.id,

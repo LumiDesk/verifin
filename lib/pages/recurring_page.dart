@@ -6,6 +6,7 @@ import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
 import '../app/currency_catalog.dart';
 import '../app/currency_math.dart';
+import '../app/entry_currency_draft.dart';
 import '../app/feedback.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
@@ -818,9 +819,42 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
       return;
     }
     setState(() {
-      _amount = normalizeCurrencyAmount(amount, _currencyCode);
       final controller = VeriFinScope.of(context);
-      _resolveAmounts(controller, controller.accounts);
+      final previousAmount = _amount;
+      _amount = normalizeCurrencyAmount(amount, _currencyCode);
+      if (_ratePolicy == RecurringRatePolicy.fixedAmounts) {
+        final account = _findAccount(controller.accounts, _accountId);
+        final toAccount = _findAccount(controller.accounts, _toAccountId);
+        if (account != null) {
+          _accountAmount = scaleDependentCurrencyAmount(
+            dependentAmount: _accountAmount,
+            previousOriginalAmount: previousAmount,
+            nextOriginalAmount: _amount,
+            targetCurrencyCode: account.currencyCode,
+          );
+          _accountAmountTouched = true;
+        }
+        if (toAccount != null) {
+          _toAccountAmount = scaleDependentCurrencyAmount(
+            dependentAmount: _toAccountAmount,
+            previousOriginalAmount: previousAmount,
+            nextOriginalAmount: _amount,
+            targetCurrencyCode: toAccount.currencyCode,
+          );
+          _toAccountAmountTouched = true;
+        }
+        _baseAmount =
+            scaleDependentCurrencyAmount(
+              dependentAmount: _baseAmount,
+              previousOriginalAmount: previousAmount,
+              nextOriginalAmount: _amount,
+              targetCurrencyCode: controller.activeBook.baseCurrencyCode,
+            ) ??
+            0;
+        _baseAmountTouched = true;
+      } else {
+        _resolveAmounts(controller, controller.accounts);
+      }
     });
   }
 

@@ -108,6 +108,32 @@ void main() {
   });
 
   group('applyImportEntries（落库被引用子集）', () {
+    test('金额或账户引用不合法时拒绝整批且不写入', () async {
+      final controller = await makeController();
+      final before = controller.entries.length;
+      final applied = controller.applyImportEntries(
+        entries: <LedgerEntry>[
+          LedgerEntry(
+            id: 'invalid-import',
+            bookId: controller.activeBook.id,
+            type: EntryType.expense,
+            amount: 10,
+            accountAmount: 10,
+            baseAmount: 10,
+            categoryId: 'dining',
+            accountId: 'missing-account',
+            note: '',
+            occurredAt: DateTime(2026, 8, 25),
+          ),
+        ],
+        candidateAccounts: const <Account>[],
+        candidateCategories: const <Category>[],
+      );
+
+      expect(applied, isFalse);
+      expect(controller.entries.length, before);
+    });
+
     test('全部保留：交易与其引用的新账户/分类都落地', () async {
       final controller = await makeController();
       final beforeEntries = controller.entries.length;

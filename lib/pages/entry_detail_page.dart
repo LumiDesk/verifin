@@ -11,6 +11,8 @@ import '../app/category_tree.dart';
 import '../app/common_widgets.dart';
 import '../app/currency_catalog.dart';
 import '../app/currency_math.dart';
+import '../app/entry_currency_draft.dart';
+import '../app/feedback.dart';
 import '../app/model_lookup.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
@@ -1149,11 +1151,44 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     }
 
     setState(() {
+      final previousAmount = _amount;
       _amount = normalizeCurrencyAmount(amount, code);
-      _refreshCurrencyAmounts(
-        VeriFinScope.of(context),
-        _availableAccounts(VeriFinScope.of(context)),
-      );
+      final controller = VeriFinScope.of(context);
+      final accounts = _availableAccounts(controller);
+      if (_conversionSource == ConversionSource.manual ||
+          _conversionSource == ConversionSource.imported ||
+          _conversionSource == ConversionSource.legacy) {
+        final accountCode = _accountFor(accounts, _accountId)?.currencyCode;
+        final toAccountCode = _accountFor(accounts, _toAccountId)?.currencyCode;
+        if (accountCode != null) {
+          _accountAmount = scaleDependentCurrencyAmount(
+            dependentAmount: _accountAmount,
+            previousOriginalAmount: previousAmount,
+            nextOriginalAmount: _amount,
+            targetCurrencyCode: accountCode,
+          );
+          _accountAmountTouched = true;
+        }
+        if (toAccountCode != null) {
+          _toAccountAmount = scaleDependentCurrencyAmount(
+            dependentAmount: _toAccountAmount,
+            previousOriginalAmount: previousAmount,
+            nextOriginalAmount: _amount,
+            targetCurrencyCode: toAccountCode,
+          );
+          _toAccountAmountTouched = true;
+        }
+        _baseAmount = scaleDependentCurrencyAmount(
+          dependentAmount: _baseAmount,
+          previousOriginalAmount: previousAmount,
+          nextOriginalAmount: _amount,
+          targetCurrencyCode: controller.activeBook.baseCurrencyCode,
+        );
+        _baseAmountTouched = true;
+        _refreshMissingRateCodes(controller, accounts);
+      } else {
+        _refreshCurrencyAmounts(controller, accounts);
+      }
     });
     // 金额变了，按新金额重新识别。
     _recomputeSuggestion();
@@ -1650,7 +1685,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
           dataUrl: _pendingAttachments[index],
         ),
     ];
-    final saved = await controller.saveEntryAggregateDraft(
+    final result = await controller.saveEntryAggregateDraftResult(
       entry: draft,
       isNew: true,
       attachments: attachments,
@@ -1660,8 +1695,17 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
           : null,
       rememberRateEffectiveDate: _rememberRate ? draft.occurredAt : null,
     );
-    if (!saved) {
+    if (!result.isSuccess) {
       _saving = false;
+      if (result is EntrySaveValidationFailure && mounted) {
+        unawaited(
+          VeriFeedbackHost.of(context).showMessage(
+            message: AppLocalizations.of(context).entrySaveValidationFailed,
+            tone: VeriFeedbackTone.warning,
+            duration: VeriFeedbackDuration.long,
+          ),
+        );
+      }
       return false;
     }
     _saved = true;

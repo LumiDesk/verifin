@@ -12,6 +12,10 @@ mixin _ControllerState on ChangeNotifier {
   /// SQLite 落库失败时回调（由 UI 层挂钩弹出「保存失败」提示）。
   void Function(Object error)? onPersistError;
 
+  /// 任一 Controller 状态变化后通知根组件刷新桌面小组件投影。根组件负责去抖与
+  /// 平台调用；Controller 不直接依赖 Android Bridge。
+  VoidCallback? onWidgetProjectionInvalidated;
+
   /// 应用锁开关变化时回调（由 main 挂钩，据此开关 Android FLAG_SECURE）。
   void Function(bool appLockEnabled)? onAppLockChanged;
 
@@ -66,6 +70,7 @@ mixin _ControllerState on ChangeNotifier {
   void notifyListeners() {
     _syncAmountFormatContext();
     _invalidateDerivedViews();
+    onWidgetProjectionInvalidated?.call();
     super.notifyListeners();
   }
 

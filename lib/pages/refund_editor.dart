@@ -4,6 +4,7 @@ import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
 import '../app/currency_catalog.dart';
 import '../app/currency_math.dart';
+import '../app/entry_currency_draft.dart';
 import '../app/model_lookup.dart';
 import '../app/models.dart';
 import '../app/veri_fin_scope.dart';
@@ -434,8 +435,33 @@ class _RefundSheetState extends State<_RefundSheet> {
       return;
     }
     setState(() {
+      final previousAmount = _amount;
       _amount = normalizeCurrencyAmount(value, widget.expense.currencyCode);
-      _resolveAmounts();
+      if (_conversionSource == ConversionSource.manual) {
+        final accountCode = _selectedAccount?.currencyCode;
+        if (accountCode != null) {
+          _accountAmount = scaleDependentCurrencyAmount(
+            dependentAmount: _accountAmount,
+            previousOriginalAmount: previousAmount,
+            nextOriginalAmount: _amount,
+            targetCurrencyCode: accountCode,
+          );
+          _accountAmountTouched = true;
+        }
+        _baseAmount =
+            scaleDependentCurrencyAmount(
+              dependentAmount: _baseAmount,
+              previousOriginalAmount: previousAmount,
+              nextOriginalAmount: _amount,
+              targetCurrencyCode: VeriFinScope.of(
+                context,
+              ).activeBook.baseCurrencyCode,
+            ) ??
+            0;
+        _baseAmountTouched = true;
+      } else {
+        _resolveAmounts();
+      }
     });
   }
 

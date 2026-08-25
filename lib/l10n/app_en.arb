@@ -1565,6 +1565,8 @@
   },
   "accountCurrencyLocked": "The account currency is locked because it has a balance, credit limit, or transaction history.",
   "entryCurrencyLockedByRefund": "The original currency is locked because this transaction has refunds. Resolve the linked refunds first.",
+  "entrySaveValidationFailed": "The transaction amounts, currencies, or linked data are incomplete. Review them and try again.",
+  "importValidationFailed": "The imported amounts, currencies, or links are incomplete. No ledger data was written.",
   "entryConversionRateTrace": "Using local rates effective {date}{status}",
   "@entryConversionRateTrace": {
     "placeholders": {

@@ -435,6 +435,68 @@ void main() {
     expect(saved.conversionSource, ConversionSource.manual);
   });
 
+  testWidgets('手工结算交易改原币金额时保持既有结算比例', (tester) async {
+    final controller = await makeController();
+    final bookId = controller.activeBook.id;
+    controller
+      ..addAccount(
+        Account(
+          id: 'usd-cash',
+          bookId: bookId,
+          name: '美元现金',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 0,
+          iconCode: 'cash',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+          currencyCode: 'USD',
+        ),
+      )
+      ..addEntry(
+        LedgerEntry(
+          id: 'usd-expense',
+          bookId: bookId,
+          type: EntryType.expense,
+          amount: 10,
+          currencyCode: 'USD',
+          accountAmount: 10,
+          baseAmount: 72,
+          conversionSource: ConversionSource.manual,
+          categoryId: 'dining',
+          accountId: 'usd-cash',
+          note: '',
+          occurredAt: DateTime(2026, 8, 1),
+        ),
+      );
+    await tester.binding.setSurfaceSize(const Size(460, 1800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await pumpPage(
+      tester,
+      controller,
+      const TransactionDetailPage(entryId: 'usd-expense'),
+    );
+
+    await tester.tap(find.text('-10').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('number_key_C')));
+    await tester.tap(find.byKey(const Key('number_key_2')));
+    await tester.tap(find.byKey(const Key('number_key_0')));
+    await tester.tap(find.byKey(const Key('number_pad_ok')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+
+    final saved = controller.entries.singleWhere(
+      (entry) => entry.id == 'usd-expense',
+    );
+    expect(saved.amount, 20);
+    expect(saved.accountAmount, 20);
+    expect(saved.baseAmount, 144);
+    expect(saved.conversionSource, ConversionSource.manual);
+  });
+
   testWidgets('已有退款的支出点击原币时解释锁定原因', (tester) async {
     final controller = await makeController();
     final bookId = controller.activeBook.id;

@@ -181,6 +181,7 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
   late final VeriFinController _controller = widget.controller;
   final NotificationScheduler _notifications = NotificationScheduler();
   final VeriFeedbackController _feedbackController = VeriFeedbackController();
+  Timer? _widgetRefreshTimer;
 
   @override
   void initState() {
@@ -188,6 +189,7 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     // 记账后自动备份挂钩；应用打开时按配置尝试一次自动备份。
     _controller.onEntryAdded = _handleEntryAdded;
+    _controller.onWidgetProjectionInvalidated = _scheduleWidgetRefresh;
     // 落库失败时弹出「保存失败」提示，避免用户以为已保存。
     _controller.onPersistError = _handlePersistError;
     // 应用锁开关变化时同步 FLAG_SECURE；开屏按当前状态对齐一次。
@@ -206,7 +208,13 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
 
   void _handleEntryAdded() {
     BackupCoordinator.maybeBackupAfterEntry(_controller);
-    pushWidgetData(_controller);
+  }
+
+  void _scheduleWidgetRefresh() {
+    _widgetRefreshTimer?.cancel();
+    _widgetRefreshTimer = Timer(const Duration(milliseconds: 250), () {
+      unawaited(pushWidgetData(_controller));
+    });
   }
 
   void _handlePersistError(Object _) {
@@ -263,6 +271,8 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _widgetRefreshTimer?.cancel();
+    _controller.onWidgetProjectionInvalidated = null;
     WidgetsBinding.instance.removeObserver(this);
     if (_controller.onEntryAdded == _handleEntryAdded) {
       _controller.onEntryAdded = null;

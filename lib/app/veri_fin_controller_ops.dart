@@ -1741,7 +1741,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   /// [entry.refundedBaseAmount] is ignored and derived again from the settled
   /// refunds, preventing an editor's stale entry snapshot from overwriting the
   /// controller-managed cache.
-  Future<bool> saveEntryAggregateDraft({
+  Future<EntrySaveResult> saveEntryAggregateDraftResult({
     required LedgerEntry entry,
     required bool isNew,
     List<LedgerEntry> refunds = const <LedgerEntry>[],
@@ -1752,28 +1752,36 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   }) async {
     final currentIndex = _entries.indexWhere((item) => item.id == entry.id);
     if ((isNew && currentIndex != -1) || (!isNew && currentIndex == -1)) {
-      return false;
+      return const EntrySaveValidationFailure(EntryValidationCode.staleDraft);
     }
     if (!isNew && _entries[currentIndex].bookId != entry.bookId) {
-      return false;
+      return const EntrySaveValidationFailure(EntryValidationCode.staleDraft);
     }
     final book = ledgerBooks
         .where((item) => item.id == entry.bookId)
         .firstOrNull;
     if (book == null || !_validEntryCurrencyAmounts(entry, book)) {
-      return false;
+      return const EntrySaveValidationFailure(
+        EntryValidationCode.invalidAmounts,
+      );
     }
     if (refunds.any(
-          (refund) =>
-              refund.type != EntryType.refund ||
-              refund.refundOf != entry.id ||
-              refund.bookId != entry.bookId ||
-              refund.currencyCode != entry.currencyCode ||
-              refund.amount <= 0 ||
-              !_validEntryCurrencyAmounts(refund, book),
-        ) ||
-        attachments.any((attachment) => attachment.entryId != entry.id)) {
-      return false;
+      (refund) =>
+          refund.type != EntryType.refund ||
+          refund.refundOf != entry.id ||
+          refund.bookId != entry.bookId ||
+          refund.currencyCode != entry.currencyCode ||
+          refund.amount <= 0 ||
+          !_validEntryCurrencyAmounts(refund, book),
+    )) {
+      return const EntrySaveValidationFailure(
+        EntryValidationCode.invalidRefund,
+      );
+    }
+    if (attachments.any((attachment) => attachment.entryId != entry.id)) {
+      return const EntrySaveValidationFailure(
+        EntryValidationCode.invalidAttachments,
+      );
     }
     final refundTotal = refunds.fold<double>(
       0,
@@ -1782,7 +1790,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     final refundTolerance = currencyAmountTolerance(entry.currencyCode);
     if (entry.type != EntryType.expense && refunds.isNotEmpty ||
         refundTotal > entry.amount + refundTolerance) {
-      return false;
+      return const EntrySaveValidationFailure(
+        EntryValidationCode.refundExceedsExpense,
+      );
     }
 
     final existingEntryIds = _entries.map((item) => item.id).toSet();
@@ -1821,6 +1831,28 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
           .toDouble();
       nextEntries[i] = current.copyWith(refundedBaseAmount: refundedBaseAmount);
     }
+    final aggregateEntries = nextEntries
+        .where(
+          (current) => current.id == entry.id || current.refundOf == entry.id,
+        )
+        .toList(growable: false);
+    final aggregateIssue = validateLedgerEntries(
+      books: <LedgerBook>[book],
+      accounts: _accounts.where((account) => account.bookId == book.id),
+      entries: aggregateEntries,
+      allowMissingAccounts: !isNew,
+      requireMinorUnitNormalization: true,
+    );
+    if (aggregateIssue != null) {
+      return EntrySaveValidationFailure(
+        aggregateIssue.code == LedgerDataValidationCode.invalidRefund ||
+                aggregateIssue.code ==
+                    LedgerDataValidationCode.refundExceedsExpense ||
+                aggregateIssue.code == LedgerDataValidationCode.staleRefundCache
+            ? EntryValidationCode.invalidRefund
+            : EntryValidationCode.invalidAmounts,
+      );
+    }
     nextEntries.sort(_compareEntriesLatestFirst);
 
     final nextAttachments = <Attachment>[
@@ -1835,7 +1867,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       if (rememberRateCurrencyCode == null ||
           rememberRateToBase == null ||
           rememberRateEffectiveDate == null) {
-        return false;
+        return const EntrySaveValidationFailure(
+          EntryValidationCode.invalidRememberedRate,
+        );
       }
       final code = rememberRateCurrencyCode.trim().toUpperCase();
       final baseCode = book.baseCurrencyCode.toUpperCase();
@@ -1843,7 +1877,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
           !CurrencyCatalog.isSupported(code) ||
           code == baseCode ||
           !isValidExchangeRate(rememberRateToBase)) {
-        return false;
+        return const EntrySaveValidationFailure(
+          EntryValidationCode.invalidRememberedRate,
+        );
       }
       final effectiveDate = dateOnly(rememberRateEffectiveDate);
       final existingIndex = _exchangeRates.indexWhere(
@@ -1884,7 +1920,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       );
     } catch (error, stackTrace) {
       _handlePersistError(error, stackTrace);
-      return false;
+      return const EntrySavePersistenceFailure();
     }
 
     _entries
@@ -1902,7 +1938,30 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     if (hasNewEntry) {
       onEntryAdded?.call();
     }
-    return true;
+    return const EntrySaveSuccess();
+  }
+
+  /// 兼容既有调用点的 bool 入口；新页面优先使用 [saveEntryAggregateDraftResult]
+  /// 获取稳定的校验失败原因。
+  Future<bool> saveEntryAggregateDraft({
+    required LedgerEntry entry,
+    required bool isNew,
+    List<LedgerEntry> refunds = const <LedgerEntry>[],
+    List<Attachment> attachments = const <Attachment>[],
+    String? rememberRateCurrencyCode,
+    double? rememberRateToBase,
+    DateTime? rememberRateEffectiveDate,
+  }) async {
+    final result = await saveEntryAggregateDraftResult(
+      entry: entry,
+      isNew: isNew,
+      refunds: refunds,
+      attachments: attachments,
+      rememberRateCurrencyCode: rememberRateCurrencyCode,
+      rememberRateToBase: rememberRateToBase,
+      rememberRateEffectiveDate: rememberRateEffectiveDate,
+    );
+    return result.isSuccess;
   }
 
   bool _validEntryCurrencyAmounts(LedgerEntry entry, LedgerBook book) {
@@ -2027,7 +2086,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   /// [candidateAccounts]/[candidateCategories] 为解析计划里待新建的账户/分类，
   /// 这里只创建被保留交易**实际引用到**、且当前尚不存在的那些，避免建出用不上的
   /// 空账户/空分类。空交易列表直接返回、不写库。
-  void applyImportEntries({
+  bool applyImportEntries({
     required List<LedgerEntry> entries,
     required List<Account> candidateAccounts,
     required List<Category> candidateCategories,
@@ -2036,7 +2095,20 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     List<ExchangeRate> candidateExchangeRates = const <ExchangeRate>[],
   }) {
     if (entries.isEmpty && alwaysCreateAccountIds.isEmpty) {
-      return;
+      return false;
+    }
+    final importIssue = validateLedgerEntries(
+      books: ledgerBooks,
+      accounts: <Account>[..._accounts, ...candidateAccounts],
+      entries: entries,
+      requireMinorUnitNormalization: true,
+    );
+    if (importIssue != null) {
+      _logger?.warning(
+        'Import validation failed: ${importIssue.code.name}',
+        source: 'import',
+      );
+      return false;
     }
     final referencedAccountIds = <String>{};
     final referencedCategoryIds = <String>{};
@@ -2153,6 +2225,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
     // 导入也新增了交易：触发自动备份与小组件刷新，与手动记账一致。
     onEntryAdded?.call();
+    return true;
   }
 
   void updateEntry(LedgerEntry entry) {
@@ -3737,6 +3810,16 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       categoryBudgets: nextCategoryBudgets,
       dailyBudgets: nextDailyBudgets,
     );
+    final ledgerIssue = validateLedgerEntries(
+      books: nextLedgerBooks,
+      accounts: nextAccounts,
+      entries: nextEntries,
+      allowMissingAccounts: true,
+    );
+    if (ledgerIssue != null &&
+        ledgerIssue.code != LedgerDataValidationCode.staleRefundCache) {
+      throw FormatException('账目关联或金额不合法：${ledgerIssue.code.name}');
+    }
 
     _ledgerBooks
       ..clear()

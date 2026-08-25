@@ -3943,6 +3943,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get entryCurrencyLockedByRefund => '交易已有退款，原币不可修改。请先处理关联退款。';
 
   @override
+  String get entrySaveValidationFailed => '交易金额、币种或关联数据不完整，请检查后重试。';
+
+  @override
+  String get importValidationFailed => '导入数据的金额、币种或关联关系不完整，未写入任何账目。';
+
+  @override
   String entryConversionRateTrace(String date, String status) {
     return '使用 $date 生效的本地汇率$status';
   }

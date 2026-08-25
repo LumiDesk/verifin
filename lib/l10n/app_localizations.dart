@@ -7220,6 +7220,18 @@ abstract class AppLocalizations {
   /// **'交易已有退款，原币不可修改。请先处理关联退款。'**
   String get entryCurrencyLockedByRefund;
 
+  /// No description provided for @entrySaveValidationFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'交易金额、币种或关联数据不完整，请检查后重试。'**
+  String get entrySaveValidationFailed;
+
+  /// No description provided for @importValidationFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入数据的金额、币种或关联关系不完整，未写入任何账目。'**
+  String get importValidationFailed;
+
   /// No description provided for @entryConversionRateTrace.
   ///
   /// In zh, this message translates to:
