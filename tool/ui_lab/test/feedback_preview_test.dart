@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/app_theme.dart';
 import 'package:verifin_ui_lab/feedback_preview.dart';
@@ -20,12 +21,31 @@ void main() {
     final navigationRect = tester.getRect(
       find.byKey(const Key('lab_nav_capsule')),
     );
-    expect(tester.getSize(cardFinder), const Size(168, 40));
+    final cardSize = tester.getSize(cardFinder);
+    expect(cardSize.width, 208);
+    expect(cardSize.height, inInclusiveRange(52, 56));
     expect(cardRect.bottom, lessThan(navigationRect.top));
 
     final card = tester.widget<Material>(cardFinder);
     final shape = card.shape! as RoundedRectangleBorder;
     expect(shape.borderRadius, BorderRadius.circular(veriRadiusMd));
+  });
+
+  testWidgets('长提示按屏幕宽度扩展并完整换行', (tester) async {
+    await _pumpFeedbackApp(tester);
+
+    await tester.tap(find.text(FeedbackTone.warning.label));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('feedback_add')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 240));
+
+    final card = find.byKey(const Key('veri_feedback_card_1'));
+    final message = find.byKey(const Key('veri_feedback_message_1'));
+    final paragraph = tester.renderObject<RenderParagraph>(message);
+    expect(tester.getSize(card).width, 360);
+    expect(tester.getSize(card).height, greaterThan(52));
+    expect(paragraph.didExceedMaxLines, isFalse);
   });
 
   testWidgets('最多堆叠四条并把更多提示放入等待队列', (tester) async {
@@ -219,7 +239,7 @@ void main() {
     expect(find.textContaining('×2', findRichText: true), findsOneWidget);
     expect(
       tester.getSize(find.byKey(const Key('veri_feedback_card_1'))).width,
-      240,
+      inInclusiveRange(252, 360),
     );
     await tester.tap(find.byKey(const Key('veri_feedback_action_1')));
     await tester.pump();

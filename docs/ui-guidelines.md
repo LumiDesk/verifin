@@ -106,9 +106,11 @@ SafeArea(child: VeriPage(child: Column(children: [
 ## 轻提示
 
 应用内短反馈统一使用根级 `VeriFeedbackHost`，不新增旧式 Material 横条或 Android
-Toast。默认提示为 168×40dp；带唯一操作按钮时可扩展到 240×40dp。消息、重复计数
-和操作文字必须由同一字体基线或等价布局对齐，禁止用 `Transform.translate`、额外
-top padding 等像素补丁修正单个字形；关闭图标在自身触控盒内居中。
+Toast。提示宽度根据正文、重复计数和操作文字的实际排版自适应，短提示保持紧凑，
+长提示最多扩展到 360dp 且始终保留屏幕左右安全边距；正文允许三行，高度随换行自然
+增长。消息、重复计数和操作文字必须由同一字体基线或等价布局对齐，禁止用
+`Transform.translate`、额外 top padding 等像素补丁修正单个字形；关闭图标在自身
+触控盒内居中。
 
 信息/成功/警告/错误分别使用 `veriRoyal` / `veriIncome` / `veriWarning` /
 `veriExpense`。语义色只用于图标、操作和进度线，不整块染色。常驻提示完全不创建

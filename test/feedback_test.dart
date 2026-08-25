@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/app_theme.dart';
 import 'package:verifin/app/feedback.dart';
@@ -25,7 +26,7 @@ void main() {
 
     final card = find.byKey(const Key('veri_feedback_card_0'));
     final icon = find.byKey(const Key('veri_feedback_icon_0'));
-    expect(tester.getSize(card), const Size(168, 40));
+    expect(tester.getSize(card), const Size(208, 48));
     expect(
       tester.getRect(icon).center.dy,
       closeTo(tester.getRect(card).center.dy, 0.1),
@@ -51,7 +52,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 240));
     expect(
       tester.getSize(find.byKey(const Key('veri_feedback_card_0'))).width,
-      240,
+      252,
     );
 
     await tester.tap(find.byKey(const Key('veri_feedback_action_0')));
@@ -59,6 +60,33 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
     await tester.pump();
     expect(await result, VeriFeedbackResult.action);
+    controller.dispose();
+  });
+
+  testWidgets('提示按文案自适应宽度且长内容完整换行', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final controller = VeriFeedbackController();
+    await _pumpHost(tester, controller: controller);
+
+    unawaited(
+      controller.showMessage(
+        message: '已有 12 笔交易使用该分类，不能删除；请先移动或合并相关交易后再试',
+        tone: VeriFeedbackTone.warning,
+        duration: VeriFeedbackDuration.persistent,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 240));
+
+    final card = find.byKey(const Key('veri_feedback_card_0'));
+    final message = find.byKey(const Key('veri_feedback_message_0'));
+    final cardSize = tester.getSize(card);
+    final paragraph = tester.renderObject<RenderParagraph>(message);
+    expect(cardSize.width, 360);
+    expect(cardSize.height, greaterThan(48));
+    expect(paragraph.didExceedMaxLines, isFalse);
+    expect(paragraph.size.height, greaterThan(18));
     controller.dispose();
   });
 
