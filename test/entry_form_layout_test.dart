@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:verifin/app/app_theme.dart';
+import 'package:verifin/app/common_widgets.dart';
 import 'package:verifin/app/entry_sheets.dart';
 import 'package:verifin/app/veri_fin_scope.dart';
 import 'package:verifin/pages/attachments_editor.dart';
@@ -35,16 +37,58 @@ void main() {
     expect(find.byIcon(Icons.save_outlined), findsNothing);
     expect(find.byKey(const Key('save_entry_button')), findsOneWidget);
     expect(
+      tester
+          .widget<Padding>(find.byKey(const Key('entry_bottom_save_padding')))
+          .padding,
+      const EdgeInsets.fromLTRB(22, 10, 22, 18),
+    );
+    expect(
       find.descendant(
         of: find.byKey(const Key('entry_bottom_save_bar')),
         matching: find.byType(Divider),
       ),
       findsNothing,
     );
+    expect(
+      tester
+          .widget<CategoryGlyph>(
+            find.descendant(
+              of: find.byKey(const Key('entry_category_dining')),
+              matching: find.byType(CategoryGlyph),
+            ),
+          )
+          .color,
+      veriExpense,
+    );
 
     await tester.tap(find.byKey(const Key('entry_type_income')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('entry_type_selected_income')), findsOneWidget);
+    expect(
+      tester
+          .widget<CategoryGlyph>(
+            find.descendant(
+              of: find.byKey(const Key('entry_category_salary')),
+              matching: find.byType(CategoryGlyph),
+            ),
+          )
+          .color,
+      veriIncome,
+    );
+
+    await tester.tap(find.byKey(const Key('entry_type_transfer')));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<CategoryGlyph>(
+            find.descendant(
+              of: find.byKey(const Key('entry_category_transfer_out')),
+              matching: find.byType(CategoryGlyph),
+            ),
+          )
+          .color,
+      veriBlue,
+    );
   });
 
   testWidgets('更多信息收纳日期时间标签报销附件与币种', (tester) async {
