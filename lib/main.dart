@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'app/app_theme.dart';
 import 'app/backup/backup_coordinator.dart';
+import 'app/feedback.dart';
 import 'app/home_widget_service.dart';
 import 'app/l10n_outside_context.dart';
 import 'app/logging/app_logger.dart';
@@ -179,6 +180,7 @@ class VeriFinApp extends StatefulWidget {
 class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
   late final VeriFinController _controller = widget.controller;
   final NotificationScheduler _notifications = NotificationScheduler();
+  final VeriFeedbackController _feedbackController = VeriFeedbackController();
   final GlobalKey<ScaffoldMessengerState> _messengerKey =
       GlobalKey<ScaffoldMessengerState>();
 
@@ -272,6 +274,7 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
     if (_controller.onReminderChanged == _handleReminderChanged) {
       _controller.onReminderChanged = null;
     }
+    _feedbackController.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -299,7 +302,12 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
                 theme: buildVeriFinTheme(Brightness.light),
                 darkTheme: buildVeriFinTheme(Brightness.dark),
                 builder: (context, child) => PrivacyConsentGate(
-                  child: AppLockGate(child: child ?? const SizedBox.shrink()),
+                  child: AppLockGate(
+                    child: VeriFeedbackHost(
+                      controller: _feedbackController,
+                      child: child ?? const SizedBox.shrink(),
+                    ),
+                  ),
                 ),
                 home: const VeriFinShell(),
               );
