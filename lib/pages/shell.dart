@@ -132,10 +132,12 @@ class _VeriFinShellState extends State<VeriFinShell> {
         body: SafeArea(
           key: const Key('main_shell_body_safe_area'),
           bottom: false,
-          child: PageView(
-            controller: _pageController,
-            onPageChanged: (value) => setState(() => _index = value),
-            children: pages,
+          child: VeriRootNavigationBody(
+            child: PageView(
+              controller: _pageController,
+              onPageChanged: (value) => setState(() => _index = value),
+              children: pages,
+            ),
           ),
         ),
         bottomNavigationBar: VeriRootNavigation(

@@ -21,7 +21,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `VeriCard` | Widget | `common_widgets.dart` | 统一圆角/描边/阴影卡片，可点击（`quietTap` 长按吞噬变体） |
 | `VeriHeader` | Widget | `common_widgets.dart` | 页眉（标题+副标题+返回+actions，固定高 52） |
 | `PageHeader` | Widget | `common_widgets.dart` | `VeriHeader` 的薄封装（单 trailing） |
-| `VeriRootNavigation` / `VeriNavigationDestination` / `veriRootPageListPadding` | Widget / 值类 / 布局 helper | `root_navigation.dart` | 四个根页面的中性玻璃导航胶囊；选中滑块可按压/拖动/吸附，圆形快捷记账仅首页显示，支持点击与长按；根页面列表用 helper 按实际底栏高度避让，调用方提供本地化 label，完整约定见 `liquid-glass-navigation.md` |
+| `VeriRootNavigation` / `VeriRootNavigationBody` / `VeriNavigationDestination` / `veriRootPageListPadding` | Widget / 值类 / 布局 helper | `root_navigation.dart` | 四个根页面的中性玻璃导航胶囊；Body 隔离 `extendBody` 注入的底栏 padding，避免嵌套日历/宫格增高；根列表再用 helper 按真实底栏高度避让，完整约定见 `liquid-glass-navigation.md` |
 | `SectionTitle` | Widget | `common_widgets.dart` | 区块标题 + 可选 trailing |
 | `EmptyState` | Widget | `common_widgets.dart` | 空状态（图标+标题+描述） |
 | `HeaderAction` / `HeaderTextAction` / `HeaderInline` / `VeriSectionAction` | Widget | `common_widgets.dart` | 页眉动作族（图标钮/文字钮/宽度约束/填充色小图标钮）；需要弹出操作菜单时使用 `VeriAnchoredMenuButton` |

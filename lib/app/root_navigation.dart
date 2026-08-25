@@ -17,16 +17,52 @@ class VeriNavigationDestination {
   final String label;
 }
 
-/// 根页面列表在浮动导航后方绘制时所需的内容留白。
+/// 隔离 `Scaffold.extendBody` 注入的底栏 padding。
 ///
-/// `Scaffold.extendBody` 会把完整底栏高度写入后代 [MediaQuery] 的 bottom
-/// padding；在它之上再保留 12dp，确保最后一项不会贴住或落入玻璃导航。
+/// Flutter 的嵌套 ScrollView 会在 `padding == null` 时自动继承 MediaQuery
+/// padding；若直接把底栏高度传下去，日历和功能宫格会凭空增高。此组件先保存根
+/// 列表所需的真实避让高度，再从页面子树移除 bottom padding。
+class VeriRootNavigationBody extends StatelessWidget {
+  const VeriRootNavigationBody({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return _VeriRootNavigationLayout(
+      listBottomPadding: MediaQuery.paddingOf(context).bottom + 12,
+      child: MediaQuery.removePadding(
+        context: context,
+        removeBottom: true,
+        child: child,
+      ),
+    );
+  }
+}
+
+class _VeriRootNavigationLayout extends InheritedWidget {
+  const _VeriRootNavigationLayout({
+    required this.listBottomPadding,
+    required super.child,
+  });
+
+  final double listBottomPadding;
+
+  @override
+  bool updateShouldNotify(_VeriRootNavigationLayout oldWidget) {
+    return oldWidget.listBottomPadding != listBottomPadding;
+  }
+}
+
+/// 根页面列表在浮动导航后方绘制时所需的内容留白。
 EdgeInsets veriRootPageListPadding(BuildContext context) {
+  final layout = context
+      .dependOnInheritedWidgetOfExactType<_VeriRootNavigationLayout>();
   return EdgeInsets.fromLTRB(
     14,
     8,
     14,
-    MediaQuery.paddingOf(context).bottom + 12,
+    layout?.listBottomPadding ?? MediaQuery.paddingOf(context).bottom + 12,
   );
 }
 

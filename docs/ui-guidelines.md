@@ -11,7 +11,7 @@ SQLite、KV、备份、AI 或平台桥补 Web 兼容分支。方案确认后迁�
 
 四个根页面统一使用 `VeriRootNavigation`。导航是浮动胶囊，快捷记账是同材质圆形按钮且只在首页显示；非首页隐藏按钮后胶囊居中。选中图标/文字在深色模式使用白色、浅色模式使用黑色，未选中为灰色；Hover 只增强图标/文字，不绘制背景。
 
-承载根导航的 Shell 必须启用 `Scaffold.extendBody` 并关闭 body 外层 `SafeArea` 的 bottom 裁切，页面内容需延伸到玻璃背后，不得留下整宽底栏底色。导航在系统安全区之外再保留左右、底部各 24dp 外边距，不能只依赖 `SafeArea.minimum`，避免系统 inset 吞掉额外留白；四个根页面列表使用 `veriRootPageListPadding(context)` 按实际底栏高度避让末项。
+承载根导航的 Shell 必须启用 `Scaffold.extendBody` 并关闭 body 外层 `SafeArea` 的 bottom 裁切，页面内容需延伸到玻璃背后，不得留下整宽底栏底色。PageView 外必须套 `VeriRootNavigationBody`，隔离 Scaffold 注入的 bottom padding，避免页面内未显式 padding 的 GridView（日历、功能宫格等）被底栏高度撑大。导航在系统安全区之外再保留左右、底部各 24dp 外边距；四个根页面列表使用 `veriRootPageListPadding(context)` 按保存的实际底栏高度避让末项。
 
 玻璃层禁止手写线性/径向渐变、固定品牌染色或额外顶部高光线；只允许均匀中性透明色、背景模糊、单一轮廓和阴影。品牌蓝只用于圆形快捷记账的加号等明确主操作，不用于选中 Tab。真正的背景折射/色差必须使用单独评估并验证过的 Android Shader，不能用静态渐变冒充。
 

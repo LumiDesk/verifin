@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/app_version.dart';
+import 'package:verifin/app/common_widgets.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/local_storage/local_storage.dart';
 import 'package:verifin/pages/home_page.dart';
+import 'package:verifin/pages/profile_pages.dart';
 
 import 'support/test_harness.dart';
 
@@ -50,6 +52,62 @@ void main() {
 
     await tapBottomTab(tester, 3);
     expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
+  });
+
+  testWidgets('floating navigation inset does not inflate nested grids', (
+    WidgetTester tester,
+  ) async {
+    await pumpApp(tester);
+
+    await tester.scrollUntilVisible(
+      find.byType(CalendarPreview),
+      500,
+      scrollable: firstVerticalScrollable(),
+    );
+    final calendarGrid = find.descendant(
+      of: find.byType(CalendarPreview),
+      matching: find.byType(GridView),
+    );
+    expect(calendarGrid, findsOneWidget);
+    expect(MediaQuery.paddingOf(tester.element(calendarGrid)).bottom, 0);
+    final calendar = tester.widget<GridView>(calendarGrid);
+    final calendarDelegate =
+        calendar.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
+    final calendarRows = (calendar.semanticChildCount! + 6) ~/ 7;
+    final expectedCalendarHeight =
+        calendarRows * calendarDelegate.mainAxisExtent! +
+        (calendarRows - 1) * calendarDelegate.mainAxisSpacing;
+    expect(
+      tester.getSize(calendarGrid).height,
+      closeTo(expectedCalendarHeight, 0.1),
+    );
+
+    await tapBottomTab(tester, 3);
+    final featureGrids = find.descendant(
+      of: find.byType(ProfilePage),
+      matching: find.byType(GridView),
+    );
+    expect(featureGrids, findsNWidgets(2));
+    for (final grid in <Finder>[featureGrids.at(0), featureGrids.at(1)]) {
+      expect(MediaQuery.paddingOf(tester.element(grid)).bottom, 0);
+    }
+
+    final firstGrid = featureGrids.at(0);
+    final secondGrid = featureGrids.at(1);
+    final firstDelegate =
+        tester.widget<GridView>(firstGrid).gridDelegate
+            as SliverGridDelegateWithFixedCrossAxisCount;
+    final cellWidth =
+        (tester.getSize(firstGrid).width -
+            firstDelegate.crossAxisSpacing *
+                (firstDelegate.crossAxisCount - 1)) /
+        firstDelegate.crossAxisCount;
+    final rowHeight = cellWidth / firstDelegate.childAspectRatio;
+    expect(tester.getSize(firstGrid).height, closeTo(rowHeight, 0.1));
+    expect(
+      tester.getSize(secondGrid).height,
+      closeTo(rowHeight * 2 + firstDelegate.mainAxisSpacing, 0.1),
+    );
   });
 
   testWidgets('changes theme preference from the profile page', (
