@@ -181,8 +181,6 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
   late final VeriFinController _controller = widget.controller;
   final NotificationScheduler _notifications = NotificationScheduler();
   final VeriFeedbackController _feedbackController = VeriFeedbackController();
-  final GlobalKey<ScaffoldMessengerState> _messengerKey =
-      GlobalKey<ScaffoldMessengerState>();
 
   @override
   void initState() {
@@ -211,13 +209,17 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
     pushWidgetData(_controller);
   }
 
-  void _handlePersistError(Object error) {
-    final messenger = _messengerKey.currentState;
-    if (messenger == null) return;
-    final l10n = AppLocalizations.of(messenger.context);
-    messenger
-      ..clearSnackBars()
-      ..showSnackBar(SnackBar(content: Text(l10n.saveFailed)));
+  void _handlePersistError(Object _) {
+    final l10n = l10nForPreference(_controller.localePreference);
+    unawaited(
+      _feedbackController.showMessage(
+        message: l10n.saveFailed,
+        tone: VeriFeedbackTone.error,
+        duration: VeriFeedbackDuration.long,
+        priority: VeriFeedbackPriority.high,
+        dedupeKey: 'persist-error',
+      ),
+    );
   }
 
   void _handleAppLockChanged(bool appLockEnabled) {
@@ -290,7 +292,6 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
             valueListenable: _controller.localePreferenceListenable,
             builder: (context, localePreference, _) {
               return MaterialApp(
-                scaffoldMessengerKey: _messengerKey,
                 onGenerateTitle: (context) =>
                     AppLocalizations.of(context).appTitle,
                 debugShowCheckedModeBanner: false,

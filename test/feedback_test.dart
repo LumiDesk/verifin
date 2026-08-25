@@ -312,6 +312,29 @@ void main() {
     await tester.pump();
     expect(await result, VeriFeedbackResult.cleared);
   });
+
+  testWidgets('首页首次返回使用根级轻提示而不是 SnackBar', (tester) async {
+    await pumpApp(tester);
+
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 240));
+    expect(find.text('再次返回退出程序'), findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing);
+  });
+
+  testWidgets('全局持久化失败使用高优先级去重错误提示', (tester) async {
+    final appController = await pumpApp(tester);
+
+    appController.onPersistError?.call(StateError('test'));
+    appController.onPersistError?.call(StateError('test again'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 240));
+
+    expect(find.textContaining('保存失败', findRichText: true), findsOneWidget);
+    expect(find.textContaining('×2', findRichText: true), findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing);
+  });
 }
 
 Future<void> _pumpHost(
