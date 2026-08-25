@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../app/models.dart';
+import '../app/feedback.dart';
 import '../app/platform_bridge.dart';
 import '../app/root_navigation.dart';
 import '../app/veri_fin_scope.dart';
@@ -211,9 +212,11 @@ class _VeriFinShellState extends State<VeriFinShell> {
       return;
     }
     _lastBackPressedAt = now;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(AppLocalizations.of(context).pressBackAgainToExit),
+    unawaited(
+      VeriFeedbackHost.of(context).showMessage(
+        message: AppLocalizations.of(context).pressBackAgainToExit,
+        duration: VeriFeedbackDuration.short,
+        dedupeKey: 'root-exit',
       ),
     );
   }

@@ -8,6 +8,7 @@
 // [useTestDatabases] 注册清理。
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:verifin/app/feedback.dart';
 import 'package:verifin/app/veri_fin_controller.dart';
 import 'package:verifin/data/ledger_repository.dart';
 import 'package:verifin/l10n/app_localizations.dart';
@@ -64,13 +65,43 @@ Future<VeriFinController> pumpApp(
 /// 不经 [VeriFinApp]、直接 pump 单页/单组件的测试用：固定中文并带上
 /// 本地化代理的 MaterialApp（页面里的 `AppLocalizations.of` 才能解析）。
 Widget zhMaterialApp({required Widget home, ThemeData? theme}) {
-  return MaterialApp(
-    locale: const Locale('zh'),
-    supportedLocales: AppLocalizations.supportedLocales,
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    theme: theme,
-    home: home,
-  );
+  return _LocalizedTestApp(home: home, theme: theme);
+}
+
+class _LocalizedTestApp extends StatefulWidget {
+  const _LocalizedTestApp({required this.home, this.theme});
+
+  final Widget home;
+  final ThemeData? theme;
+
+  @override
+  State<_LocalizedTestApp> createState() => _LocalizedTestAppState();
+}
+
+class _LocalizedTestAppState extends State<_LocalizedTestApp> {
+  final VeriFeedbackController _feedback = VeriFeedbackController();
+
+  @override
+  void dispose() {
+    _feedback.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      locale: const Locale('zh'),
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      theme: widget.theme,
+      builder: (context, child) => VeriFeedbackHost(
+        controller: _feedback,
+        bottomMargin: 0,
+        child: child ?? const SizedBox.shrink(),
+      ),
+      home: widget.home,
+    );
+  }
 }
 
 Future<void> tapBottomTab(WidgetTester tester, int index) async {

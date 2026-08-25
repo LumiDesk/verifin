@@ -8,6 +8,7 @@ import '../app/app_lock.dart';
 import '../app/app_theme.dart';
 import '../app/biometric_auth.dart';
 import '../app/common_widgets.dart';
+import '../app/feedback.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
@@ -822,8 +823,11 @@ class _AppLockSettingsPageState extends State<AppLockSettingsPage> {
     if (ok) {
       controller.setBiometricUnlockEnabled(true);
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).bioNotPassed)),
+      unawaited(
+        VeriFeedbackHost.of(context).showMessage(
+          message: AppLocalizations.of(context).bioNotPassed,
+          tone: VeriFeedbackTone.warning,
+        ),
       );
     }
   }
@@ -874,8 +878,11 @@ class _AppLockSettingsPageState extends State<AppLockSettingsPage> {
       ),
     );
     if (changed == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).appLockUpdated)),
+      unawaited(
+        VeriFeedbackHost.of(context).showMessage(
+          message: AppLocalizations.of(context).appLockUpdated,
+          tone: VeriFeedbackTone.success,
+        ),
       );
     }
   }

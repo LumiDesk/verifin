@@ -14,6 +14,7 @@ import '../app/backup/webdav_config.dart';
 import '../app/common_widgets.dart';
 import '../app/currency_math.dart';
 import '../app/data_file_port.dart';
+import '../app/feedback.dart';
 import '../l10n/app_localizations.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
@@ -448,6 +449,25 @@ class _DataManagementPageState extends State<DataManagementPage> {
     );
   }
 
+  void _notify(
+    BuildContext context, {
+    required String message,
+    VeriFeedbackTone tone = VeriFeedbackTone.info,
+    VeriFeedbackDuration duration = VeriFeedbackDuration.standard,
+    VeriFeedbackPriority priority = VeriFeedbackPriority.normal,
+    String? dedupeKey,
+  }) {
+    unawaited(
+      VeriFeedbackHost.of(context).showMessage(
+        message: message,
+        tone: tone,
+        duration: duration,
+        priority: priority,
+        dedupeKey: dedupeKey,
+      ),
+    );
+  }
+
   Future<void> _chooseBackupDirectory(
     BuildContext context,
     VeriFinController controller,
@@ -458,21 +478,21 @@ class _DataManagementPageState extends State<DataManagementPage> {
         return;
       }
       controller.setBackupDirectory(picked.uri, picked.label);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context).chosenBackupDir(picked.label),
-          ),
-        ),
+      _notify(
+        context,
+        message: AppLocalizations.of(context).chosenBackupDir(picked.label),
+        tone: VeriFeedbackTone.success,
       );
     } catch (error) {
+      controller.logger?.error('选择备份目录失败', source: 'backup', error: error);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _backupErrorText(AppLocalizations.of(context), error),
-            ),
-          ),
+        _notify(
+          context,
+          message: _backupErrorText(AppLocalizations.of(context), error),
+          tone: VeriFeedbackTone.error,
+          duration: VeriFeedbackDuration.long,
+          priority: VeriFeedbackPriority.high,
+          dedupeKey: 'backup-directory',
         );
       }
     }
@@ -489,7 +509,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
       }
     }
     final l10n = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
+    final feedback = VeriFeedbackHost.of(context);
     // 备份含加密（PBKDF2）与文件写入，耗时可感知：期间弹不可关闭的「备份中」转圈，
     // 避免点了没反应的错觉。
     final navigator = Navigator.of(context, rootNavigator: true);
@@ -511,14 +531,23 @@ class _DataManagementPageState extends State<DataManagementPage> {
       );
       controller.recordBackupTime(now);
       navigator.pop(); // 关闭「备份中」
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.backedUpFile(result.filename))),
+      unawaited(
+        feedback.showMessage(
+          message: l10n.backedUpFile(result.filename),
+          tone: VeriFeedbackTone.success,
+        ),
       );
     } catch (error) {
       controller.logger?.error('手动备份失败', source: 'backup', error: error);
       navigator.pop(); // 关闭「备份中」
-      messenger.showSnackBar(
-        SnackBar(content: Text(_backupErrorText(l10n, error))),
+      unawaited(
+        feedback.showMessage(
+          message: _backupErrorText(l10n, error),
+          tone: VeriFeedbackTone.error,
+          duration: VeriFeedbackDuration.long,
+          priority: VeriFeedbackPriority.high,
+          dedupeKey: 'manual-backup',
+        ),
       );
     }
   }
@@ -565,16 +594,22 @@ class _DataManagementPageState extends State<DataManagementPage> {
         final hint = controller.backupEncryptionEnabled
             ? AppLocalizations.of(context).encryptedSuffix
             : '';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).exportedTo(hint)),
-          ),
+        _notify(
+          context,
+          message: AppLocalizations.of(context).exportedTo(hint),
+          tone: VeriFeedbackTone.success,
         );
       }
-    } catch (_) {
+    } catch (error) {
+      controller.logger?.error('数据导出失败', source: 'export', error: error);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context).exportFailed)),
+        _notify(
+          context,
+          message: AppLocalizations.of(context).exportFailed,
+          tone: VeriFeedbackTone.error,
+          duration: VeriFeedbackDuration.long,
+          priority: VeriFeedbackPriority.high,
+          dedupeKey: 'data-export',
         );
       }
     }
@@ -675,8 +710,10 @@ class _DataManagementPageState extends State<DataManagementPage> {
     if (result != null && result.isNotEmpty) {
       controller.setBackupPassphrase(result);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context).keySet)),
+        _notify(
+          context,
+          message: AppLocalizations.of(context).keySet,
+          tone: VeriFeedbackTone.success,
         );
       }
     }
@@ -718,8 +755,10 @@ class _DataManagementPageState extends State<DataManagementPage> {
         });
       }
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context).webdavSaved)),
+        _notify(
+          context,
+          message: AppLocalizations.of(context).webdavSaved,
+          tone: VeriFeedbackTone.success,
         );
       }
     }
@@ -762,10 +801,14 @@ class _DataManagementPageState extends State<DataManagementPage> {
     BuildContext context,
     VeriFinController controller,
   ) async {
-    final messenger = ScaffoldMessenger.of(context);
+    final feedback = VeriFeedbackHost.of(context);
     final l10n = AppLocalizations.of(context);
-    messenger.showSnackBar(
-      SnackBar(content: Text(AppLocalizations.of(context).uploadingWebdav)),
+    unawaited(
+      feedback.showMessage(
+        message: l10n.uploadingWebdav,
+        duration: VeriFeedbackDuration.persistent,
+        dedupeKey: 'webdav-upload',
+      ),
     );
     try {
       final now = DateTime.now();
@@ -781,12 +824,23 @@ class _DataManagementPageState extends State<DataManagementPage> {
         prepared.bytes,
       );
       controller.recordBackupTime(now);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.uploadedFile(prepared.filename))),
+      unawaited(
+        feedback.showMessage(
+          message: l10n.uploadedFile(prepared.filename),
+          tone: VeriFeedbackTone.success,
+          dedupeKey: 'webdav-upload',
+        ),
       );
     } catch (error) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.uploadFailed('$error'))),
+      controller.logger?.error('WebDAV 上传失败', source: 'webdav', error: error);
+      unawaited(
+        feedback.showMessage(
+          message: l10n.uploadFailed('$error'),
+          tone: VeriFeedbackTone.error,
+          duration: VeriFeedbackDuration.long,
+          priority: VeriFeedbackPriority.high,
+          dedupeKey: 'webdav-upload',
+        ),
       );
     }
   }
@@ -795,14 +849,21 @@ class _DataManagementPageState extends State<DataManagementPage> {
     BuildContext context,
     VeriFinController controller,
   ) async {
-    final messenger = ScaffoldMessenger.of(context);
+    final feedback = VeriFeedbackHost.of(context);
     final l10n = AppLocalizations.of(context);
     List<WebdavRemoteFile> files;
     try {
       files = await webdavList(controller.webdavConfig);
     } catch (error) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.readFailed('$error'))),
+      controller.logger?.error('WebDAV 读取失败', source: 'webdav', error: error);
+      unawaited(
+        feedback.showMessage(
+          message: l10n.readFailed('$error'),
+          tone: VeriFeedbackTone.error,
+          duration: VeriFeedbackDuration.long,
+          priority: VeriFeedbackPriority.high,
+          dedupeKey: 'webdav-restore',
+        ),
       );
       return;
     }
@@ -810,8 +871,10 @@ class _DataManagementPageState extends State<DataManagementPage> {
       return;
     }
     if (files.isEmpty) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).noWebdavBackups)),
+      unawaited(
+        feedback.showMessage(
+          message: AppLocalizations.of(context).noWebdavBackups,
+        ),
       );
       return;
     }
@@ -872,17 +935,35 @@ class _DataManagementPageState extends State<DataManagementPage> {
       }
       final imported = await _importBackupBytes(context, controller, bytes);
       if (imported && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).restoredFromWebdav),
+        unawaited(
+          feedback.showMessage(
+            message: AppLocalizations.of(context).restoredFromWebdav,
+            tone: VeriFeedbackTone.success,
+            dedupeKey: 'webdav-restore',
           ),
         );
       }
-    } on FormatException {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.restoreFailedFormat)));
+    } on FormatException catch (error) {
+      controller.logger?.error('WebDAV 恢复格式错误', source: 'webdav', error: error);
+      unawaited(
+        feedback.showMessage(
+          message: l10n.restoreFailedFormat,
+          tone: VeriFeedbackTone.error,
+          duration: VeriFeedbackDuration.long,
+          priority: VeriFeedbackPriority.high,
+          dedupeKey: 'webdav-restore',
+        ),
+      );
     } catch (error) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.restoreFailedError('$error'))),
+      controller.logger?.error('WebDAV 恢复失败', source: 'webdav', error: error);
+      unawaited(
+        feedback.showMessage(
+          message: l10n.restoreFailedError('$error'),
+          tone: VeriFeedbackTone.error,
+          duration: VeriFeedbackDuration.long,
+          priority: VeriFeedbackPriority.high,
+          dedupeKey: 'webdav-restore',
+        ),
       );
     }
   }
@@ -904,6 +985,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
   }
 
   Future<void> _downloadCsvTemplate(BuildContext context) async {
+    final logger = VeriFinScope.of(context).logger;
     try {
       final saved = await downloadTextFile(
         filename: 'verifin-import-template.csv',
@@ -911,18 +993,22 @@ class _DataManagementPageState extends State<DataManagementPage> {
         mimeType: 'text/csv',
       );
       if (saved && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).csvTemplateSaved),
-          ),
+        _notify(
+          context,
+          message: AppLocalizations.of(context).csvTemplateSaved,
+          tone: VeriFeedbackTone.success,
         );
       }
-    } catch (_) {
+    } catch (error) {
+      logger?.error('CSV 模板导出失败', source: 'export', error: error);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).csvTemplateSaveFailed),
-          ),
+        _notify(
+          context,
+          message: AppLocalizations.of(context).csvTemplateSaveFailed,
+          tone: VeriFeedbackTone.error,
+          duration: VeriFeedbackDuration.long,
+          priority: VeriFeedbackPriority.high,
+          dedupeKey: 'csv-template-export',
         );
       }
     }
@@ -945,21 +1031,22 @@ class _DataManagementPageState extends State<DataManagementPage> {
         mimeType: 'text/csv',
       );
       if (saved && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).transactionsCsvExported),
-          ),
+        _notify(
+          context,
+          message: AppLocalizations.of(context).transactionsCsvExported,
+          tone: VeriFeedbackTone.success,
         );
       }
     } catch (error) {
       controller.logger?.error('交易 CSV 导出失败', source: 'export', error: error);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context).transactionsCsvExportFailed,
-            ),
-          ),
+        _notify(
+          context,
+          message: AppLocalizations.of(context).transactionsCsvExportFailed,
+          tone: VeriFeedbackTone.error,
+          duration: VeriFeedbackDuration.long,
+          priority: VeriFeedbackPriority.high,
+          dedupeKey: 'transactions-csv-export',
         );
       }
     }
@@ -1260,10 +1347,10 @@ class _DataManagementPageState extends State<DataManagementPage> {
       }
       if (bytes.isEmpty) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppLocalizations.of(context).fileEmptyError),
-            ),
+          _notify(
+            context,
+            message: AppLocalizations.of(context).fileEmptyError,
+            tone: VeriFeedbackTone.warning,
           );
         }
         return;
@@ -1294,12 +1381,9 @@ class _DataManagementPageState extends State<DataManagementPage> {
         if (plan.errorCount > 0) {
           await _showImportResult(context, plan);
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                AppLocalizations.of(context).importPreviewNothingToImport,
-              ),
-            ),
+          _notify(
+            context,
+            message: AppLocalizations.of(context).importPreviewNothingToImport,
           );
         }
         return;
@@ -1336,29 +1420,35 @@ class _DataManagementPageState extends State<DataManagementPage> {
       final summary = result.entries.isEmpty
           ? l10n.importedAccounts(result.alwaysCreateAccountIds.length)
           : l10n.importedEntries(result.entries.length);
-      ScaffoldMessenger.of(
+      _notify(
         context,
-      ).showSnackBar(SnackBar(content: Text('$summary$suffix')));
+        message: '$summary$suffix',
+        tone: VeriFeedbackTone.success,
+      );
     } on FormatException catch (error) {
       controller.logger?.error('账单导入格式错误', source: 'import', error: error);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(
-                context,
-              ).importFailedWithMessage(error.message),
-            ),
-          ),
+        _notify(
+          context,
+          message: AppLocalizations.of(
+            context,
+          ).importFailedWithMessage(error.message),
+          tone: VeriFeedbackTone.error,
+          duration: VeriFeedbackDuration.long,
+          priority: VeriFeedbackPriority.high,
+          dedupeKey: 'platform-import-${platform.name}',
         );
       }
     } catch (error) {
       controller.logger?.error('账单导入失败', source: 'import', error: error);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).importFailedCheckFile),
-          ),
+        _notify(
+          context,
+          message: AppLocalizations.of(context).importFailedCheckFile,
+          tone: VeriFeedbackTone.error,
+          duration: VeriFeedbackDuration.long,
+          priority: VeriFeedbackPriority.high,
+          dedupeKey: 'platform-import-${platform.name}',
         );
       }
     }
@@ -1458,24 +1548,34 @@ class _DataManagementPageState extends State<DataManagementPage> {
       }
       final imported = await _importBackupBytes(context, controller, bytes);
       if (imported && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context).importedLocal)),
+        _notify(
+          context,
+          message: AppLocalizations.of(context).importedLocal,
+          tone: VeriFeedbackTone.success,
         );
       }
-    } on FormatException {
+    } on FormatException catch (error) {
+      controller.logger?.error('本地备份格式错误', source: 'import', error: error);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).importFailedFormat),
-          ),
+        _notify(
+          context,
+          message: AppLocalizations.of(context).importFailedFormat,
+          tone: VeriFeedbackTone.error,
+          duration: VeriFeedbackDuration.long,
+          priority: VeriFeedbackPriority.high,
+          dedupeKey: 'local-backup-import',
         );
       }
-    } catch (_) {
+    } catch (error) {
+      controller.logger?.error('本地备份导入失败', source: 'import', error: error);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).importFailedCheckFile),
-          ),
+        _notify(
+          context,
+          message: AppLocalizations.of(context).importFailedCheckFile,
+          tone: VeriFeedbackTone.error,
+          duration: VeriFeedbackDuration.long,
+          priority: VeriFeedbackPriority.high,
+          dedupeKey: 'local-backup-import',
         );
       }
     }

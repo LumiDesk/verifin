@@ -1,5 +1,7 @@
 // 账户详情相关页面：从 assets_pages 拆出。账户详情/编辑、账户报表、
 // 信用卡还款日横幅与迷你分段切换控件。
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:flutter/services.dart';
@@ -11,6 +13,7 @@ import '../app/common_widgets.dart';
 import '../app/credit_card.dart';
 import '../app/currency_catalog.dart';
 import '../app/currency_math.dart';
+import '../app/feedback.dart';
 import '../app/icon_catalog.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
@@ -628,13 +631,13 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
         note: AppLocalizations.of(context).balanceAdjustNote,
       );
       if (!saved && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(
-                context,
-              ).balanceAdjustMissingRate(account.currencyCode),
-            ),
+        unawaited(
+          VeriFeedbackHost.of(context).showMessage(
+            message: AppLocalizations.of(
+              context,
+            ).balanceAdjustMissingRate(account.currencyCode),
+            tone: VeriFeedbackTone.warning,
+            duration: VeriFeedbackDuration.long,
           ),
         );
       }
@@ -678,9 +681,10 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
     var controller = VeriFinScope.of(context);
     var accountDraft = currentAccount;
     if (controller.accountCurrencyLocked(persistedAccount)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).accountCurrencyLocked),
+      unawaited(
+        VeriFeedbackHost.of(context).showMessage(
+          message: AppLocalizations.of(context).accountCurrencyLocked,
+          tone: VeriFeedbackTone.warning,
         ),
       );
       return;
@@ -761,8 +765,12 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AppLocalizations.of(context).copiedToClipboard)),
+    unawaited(
+      VeriFeedbackHost.of(context).showMessage(
+        message: AppLocalizations.of(context).copiedToClipboard,
+        tone: VeriFeedbackTone.success,
+        duration: VeriFeedbackDuration.short,
+      ),
     );
   }
 

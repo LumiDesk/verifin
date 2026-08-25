@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
 import '../app/currency_math.dart';
+import '../app/feedback.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
 import '../app/platform_bridge.dart';
@@ -156,11 +159,15 @@ class _WidgetCard extends StatelessWidget {
 
   Future<void> _addToHome(BuildContext context) async {
     final l10n = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
+    final feedback = VeriFeedbackHost.of(context);
     final ok = await AppWidgetBridge.pinWidget(spec.widgetKey);
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(ok ? l10n.widgetPinRequested : l10n.widgetPinUnsupported),
+    unawaited(
+      feedback.showMessage(
+        message: ok ? l10n.widgetPinRequested : l10n.widgetPinUnsupported,
+        tone: ok ? VeriFeedbackTone.success : VeriFeedbackTone.warning,
+        duration: ok
+            ? VeriFeedbackDuration.standard
+            : VeriFeedbackDuration.long,
       ),
     );
   }

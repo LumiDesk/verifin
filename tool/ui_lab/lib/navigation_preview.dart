@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:verifin/app/app_theme.dart';
+import 'package:verifin/app/feedback.dart';
 
 class NavigationPreview extends StatefulWidget {
   const NavigationPreview({super.key});
@@ -73,9 +75,13 @@ class _NavigationPreviewState extends State<NavigationPreview> {
                 setState(() => _currentIndex = index);
               },
               onQuickEntry: () {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text('预览：打开快速记账')));
+                unawaited(
+                  VeriFeedbackHost.of(context).showMessage(
+                    message: '预览：打开快速记账',
+                    duration: VeriFeedbackDuration.short,
+                    dedupeKey: 'navigation-preview',
+                  ),
+                );
               },
             ),
           ),

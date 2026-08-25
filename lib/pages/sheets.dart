@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../app/account_icon_assets.dart';
@@ -7,6 +9,7 @@ import '../app/currency_catalog.dart';
 import '../app/currency_math.dart';
 import '../app/icon_catalog.dart';
 import '../app/entry_sheets.dart';
+import '../app/feedback.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
 import '../app/net_security.dart';
@@ -504,9 +507,15 @@ Future<bool> confirmLegacyLedgerCurrency({
     code,
   );
   if (!context.mounted) return saved;
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(saved ? l10n.legacyCurrencySaved(code) : l10n.saveFailed),
+  unawaited(
+    VeriFeedbackHost.of(context).showMessage(
+      message: saved ? l10n.legacyCurrencySaved(code) : l10n.saveFailed,
+      tone: saved ? VeriFeedbackTone.success : VeriFeedbackTone.error,
+      duration: saved
+          ? VeriFeedbackDuration.standard
+          : VeriFeedbackDuration.long,
+      priority: saved ? VeriFeedbackPriority.normal : VeriFeedbackPriority.high,
+      dedupeKey: saved ? null : 'legacy-currency-save',
     ),
   );
   return saved;
@@ -1523,13 +1532,17 @@ Future<bool> confirmDeleteAccount(
 ) async {
   final controller = VeriFinScope.of(context);
   final l10n = AppLocalizations.of(context);
-  // 弹层随后会 pop，提前抓住 messenger（它位于被 pop 路由之上，pop 后仍有效），
+  // 弹层随后会 pop，提前抓住根级反馈控制器，确保路由退出后仍能提示被停用的规则。
   // 用于删账户后提示被停用的周期规则。
-  final messenger = ScaffoldMessenger.of(context);
+  final feedback = VeriFeedbackHost.of(context);
   void notifyDisabledRules(int affected) {
     if (affected > 0) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.accountRecurringRulesDisabled(affected))),
+      unawaited(
+        feedback.showMessage(
+          message: l10n.accountRecurringRulesDisabled(affected),
+          tone: VeriFeedbackTone.warning,
+          duration: VeriFeedbackDuration.long,
+        ),
       );
     }
   }

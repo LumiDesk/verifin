@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../app/common_widgets.dart';
+import '../app/feedback.dart';
 import '../app/reminder/notification_scheduler.dart';
 import '../app/reminder/reminder_settings.dart';
 import '../app/veri_fin_scope.dart';
@@ -133,7 +136,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
   }
 
   Future<void> _sendTest() async {
-    final messenger = ScaffoldMessenger.of(context);
+    final feedback = VeriFeedbackHost.of(context);
     final l10n = AppLocalizations.of(context);
     // 先确保有通知/精确闹钟权限（首次可能未申请过），再立即发一条测试通知。
     await _scheduler.requestPermission();
@@ -141,7 +144,12 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
     if (!mounted) {
       return;
     }
-    messenger.showSnackBar(SnackBar(content: Text(l10n.reminderTestSent)));
+    unawaited(
+      feedback.showMessage(
+        message: l10n.reminderTestSent,
+        tone: VeriFeedbackTone.success,
+      ),
+    );
   }
 
   bool get _isDirty => _draftSettings != _initialSettings;
@@ -154,7 +162,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
   }
 
   Future<bool> _save() async {
-    final messenger = ScaffoldMessenger.of(context);
+    final feedback = VeriFeedbackHost.of(context);
     final l10n = AppLocalizations.of(context);
     var granted = true;
     if (_draftSettings.enabled && !_initialSettings.enabled) {
@@ -170,8 +178,12 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
       return false;
     }
     if (_draftSettings.enabled && _scheduler.supported && !granted) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.reminderPermissionDenied)),
+      unawaited(
+        feedback.showMessage(
+          message: l10n.reminderPermissionDenied,
+          tone: VeriFeedbackTone.warning,
+          duration: VeriFeedbackDuration.long,
+        ),
       );
     }
     return true;
