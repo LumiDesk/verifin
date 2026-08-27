@@ -529,6 +529,7 @@ class MainActivity : FlutterFragmentActivity() {
         val release = resolveRelease(includePrerelease)
         val latestTag = release.optString("tag_name")
         val latestVersion = latestTag.removePrefix("v")
+        val isPrerelease = release.optBoolean("prerelease")
         val currentVersion = BuildConfig.VERSION_NAME
         if (latestVersion.isBlank()) {
             return mapOf(
