@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/ledger_math.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/app/veri_fin_controller.dart';
+import 'package:verifin/data/ledger_repository.dart';
 import 'package:verifin/local_storage/local_storage.dart';
 
 import 'support/in_memory_ledger_repository.dart';
@@ -165,8 +166,15 @@ void main() {
             occurredAt: DateTime(2026, 7, 3, 11),
           ),
         );
+      controller.addRefund(
+        expenseId: 'delete-expense-test',
+        amount: 2,
+        accountId: card.id,
+        initiatedAt: DateTime(2026, 7, 4),
+        settledAt: DateTime(2026, 7, 5),
+      );
 
-      controller.deleteAccountAndRelatedEntries(cash.id);
+      await controller.deleteAccountAndRelatedEntries(cash.id);
 
       expect(controller.accounts.map((account) => account.id), <String>[
         card.id,
@@ -178,6 +186,60 @@ void main() {
       controller.dispose();
     },
   );
+
+  test('跨表删除落库失败时保留 Controller 与仓储原状态', () async {
+    final repository = _FailingReplaceRepository();
+    final controller = await VeriFinController.create(
+      LocalKeyValueStore(),
+      repository: repository,
+    );
+    final account = Account(
+      id: 'atomic-delete-account',
+      bookId: controller.activeBook.id,
+      name: '待删除账户',
+      type: AccountType.cash,
+      groupId: null,
+      initialBalance: 0,
+      iconCode: 'cash',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+    );
+    controller
+      ..addAccount(account)
+      ..addEntry(
+        LedgerEntry(
+          id: 'atomic-delete-entry',
+          bookId: controller.activeBook.id,
+          type: EntryType.expense,
+          amount: 10,
+          categoryId: 'dining',
+          accountId: account.id,
+          note: '',
+          occurredAt: DateTime(2026, 8, 27),
+        ),
+      );
+    await controller.waitForPendingWrites();
+    repository.failReplace = true;
+
+    expect(await controller.deleteAccountAndRelatedEntries(account.id), isNull);
+    expect(controller.accounts.any((item) => item.id == account.id), isTrue);
+    expect(
+      controller.entries.any((item) => item.id == 'atomic-delete-entry'),
+      isTrue,
+    );
+    expect(
+      (await repository.loadAccounts()).any((item) => item.id == account.id),
+      isTrue,
+    );
+    expect(
+      (await repository.loadEntries()).any(
+        (item) => item.id == 'atomic-delete-entry',
+      ),
+      isTrue,
+    );
+    controller.dispose();
+  });
 
   test(
     'transfer entries update both account balances without income expense',
@@ -335,4 +397,16 @@ void main() {
       controller.dispose();
     },
   );
+}
+
+class _FailingReplaceRepository extends InMemoryLedgerRepository {
+  bool failReplace = false;
+
+  @override
+  Future<void> replaceAllLedgerData(LedgerDataSnapshot snapshot) {
+    if (failReplace) {
+      throw StateError('simulated replace failure');
+    }
+    return super.replaceAllLedgerData(snapshot);
+  }
 }

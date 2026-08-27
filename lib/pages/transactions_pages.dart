@@ -890,8 +890,12 @@ class _TransactionsPageState extends State<TransactionsPage> {
     if (!mounted || !confirmed) {
       return;
     }
-    VeriFinScope.of(context).deleteEntries(Set<String>.of(_selectedIds));
-    _exitSelection();
+    final deleted = await VeriFinScope.of(
+      context,
+    ).deleteEntries(Set<String>.of(_selectedIds));
+    if (mounted && deleted) {
+      _exitSelection();
+    }
   }
 
   Future<void> _batchChangeCategory(VeriFinController controller) async {
@@ -922,33 +926,59 @@ class _TransactionsPageState extends State<TransactionsPage> {
   }
 
   Future<void> _batchChangeAccount(VeriFinController controller) async {
-    if (controller.accounts.isEmpty) {
+    final candidates = controller.batchAccountChangeCandidates(
+      Set<String>.of(_selectedIds),
+    );
+    if (candidates.isEmpty) {
+      unawaited(
+        VeriFeedbackHost.of(context).showMessage(
+          message: AppLocalizations.of(context).batchAccountChangeUnsafe,
+          tone: VeriFeedbackTone.warning,
+          duration: VeriFeedbackDuration.long,
+        ),
+      );
       return;
     }
     // 与记账 / 编辑用同一个账户选择器（带图标、余额，按资产视图模式分区）。
     final selected = await showAccountPickerSheet(
       context: context,
       title: AppLocalizations.of(context).changeAccountTitle,
-      accounts: controller.accounts,
+      accounts: candidates,
       selectedId: null,
       balanceOf: controller.accountBalance,
     );
     if (selected == null || !mounted) {
       return;
     }
-    final changed = controller.setEntriesAccount(
+    final result = await controller.setEntriesAccount(
       Set<String>.of(_selectedIds),
       selected.id,
     );
-    if (mounted) {
+    if (!mounted) {
+      return;
+    }
+    if (result.status == BatchAccountChangeStatus.unsafeSelection ||
+        result.status == BatchAccountChangeStatus.invalidTarget) {
       unawaited(
         VeriFeedbackHost.of(context).showMessage(
-          message: AppLocalizations.of(context).changedAccountCount(changed),
+          message: AppLocalizations.of(context).batchAccountChangeUnsafe,
+          tone: VeriFeedbackTone.warning,
+          duration: VeriFeedbackDuration.long,
+        ),
+      );
+      return;
+    }
+    if (result.isSuccess) {
+      unawaited(
+        VeriFeedbackHost.of(context).showMessage(
+          message: AppLocalizations.of(
+            context,
+          ).changedAccountCount(result.changed),
           tone: VeriFeedbackTone.success,
         ),
       );
+      _exitSelection();
     }
-    _exitSelection();
   }
 
   DateWindow? _activePeriod() {

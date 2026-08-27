@@ -1218,8 +1218,7 @@ Future<bool> _confirmDeleteEntry(
   if (!context.mounted || !confirmed) {
     return false;
   }
-  controller.deleteEntry(entry.id);
-  return true;
+  return controller.deleteEntry(entry.id);
 }
 
 void openEntryDetail(BuildContext context, LedgerEntry entry) {

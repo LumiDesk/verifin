@@ -1136,14 +1136,6 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     return true;
   }
 
-  void _clearDefaultAccountRef(String accountId) {
-    final before = _defaultAccountIds.length;
-    _defaultAccountIds.removeWhere((_, id) => id == accountId);
-    if (_defaultAccountIds.length != before) {
-      _persistDefaultAccounts();
-    }
-  }
-
   /// 是否强制所有金额展示两位小数（`12` → `12.00`）。全局显示偏好（不分账本），
   /// 进 JSON 备份、初始化保留。经顶层量 [amountForceTwoDecimals] 让无 context 的金额
   /// 格式化纯函数（小组件、通知、`series_math` 等）同步生效。
@@ -1355,13 +1347,19 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   bool get privacyConsentAccepted => _privacyConsentAccepted;
 
   /// 记录用户已同意隐私政策与用户协议。一经同意即持久化，重启后不再询问。
-  void acceptPrivacyConsent() {
+  Future<bool> acceptPrivacyConsent() async {
     if (_privacyConsentAccepted) {
-      return;
+      return true;
+    }
+    try {
+      await _store.writeAndFlush(_privacyConsentKey, 'true');
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
     }
     _privacyConsentAccepted = true;
-    _store.write(_privacyConsentKey, 'true');
     notifyListeners();
+    return true;
   }
 
   /// 当前应用锁配置（含锁类型、加盐哈希、生物识别开关）。
@@ -1378,48 +1376,63 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       _appLockConfig.enabled && _appLockConfig.biometricEnabled;
 
   /// 设置或修改应用锁密钥（PIN 数字串或图案点序列）。生成新盐并落库，不存明文。
-  void setAppLock({required AppLockKind kind, required String secret}) {
+  Future<bool> setAppLock({
+    required AppLockKind kind,
+    required String secret,
+  }) async {
     assert(kind != AppLockKind.none, 'setAppLock 不能用于关闭应用锁');
-    _appLockConfig = AppLockConfig.fromSecret(
+    final next = AppLockConfig.fromSecret(
       kind: kind,
       secret: secret,
       biometricEnabled: _appLockConfig.biometricEnabled,
     );
-    _persistAppLock();
+    try {
+      await _store.writeAndFlush(_appLockKey, jsonEncode(next.toJson()));
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _appLockConfig = next;
     notifyListeners();
     onAppLockChanged?.call(_appLockConfig.enabled);
+    return true;
   }
 
   /// 校验输入的密钥是否匹配当前应用锁。
   bool verifyAppLock(String input) => _appLockConfig.verify(input);
 
   /// 关闭应用锁（同时关闭生物识别）。
-  void disableAppLock() {
+  Future<bool> disableAppLock() async {
     if (!_appLockConfig.enabled) {
-      return;
+      return true;
+    }
+    try {
+      await _store.deleteAndFlush(_appLockKey);
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
     }
     _appLockConfig = const AppLockConfig.none();
-    _persistAppLock();
     notifyListeners();
     onAppLockChanged?.call(false);
+    return true;
   }
 
   /// 开关生物识别快捷解锁。仅在已启用应用锁时生效。
-  void setBiometricUnlockEnabled(bool enabled) {
+  Future<bool> setBiometricUnlockEnabled(bool enabled) async {
     if (!_appLockConfig.enabled || _appLockConfig.biometricEnabled == enabled) {
-      return;
+      return _appLockConfig.enabled;
     }
-    _appLockConfig = _appLockConfig.copyWith(biometricEnabled: enabled);
-    _persistAppLock();
+    final next = _appLockConfig.copyWith(biometricEnabled: enabled);
+    try {
+      await _store.writeAndFlush(_appLockKey, jsonEncode(next.toJson()));
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _appLockConfig = next;
     notifyListeners();
-  }
-
-  void _persistAppLock() {
-    if (_appLockConfig.enabled) {
-      _store.write(_appLockKey, jsonEncode(_appLockConfig.toJson()));
-    } else {
-      _store.delete(_appLockKey);
-    }
+    return true;
   }
 
   void toggleAssetAccountViewMode() {
@@ -2451,18 +2464,34 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   }
 
   /// 删除一笔退款条目（原支出净额缓存随之恢复）。
-  void deleteRefund(String refundId) {
+  Future<bool> deleteRefund(String refundId) async {
     final index = _entries.indexWhere(
       (e) => e.id == refundId && e.type == EntryType.refund,
     );
-    if (index == -1) return;
-    _entries.removeAt(index);
-    _syncRefundCache();
-    _persistEntries();
-    if (_removeAttachmentsForEntries(<String>{refundId})) {
-      _persistAttachments();
+    if (index == -1) return false;
+    final nextEntries = _entriesWithSyncedRefundCache(
+      _entries.where((entry) => entry.id != refundId),
+    )..sort(_compareEntriesLatestFirst);
+    final nextAttachments = _attachments
+        .where((attachment) => attachment.entryId != refundId)
+        .toList();
+    final saved = await _runTrackedWrite(
+      () => _repository.saveEntryAggregate(
+        entries: nextEntries,
+        attachments: nextAttachments,
+      ),
+    );
+    if (!saved) {
+      return false;
     }
+    _entries
+      ..clear()
+      ..addAll(nextEntries);
+    _attachments
+      ..clear()
+      ..addAll(nextAttachments);
     notifyListeners();
+    return true;
   }
 
   void addLedgerBook(String name, {String? baseCurrencyCode}) {
@@ -2705,27 +2734,20 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     return _entries.where((entry) => entry.bookId == bookId).length;
   }
 
-  void deleteEntry(String entryId) {
+  Future<bool> deleteEntry(String entryId) {
     // 删支出时级联删除挂它的退款条目；删退款时由 _syncRefundData 恢复原支出净额缓存。
-    final refundIds = _entries
-        .where((e) => e.type == EntryType.refund && e.refundOf == entryId)
-        .map((e) => e.id)
-        .toSet();
-    final removeIds = <String>{entryId, ...refundIds};
-    _entries.removeWhere((entry) => removeIds.contains(entry.id));
-    _syncRefundCache();
-    _persistEntries();
-    if (_removeAttachmentsForEntries(removeIds)) {
-      _persistAttachments();
-    }
-    notifyListeners();
+    return _deleteEntryIds(<String>{entryId});
   }
 
   /// 批量删除交易（连同关联退款条目与附件级联清理）。
-  void deleteEntries(Set<String> entryIds) {
+  Future<bool> deleteEntries(Set<String> entryIds) {
     if (entryIds.isEmpty) {
-      return;
+      return Future<bool>.value(false);
     }
+    return _deleteEntryIds(entryIds);
+  }
+
+  Set<String> _withDependentRefundIds(Set<String> entryIds) {
     final refundIds = _entries
         .where(
           (e) =>
@@ -2735,14 +2757,37 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         )
         .map((e) => e.id)
         .toSet();
-    final removeIds = <String>{...entryIds, ...refundIds};
-    _entries.removeWhere((entry) => removeIds.contains(entry.id));
-    _syncRefundCache();
-    _persistEntries();
-    if (_removeAttachmentsForEntries(removeIds)) {
-      _persistAttachments();
+    return <String>{...entryIds, ...refundIds};
+  }
+
+  Future<bool> _deleteEntryIds(Set<String> entryIds) async {
+    final removeIds = _withDependentRefundIds(entryIds);
+    if (!_entries.any((entry) => removeIds.contains(entry.id))) {
+      return false;
     }
+    final nextEntries = _entriesWithSyncedRefundCache(
+      _entries.where((entry) => !removeIds.contains(entry.id)),
+    )..sort(_compareEntriesLatestFirst);
+    final nextAttachments = _attachments
+        .where((attachment) => !removeIds.contains(attachment.entryId))
+        .toList();
+    final saved = await _runTrackedWrite(
+      () => _repository.saveEntryAggregate(
+        entries: nextEntries,
+        attachments: nextAttachments,
+      ),
+    );
+    if (!saved) {
+      return false;
+    }
+    _entries
+      ..clear()
+      ..addAll(nextEntries);
+    _attachments
+      ..clear()
+      ..addAll(nextAttachments);
     notifyListeners();
+    return true;
   }
 
   /// 批量改分类：只改与目标分类同类型的交易（类型不符的跳过）。返回改动数量。
@@ -2766,28 +2811,134 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     return changed;
   }
 
-  /// 批量改账户：设置选中交易的（转出）账户。返回改动数量。
-  int setEntriesAccount(Set<String> entryIds, String accountId) {
+  List<LedgerEntry>? _safeBatchAccountEntries(Set<String> entryIds) {
     if (entryIds.isEmpty) {
-      return 0;
+      return null;
     }
-    var changed = 0;
-    for (var i = 0; i < _entries.length; i++) {
-      final entry = _entries[i];
-      // 转账时目标账户不能与转出账户相同。
-      if (entryIds.contains(entry.id) &&
-          entry.accountId != accountId &&
-          !(entry.type == EntryType.transfer &&
-              entry.toAccountId == accountId)) {
-        _entries[i] = entry.copyWith(accountId: accountId);
-        changed += 1;
+    final selected = _entries
+        .where(
+          (entry) =>
+              entry.bookId == _activeBookId && entryIds.contains(entry.id),
+        )
+        .toList();
+    if (selected.length != entryIds.length) {
+      return null;
+    }
+    for (final entry in selected) {
+      final source = _accounts
+          .where(
+            (account) =>
+                account.id == entry.accountId && account.bookId == entry.bookId,
+          )
+          .firstOrNull;
+      if (source == null || entry.accountAmount == null) {
+        // “无账户”或悬空账户没有可直接搬到新账户的实际账户金额。
+        return null;
       }
     }
-    if (changed > 0) {
-      _persistEntries();
-      notifyListeners();
+    return selected;
+  }
+
+  /// 批量改账户只能在账户币种不变时复用冻结的 accountAmount/baseAmount。
+  /// 跨币种、无账户或转入账户冲突都必须逐笔编辑，不能静默猜汇率/结算金额。
+  List<Account> batchAccountChangeCandidates(Set<String> entryIds) {
+    final selected = _safeBatchAccountEntries(entryIds);
+    if (selected == null) {
+      return const <Account>[];
     }
-    return changed;
+    final sourceCurrencies = <String>{
+      for (final entry in selected)
+        _accounts
+            .firstWhere(
+              (account) =>
+                  account.id == entry.accountId &&
+                  account.bookId == entry.bookId,
+            )
+            .currencyCode,
+    };
+    if (sourceCurrencies.length != 1) {
+      return const <Account>[];
+    }
+    final currencyCode = sourceCurrencies.single;
+    final forbiddenTransferTargets = <String>{
+      for (final entry in selected)
+        if (entry.type == EntryType.transfer && entry.toAccountId != null)
+          entry.toAccountId!,
+    };
+    return List<Account>.unmodifiable(
+      accounts.where(
+        (account) =>
+            !account.hidden &&
+            account.currencyCode == currencyCode &&
+            !forbiddenTransferTargets.contains(account.id),
+      ),
+    );
+  }
+
+  Future<BatchAccountChangeResult> setEntriesAccount(
+    Set<String> entryIds,
+    String accountId,
+  ) async {
+    final target = _accounts
+        .where(
+          (account) =>
+              account.id == accountId &&
+              account.bookId == _activeBookId &&
+              !account.hidden,
+        )
+        .firstOrNull;
+    if (target == null) {
+      return const BatchAccountChangeResult(
+        status: BatchAccountChangeStatus.invalidTarget,
+      );
+    }
+    final selected = _safeBatchAccountEntries(entryIds);
+    if (selected == null ||
+        selected.any((entry) {
+          final source = _accounts.firstWhere(
+            (account) =>
+                account.id == entry.accountId && account.bookId == entry.bookId,
+          );
+          return source.currencyCode != target.currencyCode ||
+              entry.type == EntryType.transfer &&
+                  entry.toAccountId == target.id;
+        })) {
+      return const BatchAccountChangeResult(
+        status: BatchAccountChangeStatus.unsafeSelection,
+      );
+    }
+
+    final changedIds = <String>{
+      for (final entry in selected)
+        if (entry.accountId != target.id) entry.id,
+    };
+    if (changedIds.isEmpty) {
+      return const BatchAccountChangeResult(
+        status: BatchAccountChangeStatus.success,
+      );
+    }
+    final nextEntries = <LedgerEntry>[
+      for (final entry in _entries)
+        changedIds.contains(entry.id)
+            ? entry.copyWith(accountId: target.id)
+            : entry,
+    ];
+    final saved = await _runTrackedWrite(
+      () => _repository.saveEntries(nextEntries),
+    );
+    if (!saved) {
+      return const BatchAccountChangeResult(
+        status: BatchAccountChangeStatus.persistenceFailure,
+      );
+    }
+    _entries
+      ..clear()
+      ..addAll(nextEntries);
+    notifyListeners();
+    return BatchAccountChangeResult(
+      status: BatchAccountChangeStatus.success,
+      changed: changedIds.length,
+    );
   }
 
   bool _isAccountCurrencyAllowed(Account account) {
@@ -2889,62 +3040,124 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     return true;
   }
 
-  /// 停用引用 [accountId] 的周期规则并清掉其账户引用（转出改为「无账户」、
-  /// 转入清空），避免删账户后规则继续往已不存在的账户补记。返回受影响的规则数，
-  /// 供 UI 提示用户前往复查。
-  int _detachAccountFromRecurringRules(String accountId) {
-    var affected = 0;
-    for (var i = 0; i < _recurringRules.length; i++) {
-      final rule = _recurringRules[i];
-      final hitsFrom = rule.accountId == accountId;
-      final hitsTo = rule.toAccountId == accountId;
-      if (!hitsFrom && !hitsTo) {
-        continue;
-      }
-      _recurringRules[i] = rule.copyWith(
-        active: false,
-        accountId: hitsFrom ? '' : null,
-        clearToAccountId: hitsTo,
-      );
-      affected++;
-    }
-    if (affected > 0) {
-      _persistRecurringRules();
-    }
-    return affected;
+  /// 删除账户。成功返回被停用的周期规则数，落库失败/账户仍有流水时返回 null。
+  Future<int?> deleteAccount(String accountId) {
+    return _deleteAccount(accountId, deleteRelatedEntries: false);
   }
 
-  /// 删除账户。返回被停用的周期规则数（0 表示没有规则引用它）。
-  int deleteAccount(String accountId) {
-    final affectedRules = _detachAccountFromRecurringRules(accountId);
-    _accounts.removeWhere((account) => account.id == accountId);
-    _removeAccountFromOrders(accountId);
-    _clearDefaultAccountRef(accountId);
-    _persistAssetAccountOrders();
-    _persistAccounts();
-    notifyListeners();
-    return affectedRules;
+  /// 删除账户及其相关交易。成功返回被停用的周期规则数，失败返回 null。
+  Future<int?> deleteAccountAndRelatedEntries(String accountId) {
+    return _deleteAccount(accountId, deleteRelatedEntries: true);
   }
 
-  /// 删除账户及其相关交易。返回被停用的周期规则数。
-  int deleteAccountAndRelatedEntries(String accountId) {
-    final affectedRules = _detachAccountFromRecurringRules(accountId);
-    final removedEntryIds = _entries
+  Future<int?> _deleteAccount(
+    String accountId, {
+    required bool deleteRelatedEntries,
+  }) async {
+    if (!_accounts.any((account) => account.id == accountId)) {
+      return null;
+    }
+    final directlyRelatedIds = _entries
         .where((entry) => entryTouchesAccount(entry, accountId))
         .map((entry) => entry.id)
         .toSet();
-    _entries.removeWhere((entry) => entryTouchesAccount(entry, accountId));
-    _accounts.removeWhere((account) => account.id == accountId);
-    _removeAccountFromOrders(accountId);
-    _clearDefaultAccountRef(accountId);
-    _persistEntries();
-    if (_removeAttachmentsForEntries(removedEntryIds)) {
-      _persistAttachments();
+    if (!deleteRelatedEntries && directlyRelatedIds.isNotEmpty) {
+      return null;
     }
-    _persistAssetAccountOrders();
-    _persistAccounts();
+    final removeIds = deleteRelatedEntries
+        ? _withDependentRefundIds(directlyRelatedIds)
+        : const <String>{};
+
+    var affected = 0;
+    final nextRules = <RecurringRule>[];
+    for (final rule in _recurringRules) {
+      final hitsFrom = rule.accountId == accountId;
+      final hitsTo = rule.toAccountId == accountId;
+      if (!hitsFrom && !hitsTo) {
+        nextRules.add(rule);
+        continue;
+      }
+      nextRules.add(
+        rule.copyWith(
+          active: false,
+          accountId: hitsFrom ? '' : null,
+          clearToAccountId: hitsTo,
+        ),
+      );
+      affected++;
+    }
+    final nextAccounts = _accounts
+        .where((account) => account.id != accountId)
+        .toList();
+    final nextEntries = _entriesWithSyncedRefundCache(
+      _entries.where((entry) => !removeIds.contains(entry.id)),
+    )..sort(_compareEntriesLatestFirst);
+    final nextAttachments = _attachments
+        .where((attachment) => !removeIds.contains(attachment.entryId))
+        .toList();
+    final nextOrders = <String, List<String>>{
+      for (final entry in _assetAccountOrders.entries)
+        entry.key: entry.value.where((id) => id != accountId).toList(),
+    };
+    final nextDefaults = Map<String, String>.of(_defaultAccountIds)
+      ..removeWhere((_, id) => id == accountId);
+
+    final saved = await _runTrackedWrite(
+      () => _repository.replaceAllLedgerData(
+        _ledgerDataSnapshot(
+          accounts: nextAccounts,
+          attachments: nextAttachments,
+          entries: nextEntries,
+          recurringRules: nextRules,
+        ),
+      ),
+    );
+    if (!saved) {
+      return null;
+    }
+
+    _accounts
+      ..clear()
+      ..addAll(nextAccounts);
+    _entries
+      ..clear()
+      ..addAll(nextEntries);
+    _attachments
+      ..clear()
+      ..addAll(nextAttachments);
+    _recurringRules
+      ..clear()
+      ..addAll(nextRules);
+    _assetAccountOrders
+      ..clear()
+      ..addAll(nextOrders);
+    _defaultAccountIds
+      ..clear()
+      ..addAll(nextDefaults);
+    await _persistAccountDeletionPreferences();
     notifyListeners();
-    return affectedRules;
+    return affected;
+  }
+
+  Future<void> _persistAccountDeletionPreferences() async {
+    try {
+      await _store.writeAndFlush(
+        _assetAccountOrderKey,
+        jsonEncode(_assetAccountOrders),
+      );
+      if (_defaultAccountIds.isEmpty) {
+        await _store.deleteAndFlush(_defaultAccountKey);
+      } else {
+        await _store.writeAndFlush(
+          _defaultAccountKey,
+          jsonEncode(_defaultAccountIds),
+        );
+      }
+    } catch (error, stackTrace) {
+      // SQLite 权威删除已成功；KV 只保存排序/默认账户，失败时记录并提示，下一次
+      // 载入会按现存账户自愈，不回滚已经完成的核心数据删除。
+      _handlePersistError(error, stackTrace);
+    }
   }
 
   bool adjustAccountBalance(
@@ -3190,7 +3403,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     return true;
   }
 
-  bool deleteCategory(String categoryId) {
+  Future<bool> deleteCategory(String categoryId) async {
     if (_isProtectedCategory(categoryId)) {
       return false;
     }
@@ -3211,11 +3424,29 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     if (categoriesForType(category.type).length <= 1) {
       return false;
     }
-    _categories.removeWhere((item) => item.id == categoryId);
+    final nextCategories = _categories
+        .where((item) => item.id != categoryId)
+        .toList();
     // 清理该分类在各账本/月份下的分类预算，避免残留孤儿键。
-    _categoryBudgets.removeWhere((key, _) => key.endsWith(':$categoryId'));
-    _persistCategories();
-    _persistCategoryBudgets();
+    final nextCategoryBudgets = Map<String, double>.of(_categoryBudgets)
+      ..removeWhere((key, _) => key.endsWith(':$categoryId'));
+    final saved = await _runTrackedWrite(
+      () => _repository.replaceAllLedgerData(
+        _ledgerDataSnapshot(
+          categories: nextCategories,
+          categoryBudgets: nextCategoryBudgets,
+        ),
+      ),
+    );
+    if (!saved) {
+      return false;
+    }
+    _categories
+      ..clear()
+      ..addAll(nextCategories);
+    _categoryBudgets
+      ..clear()
+      ..addAll(nextCategoryBudgets);
     notifyListeners();
     return true;
   }
@@ -3248,7 +3479,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   ///
   /// 返回被改动的交易笔数；无法合并时返回 -1（源受保护 / 源或目标不存在 / 类型不一致 /
   /// 源与目标相同 / 源仍有子分类 / 目标是源的后代）。源有子分类时应先移动或删除子分类。
-  int mergeCategoryInto(String sourceId, String targetId) {
+  Future<int> mergeCategoryInto(String sourceId, String targetId) async {
     if (sourceId == targetId || _isProtectedCategory(sourceId)) {
       return -1;
     }
@@ -3262,31 +3493,52 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         isDescendantOf(_categories, targetId, sourceId)) {
       return -1;
     }
-    var changed = 0;
-    for (var i = 0; i < _entries.length; i++) {
-      if (_entries[i].categoryId == sourceId) {
-        _entries[i] = _entries[i].copyWith(categoryId: targetId);
-        changed += 1;
-      }
-    }
-    var rulesChanged = false;
-    for (var i = 0; i < _recurringRules.length; i++) {
-      if (_recurringRules[i].categoryId == sourceId) {
-        _recurringRules[i] = _recurringRules[i].copyWith(categoryId: targetId);
-        rulesChanged = true;
-      }
-    }
-    _categories.removeWhere((c) => c.id == sourceId);
+    final changed = _entries
+        .where((entry) => entry.categoryId == sourceId)
+        .length;
+    final nextEntries = <LedgerEntry>[
+      for (final entry in _entries)
+        entry.categoryId == sourceId
+            ? entry.copyWith(categoryId: targetId)
+            : entry,
+    ];
+    final nextRules = <RecurringRule>[
+      for (final rule in _recurringRules)
+        rule.categoryId == sourceId
+            ? rule.copyWith(categoryId: targetId)
+            : rule,
+    ];
+    final nextCategories = _categories
+        .where((category) => category.id != sourceId)
+        .toList();
     // 清理源分类的分类预算，避免残留孤儿键。
-    _categoryBudgets.removeWhere((key, _) => key.endsWith(':$sourceId'));
-    if (changed > 0) {
-      _persistEntries();
+    final nextCategoryBudgets = Map<String, double>.of(_categoryBudgets)
+      ..removeWhere((key, _) => key.endsWith(':$sourceId'));
+    final saved = await _runTrackedWrite(
+      () => _repository.replaceAllLedgerData(
+        _ledgerDataSnapshot(
+          categories: nextCategories,
+          entries: nextEntries,
+          recurringRules: nextRules,
+          categoryBudgets: nextCategoryBudgets,
+        ),
+      ),
+    );
+    if (!saved) {
+      return -1;
     }
-    if (rulesChanged) {
-      _persistRecurringRules();
-    }
-    _persistCategories();
-    _persistCategoryBudgets();
+    _entries
+      ..clear()
+      ..addAll(nextEntries);
+    _recurringRules
+      ..clear()
+      ..addAll(nextRules);
+    _categories
+      ..clear()
+      ..addAll(nextCategories);
+    _categoryBudgets
+      ..clear()
+      ..addAll(nextCategoryBudgets);
     notifyListeners();
     return changed;
   }
@@ -3361,27 +3613,37 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   }
 
   /// 删除标签，并从所有交易的 tagIds 中移除该标签的引用。
-  void deleteTag(String tagId) {
+  Future<bool> deleteTag(String tagId) async {
     final index = _tags.indexWhere((tag) => tag.id == tagId);
     if (index == -1) {
-      return;
+      return false;
     }
-    _tags.removeAt(index);
-    var touchedEntries = false;
-    for (var i = 0; i < _entries.length; i++) {
-      final entry = _entries[i];
-      if (entry.tagIds.contains(tagId)) {
-        _entries[i] = entry.copyWith(
-          tagIds: entry.tagIds.where((id) => id != tagId).toList(),
-        );
-        touchedEntries = true;
-      }
+    final nextTags = List<Tag>.of(_tags)..removeAt(index);
+    final nextEntries = <LedgerEntry>[
+      for (final entry in _entries)
+        if (entry.tagIds.contains(tagId))
+          entry.copyWith(
+            tagIds: entry.tagIds.where((id) => id != tagId).toList(),
+          )
+        else
+          entry,
+    ];
+    final saved = await _runTrackedWrite(
+      () => _repository.replaceAllLedgerData(
+        _ledgerDataSnapshot(tags: nextTags, entries: nextEntries),
+      ),
+    );
+    if (!saved) {
+      return false;
     }
-    _persistTags();
-    if (touchedEntries) {
-      _persistEntries();
-    }
+    _tags
+      ..clear()
+      ..addAll(nextTags);
+    _entries
+      ..clear()
+      ..addAll(nextEntries);
     notifyListeners();
+    return true;
   }
 
   void addAccountGroup(String name) {
@@ -3426,17 +3688,43 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
-  void deleteAccountGroup(String groupId) {
-    _accountGroups.removeWhere((group) => group.id == groupId);
-    for (var i = 0; i < _accounts.length; i += 1) {
-      if (_accounts[i].groupId == groupId) {
-        _accounts[i] = _accounts[i].copyWith(groupId: 'ungrouped');
-      }
+  Future<bool> deleteAccountGroup(String groupId) async {
+    if (!_accountGroups.any((group) => group.id == groupId)) {
+      return false;
     }
-    _normalizeGroupOrder();
-    _persistAccountGroups();
-    _persistAccounts();
+    final grouped = <String, List<AccountGroup>>{};
+    for (final group in _accountGroups.where((group) => group.id != groupId)) {
+      grouped.putIfAbsent(group.bookId, () => <AccountGroup>[]).add(group);
+    }
+    final nextGroups = <AccountGroup>[];
+    for (final groups in grouped.values) {
+      groups.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+      nextGroups.addAll(
+        groups.indexed.map((item) => item.$2.copyWith(sortOrder: item.$1)),
+      );
+    }
+    final nextAccounts = <Account>[
+      for (final account in _accounts)
+        account.groupId == groupId
+            ? account.copyWith(groupId: 'ungrouped')
+            : account,
+    ];
+    final saved = await _runTrackedWrite(
+      () => _repository.replaceAllLedgerData(
+        _ledgerDataSnapshot(accounts: nextAccounts, accountGroups: nextGroups),
+      ),
+    );
+    if (!saved) {
+      return false;
+    }
+    _accountGroups
+      ..clear()
+      ..addAll(nextGroups);
+    _accounts
+      ..clear()
+      ..addAll(nextAccounts);
     notifyListeners();
+    return true;
   }
 
   void reorderAccountGroup(int oldIndex, int newIndex) {

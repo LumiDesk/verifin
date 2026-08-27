@@ -105,7 +105,7 @@ void main() {
     );
     expect(controller.refundsForEntry('e1').length, 1);
 
-    controller.deleteEntry('e1');
+    await controller.deleteEntry('e1');
     expect(controller.entries.where((e) => e.id == 'e1'), isEmpty);
     expect(controller.refundsForEntry('e1'), isEmpty);
     // 退款条目也一并清掉（列表里没有任何退款残留）。
@@ -134,7 +134,7 @@ void main() {
     expect(controller.accountBalance(a), 940);
     expect(controller.entries.firstWhere((e) => e.id == 'e1').netAmount, 60);
 
-    controller.deleteRefund(refund!.id);
+    await controller.deleteRefund(refund!.id);
     expect(controller.accountBalance(a), 900); // 回到只有支出的状态
     expect(controller.entries.firstWhere((e) => e.id == 'e1').netAmount, 100);
     controller.dispose();

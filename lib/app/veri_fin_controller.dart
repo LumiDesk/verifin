@@ -222,6 +222,22 @@ final class EntrySavePersistenceFailure extends EntrySaveResult {
   const EntrySavePersistenceFailure();
 }
 
+enum BatchAccountChangeStatus {
+  success,
+  unsafeSelection,
+  invalidTarget,
+  persistenceFailure,
+}
+
+class BatchAccountChangeResult {
+  const BatchAccountChangeResult({required this.status, this.changed = 0});
+
+  final BatchAccountChangeStatus status;
+  final int changed;
+
+  bool get isSuccess => status == BatchAccountChangeStatus.success;
+}
+
 int _defaultAccountCompare(Account a, Account b) {
   final hiddenCompare = (a.hidden ? 1 : 0).compareTo(b.hidden ? 1 : 0);
   if (hiddenCompare != 0) {

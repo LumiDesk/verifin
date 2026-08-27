@@ -118,10 +118,10 @@ void main() {
     );
     final coffeeId = idOfLabel(controller, '咖啡');
 
-    expect(controller.deleteCategory(diningId), isFalse);
+    expect(await controller.deleteCategory(diningId), isFalse);
     // 先删子分类，父分类才能删。
-    expect(controller.deleteCategory(coffeeId), isTrue);
-    expect(controller.deleteCategory(diningId), isTrue);
+    expect(await controller.deleteCategory(coffeeId), isTrue);
+    expect(await controller.deleteCategory(diningId), isTrue);
     expect(controller.categories.any((c) => c.id == diningId), isFalse);
   });
 
@@ -137,7 +137,7 @@ void main() {
     controller.setCategoryBudget(month, tempId, 200);
     expect(controller.categoryBudget(month, tempId), 200);
 
-    expect(controller.deleteCategory(tempId), isTrue);
+    expect(await controller.deleteCategory(tempId), isTrue);
     expect(controller.categoryBudget(month, tempId), 0);
   });
 
@@ -166,7 +166,7 @@ void main() {
     controller.addEntry(expenseEntry(controller, 'm2', shoppingId));
     controller.addEntry(expenseEntry(controller, 'm3', diningId));
 
-    final moved = controller.mergeCategoryInto(shoppingId, diningId);
+    final moved = await controller.mergeCategoryInto(shoppingId, diningId);
     expect(moved, 2);
     // 源分类被删除，其交易全部改指向目标。
     expect(controller.categories.any((c) => c.id == shoppingId), isFalse);
@@ -187,11 +187,11 @@ void main() {
     final coffeeId = idOfLabel(controller, '咖啡');
 
     // 源有子分类：不能合并。
-    expect(controller.mergeCategoryInto(diningId, shoppingId), -1);
+    expect(await controller.mergeCategoryInto(diningId, shoppingId), -1);
     // 目标是源的后代：不能合并。
-    expect(controller.mergeCategoryInto(diningId, coffeeId), -1);
+    expect(await controller.mergeCategoryInto(diningId, coffeeId), -1);
     // 合并到自身：不能。
-    expect(controller.mergeCategoryInto(shoppingId, shoppingId), -1);
+    expect(await controller.mergeCategoryInto(shoppingId, shoppingId), -1);
     // 分类均未被改动。
     expect(controller.categories.any((c) => c.id == diningId), isTrue);
     expect(controller.categories.any((c) => c.id == shoppingId), isTrue);
@@ -205,7 +205,10 @@ void main() {
     controller.setCategoryBudget(month, shoppingId, 300);
     expect(controller.categoryBudget(month, shoppingId), 300);
 
-    expect(controller.mergeCategoryInto(shoppingId, diningId) >= 0, isTrue);
+    expect(
+      await controller.mergeCategoryInto(shoppingId, diningId) >= 0,
+      isTrue,
+    );
     expect(controller.categoryBudget(month, shoppingId), 0);
   });
 

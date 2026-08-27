@@ -585,10 +585,13 @@ mixin _ControllerState on ChangeNotifier {
   /// 「挂它的·已到账·退款 baseAmount 之和」（钳到 `[0, baseAmount]`）；无到账退款归零。
   /// 该缓存只驱动统计净额（[LedgerEntry.netBaseAmount]），
   /// 账户余额不读它。**待到账**退款（`settledAt == null`）不计入（cash basis）。
-  /// 每次退款增删改后调用；返回是否有改动。
-  bool _syncRefundCache() {
+  /// 返回一份缓存已同步的新列表，供“先落库、成功后再替换内存”的原子命令复用。
+  List<LedgerEntry> _entriesWithSyncedRefundCache(
+    Iterable<LedgerEntry> source,
+  ) {
+    final next = List<LedgerEntry>.of(source);
     final settledByExpense = <String, double>{};
-    for (final e in _entries) {
+    for (final e in next) {
       if (e.type == EntryType.refund &&
           e.settledAt != null &&
           e.refundOf != null) {
@@ -596,9 +599,8 @@ mixin _ControllerState on ChangeNotifier {
             (settledByExpense[e.refundOf!] ?? 0) + e.baseAmount;
       }
     }
-    var changed = false;
-    for (var i = 0; i < _entries.length; i++) {
-      final e = _entries[i];
+    for (var i = 0; i < next.length; i++) {
+      final e = next[i];
       if (e.type != EntryType.expense) continue;
       final target = (settledByExpense[e.id] ?? 0)
           .clamp(0.0, e.baseAmount)
@@ -611,9 +613,26 @@ mixin _ControllerState on ChangeNotifier {
           ? currencyAmountTolerance(baseCode!)
           : 0.005;
       if ((e.refundedBaseAmount - target).abs() >= tolerance) {
-        _entries[i] = e.copyWith(refundedBaseAmount: target);
-        changed = true;
+        next[i] = e.copyWith(refundedBaseAmount: target);
       }
+    }
+    return next;
+  }
+
+  /// 每次退款增删改后调用；返回是否有改动。
+  bool _syncRefundCache() {
+    final next = _entriesWithSyncedRefundCache(_entries);
+    var changed = false;
+    for (var i = 0; i < _entries.length; i++) {
+      if (_entries[i].refundedBaseAmount != next[i].refundedBaseAmount) {
+        changed = true;
+        break;
+      }
+    }
+    if (changed) {
+      _entries
+        ..clear()
+        ..addAll(next);
     }
     return changed;
   }
@@ -628,12 +647,6 @@ mixin _ControllerState on ChangeNotifier {
       _entries.sort(_compareEntriesLatestFirst);
     }
     return changed;
-  }
-
-  void _removeAccountFromOrders(String accountId) {
-    for (final order in _assetAccountOrders.values) {
-      order.remove(accountId);
-    }
   }
 
   void _loadProfile() {
@@ -728,15 +741,35 @@ mixin _ControllerState on ChangeNotifier {
   int _lastFailedWriteGeneration = -1;
 
   void _trackWrite(Future<void> write) {
+    unawaited(_trackWriteResult(write));
+  }
+
+  /// 记录并等待一次 SQLite 写入。显式命令用返回值决定是否提交内存状态；旧的
+  /// fire-and-forget 路径仍经 [_trackWrite] 复用同一套日志、反馈和刷盘追踪。
+  Future<bool> _trackWriteResult(Future<void> write) async {
     // 挂 catchError：落库失败时记录日志并回调 UI 提示，避免「内存已改但库未写」
     // 的静默不一致——用户以为已保存、重启后却丢失。
     final generation = ++_writeGeneration;
+    var succeeded = true;
     final tracked = write.catchError((Object error, StackTrace stackTrace) {
+      succeeded = false;
       _lastFailedWriteGeneration = generation;
       _handlePersistError(error, stackTrace);
     });
     _pendingWrite = tracked;
-    unawaited(tracked);
+    await tracked;
+    return succeeded;
+  }
+
+  Future<bool> _runTrackedWrite(Future<void> Function() operation) async {
+    try {
+      return await _trackWriteResult(operation());
+    } catch (error, stackTrace) {
+      // 测试仓储或平台适配也可能在返回 Future 前同步抛错；与异步失败保持
+      // 同一日志、用户反馈和“不提交内存状态”语义。
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
   }
 
   void _handlePersistError(Object error, StackTrace stackTrace) {
@@ -761,8 +794,13 @@ mixin _ControllerState on ChangeNotifier {
   /// 刷盘所有挂起写入：偏好类 KV **与** 账目类 SQLite。应用切到后台时调用，
   /// 确保应用锁 / 隐私同意等关键偏好，以及用户刚记下的交易，在进程可能被系统
   /// 回收前落盘（此前只刷 KV，SQLite 写入是 fire-and-forget，极端情况下会丢账）。
-  Future<void> flushPendingWrites() {
-    return Future.wait(<Future<void>>[_store.flush(), _pendingWrite]);
+  Future<void> flushPendingWrites() async {
+    try {
+      await _store.flush();
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+    }
+    await _pendingWrite;
   }
 
   void _persistLedgerBooks() {
@@ -824,22 +862,30 @@ mixin _ControllerState on ChangeNotifier {
   LedgerDataSnapshot _ledgerDataSnapshot({
     List<LedgerBook>? books,
     List<Account>? accounts,
+    List<AccountGroup>? accountGroups,
+    List<Category>? categories,
+    List<Tag>? tags,
+    List<Attachment>? attachments,
     List<LedgerEntry>? entries,
     List<RecurringRule>? recurringRules,
     List<ExchangeRate>? exchangeRates,
+    Map<String, double>? monthlyBudgets,
+    Map<String, double>? categoryBudgets,
+    Map<String, double>? dailyBudgets,
   }) {
     return LedgerDataSnapshot(
       books: books ?? List<LedgerBook>.of(_ledgerBooks),
       accounts: accounts ?? List<Account>.of(_accounts),
-      accountGroups: List<AccountGroup>.of(_accountGroups),
-      categories: List<Category>.of(_categories),
-      tags: List<Tag>.of(_tags),
-      attachments: List<Attachment>.of(_attachments),
+      accountGroups: accountGroups ?? List<AccountGroup>.of(_accountGroups),
+      categories: categories ?? List<Category>.of(_categories),
+      tags: tags ?? List<Tag>.of(_tags),
+      attachments: attachments ?? List<Attachment>.of(_attachments),
       entries: entries ?? List<LedgerEntry>.of(_entries),
       recurringRules: recurringRules ?? List<RecurringRule>.of(_recurringRules),
-      monthlyBudgets: Map<String, double>.of(_monthlyBudgets),
-      categoryBudgets: Map<String, double>.of(_categoryBudgets),
-      dailyBudgets: Map<String, double>.of(_dailyBudgets),
+      monthlyBudgets: monthlyBudgets ?? Map<String, double>.of(_monthlyBudgets),
+      categoryBudgets:
+          categoryBudgets ?? Map<String, double>.of(_categoryBudgets),
+      dailyBudgets: dailyBudgets ?? Map<String, double>.of(_dailyBudgets),
       exchangeRates: exchangeRates ?? List<ExchangeRate>.of(_exchangeRates),
     );
   }

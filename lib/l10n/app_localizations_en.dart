@@ -1343,6 +1343,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get batchAccountChangeUnsafe =>
+      'Batch account changes require transactions with the same existing account currency and an actual account amount. Edit cross-currency, no-account, or conflicting transfers individually.';
+
+  @override
   String yearLabel(int year) {
     return '$year';
   }

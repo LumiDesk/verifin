@@ -52,7 +52,7 @@
 - Controller 物理拆为 `veri_fin_controller.dart`、`veri_fin_controller_state.dart`、`veri_fin_controller_ops.dart`。`VeriFinController.create()` 是生产异步创建入口。
 - UI 只调用 Controller 的公共读取/操作 API，不直接访问 repository、SQLite 或 KV；Controller 内部再经 `_persistX` 等路径持久化。
 - 账本、交易、账户、分组、分类、标签、附件、周期规则和预算等核心数据只认 SQLite。Controller 的内存集合是运行时读取源，不存在 KV 回退。
-- `LedgerRepository.saveX` 的对外语义是“落库后该表内容等于传入集合”。生产实现对交易、账本、账户、分组、分类、标签和周期规则做 `_incrementalReplace` 行级差分；附件大 blob 与小型预算表仍可整表覆盖；导入、恢复、重置、删账本等多表操作走 `replaceAllLedgerData` 原子整替。
+- `LedgerRepository.saveX` 的对外语义是“落库后该表内容等于传入集合”。生产实现把“读取行快照、计算 `_incrementalReplace` 差分、事务写入、更新快照”整体串行化；单次失败不得阻塞后续写。附件大 blob 与小型预算表仍可整表覆盖；导入、恢复、重置、删账本及跨表删除走 `replaceAllLedgerData` 原子整替，显式删除命令落库成功后才替换 Controller 内存。
 - 主题、语言、触感、面板配置、备份设置、AI 配置等偏好类小数据走 `LocalKeyValueStore`。新增偏好优先参考主题/语言的独立 `ValueNotifier`，避免继续扩大全树 `notifyListeners()`。
 - Android/测试差异统一采用条件导出：公共入口 + `_io.dart` + `_stub.dart`，真实平台不得意外落到 stub。
 
@@ -194,6 +194,7 @@ Android-only，根目录不得新增 `web/`。UI Lab 自行运行 `flutter analy
 - 新增原生能力放入 `platform_bridge.dart` 已有领域 Bridge，统一由单一 MethodChannel 处理器分发，不另挂互相覆盖的 handler。
 - 通知、小组件、SAF、分享 Activity、应用更新等必须验证冷启动、前后台切换、进程被杀、重启/升级、Android 权限和 Doze 行为。涉及反射或 ML Kit 时必须验证 release/R8 构建；debug 正常不能替代。
 - data URL 图片使用内存图片渲染，不使用 `Image.network`。
+- Android 明确禁用系统 Auto Backup；外部分享图片必须分块读取并在累计超过 25 MB 时立即停止，禁止先完整 `readBytes()` 再检查大小。
 
 ## 测试规范
 

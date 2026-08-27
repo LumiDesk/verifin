@@ -575,10 +575,14 @@ class AppLockSetupPage extends StatefulWidget {
 class _AppLockSetupPageState extends State<AppLockSetupPage> {
   String? _first;
   String? _error;
+  bool _saving = false;
 
   bool get _isPattern => widget.kind == AppLockKind.pattern;
 
   void _onCompleted(String secret) {
+    if (_saving) {
+      return;
+    }
     final first = _first;
     if (first == null) {
       setState(() {
@@ -596,8 +600,22 @@ class _AppLockSetupPageState extends State<AppLockSetupPage> {
       });
       return;
     }
-    VeriFinScope.of(context).setAppLock(kind: widget.kind, secret: secret);
-    Navigator.of(context).pop(true);
+    unawaited(_save(secret));
+  }
+
+  Future<void> _save(String secret) async {
+    setState(() => _saving = true);
+    final saved = await VeriFinScope.of(
+      context,
+    ).setAppLock(kind: widget.kind, secret: secret);
+    if (!mounted) {
+      return;
+    }
+    if (saved) {
+      Navigator.of(context).pop(true);
+      return;
+    }
+    setState(() => _saving = false);
   }
 
   @override
@@ -811,7 +829,7 @@ class _AppLockSettingsPageState extends State<AppLockSettingsPage> {
     bool value,
   ) async {
     if (!value) {
-      controller.setBiometricUnlockEnabled(false);
+      await controller.setBiometricUnlockEnabled(false);
       return;
     }
     // 开启前先验证一次生物识别，确认可用。
@@ -821,7 +839,7 @@ class _AppLockSettingsPageState extends State<AppLockSettingsPage> {
       l10n: l10n,
     );
     if (ok) {
-      controller.setBiometricUnlockEnabled(true);
+      await controller.setBiometricUnlockEnabled(true);
     } else if (mounted) {
       unawaited(
         VeriFeedbackHost.of(context).showMessage(
@@ -853,7 +871,7 @@ class _AppLockSettingsPageState extends State<AppLockSettingsPage> {
       ),
     );
     if (verified == true) {
-      controller.disableAppLock();
+      await controller.disableAppLock();
     }
   }
 

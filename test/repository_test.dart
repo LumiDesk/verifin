@@ -151,6 +151,38 @@ void main() {
     expect(await noteOf('b'), 'SENT_B', reason: 'b 始终未被重写');
   });
 
+  test('写队列中一次操作失败后，后续写入仍继续执行', () async {
+    final repo = await openRepo();
+    final db = opened.last.db;
+    await db.execute('DROP TABLE categories');
+
+    final failed = repo.saveCategories(const <Category>[
+      Category(
+        id: 'missing-table-category',
+        label: '分类',
+        type: EntryType.expense,
+        iconCode: 'category',
+      ),
+    ]);
+    final following = repo.saveEntries(<LedgerEntry>[
+      LedgerEntry(
+        id: 'after-failure',
+        bookId: defaultLedgerBookId,
+        type: EntryType.expense,
+        amount: 1,
+        categoryId: 'dining',
+        accountId: 'cash',
+        note: '',
+        occurredAt: DateTime(2026, 8, 27),
+      ),
+    ]);
+
+    await expectLater(failed, throwsA(anything));
+    await following;
+
+    expect((await repo.loadEntries()).single.id, 'after-failure');
+  });
+
   test('replaceAllLedgerData 一次性原子替换全部表', () async {
     final repo = await openRepo();
     // 先放入一批旧数据。

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/models.dart';
+import 'package:verifin/app/veri_fin_controller.dart';
 import 'package:verifin/local_storage/local_storage.dart';
 
 import 'support/test_harness.dart';
@@ -21,6 +22,25 @@ LedgerEntry _entry(
   occurredAt: DateTime(2026, 7, 4),
 );
 
+Account _account(
+  String id,
+  String bookId, {
+  String currencyCode = defaultCurrencyCode,
+  double initialBalance = 0,
+}) => Account(
+  id: id,
+  bookId: bookId,
+  name: id,
+  type: AccountType.cash,
+  groupId: null,
+  initialBalance: initialBalance,
+  iconCode: 'cash',
+  note: '',
+  includeInAssets: true,
+  hidden: false,
+  currencyCode: currencyCode,
+);
+
 void main() {
   useTestDatabases();
 
@@ -33,7 +53,7 @@ void main() {
       ..addEntry(_entry('c', bookId))
       ..addAttachment('a', 'data:image/jpeg;base64,AAAA');
 
-    controller.deleteEntries(<String>{'a', 'b'});
+    await controller.deleteEntries(<String>{'a', 'b'});
     expect(controller.entries.map((e) => e.id), <String>['c']);
     expect(controller.attachmentCountForEntry('a'), 0);
     controller.dispose();
@@ -69,11 +89,59 @@ void main() {
     final controller = await makeController();
     final bookId = controller.activeBook.id;
     controller
+      ..addAccount(_account('cash', bookId))
+      ..addAccount(_account('card', bookId))
       ..addEntry(_entry('a', bookId, account: 'cash'))
       ..addEntry(_entry('b', bookId, account: 'cash'));
-    final changed = controller.setEntriesAccount(<String>{'a', 'b'}, 'card');
-    expect(changed, 2);
+    final result = await controller.setEntriesAccount(<String>{
+      'a',
+      'b',
+    }, 'card');
+    expect(result.status, BatchAccountChangeStatus.success);
+    expect(result.changed, 2);
     expect(controller.entries.every((e) => e.accountId == 'card'), isTrue);
+    controller.dispose();
+  });
+
+  test('setEntriesAccount 拒绝把外币账户金额直接解释为目标账户币种', () async {
+    final controller = await makeController();
+    final bookId = controller.activeBook.id;
+    final usdAccount = _account('usd-account', bookId, currencyCode: 'USD');
+    controller
+      ..addAccount(usdAccount)
+      ..addAccount(_account('card', bookId))
+      ..addEntry(
+        LedgerEntry(
+          id: 'usd-entry',
+          bookId: bookId,
+          type: EntryType.expense,
+          amount: 10,
+          currencyCode: 'USD',
+          accountAmount: 10,
+          baseAmount: 72,
+          conversionSource: ConversionSource.imported,
+          categoryId: 'dining',
+          accountId: usdAccount.id,
+          note: '',
+          occurredAt: DateTime(2026, 7, 4),
+        ),
+      );
+
+    final candidates = controller.batchAccountChangeCandidates(<String>{
+      'usd-entry',
+    });
+    expect(candidates.map((account) => account.currencyCode).toSet(), <String>{
+      'USD',
+    });
+    final result = await controller.setEntriesAccount(<String>{
+      'usd-entry',
+    }, 'card');
+
+    expect(result.status, BatchAccountChangeStatus.unsafeSelection);
+    final unchanged = controller.entries.single;
+    expect(unchanged.accountId, usdAccount.id);
+    expect(unchanged.accountAmount, 10);
+    expect(unchanged.baseAmount, 72);
     controller.dispose();
   });
 
@@ -147,6 +215,7 @@ void main() {
     final controller = await makeController(store);
     final bookId = controller.activeBook.id;
     controller
+      ..addAccount(_account('cash', bookId))
       ..addAccount(
         Account(
           id: 'zs',

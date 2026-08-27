@@ -1584,10 +1584,14 @@ Future<bool> confirmDeleteAccount(
       return false;
     }
     if (action == AccountDeleteAction.hide) {
-      controller.updateAccount(account.copyWith(hidden: true));
-      return true;
+      return controller.saveAccountDraft(account.copyWith(hidden: true));
     }
-    final affected = controller.deleteAccountAndRelatedEntries(account.id);
+    final affected = await controller.deleteAccountAndRelatedEntries(
+      account.id,
+    );
+    if (!context.mounted || affected == null) {
+      return false;
+    }
     notifyDisabledRules(affected);
     return true;
   }
@@ -1612,7 +1616,10 @@ Future<bool> confirmDeleteAccount(
   if (!context.mounted || confirmed != true) {
     return false;
   }
-  final affected = controller.deleteAccount(account.id);
+  final affected = await controller.deleteAccount(account.id);
+  if (!context.mounted || affected == null) {
+    return false;
+  }
   notifyDisabledRules(affected);
   return true;
 }
