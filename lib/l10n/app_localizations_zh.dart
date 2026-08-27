@@ -1319,6 +1319,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get batchAccountChangeUnsafe =>
+      '批量改账户只支持原账户币种相同且已有实际账户金额的交易；跨币种、无账户或转入冲突请逐笔编辑。';
+
+  @override
   String yearLabel(int year) {
     return '$year年';
   }

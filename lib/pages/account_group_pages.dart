@@ -280,9 +280,13 @@ class _AccountGroupsPageState extends State<AccountGroupsPage> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: FilledButton.tonalIcon(
-                          onPressed: () {
-                            controller.deleteAccountGroup(_selectedGroupId!);
-                            setState(() => _selectedGroupId = null);
+                          onPressed: () async {
+                            final deleted = await controller.deleteAccountGroup(
+                              _selectedGroupId!,
+                            );
+                            if (mounted && deleted) {
+                              setState(() => _selectedGroupId = null);
+                            }
                           },
                           icon: const Icon(Icons.delete_outline),
                           label: Text(

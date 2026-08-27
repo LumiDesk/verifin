@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:sqflite_common/sqlite_api.dart';
@@ -119,6 +120,25 @@ class SqliteLedgerRepository implements LedgerRepository {
   final AppDatabase _database;
   Database get _db => _database.db;
 
+  /// 串行化本仓储的全部写入。sqflite 会串行执行底层事务，但行级差分快照在
+  /// 事务开始前就会读取；若两个 saveX 同时进入，后一个会基于旧快照计算差分，
+  /// 可能把“刚新增后立即删除”误判为无需写入。这里把“读取快照 → 写事务 → 更新
+  /// 快照”整个临界区排成队列，同时让失败只结束当前调用、不阻塞后续写入。
+  Future<void> _writeTail = Future<void>.value();
+
+  Future<void> _enqueueWrite(Future<void> Function() operation) {
+    final completer = Completer<void>();
+    _writeTail = _writeTail.then((_) async {
+      try {
+        await operation();
+        completer.complete();
+      } catch (error, stackTrace) {
+        completer.completeError(error, stackTrace);
+      }
+    });
+    return completer.future;
+  }
+
   // ---- 交易 ----
 
   @override
@@ -133,8 +153,11 @@ class SqliteLedgerRepository implements LedgerRepository {
   }
 
   @override
-  Future<void> saveEntries(List<LedgerEntry> entries) async {
-    await _incrementalReplace('entries', entries.map(_entryToRow));
+  Future<void> saveEntries(List<LedgerEntry> entries) {
+    final snapshot = List<LedgerEntry>.of(entries);
+    return _enqueueWrite(
+      () => _incrementalReplace('entries', snapshot.map(_entryToRow)),
+    );
   }
 
   // ---- 账本 ----
@@ -148,8 +171,11 @@ class SqliteLedgerRepository implements LedgerRepository {
   }
 
   @override
-  Future<void> saveBooks(List<LedgerBook> books) async {
-    await _incrementalReplace('ledger_books', _indexed(books, _bookToRow));
+  Future<void> saveBooks(List<LedgerBook> books) {
+    final snapshot = List<LedgerBook>.of(books);
+    return _enqueueWrite(
+      () => _incrementalReplace('ledger_books', _indexed(snapshot, _bookToRow)),
+    );
   }
 
   // ---- 账户 ----
@@ -163,8 +189,11 @@ class SqliteLedgerRepository implements LedgerRepository {
   }
 
   @override
-  Future<void> saveAccounts(List<Account> accounts) async {
-    await _incrementalReplace('accounts', _indexed(accounts, _accountToRow));
+  Future<void> saveAccounts(List<Account> accounts) {
+    final snapshot = List<Account>.of(accounts);
+    return _enqueueWrite(
+      () => _incrementalReplace('accounts', _indexed(snapshot, _accountToRow)),
+    );
   }
 
   // ---- 账户分组 ----
@@ -178,8 +207,11 @@ class SqliteLedgerRepository implements LedgerRepository {
   }
 
   @override
-  Future<void> saveAccountGroups(List<AccountGroup> groups) async {
-    await _incrementalReplace('account_groups', groups.map(_groupToRow));
+  Future<void> saveAccountGroups(List<AccountGroup> groups) {
+    final snapshot = List<AccountGroup>.of(groups);
+    return _enqueueWrite(
+      () => _incrementalReplace('account_groups', snapshot.map(_groupToRow)),
+    );
   }
 
   // ---- 分类 ----
@@ -193,10 +225,11 @@ class SqliteLedgerRepository implements LedgerRepository {
   }
 
   @override
-  Future<void> saveCategories(List<Category> categories) async {
-    await _incrementalReplace(
-      'categories',
-      _indexed(categories, _categoryToRow),
+  Future<void> saveCategories(List<Category> categories) {
+    final snapshot = List<Category>.of(categories);
+    return _enqueueWrite(
+      () =>
+          _incrementalReplace('categories', _indexed(snapshot, _categoryToRow)),
     );
   }
 
@@ -211,8 +244,11 @@ class SqliteLedgerRepository implements LedgerRepository {
   }
 
   @override
-  Future<void> saveTags(List<Tag> tags) async {
-    await _incrementalReplace('tags', _indexed(tags, _tagToRow));
+  Future<void> saveTags(List<Tag> tags) {
+    final snapshot = List<Tag>.of(tags);
+    return _enqueueWrite(
+      () => _incrementalReplace('tags', _indexed(snapshot, _tagToRow)),
+    );
   }
 
   // ---- 图片附件 ----
@@ -224,8 +260,11 @@ class SqliteLedgerRepository implements LedgerRepository {
   }
 
   @override
-  Future<void> saveAttachments(List<Attachment> attachments) async {
-    await _replaceAll('attachments', _indexed(attachments, _attachmentToRow));
+  Future<void> saveAttachments(List<Attachment> attachments) {
+    final snapshot = List<Attachment>.of(attachments);
+    return _enqueueWrite(
+      () => _replaceAll('attachments', _indexed(snapshot, _attachmentToRow)),
+    );
   }
 
   @override
@@ -233,26 +272,33 @@ class SqliteLedgerRepository implements LedgerRepository {
     required List<LedgerEntry> entries,
     required List<Attachment> attachments,
     List<ExchangeRate>? exchangeRates,
-  }) async {
-    await _db.transaction((txn) async {
-      await _replaceInTxn(txn, 'entries', entries.map(_entryToRow));
-      await _replaceInTxn(
-        txn,
-        'attachments',
-        _indexed(attachments, _attachmentToRow),
-      );
-      if (exchangeRates != null) {
+  }) {
+    final entrySnapshot = List<LedgerEntry>.of(entries);
+    final attachmentSnapshot = List<Attachment>.of(attachments);
+    final rateSnapshot = exchangeRates == null
+        ? null
+        : List<ExchangeRate>.of(exchangeRates);
+    return _enqueueWrite(() async {
+      await _db.transaction((txn) async {
+        await _replaceInTxn(txn, 'entries', entrySnapshot.map(_entryToRow));
         await _replaceInTxn(
           txn,
-          'exchange_rates',
-          exchangeRates.map(_exchangeRateToRow),
+          'attachments',
+          _indexed(attachmentSnapshot, _attachmentToRow),
         );
+        if (rateSnapshot != null) {
+          await _replaceInTxn(
+            txn,
+            'exchange_rates',
+            rateSnapshot.map(_exchangeRateToRow),
+          );
+        }
+      });
+      _seedSnapshot('entries', entrySnapshot.map(_entryToRow));
+      if (rateSnapshot != null) {
+        _seedSnapshot('exchange_rates', rateSnapshot.map(_exchangeRateToRow));
       }
     });
-    _seedSnapshot('entries', entries.map(_entryToRow));
-    if (exchangeRates != null) {
-      _seedSnapshot('exchange_rates', exchangeRates.map(_exchangeRateToRow));
-    }
   }
 
   // ---- 周期记账规则 ----
@@ -266,10 +312,13 @@ class SqliteLedgerRepository implements LedgerRepository {
   }
 
   @override
-  Future<void> saveRecurringRules(List<RecurringRule> rules) async {
-    await _incrementalReplace(
-      'recurring_rules',
-      _indexed(rules, _recurringToRow),
+  Future<void> saveRecurringRules(List<RecurringRule> rules) {
+    final snapshot = List<RecurringRule>.of(rules);
+    return _enqueueWrite(
+      () => _incrementalReplace(
+        'recurring_rules',
+        _indexed(snapshot, _recurringToRow),
+      ),
     );
   }
 
@@ -277,17 +326,21 @@ class SqliteLedgerRepository implements LedgerRepository {
   Future<void> saveRecurringGeneration({
     required List<LedgerEntry> entries,
     required List<RecurringRule> recurringRules,
-  }) async {
-    await _db.transaction((txn) async {
-      await _replaceInTxn(txn, 'entries', entries.map(_entryToRow));
-      await _replaceInTxn(
-        txn,
-        'recurring_rules',
-        _indexed(recurringRules, _recurringToRow),
-      );
+  }) {
+    final entrySnapshot = List<LedgerEntry>.of(entries);
+    final ruleSnapshot = List<RecurringRule>.of(recurringRules);
+    return _enqueueWrite(() async {
+      await _db.transaction((txn) async {
+        await _replaceInTxn(txn, 'entries', entrySnapshot.map(_entryToRow));
+        await _replaceInTxn(
+          txn,
+          'recurring_rules',
+          _indexed(ruleSnapshot, _recurringToRow),
+        );
+      });
+      _seedSnapshot('entries', entrySnapshot.map(_entryToRow));
+      _seedSnapshot('recurring_rules', _indexed(ruleSnapshot, _recurringToRow));
     });
-    _seedSnapshot('entries', entries.map(_entryToRow));
-    _seedSnapshot('recurring_rules', _indexed(recurringRules, _recurringToRow));
   }
 
   // ---- 本地汇率 ----
@@ -304,8 +357,14 @@ class SqliteLedgerRepository implements LedgerRepository {
   }
 
   @override
-  Future<void> saveExchangeRates(List<ExchangeRate> rates) async {
-    await _incrementalReplace('exchange_rates', rates.map(_exchangeRateToRow));
+  Future<void> saveExchangeRates(List<ExchangeRate> rates) {
+    final snapshot = List<ExchangeRate>.of(rates);
+    return _enqueueWrite(
+      () => _incrementalReplace(
+        'exchange_rates',
+        snapshot.map(_exchangeRateToRow),
+      ),
+    );
   }
 
   // ---- 预算（键值对：月度 / 分类）----
@@ -315,115 +374,135 @@ class SqliteLedgerRepository implements LedgerRepository {
       _loadBudgetMap('monthly_budgets');
 
   @override
-  Future<void> saveMonthlyBudgets(Map<String, double> budgets) =>
-      _saveBudgetMap('monthly_budgets', budgets);
+  Future<void> saveMonthlyBudgets(Map<String, double> budgets) {
+    final snapshot = Map<String, double>.of(budgets);
+    return _enqueueWrite(() => _saveBudgetMap('monthly_budgets', snapshot));
+  }
 
   @override
   Future<Map<String, double>> loadCategoryBudgets() =>
       _loadBudgetMap('category_budgets');
 
   @override
-  Future<void> saveCategoryBudgets(Map<String, double> budgets) =>
-      _saveBudgetMap('category_budgets', budgets);
+  Future<void> saveCategoryBudgets(Map<String, double> budgets) {
+    final snapshot = Map<String, double>.of(budgets);
+    return _enqueueWrite(() => _saveBudgetMap('category_budgets', snapshot));
+  }
 
   @override
   Future<Map<String, double>> loadDailyBudgets() =>
       _loadBudgetMap('daily_budgets');
 
   @override
-  Future<void> saveDailyBudgets(Map<String, double> budgets) =>
-      _saveBudgetMap('daily_budgets', budgets);
+  Future<void> saveDailyBudgets(Map<String, double> budgets) {
+    final snapshot = Map<String, double>.of(budgets);
+    return _enqueueWrite(() => _saveBudgetMap('daily_budgets', snapshot));
+  }
 
   @override
   Future<void> saveBudgetSettings({
     required Map<String, double> monthlyBudgets,
     required Map<String, double> categoryBudgets,
     required Map<String, double> dailyBudgets,
-  }) async {
-    await _db.transaction((txn) async {
-      await _replaceInTxn(txn, 'monthly_budgets', _budgetRows(monthlyBudgets));
-      await _replaceInTxn(
-        txn,
-        'category_budgets',
-        _budgetRows(categoryBudgets),
-      );
-      await _replaceInTxn(txn, 'daily_budgets', _budgetRows(dailyBudgets));
+  }) {
+    final monthlySnapshot = Map<String, double>.of(monthlyBudgets);
+    final categorySnapshot = Map<String, double>.of(categoryBudgets);
+    final dailySnapshot = Map<String, double>.of(dailyBudgets);
+    return _enqueueWrite(() async {
+      await _db.transaction((txn) async {
+        await _replaceInTxn(
+          txn,
+          'monthly_budgets',
+          _budgetRows(monthlySnapshot),
+        );
+        await _replaceInTxn(
+          txn,
+          'category_budgets',
+          _budgetRows(categorySnapshot),
+        );
+        await _replaceInTxn(txn, 'daily_budgets', _budgetRows(dailySnapshot));
+      });
     });
   }
 
   @override
-  Future<void> replaceAllLedgerData(LedgerDataSnapshot snapshot) async {
-    // 全部表在同一事务内清空重建：任一步失败即整体回滚，绝不留半新半旧状态。
-    await _db.transaction((txn) async {
-      await _replaceInTxn(
-        txn,
-        'ledger_books',
-        _indexed(snapshot.books, _bookToRow),
-      );
-      await _replaceInTxn(
-        txn,
-        'accounts',
-        _indexed(snapshot.accounts, _accountToRow),
-      );
-      await _replaceInTxn(
-        txn,
-        'account_groups',
-        snapshot.accountGroups.map(_groupToRow),
-      );
-      await _replaceInTxn(
-        txn,
+  Future<void> replaceAllLedgerData(LedgerDataSnapshot snapshot) {
+    return _enqueueWrite(() async {
+      // 全部表在同一事务内清空重建：任一步失败即整体回滚，绝不留半新半旧状态。
+      await _db.transaction((txn) async {
+        await _replaceInTxn(
+          txn,
+          'ledger_books',
+          _indexed(snapshot.books, _bookToRow),
+        );
+        await _replaceInTxn(
+          txn,
+          'accounts',
+          _indexed(snapshot.accounts, _accountToRow),
+        );
+        await _replaceInTxn(
+          txn,
+          'account_groups',
+          snapshot.accountGroups.map(_groupToRow),
+        );
+        await _replaceInTxn(
+          txn,
+          'categories',
+          _indexed(snapshot.categories, _categoryToRow),
+        );
+        await _replaceInTxn(txn, 'tags', _indexed(snapshot.tags, _tagToRow));
+        await _replaceInTxn(
+          txn,
+          'attachments',
+          _indexed(snapshot.attachments, _attachmentToRow),
+        );
+        await _replaceInTxn(txn, 'entries', snapshot.entries.map(_entryToRow));
+        await _replaceInTxn(
+          txn,
+          'recurring_rules',
+          _indexed(snapshot.recurringRules, _recurringToRow),
+        );
+        await _replaceInTxn(
+          txn,
+          'monthly_budgets',
+          _budgetRows(snapshot.monthlyBudgets),
+        );
+        await _replaceInTxn(
+          txn,
+          'category_budgets',
+          _budgetRows(snapshot.categoryBudgets),
+        );
+        await _replaceInTxn(
+          txn,
+          'daily_budgets',
+          _budgetRows(snapshot.dailyBudgets),
+        );
+        await _replaceInTxn(
+          txn,
+          'exchange_rates',
+          snapshot.exchangeRates.map(_exchangeRateToRow),
+        );
+      });
+      // 整替后重建各增量表基线，使后续单条 saveX 的差分有正确起点（否则会拿导入前
+      // 的旧快照去 diff、误删或漏写）。附件/预算不走增量、无需重置。
+      _seedSnapshot('ledger_books', _indexed(snapshot.books, _bookToRow));
+      _seedSnapshot('accounts', _indexed(snapshot.accounts, _accountToRow));
+      _seedSnapshot('account_groups', snapshot.accountGroups.map(_groupToRow));
+      _seedSnapshot(
         'categories',
         _indexed(snapshot.categories, _categoryToRow),
       );
-      await _replaceInTxn(txn, 'tags', _indexed(snapshot.tags, _tagToRow));
-      await _replaceInTxn(
-        txn,
-        'attachments',
-        _indexed(snapshot.attachments, _attachmentToRow),
-      );
-      await _replaceInTxn(txn, 'entries', snapshot.entries.map(_entryToRow));
-      await _replaceInTxn(
-        txn,
+      _seedSnapshot('tags', _indexed(snapshot.tags, _tagToRow));
+      _seedSnapshot('entries', snapshot.entries.map(_entryToRow));
+      _seedSnapshot(
         'recurring_rules',
         _indexed(snapshot.recurringRules, _recurringToRow),
       );
-      await _replaceInTxn(
-        txn,
-        'monthly_budgets',
-        _budgetRows(snapshot.monthlyBudgets),
-      );
-      await _replaceInTxn(
-        txn,
-        'category_budgets',
-        _budgetRows(snapshot.categoryBudgets),
-      );
-      await _replaceInTxn(
-        txn,
-        'daily_budgets',
-        _budgetRows(snapshot.dailyBudgets),
-      );
-      await _replaceInTxn(
-        txn,
+      _seedSnapshot(
         'exchange_rates',
         snapshot.exchangeRates.map(_exchangeRateToRow),
       );
     });
-    // 整替后重建各增量表基线，使后续单条 saveX 的差分有正确起点（否则会拿导入前
-    // 的旧快照去 diff、误删或漏写）。附件/预算不走增量、无需重置。
-    _seedSnapshot('ledger_books', _indexed(snapshot.books, _bookToRow));
-    _seedSnapshot('accounts', _indexed(snapshot.accounts, _accountToRow));
-    _seedSnapshot('account_groups', snapshot.accountGroups.map(_groupToRow));
-    _seedSnapshot('categories', _indexed(snapshot.categories, _categoryToRow));
-    _seedSnapshot('tags', _indexed(snapshot.tags, _tagToRow));
-    _seedSnapshot('entries', snapshot.entries.map(_entryToRow));
-    _seedSnapshot(
-      'recurring_rules',
-      _indexed(snapshot.recurringRules, _recurringToRow),
-    );
-    _seedSnapshot(
-      'exchange_rates',
-      snapshot.exchangeRates.map(_exchangeRateToRow),
-    );
   }
 
   /// 是否已存在任何账目数据（用于判断迁移是否有内容写入）。

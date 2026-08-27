@@ -22,6 +22,7 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -173,8 +174,8 @@ class MainActivity : FlutterFragmentActivity() {
         }
         Thread {
             try {
-                val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                if (bytes == null || bytes.isEmpty() || bytes.size > MAX_CAPTURE_IMAGE_BYTES) {
+                val bytes = readCaptureImageBytes(uri)
+                if (bytes == null || bytes.isEmpty()) {
                     runOnUiThread { result.success(null) }
                 } else {
                     runOnUiThread { result.success(bytes) }
@@ -184,6 +185,26 @@ class MainActivity : FlutterFragmentActivity() {
                 runOnUiThread { result.success(null) }
             }
         }.start()
+    }
+
+    /// 外部 ContentProvider 的长度不可信，必须边读边累计；超过上限立即停止，不能先
+    /// readBytes() 把任意大流装进内存后再检查，否则 exported 分享入口可触发 OOM。
+    private fun readCaptureImageBytes(uri: Uri): ByteArray? {
+        return contentResolver.openInputStream(uri)?.use { input ->
+            val output = ByteArrayOutputStream(DEFAULT_BUFFER_SIZE)
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            var total = 0
+            while (true) {
+                val read = input.read(buffer)
+                if (read == -1) break
+                total += read
+                if (total > MAX_CAPTURE_IMAGE_BYTES) {
+                    return null
+                }
+                output.write(buffer, 0, read)
+            }
+            output.toByteArray()
+        }
     }
 
     /// 开关 FLAG_SECURE：开启后应用内容不可截屏/录屏，且从最近任务缩略图中隐藏，

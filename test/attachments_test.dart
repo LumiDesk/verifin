@@ -44,7 +44,7 @@ void main() {
     controller.addAttachment('e1', _img);
     expect(controller.attachmentCountForEntry('e1'), 1);
 
-    controller.deleteEntry('e1');
+    await controller.deleteEntry('e1');
     expect(controller.attachmentCountForEntry('e1'), 0);
     controller.dispose();
   });

@@ -755,6 +755,7 @@
   },
   "changeAccountTitle": "改账户",
   "changedAccountCount": "已修改 {count} 笔交易的账户",
+  "batchAccountChangeUnsafe": "批量改账户只支持原账户币种相同且已有实际账户金额的交易；跨币种、无账户或转入冲突请逐笔编辑。",
   "@changedAccountCount": {
     "placeholders": {
       "count": {

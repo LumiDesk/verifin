@@ -453,6 +453,7 @@
   "changedCategoryCount": "Changed category of {count} transactions",
   "changeAccountTitle": "Change account",
   "changedAccountCount": "Changed account of {count} transactions",
+  "batchAccountChangeUnsafe": "Batch account changes require transactions with the same existing account currency and an actual account amount. Edit cross-currency, no-account, or conflicting transfers individually.",
   "yearLabel": "{year}",
   "quarterLabel": "Q{quarter}",
   "weekNumber": "W{week}",

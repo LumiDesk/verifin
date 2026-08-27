@@ -54,7 +54,7 @@ void main() {
       ..setDefaultAccountId(cash.id);
     expect(controller.defaultAccountId, cash.id);
 
-    controller.deleteAccount(cash.id);
+    await controller.deleteAccount(cash.id);
     expect(controller.defaultAccountId, isNull);
   });
 

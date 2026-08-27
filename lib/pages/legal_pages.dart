@@ -163,8 +163,9 @@ class PrivacyConsentPage extends StatelessWidget {
                       backgroundColor: veriRoyal,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    onPressed: () =>
-                        VeriFinScope.of(context).acceptPrivacyConsent(),
+                    onPressed: () async {
+                      await VeriFinScope.of(context).acceptPrivacyConsent();
+                    },
                     child: Text(AppLocalizations.of(context).agreeContinue),
                   ),
                 ),

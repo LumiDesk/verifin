@@ -43,7 +43,7 @@ void main() {
     );
     expect(controller.tagUsageCount(tagId), 1);
 
-    controller.deleteTag(tagId);
+    await controller.deleteTag(tagId);
     expect(controller.tagById(tagId), isNull);
     expect(controller.entries.single.tagIds, isEmpty);
     controller.dispose();

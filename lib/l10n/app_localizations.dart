@@ -2558,6 +2558,12 @@ abstract class AppLocalizations {
   /// **'已修改 {count} 笔交易的账户'**
   String changedAccountCount(int count);
 
+  /// No description provided for @batchAccountChangeUnsafe.
+  ///
+  /// In zh, this message translates to:
+  /// **'批量改账户只支持原账户币种相同且已有实际账户金额的交易；跨币种、无账户或转入冲突请逐笔编辑。'**
+  String get batchAccountChangeUnsafe;
+
   /// No description provided for @yearLabel.
   ///
   /// In zh, this message translates to:

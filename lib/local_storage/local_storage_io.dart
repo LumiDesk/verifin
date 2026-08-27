@@ -16,6 +16,7 @@ class LocalKeyValueStore {
 
   // 追踪未完成的异步落盘，供 [flush] 在应用切后台时等待其完成。
   final Set<Future<void>> _pending = <Future<void>>{};
+  final List<(Object, StackTrace)> _pendingErrors = <(Object, StackTrace)>[];
 
   static Future<LocalKeyValueStore> create() async {
     final preferences = await SharedPreferences.getInstance();
@@ -65,7 +66,11 @@ class LocalKeyValueStore {
   }
 
   void _track(Future<void> op) {
-    final future = op.catchError((_) {});
+    final future = op.catchError((Object error, StackTrace stackTrace) {
+      // fire-and-forget 调用不能把异常重新抛到未捕获 Zone；先记录，等 [flush]
+      // 汇总抛出，由 Controller 统一写日志并展示“保存失败”。
+      _pendingErrors.add((error, stackTrace));
+    });
     _pending.add(future);
     unawaited(future.whenComplete(() => _pending.remove(future)));
   }
@@ -73,5 +78,13 @@ class LocalKeyValueStore {
   /// 等待所有挂起的写入落盘。应用切到后台（paused/hidden）时调用，确保 setString
   /// 在进程可能被系统回收前完成刷盘——尤其是应用锁 / 隐私同意这类关键偏好，
   /// 否则「设完 PIN 立刻杀进程」可能丢失最后一次写入。
-  Future<void> flush() => Future.wait(_pending.toList());
+  Future<void> flush() async {
+    await Future.wait(_pending.toList());
+    if (_pendingErrors.isEmpty) {
+      return;
+    }
+    final (error, stackTrace) = _pendingErrors.removeAt(0);
+    _pendingErrors.clear();
+    Error.throwWithStackTrace(error, stackTrace);
+  }
 }

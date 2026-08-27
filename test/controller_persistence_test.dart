@@ -117,6 +117,81 @@ void main() {
     expect(reloaded.accountBalance(cash), 930); // 1000 − 100 + 30
   });
 
+  test('删除账户与相关交易会原子清理跨账户退款、附件并停用周期规则', () async {
+    final repo = await openRepo();
+    final controller = await VeriFinController.create(
+      LocalKeyValueStore(),
+      repository: repo,
+    );
+    final bookId = controller.activeBook.id;
+    final cash = Account(
+      id: 'delete-cash',
+      bookId: bookId,
+      name: '现金',
+      type: AccountType.cash,
+      groupId: null,
+      initialBalance: 100,
+      iconCode: 'cash',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+    );
+    final card = cash.copyWith(id: 'keep-card', name: '银行卡');
+    controller
+      ..addAccount(cash)
+      ..addAccount(card)
+      ..addEntry(
+        LedgerEntry(
+          id: 'delete-expense',
+          bookId: bookId,
+          type: EntryType.expense,
+          amount: 20,
+          categoryId: 'dining',
+          accountId: cash.id,
+          note: '',
+          occurredAt: DateTime(2026, 8, 20),
+        ),
+      )
+      ..addRecurringRule(
+        RecurringRule(
+          id: 'delete-account-rule',
+          bookId: bookId,
+          type: EntryType.expense,
+          amount: 5,
+          categoryId: 'dining',
+          accountId: cash.id,
+          note: '',
+          frequency: RecurringFrequency.monthly,
+          startDate: DateTime(2026, 8, 1),
+          nextRunDate: DateTime(2026, 9, 1),
+        ),
+      );
+    final refund = controller.addRefund(
+      expenseId: 'delete-expense',
+      amount: 4,
+      accountId: card.id,
+      initiatedAt: DateTime(2026, 8, 21),
+      settledAt: DateTime(2026, 8, 22),
+    );
+    controller
+      ..addAttachment('delete-expense', 'data:image/jpeg;base64,RVhQRU5TRQ==')
+      ..addAttachment(refund!.id, 'data:image/jpeg;base64,UkVGVU5E');
+    await controller.waitForPendingWrites();
+
+    expect(await controller.deleteAccountAndRelatedEntries(cash.id), 1);
+
+    final reloaded = await VeriFinController.create(
+      LocalKeyValueStore(),
+      repository: repo,
+    );
+    expect(reloaded.accounts.map((account) => account.id), <String>[card.id]);
+    expect(reloaded.entries, isEmpty);
+    expect(await repo.loadAttachments(), isEmpty);
+    final rule = reloaded.recurringRules.single;
+    expect(rule.active, isFalse);
+    expect(rule.accountId, isEmpty);
+  });
+
   test('交易聚合保存会重算退款缓存，并原子持久化交易、退款和附件', () async {
     final repo = await openRepo();
     final controller = await VeriFinController.create(

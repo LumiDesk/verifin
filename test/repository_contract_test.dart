@@ -209,6 +209,19 @@ void _runContract(String name, Future<LedgerRepository> Function() openRepo) {
       expect((await repo.loadTags()).map((t) => t.id).toList(), <String>['t2']);
     });
 
+    test('并发 save 仍按调用顺序保持整表覆盖语义', () async {
+      final repo = await openRepo();
+      await repo.loadEntries(); // 建立空基线，覆盖 SQLite 的增量快照路径。
+      final insert = repo.saveEntries(<LedgerEntry>[
+        _entry('race-entry', DateTime(2026, 3, 1)),
+      ]);
+      final remove = repo.saveEntries(const <LedgerEntry>[]);
+
+      await Future.wait(<Future<void>>[insert, remove]);
+
+      expect(await repo.loadEntries(), isEmpty);
+    });
+
     test('saveEntryAggregate 同时覆盖交易与附件', () async {
       final repo = await openRepo();
       await repo.saveEntries(<LedgerEntry>[

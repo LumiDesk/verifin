@@ -54,10 +54,34 @@ void main() {
     final events = <bool>[];
     controller.onAppLockChanged = events.add;
 
-    controller.setAppLock(kind: AppLockKind.pin, secret: '135790');
-    controller.disableAppLock();
+    await controller.setAppLock(kind: AppLockKind.pin, secret: '135790');
+    await controller.disableAppLock();
 
     expect(events, <bool>[true, false]);
+    controller.dispose();
+  });
+
+  test('应用锁 KV 写入失败时不提交内存状态', () async {
+    final store = _FailingKeyValueStore();
+    final controller = await makeController(store);
+    final errors = <Object>[];
+    controller.onPersistError = errors.add;
+
+    expect(
+      await controller.setAppLock(kind: AppLockKind.pin, secret: '135790'),
+      isFalse,
+    );
+    expect(controller.appLockEnabled, isFalse);
+    expect(errors, hasLength(1));
+
+    store.failWrites = false;
+    expect(
+      await controller.setAppLock(kind: AppLockKind.pin, secret: '135790'),
+      isTrue,
+    );
+    store.failDeletes = true;
+    expect(await controller.disableAppLock(), isFalse);
+    expect(controller.appLockEnabled, isTrue);
     controller.dispose();
   });
 
@@ -67,7 +91,7 @@ void main() {
       final controller = await makeController(store);
       expect(controller.appLockEnabled, isFalse);
 
-      controller.setAppLock(kind: AppLockKind.pin, secret: '246810');
+      await controller.setAppLock(kind: AppLockKind.pin, secret: '246810');
       expect(controller.appLockEnabled, isTrue);
       expect(controller.appLockKind, AppLockKind.pin);
       expect(controller.verifyAppLock('246810'), isTrue);
@@ -78,7 +102,7 @@ void main() {
       expect(reloaded.appLockEnabled, isTrue);
       expect(reloaded.verifyAppLock('246810'), isTrue);
 
-      reloaded.disableAppLock();
+      await reloaded.disableAppLock();
       expect(reloaded.appLockEnabled, isFalse);
       final afterDisable = await makeController(store);
       expect(afterDisable.appLockEnabled, isFalse);
@@ -86,7 +110,7 @@ void main() {
 
     test('reset keeps the app lock configured', () async {
       final controller = await makeController();
-      controller.setAppLock(kind: AppLockKind.pin, secret: '135790');
+      await controller.setAppLock(kind: AppLockKind.pin, secret: '135790');
       controller.resetAllData();
       expect(controller.appLockEnabled, isTrue);
       expect(controller.verifyAppLock('135790'), isTrue);
@@ -99,11 +123,11 @@ void main() {
         final controller = await makeController(store);
 
         // 未启用应用锁时不能开启生物识别。
-        controller.setBiometricUnlockEnabled(true);
+        await controller.setBiometricUnlockEnabled(true);
         expect(controller.biometricUnlockEnabled, isFalse);
 
-        controller.setAppLock(kind: AppLockKind.pin, secret: '112233');
-        controller.setBiometricUnlockEnabled(true);
+        await controller.setAppLock(kind: AppLockKind.pin, secret: '112233');
+        await controller.setBiometricUnlockEnabled(true);
         expect(controller.biometricUnlockEnabled, isTrue);
 
         // 持久化：重载后仍开启。
@@ -111,7 +135,7 @@ void main() {
         expect(reloaded.biometricUnlockEnabled, isTrue);
 
         // 关闭应用锁同时关闭生物识别。
-        reloaded.disableAppLock();
+        await reloaded.disableAppLock();
         expect(reloaded.biometricUnlockEnabled, isFalse);
       },
     );
@@ -145,7 +169,7 @@ void main() {
   ) async {
     final store = LocalKeyValueStore();
     final controller = await makeController(store);
-    controller.setAppLock(kind: AppLockKind.pin, secret: '778899');
+    await controller.setAppLock(kind: AppLockKind.pin, secret: '778899');
     await pumpApp(tester, store);
     await tester.pumpAndSettle();
     await _enterPin(tester, '778899'); // 先解锁冷启动锁屏
@@ -164,7 +188,7 @@ void main() {
   testWidgets('unlocks with a pattern gesture', (WidgetTester tester) async {
     final store = LocalKeyValueStore();
     final controller = await makeController(store);
-    controller.setAppLock(kind: AppLockKind.pattern, secret: '0-1-2-4-8');
+    await controller.setAppLock(kind: AppLockKind.pattern, secret: '0-1-2-4-8');
     await pumpApp(tester, store);
     await tester.pumpAndSettle();
 
@@ -195,7 +219,7 @@ void main() {
   ) async {
     final store = LocalKeyValueStore();
     final controller = await makeController(store);
-    controller.setAppLock(kind: AppLockKind.pin, secret: '424242');
+    await controller.setAppLock(kind: AppLockKind.pin, secret: '424242');
     await pumpApp(tester, store);
     await tester.pumpAndSettle();
 
@@ -218,4 +242,25 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('输入密码'), findsOneWidget);
   });
+}
+
+class _FailingKeyValueStore extends LocalKeyValueStore {
+  bool failWrites = true;
+  bool failDeletes = false;
+
+  @override
+  Future<void> writeAndFlush(String key, String value) async {
+    if (failWrites) {
+      throw StateError('simulated preference write failure');
+    }
+    await super.writeAndFlush(key, value);
+  }
+
+  @override
+  Future<void> deleteAndFlush(String key) async {
+    if (failDeletes) {
+      throw StateError('simulated preference delete failure');
+    }
+    await super.deleteAndFlush(key);
+  }
 }

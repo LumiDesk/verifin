@@ -161,7 +161,7 @@ class _PendingRefundRow extends StatelessWidget {
       return;
     }
     if (result.deleted) {
-      controller.deleteRefund(refund.id);
+      await controller.deleteRefund(refund.id);
     } else {
       controller.updateRefund(result.refund!);
     }

@@ -447,7 +447,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
     if (!mounted || !confirmed) {
       return;
     }
-    final changed = controller.mergeCategoryInto(category.id, targetId);
+    final changed = await controller.mergeCategoryInto(category.id, targetId);
     if (!mounted) {
       return;
     }
@@ -583,7 +583,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
     if (!mounted || !confirmed) {
       return;
     }
-    final deleted = controller.deleteCategory(category.id);
+    final deleted = await controller.deleteCategory(category.id);
     if (!deleted && mounted) {
       unawaited(
         VeriFeedbackHost.of(context).showMessage(

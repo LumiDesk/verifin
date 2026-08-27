@@ -254,7 +254,7 @@ class _TagManagementPageState extends State<TagManagementPage> {
     if (!mounted || !confirmed) {
       return;
     }
-    controller.deleteTag(tag.id);
+    await controller.deleteTag(tag.id);
   }
 }
 
