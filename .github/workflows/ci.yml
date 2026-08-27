@@ -40,6 +40,12 @@ jobs:
       - name: Test
         run: flutter test
 
+      # Dart analyze/test 不会编译 android/ 下的 Kotlin。普通 PR/main CI 额外构建
+      # github debug APK，提前拦截 MethodChannel、Manifest 和原生桥编译错误，避免
+      # 只在打发布标签后才发现 Kotlin 无法编译。
+      - name: Build Android debug APK
+        run: flutter build apk --debug --flavor github
+
       # 独立的 Web UI Lab 只做视觉预览，不是 Veri Fin 的产品 Web 平台。
       - name: Install UI Lab dependencies
         working-directory: tool/ui_lab
