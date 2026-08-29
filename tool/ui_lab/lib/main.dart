@@ -5,6 +5,7 @@ import 'package:verifin/app/app_theme.dart';
 import 'package:verifin/app/feedback.dart';
 import 'package:verifin/l10n/app_localizations.dart';
 
+import 'account_icon_preview.dart';
 import 'entry_form_preview.dart';
 import 'feedback_preview.dart';
 import 'navigation_preview.dart';
@@ -14,7 +15,7 @@ void main() {
   runApp(const VeriFinUiLabApp());
 }
 
-enum UiLabExperiment { entryForm, navigation, feedback }
+enum UiLabExperiment { entryForm, accountIcons, navigation, feedback }
 
 class VeriFinUiLabApp extends StatefulWidget {
   const VeriFinUiLabApp({
@@ -206,6 +207,11 @@ class _UiLabWorkbench extends StatelessWidget {
                             value: UiLabExperiment.entryForm,
                             icon: Icon(Icons.edit_note_rounded, size: 18),
                             label: Text('记一笔'),
+                          ),
+                          ButtonSegment<UiLabExperiment>(
+                            value: UiLabExperiment.accountIcons,
+                            icon: Icon(Icons.apps_rounded, size: 18),
+                            label: Text('账户图标'),
                           ),
                           ButtonSegment<UiLabExperiment>(
                             value: UiLabExperiment.navigation,
@@ -407,6 +413,8 @@ class _UiLabWorkbench extends StatelessWidget {
                                   child: switch (experiment) {
                                     UiLabExperiment.entryForm =>
                                       const EntryFormPreview(),
+                                    UiLabExperiment.accountIcons =>
+                                      const AccountIconPreview(),
                                     UiLabExperiment.navigation =>
                                       const NavigationPreview(),
                                     UiLabExperiment.feedback => FeedbackPreview(
