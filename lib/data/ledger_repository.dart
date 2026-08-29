@@ -887,7 +887,6 @@ class SqliteLedgerRepository implements LedgerRepository {
     'id': g.id,
     'book_id': g.bookId,
     'name': g.name,
-    'icon_code': g.iconCode,
     'sort_order': g.sortOrder,
   };
 
@@ -895,7 +894,6 @@ class SqliteLedgerRepository implements LedgerRepository {
     id: row['id'] as String,
     bookId: row['book_id'] as String,
     name: row['name'] as String,
-    iconCode: row['icon_code'] as String,
     sortOrder: row['sort_order'] as int,
   );
 

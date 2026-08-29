@@ -38,7 +38,7 @@ class HiddenAccountsPage extends StatelessWidget {
                   ),
                 )
               else
-                AccountGroupCard(
+                AccountSectionCard(
                   title: AppLocalizations.of(context).hiddenAccountsTitle,
                   accounts: _sortedAccounts(accounts),
                   balances: balances,
@@ -67,7 +67,6 @@ class AccountGroupsPage extends StatefulWidget {
 }
 
 class _AccountGroupsPageState extends State<AccountGroupsPage> {
-  String? _selectedGroupId;
   bool _sorting = false;
   bool _savingOrder = false;
   List<AccountGroup> _draftGroups = <AccountGroup>[];
@@ -129,175 +128,72 @@ class _AccountGroupsPageState extends State<AccountGroupsPage> {
                             ),
                           ],
                         )
-                      : ReorderableListView.builder(
+                      : ListView(
                           padding: const EdgeInsets.fromLTRB(14, 10, 14, 86),
-                          itemCount: groups.length,
-                          buildDefaultDragHandles: _sorting,
-                          // ignore: deprecated_member_use
-                          onReorder: _reorderDraft,
-                          itemBuilder: (context, index) {
-                            final group = groups[index];
-                            final groupAccounts = accounts
-                                .where(
-                                  (account) =>
-                                      _effectiveGroupId(account) == group.id,
-                                )
-                                .toList();
-                            final valuation = controller.accountBalancesInBase(
-                              accounts: groupAccounts,
-                            );
-                            final selected = _selectedGroupId == group.id;
-
-                            return Padding(
-                              key: ValueKey(group.id),
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(
-                                  veriRadiusMd,
-                                ),
-                                onLongPress: _sorting
-                                    ? null
-                                    : () => setState(
-                                        () => _selectedGroupId = group.id,
+                          children: <Widget>[
+                            VeriCard(
+                              padding: EdgeInsets.zero,
+                              child: ReorderableListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                buildDefaultDragHandles: false,
+                                itemCount: groups.length,
+                                onReorderItem: _reorderDraft,
+                                itemBuilder: (context, index) {
+                                  final group = groups[index];
+                                  final accountCount = accounts
+                                      .where(
+                                        (account) =>
+                                            _effectiveGroupId(account) ==
+                                            group.id,
+                                      )
+                                      .length;
+                                  final Widget row;
+                                  if (_sorting) {
+                                    row = _AccountGroupManageRow(
+                                      index: index,
+                                      group: group,
+                                      accountCount: accountCount,
+                                      sorting: true,
+                                    );
+                                  } else {
+                                    row = VeriAnchoredMenuAnchor(
+                                      entries: _groupMenuEntries(
+                                        group,
+                                        accountCount,
                                       ),
-                                onTap: _sorting
-                                    ? null
-                                    : () => setState(() {
-                                        _selectedGroupId = selected
-                                            ? null
-                                            : group.id;
-                                      }),
-                                child: VeriCard(
-                                  child: Row(
+                                      semanticLabel: group.name,
+                                      width: 188,
+                                      builder: (context, openMenu, menuOpen) =>
+                                          _AccountGroupManageRow(
+                                            index: index,
+                                            group: group,
+                                            accountCount: accountCount,
+                                            sorting: false,
+                                            onTap: openMenu,
+                                            onActions: openMenu,
+                                          ),
+                                    );
+                                  }
+                                  return Column(
+                                    key: ValueKey(group.id),
+                                    mainAxisSize: MainAxisSize.min,
                                     children: <Widget>[
-                                      AccountIconBox(
-                                        iconCode: group.iconCode,
-                                        size: 30,
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: <Widget>[
-                                            Text(
-                                              group.name,
-                                              style: Theme.of(
-                                                context,
-                                              ).textTheme.titleMedium,
-                                            ),
-                                            const SizedBox(height: 5),
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 2,
-                                                  ),
-                                              decoration: BoxDecoration(
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .surfaceContainerHighest,
-                                                borderRadius:
-                                                    BorderRadius.circular(
-                                                      veriRadiusSm,
-                                                    ),
-                                              ),
-                                              child: Text(
-                                                AppLocalizations.of(
-                                                  context,
-                                                ).accountsCount(
-                                                  groupAccounts.length,
-                                                ),
-                                                style: Theme.of(
-                                                  context,
-                                                ).textTheme.labelSmall,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Text(
-                                        valuation.completeTotal == null
-                                            ? '—'
-                                            : formatUserMoney(
-                                                valuation.completeTotal!,
-                                                controller
-                                                    .activeBook
-                                                    .baseCurrencyCode,
-                                              ),
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleMedium
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                      ),
-                                      if (selected) const SizedBox(width: 6),
-                                      if (selected)
-                                        const Icon(
-                                          Icons.check_circle,
-                                          color: veriBlue,
-                                        ),
+                                      row,
+                                      if (index < groups.length - 1)
+                                        const Divider(height: 1),
                                     ],
-                                  ),
-                                ),
+                                  );
+                                },
                               ),
-                            );
-                          },
+                            ),
+                          ],
                         ),
                 ),
               ],
             ),
           ),
         ),
-        bottomNavigationBar: _sorting || _selectedGroupId == null
-            ? null
-            : SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
-                  child: Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: FilledButton.tonalIcon(
-                          onPressed: () => _showGroupNameDialog(
-                            context,
-                            groupId: _selectedGroupId,
-                          ),
-                          icon: const Icon(Icons.edit),
-                          label: Text(
-                            AppLocalizations.of(context).commonRename,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: FilledButton.tonalIcon(
-                          onPressed: () => _showIconDialog(context),
-                          icon: const Icon(Icons.palette_outlined),
-                          label: Text(AppLocalizations.of(context).commonIcon),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: FilledButton.tonalIcon(
-                          onPressed: () async {
-                            final deleted = await controller.deleteAccountGroup(
-                              _selectedGroupId!,
-                            );
-                            if (mounted && deleted) {
-                              setState(() => _selectedGroupId = null);
-                            }
-                          },
-                          icon: const Icon(Icons.delete_outline),
-                          label: Text(
-                            AppLocalizations.of(context).commonDelete,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
       ),
     );
   }
@@ -312,7 +208,6 @@ class _AccountGroupsPageState extends State<AccountGroupsPage> {
   void _startSorting(VeriFinController controller) {
     setState(() {
       _sorting = true;
-      _selectedGroupId = null;
       _draftGroups = List<AccountGroup>.of(controller.accountGroups);
       _initialOrder = _draftGroups.map((group) => group.id).toList();
     });
@@ -397,31 +292,132 @@ class _AccountGroupsPageState extends State<AccountGroupsPage> {
       return;
     }
     if (groupId == null) {
-      controller.addAccountGroup(name);
+      await controller.addAccountGroup(name);
     } else {
-      controller.renameAccountGroup(groupId, name);
+      await controller.renameAccountGroup(groupId, name);
     }
   }
 
-  Future<void> _showIconDialog(BuildContext context) async {
+  List<VeriMenuEntry> _groupMenuEntries(AccountGroup group, int accountCount) {
+    final l10n = AppLocalizations.of(context);
+    return <VeriMenuEntry>[
+      VeriMenuItem(
+        id: 'account_group_rename',
+        icon: Icons.drive_file_rename_outline,
+        title: l10n.commonRename,
+        onPressed: () async => _showGroupNameDialog(context, groupId: group.id),
+      ),
+      const VeriMenuDivider(),
+      VeriMenuItem(
+        id: 'account_group_delete',
+        icon: Icons.delete_outline,
+        title: l10n.commonDelete,
+        foregroundColor: Theme.of(context).colorScheme.error,
+        onPressed: () async => _deleteGroup(group, accountCount),
+      ),
+    ];
+  }
+
+  Future<void> _deleteGroup(AccountGroup group, int accountCount) async {
     final controller = VeriFinScope.of(context);
-    final groupId = _selectedGroupId;
-    if (groupId == null) {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showConfirmDialog(
+      context,
+      title: l10n.groupDeleteTitle,
+      message: accountCount == 0
+          ? l10n.groupDeleteMessage(group.name)
+          : l10n.groupDeleteInUseMessage(group.name, accountCount),
+      confirmLabel: l10n.commonDelete,
+      destructive: true,
+    );
+    if (!mounted || !confirmed) {
       return;
     }
-    final current = controller.accountGroups
-        .where((group) => group.id == groupId)
-        .firstOrNull;
-    // 与账户图标选择用同一个组件（带图标预览）；分组图标以 iconForCode 渲染，
-    // 不支持银行等资产图标，故只列通用图标。
-    final iconCode = await showAccountIconSheet(
-      context: context,
-      selected: current?.iconCode ?? 'folder',
-      title: AppLocalizations.of(context).groupIconPickerTitle,
-      includeAssetIcons: false,
+    await controller.deleteAccountGroup(group.id);
+  }
+}
+
+class _AccountGroupManageRow extends StatelessWidget {
+  const _AccountGroupManageRow({
+    required this.index,
+    required this.group,
+    required this.accountCount,
+    required this.sorting,
+    this.onTap,
+    this.onActions,
+  });
+
+  final int index;
+  final AccountGroup group;
+  final int accountCount;
+  final bool sorting;
+  final VoidCallback? onTap;
+  final VoidCallback? onActions;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(veriRadiusSm),
+        onTap: sorting ? null : onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+          child: Row(
+            children: <Widget>[
+              Icon(
+                Icons.folder_outlined,
+                size: 24,
+                color: veriRoyal.withValues(alpha: 0.78),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      group.name,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      AppLocalizations.of(context).accountsCount(accountCount),
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.48),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (sorting)
+                ReorderableDragStartListener(
+                  index: index,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Icon(
+                      Icons.drag_handle,
+                      size: 18,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.38),
+                    ),
+                  ),
+                )
+              else
+                IconButton(
+                  tooltip: group.name,
+                  onPressed: onActions,
+                  icon: const Icon(Icons.more_vert),
+                ),
+            ],
+          ),
+        ),
+      ),
     );
-    if (iconCode != null) {
-      controller.updateAccountGroupIcon(groupId, iconCode);
-    }
   }
 }

@@ -350,7 +350,6 @@ void main() {
         id: 'daily',
         bookId: defaultLedgerBookId,
         name: '日常',
-        iconCode: 'folder',
         sortOrder: 0,
       ),
     ];

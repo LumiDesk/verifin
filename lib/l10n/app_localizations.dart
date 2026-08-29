@@ -350,6 +350,24 @@ abstract class AppLocalizations {
   /// **'选择账户图标'**
   String get accountIconPickerTitle;
 
+  /// No description provided for @accountIconSearchHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索图标、银行或支付平台'**
+  String get accountIconSearchHint;
+
+  /// No description provided for @accountIconSearchEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有找到图标'**
+  String get accountIconSearchEmpty;
+
+  /// No description provided for @accountIconSearchEmptyDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'试试银行全称、简称或英文缩写。'**
+  String get accountIconSearchEmptyDesc;
+
   /// No description provided for @accountHandleTitle.
   ///
   /// In zh, this message translates to:
@@ -1640,11 +1658,23 @@ abstract class AppLocalizations {
   /// **'分组名称'**
   String get groupNameLabel;
 
-  /// No description provided for @groupIconPickerTitle.
+  /// No description provided for @groupDeleteTitle.
   ///
   /// In zh, this message translates to:
-  /// **'选择分组图标'**
-  String get groupIconPickerTitle;
+  /// **'删除分组'**
+  String get groupDeleteTitle;
+
+  /// No description provided for @groupDeleteMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定删除“{name}”分组吗？'**
+  String groupDeleteMessage(String name);
+
+  /// No description provided for @groupDeleteInUseMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除“{name}”分组后，其中 {count} 个账户将移到“未分组”。账户和交易不会被删除。'**
+  String groupDeleteInUseMessage(String name, int count);
 
   /// No description provided for @accountIconLabel.
   ///

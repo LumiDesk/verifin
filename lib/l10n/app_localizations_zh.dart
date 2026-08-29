@@ -135,6 +135,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get accountIconPickerTitle => '选择账户图标';
 
   @override
+  String get accountIconSearchHint => '搜索图标、银行或支付平台';
+
+  @override
+  String get accountIconSearchEmpty => '没有找到图标';
+
+  @override
+  String get accountIconSearchEmptyDesc => '试试银行全称、简称或英文缩写。';
+
+  @override
   String get accountHandleTitle => '处理此账户？';
 
   @override
@@ -830,7 +839,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get groupNameLabel => '分组名称';
 
   @override
-  String get groupIconPickerTitle => '选择分组图标';
+  String get groupDeleteTitle => '删除分组';
+
+  @override
+  String groupDeleteMessage(String name) {
+    return '确定删除“$name”分组吗？';
+  }
+
+  @override
+  String groupDeleteInUseMessage(String name, int count) {
+    return '删除“$name”分组后，其中 $count 个账户将移到“未分组”。账户和交易不会被删除。';
+  }
 
   @override
   String get accountIconLabel => '账户图标';

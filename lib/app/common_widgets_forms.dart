@@ -5,15 +5,17 @@ part of 'common_widgets.dart';
 class SettingsRow extends StatelessWidget {
   const SettingsRow({
     super.key,
-    required this.icon,
+    this.icon,
+    this.leading,
     required this.title,
     required this.trailing,
     this.onTap,
     this.trailingIcon,
     this.contentColor,
-  });
+  }) : assert(icon != null || leading != null, '需要提供 icon 或 leading');
 
-  final IconData icon;
+  final IconData? icon;
+  final Widget? leading;
   final String title;
   final String trailing;
   final VoidCallback? onTap;
@@ -27,7 +29,7 @@ class SettingsRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: <Widget>[
-          VeriIconBox(icon: icon, size: 28, color: iconColor),
+          leading ?? VeriIconBox(icon: icon!, size: 28, color: iconColor),
           const SizedBox(width: 10),
           Expanded(
             child: Text(

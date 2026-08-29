@@ -361,7 +361,10 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                       ),
                       const Divider(height: 1),
                       SettingsRow(
-                        icon: Icons.image_outlined,
+                        leading: AccountIconBox(
+                          iconCode: currentAccount.iconCode,
+                          size: 28,
+                        ),
                         title: AppLocalizations.of(context).commonIcon,
                         trailing: iconLabelForCode(
                           AppLocalizations.of(context),

@@ -251,7 +251,7 @@ void main() {
     expect(await repo.loadBooks(), isNotEmpty);
 
     controller.addLedgerBook('旅行账本');
-    controller.addAccountGroup('出行');
+    await controller.addAccountGroup('出行');
     await controller.waitForPendingWrites();
 
     final reloaded = await VeriFinController.create(

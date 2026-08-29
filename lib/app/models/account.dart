@@ -219,28 +219,24 @@ class AccountGroup {
     required this.id,
     required this.bookId,
     required this.name,
-    required this.iconCode,
     required this.sortOrder,
   });
 
   final String id;
   final String bookId;
   final String name;
-  final String iconCode;
   final int sortOrder;
 
   AccountGroup copyWith({
     String? id,
     String? bookId,
     String? name,
-    String? iconCode,
     int? sortOrder,
   }) {
     return AccountGroup(
       id: id ?? this.id,
       bookId: bookId ?? this.bookId,
       name: name ?? this.name,
-      iconCode: iconCode ?? this.iconCode,
       sortOrder: sortOrder ?? this.sortOrder,
     );
   }
@@ -250,7 +246,6 @@ class AccountGroup {
       'id': id,
       'bookId': bookId,
       'name': name,
-      'iconCode': iconCode,
       'sortOrder': sortOrder,
     };
   }
@@ -260,7 +255,6 @@ class AccountGroup {
       id: json['id'] as String,
       bookId: json['bookId'] as String? ?? defaultLedgerBookId,
       name: json['name'] as String? ?? '未命名分组',
-      iconCode: json['iconCode'] as String? ?? 'folder',
       sortOrder: json['sortOrder'] as int? ?? 0,
     );
   }

@@ -543,28 +543,24 @@
         "id": "group_daily",
         "bookId": "default",
         "name": "日常支付",
-        "iconCode": "wallet",
         "sortOrder": 0
       },
       {
         "id": "group_credit",
         "bookId": "default",
         "name": "信用账户",
-        "iconCode": "credit",
         "sortOrder": 1
       },
       {
         "id": "group_bank",
         "bookId": "default",
         "name": "银行卡",
-        "iconCode": "bank",
         "sortOrder": 2
       },
       {
         "id": "group_invest",
         "bookId": "default",
         "name": "投资储蓄",
-        "iconCode": "investment",
         "sortOrder": 3
       }
     ],

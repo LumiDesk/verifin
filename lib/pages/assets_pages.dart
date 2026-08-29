@@ -126,7 +126,6 @@ class _AssetsPageState extends State<AssetsPage> {
         id: 'ungrouped',
         bookId: controller.activeBook.id,
         name: AppLocalizations.of(context).assetsUngrouped,
-        iconCode: 'folder',
         sortOrder: 999,
       ),
     ];
@@ -414,7 +413,7 @@ class _AssetsPageState extends State<AssetsPage> {
               Padding(
                 key: ValueKey<String>('asset_section_${section.id}'),
                 padding: const EdgeInsets.only(bottom: 12),
-                child: AccountGroupCard(
+                child: AccountSectionCard(
                   title: section.title,
                   accounts: section.accounts,
                   balances: balances,

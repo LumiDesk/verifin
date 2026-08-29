@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../app/account_icon_assets.dart';
 import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
 import '../app/currency_catalog.dart';
@@ -16,6 +15,7 @@ import '../app/net_security.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
+import 'account_icon_picker.dart';
 
 /// 若 [url] 会以明文 http 把凭证发往公网主机，弹确认对话框让用户知情后再继续；
 /// 非风险地址（https / 本机 / 内网）直接返回 true。用户取消返回 false。
@@ -841,7 +841,6 @@ List<({String title, List<Account> accounts})> _accountPickerSections(
           id: 'ungrouped',
           bookId: controller.activeBook.id,
           name: l10n.assetsUngrouped,
-          iconCode: 'folder',
           sortOrder: 999,
         ),
       ],
@@ -1056,128 +1055,13 @@ class _AllAccountsRow extends StatelessWidget {
   }
 }
 
-/// 账户 / 账户分组图标选择器：每行带 [AccountIconBox] 预览。[includeAssetIcons] 为
-/// false 时只列通用图标（账户分组用——分组图标以 `iconForCode` 渲染，不支持银行等
-/// 资产图标），[title] 可覆盖标题（分组用「选择分组图标」）。
+/// 账户图标选择器稳定入口；具体分组、搜索与网格实现在
+/// `account_icon_picker.dart`，页面仍只从 `sheets.dart` 调用。
 Future<String?> showAccountIconSheet({
   required BuildContext context,
   required String selected,
-  String? title,
-  bool includeAssetIcons = true,
 }) {
-  final l10n = AppLocalizations.of(context);
-  final choices = <AccountIconChoice>[
-    for (final code in accountIconCodes)
-      AccountIconChoice(
-        code: code,
-        label: iconLabelForCode(l10n, code),
-        group: l10n.iconGroupGeneric,
-      ),
-    if (includeAssetIcons) ...<AccountIconChoice>[
-      for (final option in accountAssetIconOptions)
-        AccountIconChoice(
-          code: option.code,
-          label: option.label,
-          group: option.groupLabel(l10n),
-        ),
-    ],
-  ];
-
-  return showModalBottomSheet<String>(
-    context: context,
-    showDragHandle: true,
-    backgroundColor: Theme.of(context).colorScheme.surface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(veriRadiusLg)),
-    ),
-    builder: (context) {
-      final maxHeight = MediaQuery.sizeOf(context).height * 0.74;
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxHeight),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  title ?? l10n.accountIconPickerTitle,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Flexible(
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: choices.length,
-                    separatorBuilder: (_, _) => Divider(
-                      height: 1,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.06),
-                    ),
-                    itemBuilder: (context, index) {
-                      final choice = choices[index];
-                      final isSelected = choice.code == selected;
-                      return Material(
-                        color: isSelected
-                            ? veriRoyal.withValues(alpha: 0.12)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(veriRadiusSm),
-                        child: ListTile(
-                          minTileHeight: 48,
-                          dense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                          ),
-                          leading: AccountIconBox(
-                            iconCode: choice.code,
-                            size: 34,
-                          ),
-                          title: Text(
-                            choice.label,
-                            style: Theme.of(context).textTheme.titleSmall
-                                ?.copyWith(
-                                  fontWeight: isSelected
-                                      ? FontWeight.w800
-                                      : FontWeight.w600,
-                                ),
-                          ),
-                          subtitle: Text(choice.group),
-                          trailing: isSelected
-                              ? const Icon(
-                                  Icons.check,
-                                  color: veriRoyal,
-                                  size: 18,
-                                )
-                              : null,
-                          onTap: () => Navigator.of(context).pop(choice.code),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    },
-  );
-}
-
-class AccountIconChoice {
-  const AccountIconChoice({
-    required this.code,
-    required this.label,
-    required this.group,
-  });
-
-  final String code;
-  final String label;
-  final String group;
+  return showAccountIconPickerSheet(context: context, selected: selected);
 }
 
 /// 分类图标常用 emoji 快选（覆盖餐饮/出行/居家/娱乐/人情/理财等常见分类）。

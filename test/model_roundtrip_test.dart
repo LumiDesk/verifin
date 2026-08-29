@@ -91,7 +91,6 @@ void main() {
     id: 'grp-1',
     bookId: 'book-x',
     name: '投资分组',
-    iconCode: 'chart',
     sortOrder: 3,
   );
 
@@ -179,6 +178,15 @@ void main() {
         jsonRoundTrip(accountGroup.toJson()),
       );
       expect(restored.toJson(), accountGroup.toJson());
+    });
+
+    test('AccountGroup 忽略旧备份的图标字段', () {
+      final restored = AccountGroup.fromJson(<String, Object?>{
+        ...accountGroup.toJson(),
+        'iconCode': 'wallet',
+      });
+      expect(restored.toJson(), accountGroup.toJson());
+      expect(restored.toJson(), isNot(contains('iconCode')));
     });
 
     test('Category 子分类与顶级分类', () {

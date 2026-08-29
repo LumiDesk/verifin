@@ -259,7 +259,6 @@ class _AddAccountPageState extends State<AddAccountPage> {
                 id: 'ungrouped',
                 bookId: defaultLedgerBookId,
                 name: AppLocalizations.of(context).assetsUngrouped,
-                iconCode: 'folder',
                 sortOrder: 999,
               ),
             )
@@ -282,7 +281,6 @@ class _AddAccountPageState extends State<AddAccountPage> {
             id: 'ungrouped',
             bookId: defaultLedgerBookId,
             name: AppLocalizations.of(context).assetsUngrouped,
-            iconCode: 'folder',
             sortOrder: 999,
           ),
         )

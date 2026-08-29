@@ -14,7 +14,7 @@ class AppDatabase {
   final Database db;
 
   static const String defaultDatabaseName = 'verifin.db';
-  static const int schemaVersion = 14;
+  static const int schemaVersion = 15;
 
   /// 打开（或创建）数据库。测试通过 [factory]/[path] 注入 ffi 与内存路径；
   /// 真实平台留空则由 [resolveDatabaseFactory]/[resolveDatabasePath] 决定。
@@ -67,6 +67,7 @@ class AppDatabase {
         12: _migrateToV12,
         13: _migrateToV13,
         14: _migrateToV14,
+        15: _migrateToV15,
       };
 
   /// 只读暴露迁移注册表，供迁移矩阵测试把库推进到任意中间版本。生产代码勿用。
@@ -293,6 +294,23 @@ class AppDatabase {
     await db.execute(_exchangeRatesLookupIndex);
   }
 
+  /// v14 → v15：账户分组回归纯文件夹语义，移除可自定义图标字段。
+  /// 分组 id、名称、账本归属和排序全部原样保留；账户的 group_id 无需改写。
+  static Future<void> _migrateToV15(Database db) async {
+    if (!await _tableExists(db, 'account_groups')) {
+      return;
+    }
+    await db.execute('DROP INDEX IF EXISTS idx_account_groups_book');
+    await db.execute('ALTER TABLE account_groups RENAME TO account_groups_v14');
+    await db.execute(_accountGroupsTableCurrent);
+    await db.execute('''
+      INSERT INTO account_groups (id, book_id, name, sort_order)
+      SELECT id, book_id, name, sort_order FROM account_groups_v14
+    ''');
+    await db.execute('DROP TABLE account_groups_v14');
+    await db.execute(_accountGroupsBookIndex);
+  }
+
   static Future<bool> _tableExists(Database db, String name) async {
     final rows = await db.rawQuery(
       "SELECT name FROM sqlite_master WHERE type='table' AND name = ?",
@@ -437,6 +455,18 @@ class AppDatabase {
       'CREATE INDEX idx_exchange_rates_book_currency_date '
       'ON exchange_rates (book_id, currency_code, effective_date)';
 
+  static const String _accountGroupsTableCurrent = '''
+    CREATE TABLE account_groups (
+      id TEXT PRIMARY KEY,
+      book_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      sort_order INTEGER NOT NULL
+    )
+  ''';
+
+  static const String _accountGroupsBookIndex =
+      'CREATE INDEX idx_account_groups_book ON account_groups (book_id)';
+
   /// 当前完整建表语句（供全新数据库 onCreate 用）。字段命名用 snake_case；
   /// 布尔存 0/1；时间存毫秒时间戳。已含历次迁移引入的列/表（parent_id、tags 等）。
   static const List<String> _schemaCurrent = <String>[
@@ -500,16 +530,8 @@ class AppDatabase {
     )
     ''',
     'CREATE INDEX idx_accounts_book ON accounts (book_id)',
-    '''
-    CREATE TABLE account_groups (
-      id TEXT PRIMARY KEY,
-      book_id TEXT NOT NULL,
-      name TEXT NOT NULL,
-      icon_code TEXT NOT NULL,
-      sort_order INTEGER NOT NULL
-    )
-    ''',
-    'CREATE INDEX idx_account_groups_book ON account_groups (book_id)',
+    _accountGroupsTableCurrent,
+    _accountGroupsBookIndex,
     '''
     CREATE TABLE categories (
       id TEXT PRIMARY KEY,
