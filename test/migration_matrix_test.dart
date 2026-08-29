@@ -190,6 +190,7 @@ void main() {
       expect(account.statementDay, isNull);
       expect(account.dueDay, isNull);
       expect(account.currencyCode, 'CNY');
+      expect(account.iconCode, 'asset:payment_006');
 
       final book = (await repo.loadBooks()).single;
       expect(book.name, '日常账本');
@@ -252,6 +253,51 @@ void main() {
     expect(rule.baseAmount, 0);
     expect(rule.ratePolicy, RecurringRatePolicy.fixedAmounts);
     await app.close();
+  });
+
+  test('v15 账户历史图标 code 升级后写回当前 SVG code', () async {
+    final path = '${tempDir.path}/v15_account_icons.db';
+    final app = await AppDatabase.open(factory: databaseFactoryFfi, path: path);
+    final repo = SqliteLedgerRepository(app);
+    await repo.saveAccounts(<Account>[
+      for (final legacy in const <String>['alipay', 'wechat', 'folder'])
+        Account(
+          id: 'legacy-$legacy',
+          bookId: 'default',
+          name: legacy,
+          type: AccountType.onlinePayment,
+          groupId: null,
+          initialBalance: 0,
+          iconCode: legacy,
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+        ),
+    ]);
+    await app.db.execute('PRAGMA user_version = 15');
+    await app.close();
+
+    final upgraded = await AppDatabase.open(
+      factory: databaseFactoryFfi,
+      path: path,
+    );
+    final rows = await upgraded.db.query(
+      'accounts',
+      columns: <String>['id', 'icon_code'],
+      orderBy: 'id ASC',
+    );
+    expect(
+      <String, String>{
+        for (final row in rows)
+          row['id']! as String: row['icon_code']! as String,
+      },
+      <String, String>{
+        'legacy-alipay': 'asset:payment_006',
+        'legacy-folder': 'wallet',
+        'legacy-wechat': 'asset:payment_004',
+      },
+    );
+    await upgraded.close();
   });
 }
 

@@ -9,15 +9,7 @@ import '../l10n/app_localizations.dart';
 
 import 'account_icon_assets.dart';
 
-const List<String> accountIconCodes = <String>[
-  'wallet',
-  'credit',
-  'bank',
-  'cash',
-  'investment',
-  'savings',
-  'card',
-];
+const List<String> accountIconCodes = genericAccountIconCodes;
 
 const List<String> categoryIconCodes = <String>[
   'category',
@@ -217,10 +209,6 @@ IconData iconForCode(String code) {
       return Icons.family_restroom;
     case 'star':
       return Icons.star;
-    case 'alipay':
-      return Icons.account_balance_wallet;
-    case 'wechat':
-      return Icons.chat_bubble_outline;
     case 'credit':
       return Icons.credit_card;
     case 'bank':
@@ -233,8 +221,6 @@ IconData iconForCode(String code) {
       return Icons.savings;
     case 'card':
       return Icons.payment;
-    case 'folder':
-      return Icons.folder_outlined;
     case 'wallet':
     default:
       return Icons.account_balance_wallet_outlined;
@@ -279,10 +265,6 @@ String iconLabelForCode(AppLocalizations l10n, String code) {
       return l10n.iconLabelRepayment;
     case 'adjust':
       return l10n.iconLabelAdjust;
-    case 'alipay':
-      return l10n.iconLabelPay;
-    case 'wechat':
-      return l10n.iconLabelWechat;
     case 'credit':
       return l10n.iconLabelCredit;
     case 'bank':
@@ -295,8 +277,6 @@ String iconLabelForCode(AppLocalizations l10n, String code) {
       return l10n.iconLabelSavings;
     case 'card':
       return l10n.iconLabelCard;
-    case 'folder':
-      return l10n.iconLabelFolder;
     case 'wallet':
     default:
       return l10n.iconLabelWallet;

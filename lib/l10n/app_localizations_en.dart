@@ -557,12 +557,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get iconLabelAdjust => 'Adjust';
 
   @override
-  String get iconLabelPay => 'Payment';
-
-  @override
-  String get iconLabelWechat => 'WeChat';
-
-  @override
   String get iconLabelCredit => 'Credit';
 
   @override
@@ -579,9 +573,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get iconLabelCard => 'Card';
-
-  @override
-  String get iconLabelFolder => 'Group';
 
   @override
   String get iconLabelWallet => 'Wallet';

@@ -2,6 +2,7 @@
 library;
 
 import '../../l10n/app_localizations.dart';
+import '../account_icon_assets.dart';
 
 import 'ledger_book.dart';
 import 'currency.dart';
@@ -191,7 +192,7 @@ class Account {
       type: AccountType.fromStorage(json['type'] as String?),
       groupId: json['groupId'] as String?,
       initialBalance: (json['initialBalance'] as num? ?? 0).toDouble(),
-      iconCode: json['iconCode'] as String? ?? 'wallet',
+      iconCode: normalizeAccountIconCode(json['iconCode'] as String?),
       note: json['note'] as String? ?? '',
       includeInAssets: json['includeInAssets'] as bool? ?? true,
       hidden: json['hidden'] as bool? ?? false,

@@ -542,12 +542,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get iconLabelAdjust => '调整';
 
   @override
-  String get iconLabelPay => '支付';
-
-  @override
-  String get iconLabelWechat => '微信';
-
-  @override
   String get iconLabelCredit => '信用';
 
   @override
@@ -564,9 +558,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get iconLabelCard => '卡片';
-
-  @override
-  String get iconLabelFolder => '分组';
 
   @override
   String get iconLabelWallet => '钱包';
