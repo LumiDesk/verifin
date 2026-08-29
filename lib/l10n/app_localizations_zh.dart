@@ -569,6 +569,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get iconGroupPayment => '支付平台';
 
   @override
+  String get iconGroupInvestment => '投资理财';
+
+  @override
+  String get iconGroupCard => '卡组织';
+
+  @override
+  String get iconGroupDigital => '跨境与数字账户';
+
+  @override
   String get iconGroupBank => '银行';
 
   @override

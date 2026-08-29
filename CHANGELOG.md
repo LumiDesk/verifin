@@ -6,6 +6,9 @@
 
 ## [Unreleased]
 
+### 新增
+- **账户图标新增 15 个常用平台与卡组织 Logo**：加入余额宝、云闪付、美团、国泰海通、Interactive Brokers、Visa、American Express、JCB、Diners Club、Discover、Wise、Revolut、Payoneer、Monzo 与 N26，并按支付、投资理财、卡组织、跨境与数字账户等用途重新分组；银行仍放在最后，组内优先展示常用选项。
+
 ## [1.15.15] - 2026-08-29
 
 ### 优化

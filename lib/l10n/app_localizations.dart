@@ -1190,6 +1190,24 @@ abstract class AppLocalizations {
   /// **'支付平台'**
   String get iconGroupPayment;
 
+  /// No description provided for @iconGroupInvestment.
+  ///
+  /// In zh, this message translates to:
+  /// **'投资理财'**
+  String get iconGroupInvestment;
+
+  /// No description provided for @iconGroupCard.
+  ///
+  /// In zh, this message translates to:
+  /// **'卡组织'**
+  String get iconGroupCard;
+
+  /// No description provided for @iconGroupDigital.
+  ///
+  /// In zh, this message translates to:
+  /// **'跨境与数字账户'**
+  String get iconGroupDigital;
+
   /// No description provided for @iconGroupBank.
   ///
   /// In zh, this message translates to:

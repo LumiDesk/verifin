@@ -27,8 +27,25 @@ void main() {
     expect(find.text('选择账户图标'), findsOneWidget);
     expect(find.byKey(const Key('account_icon_search_field')), findsOneWidget);
     expect(find.text('通用图标'), findsAtLeastNWidgets(1));
+    expect(find.byKey(const Key('account_icon_group_payment')), findsOneWidget);
+    expect(
+      find.byKey(const Key('account_icon_group_investment')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('account_icon_group_card')), findsOneWidget);
+    expect(find.byKey(const Key('account_icon_group_digital')), findsOneWidget);
     expect(find.byKey(const Key('account_icon_group_bank')), findsOneWidget);
 
+    await tester.tap(find.byKey(const Key('account_icon_group_investment')));
+    await tester.pumpAndSettle();
+    expect(find.text('余额宝'), findsOneWidget);
+    expect(find.text('Interactive Brokers'), findsOneWidget);
+    expect(find.byKey(const Key('account_icon_option_wallet')), findsNothing);
+
+    await tester.ensureVisible(
+      find.byKey(const Key('account_icon_group_bank')),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('account_icon_group_bank')));
     await tester.pumpAndSettle();
     expect(find.text('上海银行'), findsOneWidget);

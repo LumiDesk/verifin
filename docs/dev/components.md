@@ -48,7 +48,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | 名称 | 类型 | 位置 | 用途 / 关键点 |
 |---|---|---|---|
 | `showAccountPickerSheet` | Sheet 函数 | `sheets.dart` | 账户选择弹窗（图标+余额+卡号后四位）；**按当前资产视图模式分区**（类型视图=按 `AccountType`，分组视图=按分组+未分组，分区/区内顺序复用 `sortedAssetSections`/`sortedAccountsForAssetSection`，随备份还原）；`noneLabel` 非空时列首加「无账户」→ 返回 **id 为空串哨兵 `Account`**；`allLabel` 非空时列首加「全部」→ 返回 **id 为 `accountPickerAllId` 哨兵 `Account`**（筛选场景）；取消返回 `null` |
-| `showAccountIconSheet` | Sheet 函数 | `sheets.dart` + `account_icon_picker.dart` | 账户图标选择；按通用/信用/支付/银行分组网格浏览，支持中英文名、简称和机构缩写搜索 |
+| `showAccountIconSheet` | Sheet 函数 | `sheets.dart` + `account_icon_picker.dart` | 账户图标选择；按通用、支付、信用、投资理财、卡组织、跨境与数字账户、银行分组网格浏览，支持中英文名、简称和机构缩写搜索 |
 | `confirmDeleteAccount` | Dialog 函数 | `sheets.dart` | 删账户流程（有流水→隐藏/删除三选；级联提示停用周期规则）；返回命令是否完成，由带 Guard 的调用页统一退出 |
 | `CardNumberFields` | Widget | `common_widgets.dart` | 完整卡号 + 后四位输入组，含「后四位跟随卡号」开关（信用卡/储蓄卡录入用）；**受控**：`follows`/`onFollowsChanged` 由调用方持久化（`Account.cardLast4Follows`），组件不自行反推 |
 | `showCardNumberDialog` | Dialog 函数 | `sheets.dart` | 编辑完整卡号+后四位+跟随开关，返回 `({number, last4, follows})?`（内部用 `CardNumberFields`，后四位以 `cardLast4Of` 归一化） |

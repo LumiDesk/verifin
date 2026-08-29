@@ -584,6 +584,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get iconGroupPayment => 'Payment platforms';
 
   @override
+  String get iconGroupInvestment => 'Investments';
+
+  @override
+  String get iconGroupCard => 'Card networks';
+
+  @override
+  String get iconGroupDigital => 'Cross-border & digital';
+
+  @override
   String get iconGroupBank => 'Banks';
 
   @override

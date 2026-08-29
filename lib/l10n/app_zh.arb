@@ -308,6 +308,9 @@
   "iconLabelWallet": "钱包",
   "iconGroupCredit": "信用账户",
   "iconGroupPayment": "支付平台",
+  "iconGroupInvestment": "投资理财",
+  "iconGroupCard": "卡组织",
+  "iconGroupDigital": "跨境与数字账户",
   "iconGroupBank": "银行",
   "balanceAdjustNote": "余额调整",
   "@balanceAdjustNote": {
