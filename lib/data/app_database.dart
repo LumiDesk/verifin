@@ -14,7 +14,7 @@ class AppDatabase {
   final Database db;
 
   static const String defaultDatabaseName = 'verifin.db';
-  static const int schemaVersion = 15;
+  static const int schemaVersion = 16;
 
   /// 打开（或创建）数据库。测试通过 [factory]/[path] 注入 ffi 与内存路径；
   /// 真实平台留空则由 [resolveDatabaseFactory]/[resolveDatabasePath] 决定。
@@ -68,6 +68,7 @@ class AppDatabase {
         13: _migrateToV13,
         14: _migrateToV14,
         15: _migrateToV15,
+        16: _migrateToV16,
       };
 
   /// 只读暴露迁移注册表，供迁移矩阵测试把库推进到任意中间版本。生产代码勿用。
@@ -309,6 +310,23 @@ class AppDatabase {
     ''');
     await db.execute('DROP TABLE account_groups_v14');
     await db.execute(_accountGroupsBookIndex);
+  }
+
+  /// v15 → v16：账户图标统一进入 SVG 目录。三个旧 code 只在此处
+  /// 做一次性转换，后续渲染层不再保留历史兼容分支。
+  static Future<void> _migrateToV16(Database db) async {
+    if (!await _tableExists(db, 'accounts')) {
+      return;
+    }
+    await db.execute('''
+      UPDATE accounts SET icon_code = CASE icon_code
+        WHEN 'alipay' THEN 'asset:payment_006'
+        WHEN 'wechat' THEN 'asset:payment_004'
+        WHEN 'folder' THEN 'wallet'
+        ELSE icon_code
+      END
+      WHERE icon_code IN ('alipay', 'wechat', 'folder')
+    ''');
   }
 
   static Future<bool> _tableExists(Database db, String name) async {

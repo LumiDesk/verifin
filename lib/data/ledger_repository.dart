@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:sqflite_common/sqlite_api.dart';
 
+import '../app/account_icon_assets.dart';
 import '../app/models.dart';
 import 'app_database.dart';
 
@@ -871,7 +872,7 @@ class SqliteLedgerRepository implements LedgerRepository {
     groupId: row['group_id'] as String?,
     initialBalance: (row['initial_balance'] as num).toDouble(),
     currencyCode: row['currency_code'] as String? ?? defaultCurrencyCode,
-    iconCode: row['icon_code'] as String,
+    iconCode: normalizeAccountIconCode(row['icon_code'] as String?),
     note: row['note'] as String? ?? '',
     includeInAssets: (row['include_in_assets'] as int) != 0,
     hidden: (row['hidden'] as int) != 0,

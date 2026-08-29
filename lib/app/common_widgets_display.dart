@@ -3,45 +3,26 @@ part of 'common_widgets.dart';
 // 图标与小型展示控件：账户/分类图标盒、筛选丸、详情行、汇总指标等。
 
 class AccountIconBox extends StatelessWidget {
-  const AccountIconBox({
-    super.key,
-    required this.iconCode,
-    this.size = 28,
-    this.color,
-  });
+  const AccountIconBox({super.key, required this.iconCode, this.size = 28});
 
   final String iconCode;
   final double size;
-  final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    final option = accountAssetIconByCode(iconCode);
-    if (option == null) {
-      return VeriIconBox(
-        icon: iconForCode(iconCode),
-        color: color ?? veriRoyal,
-        size: size,
-      );
-    }
-
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final assetPath =
+        accountIconAssetPath(iconCode) ??
+        genericAccountIconAssetPaths['wallet']!;
     return Container(
       width: size,
       height: size,
-      padding: EdgeInsets.all((size * 0.18).clamp(4, 8).toDouble()),
+      padding: EdgeInsets.all((size * 0.10).clamp(2, 6).toDouble()),
       decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.08)
-            : Colors.white.withValues(alpha: 0.92),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(veriRadiusSm),
-        border: Border.all(
-          color: Theme.of(
-            context,
-          ).colorScheme.onSurface.withValues(alpha: isDark ? 0.08 : 0.06),
-        ),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
       ),
-      child: SvgPicture.asset(option.assetPath, fit: BoxFit.contain),
+      child: SvgPicture.asset(assetPath, fit: BoxFit.contain),
     );
   }
 }

@@ -1,5 +1,25 @@
 import '../l10n/app_localizations.dart';
 
+const List<String> genericAccountIconCodes = <String>[
+  'wallet',
+  'credit',
+  'bank',
+  'cash',
+  'investment',
+  'savings',
+  'card',
+];
+
+const Map<String, String> genericAccountIconAssetPaths = <String, String>{
+  'wallet': 'assets/account_icons/generic_wallet.svg',
+  'credit': 'assets/account_icons/generic_credit.svg',
+  'bank': 'assets/account_icons/generic_bank.svg',
+  'cash': 'assets/account_icons/generic_cash.svg',
+  'investment': 'assets/account_icons/generic_investment.svg',
+  'savings': 'assets/account_icons/generic_savings.svg',
+  'card': 'assets/account_icons/generic_card.svg',
+};
+
 class AccountIconOption {
   const AccountIconOption({
     required this.code,
@@ -317,7 +337,22 @@ AccountIconOption? accountAssetIconByCode(String code) {
   return null;
 }
 
-bool isAssetAccountIcon(String code) => accountAssetIconByCode(code) != null;
+String? accountIconAssetPath(String code) {
+  return genericAccountIconAssetPaths[code] ??
+      accountAssetIconByCode(code)?.assetPath;
+}
+
+/// 历史账户图标只在数据边界做一次归一，渲染层不保留兼容分支。
+String normalizeAccountIconCode(String? code) {
+  final normalized = switch (code) {
+    'alipay' => 'asset:payment_006',
+    'wechat' => 'asset:payment_004',
+    'folder' => 'wallet',
+    final String value when value.isNotEmpty => value,
+    _ => 'wallet',
+  };
+  return accountIconAssetPath(normalized) == null ? 'wallet' : normalized;
+}
 
 String normalizeAccountIconSearch(String value) {
   final buffer = StringBuffer();

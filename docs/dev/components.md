@@ -37,7 +37,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 |---|---|---|---|
 | `CategoryIconBox` | Widget | `common_widgets.dart` | **分类图标带色块盒**（自动区分内置图标 / `emoji:` 前缀） |
 | `CategoryGlyph` | Widget | `common_widgets.dart` | 分类裸字形（无背景，Chip/内联用） |
-| `AccountIconBox` | Widget | `common_widgets.dart` | 账户图标盒（SVG 资产图标，否则回退 `VeriIconBox`） |
+| `AccountIconBox` | Widget | `common_widgets.dart` | 账户图标统一渲染入口：通用/品牌均为 SVG，固定纯白底、10% 内边距与 8% 黑色描边；未知 code 回退钱包 SVG，不走 Material 图标分支 |
 | `VeriIconBox` | Widget | `common_widgets.dart` | 通用色块图标盒（给定 `IconData`） |
 | `iconForCode` | 纯函数 | `icon_catalog.dart` | code→`IconData`（**底层，渲染点勿直接调，走上面的盒子**，否则 emoji 会回退成钱包图标） |
 | `isEmojiIconCode` / `emojiOfIconCode` / `emojiIconCode` | 纯函数 | `icon_catalog.dart` | emoji 图标编解码 |

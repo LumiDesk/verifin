@@ -1136,18 +1136,6 @@ abstract class AppLocalizations {
   /// **'调整'**
   String get iconLabelAdjust;
 
-  /// No description provided for @iconLabelPay.
-  ///
-  /// In zh, this message translates to:
-  /// **'支付'**
-  String get iconLabelPay;
-
-  /// No description provided for @iconLabelWechat.
-  ///
-  /// In zh, this message translates to:
-  /// **'微信'**
-  String get iconLabelWechat;
-
   /// No description provided for @iconLabelCredit.
   ///
   /// In zh, this message translates to:
@@ -1183,12 +1171,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'卡片'**
   String get iconLabelCard;
-
-  /// No description provided for @iconLabelFolder.
-  ///
-  /// In zh, this message translates to:
-  /// **'分组'**
-  String get iconLabelFolder;
 
   /// No description provided for @iconLabelWallet.
   ///
