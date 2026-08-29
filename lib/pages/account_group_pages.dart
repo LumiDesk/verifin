@@ -222,11 +222,8 @@ class _AccountGroupsPageState extends State<AccountGroupsPage> {
       return;
     }
     setState(() {
-      if (newIndex > oldIndex) {
-        newIndex -= 1;
-      }
       final moved = _draftGroups.removeAt(oldIndex);
-      _draftGroups.insert(newIndex, moved);
+      _draftGroups.insert(newIndex.clamp(0, _draftGroups.length), moved);
     });
   }
 

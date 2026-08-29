@@ -95,6 +95,51 @@ void main() {
     expect(find.text('删除'), findsOneWidget);
   });
 
+  testWidgets('账户分组向下拖动会产生排序草稿并可保存', (tester) async {
+    final controller = await makeController();
+    await controller.addAccountGroup('测试1');
+    await controller.addAccountGroup('测试2');
+    await tester.binding.setSurfaceSize(const Size(460, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(home: const AccountGroupsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('排序'));
+    await tester.pumpAndSettle();
+    final handles = find.byIcon(Icons.drag_handle);
+    final firstHandle = tester.getCenter(handles.at(0));
+    final secondHandle = tester.getCenter(handles.at(1));
+    await tester.timedDragFrom(
+      firstHandle,
+      Offset(0, secondHandle.dy - firstHandle.dy + 30),
+      const Duration(milliseconds: 600),
+    );
+    await tester.pumpAndSettle();
+
+    expect(controller.accountGroups.map((group) => group.name), <String>[
+      '测试1',
+      '测试2',
+    ], reason: '拖动阶段只应修改页面草稿');
+    final saveButton = tester.widget<IconButton>(
+      find.ancestor(
+        of: find.byIcon(Icons.save_outlined),
+        matching: find.byType(IconButton),
+      ),
+    );
+    expect(saveButton.onPressed, isNotNull);
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+    expect(controller.accountGroups.map((group) => group.name), <String>[
+      '测试2',
+      '测试1',
+    ]);
+  });
+
   testWidgets('删除非空分组确认后把账户移到未分组', (tester) async {
     final controller = await makeController();
     await controller.addAccountGroup('信用');
