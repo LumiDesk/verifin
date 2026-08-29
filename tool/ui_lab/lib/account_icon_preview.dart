@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:verifin/app/account_icon_assets.dart';
 import 'package:verifin/app/app_theme.dart';
+import 'package:verifin/app/common_widgets.dart';
+import 'package:verifin/app/icon_catalog.dart';
 
 class AccountIconPreview extends StatefulWidget {
   const AccountIconPreview({super.key});
@@ -31,7 +33,7 @@ class _AccountIconPreviewState extends State<AccountIconPreview> {
             ),
             const SizedBox(height: 6),
             Text(
-              '只调整品牌 SVG 的容器背景与内边距，Logo 本身不改色、不拉伸。',
+              '品牌 Logo 与默认账户图标统一收口为白底 SVG；品牌 Logo 不改色、不拉伸。',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: scheme.onSurface.withValues(alpha: 0.60),
               ),
@@ -116,6 +118,36 @@ class _AccountIconPreviewState extends State<AccountIconPreview> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 12),
+            _PreviewCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    '七个默认图标 SVG 替代',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '当前 Material 色块 → Phosphor Duotone 白底双色层次',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.52),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  for (final spec in _genericIconSpecs.indexed) ...<Widget>[
+                    _GenericIconComparisonRow(
+                      spec: spec.$2,
+                      paddingFactor: _paddingFactor,
+                    ),
+                    if (spec.$1 < _genericIconSpecs.length - 1)
+                      const Divider(height: 10),
+                  ],
+                ],
+              ),
             ),
             const SizedBox(height: 12),
             _PreviewCard(
@@ -363,6 +395,95 @@ class _PreviewAccountIconBox extends StatelessWidget {
   }
 }
 
+class _GenericIconComparisonRow extends StatelessWidget {
+  const _GenericIconComparisonRow({
+    required this.spec,
+    required this.paddingFactor,
+  });
+
+  final _GenericIconSpec spec;
+  final double paddingFactor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        SizedBox(
+          width: 48,
+          child: Text(
+            spec.label,
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+        ),
+        KeyedSubtree(
+          key: Key('current_generic_${spec.code}'),
+          child: VeriIconBox(
+            icon: iconForCode(spec.code),
+            size: 36,
+            color: veriRoyal,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Icon(
+          Icons.arrow_forward_rounded,
+          size: 16,
+          color: Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: 0.34),
+        ),
+        const SizedBox(width: 12),
+        _PreviewGenericSvgBox(
+          key: Key('proposed_generic_${spec.code}'),
+          assetPath: spec.assetPath,
+          size: 36,
+          paddingFactor: paddingFactor,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            spec.description,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.50),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PreviewGenericSvgBox extends StatelessWidget {
+  const _PreviewGenericSvgBox({
+    super.key,
+    required this.assetPath,
+    required this.size,
+    required this.paddingFactor,
+  });
+
+  final String assetPath;
+  final double size;
+  final double paddingFactor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      padding: EdgeInsets.all((size * paddingFactor).clamp(2, 6).toDouble()),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(veriRadiusSm),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
+      ),
+      child: SvgPicture.asset(assetPath, fit: BoxFit.contain),
+    );
+  }
+}
+
 class _PreviewCard extends StatelessWidget {
   const _PreviewCard({required this.child});
 
@@ -386,3 +507,62 @@ class _PreviewCard extends StatelessWidget {
     );
   }
 }
+
+class _GenericIconSpec {
+  const _GenericIconSpec({
+    required this.code,
+    required this.label,
+    required this.assetPath,
+    required this.description,
+  });
+
+  final String code;
+  final String label;
+  final String assetPath;
+  final String description;
+}
+
+const _genericIconSpecs = <_GenericIconSpec>[
+  _GenericIconSpec(
+    code: 'wallet',
+    label: '钱包',
+    assetPath: 'assets/account_icon_candidates/wallet.svg',
+    description: 'Wallet Duotone',
+  ),
+  _GenericIconSpec(
+    code: 'credit',
+    label: '信用',
+    assetPath: 'assets/account_icon_candidates/credit.svg',
+    description: 'Credit Card Duotone',
+  ),
+  _GenericIconSpec(
+    code: 'bank',
+    label: '银行',
+    assetPath: 'assets/account_icon_candidates/bank.svg',
+    description: 'Bank Duotone',
+  ),
+  _GenericIconSpec(
+    code: 'cash',
+    label: '现金',
+    assetPath: 'assets/account_icon_candidates/cash.svg',
+    description: 'Money Duotone',
+  ),
+  _GenericIconSpec(
+    code: 'investment',
+    label: '投资',
+    assetPath: 'assets/account_icon_candidates/investment.svg',
+    description: 'Chart Line Up Duotone',
+  ),
+  _GenericIconSpec(
+    code: 'savings',
+    label: '储蓄',
+    assetPath: 'assets/account_icon_candidates/savings.svg',
+    description: 'Piggy Bank Duotone',
+  ),
+  _GenericIconSpec(
+    code: 'card',
+    label: '卡片',
+    assetPath: 'assets/account_icon_candidates/card.svg',
+    description: 'Cards Duotone',
+  ),
+];
