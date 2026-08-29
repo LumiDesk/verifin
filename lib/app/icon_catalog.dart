@@ -11,14 +11,12 @@ import 'account_icon_assets.dart';
 
 const List<String> accountIconCodes = <String>[
   'wallet',
-  'alipay',
   'credit',
   'bank',
   'cash',
   'investment',
   'savings',
   'card',
-  'folder',
 ];
 
 const List<String> categoryIconCodes = <String>[

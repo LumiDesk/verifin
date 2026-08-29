@@ -13,9 +13,7 @@ import 'support/test_harness.dart';
 void main() {
   useTestDatabases();
 
-  testWidgets('opens account icon picker from add account page', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('账户图标选择器支持分组浏览、搜索和选择', (WidgetTester tester) async {
     await pumpApp(tester);
 
     await tapBottomTab(tester, 1);
@@ -27,13 +25,34 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('选择账户图标'), findsOneWidget);
+    expect(find.byKey(const Key('account_icon_search_field')), findsOneWidget);
     expect(find.text('通用图标'), findsAtLeastNWidgets(1));
-    await tester.scrollUntilVisible(
-      find.text('花呗'),
-      280,
-      scrollable: find.byType(Scrollable).last,
+    expect(find.byKey(const Key('account_icon_group_bank')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('account_icon_group_bank')));
+    await tester.pumpAndSettle();
+    expect(find.text('上海银行'), findsOneWidget);
+    expect(find.byKey(const Key('account_icon_option_wallet')), findsNothing);
+
+    await tester.enterText(
+      find.byKey(const Key('account_icon_search_field')),
+      'not-a-real-icon',
     );
-    expect(find.text('花呗'), findsOneWidget);
+    await tester.pump();
+    expect(find.text('没有找到图标'), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const Key('account_icon_search_field')),
+      'ICBC',
+    );
+    await tester.pump();
+    expect(find.text('工商银行'), findsOneWidget);
+    expect(find.text('中国民生银行'), findsNothing);
+    await tester.tap(
+      find.byKey(const Key('account_icon_search_result_asset:bank_015')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('工商银行'), findsOneWidget);
   });
 
   testWidgets('suggests bank icon from account name', (
@@ -50,6 +69,43 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('中信银行'), findsOneWidget);
+  });
+
+  testWidgets('账户详情的图标设置行预览当前品牌图标', (tester) async {
+    final controller = await makeController();
+    final account = Account(
+      id: 'brand-icon-account',
+      bookId: controller.activeBook.id,
+      name: '招商银行',
+      type: AccountType.debitCard,
+      groupId: null,
+      initialBalance: 0,
+      iconCode: 'asset:bank_021',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+      currencyCode: controller.activeBook.baseCurrencyCode,
+    );
+    expect(await controller.addAccountDraft(account), isTrue);
+    await tester.binding.setSurfaceSize(const Size(460, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(home: AccountDetailPage(account: account)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is AccountIconBox &&
+            widget.iconCode == 'asset:bank_021' &&
+            widget.size == 28,
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('添加账户修改后返回可选择不保存', (tester) async {

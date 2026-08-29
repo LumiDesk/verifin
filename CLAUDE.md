@@ -94,6 +94,8 @@ Android/测试差异统一用条件导出模式（`stub` + `if (dart.library.io)
 
 分类图标：内置图标 code→`IconData` 由 `icon_catalog.dart` 的 `iconForCode` 映射（`categoryIconCodes` 为可选清单；`demo_data.dart` 现在只放种子数据，按 id 查询/展示回退在 `model_lookup.dart`）；**另支持 emoji 自定义图标**，以 `emoji:` 前缀存进 `Category.iconCode`（如 `emoji:🍜`，助手 `isEmojiIconCode`/`emojiOfIconCode`/`emojiIconCode`）。**分类图标一律用 `common_widgets.dart` 的 `CategoryIconBox`（带色块背景）或 `CategoryGlyph`（裸字形，Chip/内联用）渲染**，二者自动区分内置图标与 emoji——新增分类图标渲染点不要直接 `iconForCode(category.iconCode)`，否则 emoji 分类会回退成钱包图标。选择器 `showCategoryIconPickerSheet`（`sheets.dart`）为图标网格 + 常用 emoji 快选 + 自由输入。emoji 走 `iconCode` 存储，无 schema 变更、导出/导入天然覆盖。
 
+账户图标：通用图标可选 code 在 `icon_catalog.dart`，信用/支付/银行 SVG 目录在 `account_icon_assets.dart`，每个 `AccountIconOption` 同时登记稳定 code、专有名称、类别、资源路径与中英文/缩写 `searchTerms`；账户名自动推荐与图标搜索共用这份元数据。新增 SVG 须使用官方或已授权资源，追加目录项且永不复用/重命已发布 code；`test/account_icon_test.dart` 锁定 code/名称/路径唯一、文件与注册表一一对应及 SVG 安全边界。账户分组只是文件夹，不持有图标字段。
+
 统计分析页（`report_analysis_page.dart`）的排行支持三种分组维度（`_ReportGrouping`）：顶级分类（可点行下钻看子分类拆分，弹层子分类行与底部「查看交易」都跳到按该分类预筛的 `TransactionsPage(initialCategoryId:)`，与分类管理「查看交易」同一路径）、子分类（按记账所选分类，`reportCategoryStatsByOwn`；点行直接跳转同上）、标签（`reportTagStats`，一笔计入其每个标签、占比可重叠）；纯函数都在 `report_analysis.dart`。
 
 ### 国际化

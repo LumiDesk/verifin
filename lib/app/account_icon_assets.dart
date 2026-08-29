@@ -6,6 +6,7 @@ class AccountIconOption {
     required this.label,
     required this.groupKey,
     required this.assetPath,
+    this.searchTerms = const <String>[],
   });
 
   final String code;
@@ -16,6 +17,9 @@ class AccountIconOption {
   /// 分组标识（credit/payment/bank），显示名经 [groupLabel] 从 ARB 解析。
   final String groupKey;
   final String assetPath;
+
+  /// 用户常输入的中文简称、英文名或机构缩写。搜索与账户名自动推荐共用。
+  final List<String> searchTerms;
 
   String groupLabel(AppLocalizations l10n) {
     switch (groupKey) {
@@ -36,24 +40,28 @@ const List<AccountIconOption> accountAssetIconOptions = <AccountIconOption>[
     label: '白条',
     groupKey: 'credit',
     assetPath: 'assets/account_icons/credit_001.svg',
+    searchTerms: <String>['京东白条', 'jd', 'baitiao'],
   ),
   AccountIconOption(
     code: 'asset:credit_002',
     label: '花呗',
     groupKey: 'credit',
     assetPath: 'assets/account_icons/credit_002.svg',
+    searchTerms: <String>['huabei', 'ant credit pay'],
   ),
   AccountIconOption(
     code: 'asset:payment_001',
     label: 'Mastercard',
     groupKey: 'payment',
     assetPath: 'assets/account_icons/payment_001.svg',
+    searchTerms: <String>['master card', '万事达'],
   ),
   AccountIconOption(
     code: 'asset:payment_002',
     label: 'PayPal',
     groupKey: 'payment',
     assetPath: 'assets/account_icons/payment_002.svg',
+    searchTerms: <String>['贝宝'],
   ),
   AccountIconOption(
     code: 'asset:payment_003',
@@ -66,18 +74,21 @@ const List<AccountIconOption> accountAssetIconOptions = <AccountIconOption>[
     label: '微信支付',
     groupKey: 'payment',
     assetPath: 'assets/account_icons/payment_004.svg',
+    searchTerms: <String>['微信', 'wechat', 'weixin', 'wx'],
   ),
   AccountIconOption(
     code: 'asset:payment_005',
     label: '银联',
     groupKey: 'payment',
     assetPath: 'assets/account_icons/payment_005.svg',
+    searchTerms: <String>['unionpay', 'china unionpay'],
   ),
   AccountIconOption(
     code: 'asset:payment_006',
     label: '支付宝',
     groupKey: 'payment',
     assetPath: 'assets/account_icons/payment_006.svg',
+    searchTerms: <String>['alipay', 'zfb'],
   ),
   AccountIconOption(
     code: 'asset:bank_001',
@@ -96,24 +107,28 @@ const List<AccountIconOption> accountAssetIconOptions = <AccountIconOption>[
     label: '中信银行',
     groupKey: 'bank',
     assetPath: 'assets/account_icons/bank_003.svg',
+    searchTerms: <String>['中信', 'citic'],
   ),
   AccountIconOption(
     code: 'asset:bank_004',
     label: '中国民生银行',
     groupKey: 'bank',
     assetPath: 'assets/account_icons/bank_004.svg',
+    searchTerms: <String>['民生', 'cmbc'],
   ),
   AccountIconOption(
     code: 'asset:bank_005',
     label: '中国邮政储蓄银行',
     groupKey: 'bank',
     assetPath: 'assets/account_icons/bank_005.svg',
+    searchTerms: <String>['邮储', 'psbc'],
   ),
   AccountIconOption(
     code: 'asset:bank_006',
     label: '中国银行',
     groupKey: 'bank',
     assetPath: 'assets/account_icons/bank_006.svg',
+    searchTerms: <String>['中行', 'boc'],
   ),
   AccountIconOption(
     code: 'asset:bank_007',
@@ -126,30 +141,35 @@ const List<AccountIconOption> accountAssetIconOptions = <AccountIconOption>[
     label: '交通银行',
     groupKey: 'bank',
     assetPath: 'assets/account_icons/bank_008.svg',
+    searchTerms: <String>['交通', '交行', 'bocom'],
   ),
   AccountIconOption(
     code: 'asset:bank_009',
     label: '兴业银行',
     groupKey: 'bank',
     assetPath: 'assets/account_icons/bank_009.svg',
+    searchTerms: <String>['兴业', 'cib'],
   ),
   AccountIconOption(
     code: 'asset:bank_010',
     label: '农业银行',
     groupKey: 'bank',
     assetPath: 'assets/account_icons/bank_010.svg',
+    searchTerms: <String>['农业', '农行', 'abc'],
   ),
   AccountIconOption(
     code: 'asset:bank_011',
     label: '北京银行',
     groupKey: 'bank',
     assetPath: 'assets/account_icons/bank_011.svg',
+    searchTerms: <String>['bob'],
   ),
   AccountIconOption(
     code: 'asset:bank_012',
     label: '华夏银行',
     groupKey: 'bank',
     assetPath: 'assets/account_icons/bank_012.svg',
+    searchTerms: <String>['华夏', 'hxb'],
   ),
   AccountIconOption(
     code: 'asset:bank_013',
@@ -168,24 +188,28 @@ const List<AccountIconOption> accountAssetIconOptions = <AccountIconOption>[
     label: '工商银行',
     groupKey: 'bank',
     assetPath: 'assets/account_icons/bank_015.svg',
+    searchTerms: <String>['工商', '工行', 'icbc'],
   ),
   AccountIconOption(
     code: 'asset:bank_016',
     label: '平安银行',
     groupKey: 'bank',
     assetPath: 'assets/account_icons/bank_016.svg',
+    searchTerms: <String>['平安', 'pab'],
   ),
   AccountIconOption(
     code: 'asset:bank_017',
     label: '广发银行',
     groupKey: 'bank',
     assetPath: 'assets/account_icons/bank_017.svg',
+    searchTerms: <String>['广发', 'cgb'],
   ),
   AccountIconOption(
     code: 'asset:bank_018',
     label: '建设银行',
     groupKey: 'bank',
     assetPath: 'assets/account_icons/bank_018.svg',
+    searchTerms: <String>['建设', '建行', 'ccb'],
   ),
   AccountIconOption(
     code: 'asset:bank_019',
@@ -204,12 +228,14 @@ const List<AccountIconOption> accountAssetIconOptions = <AccountIconOption>[
     label: '招商银行',
     groupKey: 'bank',
     assetPath: 'assets/account_icons/bank_021.svg',
+    searchTerms: <String>['招商', '招行', 'cmb'],
   ),
   AccountIconOption(
     code: 'asset:bank_022',
     label: '江苏银行',
     groupKey: 'bank',
     assetPath: 'assets/account_icons/bank_022.svg',
+    searchTerms: <String>['jsb'],
   ),
   AccountIconOption(
     code: 'asset:bank_023',
@@ -222,6 +248,7 @@ const List<AccountIconOption> accountAssetIconOptions = <AccountIconOption>[
     label: '浦发银行',
     groupKey: 'bank',
     assetPath: 'assets/account_icons/bank_024.svg',
+    searchTerms: <String>['上海浦东发展银行', 'spdb'],
   ),
   AccountIconOption(
     code: 'asset:bank_025',
@@ -246,6 +273,7 @@ const List<AccountIconOption> accountAssetIconOptions = <AccountIconOption>[
     label: '苏州银行',
     groupKey: 'bank',
     assetPath: 'assets/account_icons/bank_028.svg',
+    searchTerms: <String>['bosz'],
   ),
   AccountIconOption(
     code: 'asset:bank_029',
@@ -270,6 +298,7 @@ const List<AccountIconOption> accountAssetIconOptions = <AccountIconOption>[
     label: '青岛银行',
     groupKey: 'bank',
     assetPath: 'assets/account_icons/bank_032.svg',
+    searchTerms: <String>['qdccb'],
   ),
   AccountIconOption(
     code: 'asset:bank_033',
@@ -290,54 +319,43 @@ AccountIconOption? accountAssetIconByCode(String code) {
 
 bool isAssetAccountIcon(String code) => accountAssetIconByCode(code) != null;
 
+String normalizeAccountIconSearch(String value) {
+  final buffer = StringBuffer();
+  for (final rune in value.trim().toLowerCase().runes) {
+    if (rune == 0x20 || rune == 0x3000 || (rune >= 0x09 && rune <= 0x0D)) {
+      continue;
+    }
+    if (rune >= 0xFF01 && rune <= 0xFF5E) {
+      buffer.writeCharCode(rune - 0xFEE0);
+    } else {
+      buffer.writeCharCode(rune);
+    }
+  }
+  return buffer.toString();
+}
+
+bool accountAssetIconMatches(AccountIconOption option, String query) {
+  final normalized = normalizeAccountIconSearch(query);
+  if (normalized.isEmpty) {
+    return true;
+  }
+  return <String>[
+    option.label,
+    option.code,
+    ...option.searchTerms,
+  ].any((term) => normalizeAccountIconSearch(term).contains(normalized));
+}
+
 String? suggestedAccountIconCode(String accountName) {
-  final normalized = accountName.trim().toLowerCase();
+  final normalized = normalizeAccountIconSearch(accountName);
   if (normalized.isEmpty) {
     return null;
   }
-
-  const aliases = <String, String>{
-    '支付宝': 'asset:payment_006',
-    'alipay': 'asset:payment_006',
-    '微信': 'asset:payment_004',
-    'wechat': 'asset:payment_004',
-    '微信支付': 'asset:payment_004',
-    '银联': 'asset:payment_005',
-    '中信': 'asset:bank_003',
-    '中信银行': 'asset:bank_003',
-    '民生': 'asset:bank_004',
-    '邮储': 'asset:bank_005',
-    '中国银行': 'asset:bank_006',
-    '交通': 'asset:bank_008',
-    '交通银行': 'asset:bank_008',
-    '兴业': 'asset:bank_009',
-    '农业': 'asset:bank_010',
-    '农行': 'asset:bank_010',
-    '北京银行': 'asset:bank_011',
-    '华夏': 'asset:bank_012',
-    '工商': 'asset:bank_015',
-    '工行': 'asset:bank_015',
-    '平安': 'asset:bank_016',
-    '广发': 'asset:bank_017',
-    '建设': 'asset:bank_018',
-    '建行': 'asset:bank_018',
-    '招商': 'asset:bank_021',
-    '招行': 'asset:bank_021',
-    '江苏银行': 'asset:bank_022',
-    '浦发': 'asset:bank_024',
-    '苏州银行': 'asset:bank_028',
-    '青岛银行': 'asset:bank_032',
-  };
-
-  for (final entry in aliases.entries) {
-    if (normalized.contains(entry.key.toLowerCase())) {
-      return entry.value;
-    }
-  }
-
   for (final option in accountAssetIconOptions) {
-    final label = option.label.toLowerCase();
-    if (normalized.contains(label) || label.contains(normalized)) {
+    final terms = <String>[option.label, ...option.searchTerms];
+    if (terms.any(
+      (term) => normalized.contains(normalizeAccountIconSearch(term)),
+    )) {
       return option.code;
     }
   }

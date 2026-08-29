@@ -137,6 +137,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountIconPickerTitle => 'Choose account icon';
 
   @override
+  String get accountIconSearchHint =>
+      'Search icons, banks, or payment platforms';
+
+  @override
+  String get accountIconSearchEmpty => 'No icon found';
+
+  @override
+  String get accountIconSearchEmptyDesc =>
+      'Try a full name, common abbreviation, or acronym.';
+
+  @override
   String get accountHandleTitle => 'Manage this account?';
 
   @override

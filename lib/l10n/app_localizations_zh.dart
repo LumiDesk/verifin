@@ -135,6 +135,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get accountIconPickerTitle => '选择账户图标';
 
   @override
+  String get accountIconSearchHint => '搜索图标、银行或支付平台';
+
+  @override
+  String get accountIconSearchEmpty => '没有找到图标';
+
+  @override
+  String get accountIconSearchEmptyDesc => '试试银行全称、简称或英文缩写。';
+
+  @override
   String get accountHandleTitle => '处理此账户？';
 
   @override

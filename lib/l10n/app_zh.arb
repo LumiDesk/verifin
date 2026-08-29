@@ -111,6 +111,9 @@
     "description": "账户图标选择弹窗:内置图标分组名"
   },
   "accountIconPickerTitle": "选择账户图标",
+  "accountIconSearchHint": "搜索图标、银行或支付平台",
+  "accountIconSearchEmpty": "没有找到图标",
+  "accountIconSearchEmptyDesc": "试试银行全称、简称或英文缩写。",
   "accountHandleTitle": "处理此账户？",
   "accountHandleMessage": "账户「{name}」已有 {count} 笔相关交易。你可以隐藏账户，或删除账户并同步删除这些交易记录。",
   "@accountHandleMessage": {
