@@ -27,6 +27,7 @@ class AccountIconOption {
     required this.groupKey,
     required this.assetPath,
     this.searchTerms = const <String>[],
+    this.priority = 1000,
   });
 
   final String code;
@@ -34,12 +35,15 @@ class AccountIconOption {
   /// 品牌/银行名是专有名词，不随语言切换。
   final String label;
 
-  /// 分组标识（credit/payment/bank），显示名经 [groupLabel] 从 ARB 解析。
+  /// 分组标识，显示名经 [groupLabel] 从 ARB 解析。
   final String groupKey;
   final String assetPath;
 
   /// 用户常输入的中文简称、英文名或机构缩写。搜索与账户名自动推荐共用。
   final List<String> searchTerms;
+
+  /// 同组内的展示优先级；数值越小越靠前，未指定时保持注册表原顺序。
+  final int priority;
 
   String groupLabel(AppLocalizations l10n) {
     switch (groupKey) {
@@ -47,6 +51,12 @@ class AccountIconOption {
         return l10n.iconGroupCredit;
       case 'payment':
         return l10n.iconGroupPayment;
+      case 'investment':
+        return l10n.iconGroupInvestment;
+      case 'card':
+        return l10n.iconGroupCard;
+      case 'digital':
+        return l10n.iconGroupDigital;
       case 'bank':
         return l10n.iconGroupBank;
     }
@@ -61,6 +71,7 @@ const List<AccountIconOption> accountAssetIconOptions = <AccountIconOption>[
     groupKey: 'credit',
     assetPath: 'assets/account_icons/credit_001.svg',
     searchTerms: <String>['京东白条', 'jd', 'baitiao'],
+    priority: 1,
   ),
   AccountIconOption(
     code: 'asset:credit_002',
@@ -68,13 +79,15 @@ const List<AccountIconOption> accountAssetIconOptions = <AccountIconOption>[
     groupKey: 'credit',
     assetPath: 'assets/account_icons/credit_002.svg',
     searchTerms: <String>['huabei', 'ant credit pay'],
+    priority: 0,
   ),
   AccountIconOption(
     code: 'asset:payment_001',
     label: 'Mastercard',
-    groupKey: 'payment',
+    groupKey: 'card',
     assetPath: 'assets/account_icons/payment_001.svg',
     searchTerms: <String>['master card', '万事达'],
+    priority: 1,
   ),
   AccountIconOption(
     code: 'asset:payment_002',
@@ -82,12 +95,14 @@ const List<AccountIconOption> accountAssetIconOptions = <AccountIconOption>[
     groupKey: 'payment',
     assetPath: 'assets/account_icons/payment_002.svg',
     searchTerms: <String>['贝宝'],
+    priority: 4,
   ),
   AccountIconOption(
     code: 'asset:payment_003',
     label: 'Stripe',
     groupKey: 'payment',
     assetPath: 'assets/account_icons/payment_003.svg',
+    priority: 5,
   ),
   AccountIconOption(
     code: 'asset:payment_004',
@@ -95,13 +110,15 @@ const List<AccountIconOption> accountAssetIconOptions = <AccountIconOption>[
     groupKey: 'payment',
     assetPath: 'assets/account_icons/payment_004.svg',
     searchTerms: <String>['微信', 'wechat', 'weixin', 'wx'],
+    priority: 1,
   ),
   AccountIconOption(
     code: 'asset:payment_005',
     label: '银联',
-    groupKey: 'payment',
+    groupKey: 'card',
     assetPath: 'assets/account_icons/payment_005.svg',
     searchTerms: <String>['unionpay', 'china unionpay'],
+    priority: 0,
   ),
   AccountIconOption(
     code: 'asset:payment_006',
@@ -109,6 +126,123 @@ const List<AccountIconOption> accountAssetIconOptions = <AccountIconOption>[
     groupKey: 'payment',
     assetPath: 'assets/account_icons/payment_006.svg',
     searchTerms: <String>['alipay', 'zfb'],
+    priority: 0,
+  ),
+  AccountIconOption(
+    code: 'asset:payment_007',
+    label: '云闪付',
+    groupKey: 'payment',
+    assetPath: 'assets/account_icons/payment_007.svg',
+    searchTerms: <String>['unionpay app', 'quick pass', '云闪付 app'],
+    priority: 2,
+  ),
+  AccountIconOption(
+    code: 'asset:investment_001',
+    label: '余额宝',
+    groupKey: 'investment',
+    assetPath: 'assets/account_icons/investment_001.svg',
+    searchTerms: <String>['yuebao', 'yu e bao', '支付宝理财'],
+    priority: 0,
+  ),
+  AccountIconOption(
+    code: 'asset:investment_002',
+    label: '国泰海通',
+    groupKey: 'investment',
+    assetPath: 'assets/account_icons/investment_002.svg',
+    searchTerms: <String>['国泰海通证券', '国泰君安', '海通证券', 'gtja', 'haitong'],
+    priority: 1,
+  ),
+  AccountIconOption(
+    code: 'asset:investment_003',
+    label: 'Interactive Brokers',
+    groupKey: 'investment',
+    assetPath: 'assets/account_icons/investment_003.svg',
+    searchTerms: <String>['盈透', '盈透证券', 'ibkr'],
+    priority: 2,
+  ),
+  AccountIconOption(
+    code: 'asset:payment_008',
+    label: '美团',
+    groupKey: 'payment',
+    assetPath: 'assets/account_icons/payment_008.svg',
+    searchTerms: <String>['美团月付', '美团钱包', 'meituan'],
+    priority: 3,
+  ),
+  AccountIconOption(
+    code: 'asset:card_001',
+    label: 'Visa',
+    groupKey: 'card',
+    assetPath: 'assets/account_icons/card_001.svg',
+    searchTerms: <String>['维萨'],
+    priority: 2,
+  ),
+  AccountIconOption(
+    code: 'asset:card_002',
+    label: 'American Express',
+    groupKey: 'card',
+    assetPath: 'assets/account_icons/card_002.svg',
+    searchTerms: <String>['amex', '美国运通'],
+    priority: 3,
+  ),
+  AccountIconOption(
+    code: 'asset:card_003',
+    label: 'JCB',
+    groupKey: 'card',
+    assetPath: 'assets/account_icons/card_003.svg',
+    priority: 4,
+  ),
+  AccountIconOption(
+    code: 'asset:card_004',
+    label: 'Diners Club',
+    groupKey: 'card',
+    assetPath: 'assets/account_icons/card_004.svg',
+    searchTerms: <String>['diners', '大来卡'],
+    priority: 5,
+  ),
+  AccountIconOption(
+    code: 'asset:card_005',
+    label: 'Discover',
+    groupKey: 'card',
+    assetPath: 'assets/account_icons/card_005.svg',
+    searchTerms: <String>['discover card'],
+    priority: 6,
+  ),
+  AccountIconOption(
+    code: 'asset:digital_001',
+    label: 'Wise',
+    groupKey: 'digital',
+    assetPath: 'assets/account_icons/digital_001.svg',
+    searchTerms: <String>['transferwise'],
+    priority: 0,
+  ),
+  AccountIconOption(
+    code: 'asset:digital_002',
+    label: 'Revolut',
+    groupKey: 'digital',
+    assetPath: 'assets/account_icons/digital_002.svg',
+    priority: 1,
+  ),
+  AccountIconOption(
+    code: 'asset:digital_003',
+    label: 'Payoneer',
+    groupKey: 'digital',
+    assetPath: 'assets/account_icons/digital_003.svg',
+    searchTerms: <String>['派安盈'],
+    priority: 2,
+  ),
+  AccountIconOption(
+    code: 'asset:digital_004',
+    label: 'Monzo',
+    groupKey: 'digital',
+    assetPath: 'assets/account_icons/digital_004.svg',
+    priority: 3,
+  ),
+  AccountIconOption(
+    code: 'asset:digital_005',
+    label: 'N26',
+    groupKey: 'digital',
+    assetPath: 'assets/account_icons/digital_005.svg',
+    priority: 4,
   ),
   AccountIconOption(
     code: 'asset:bank_001',
@@ -327,6 +461,39 @@ const List<AccountIconOption> accountAssetIconOptions = <AccountIconOption>[
     assetPath: 'assets/account_icons/bank_033.svg',
   ),
 ];
+
+const Map<String, int> _accountIconPriorityOverrides = <String, int>{
+  'asset:bank_015': 0, // 工商银行
+  'asset:bank_018': 1, // 建设银行
+  'asset:bank_010': 2, // 农业银行
+  'asset:bank_006': 3, // 中国银行
+  'asset:bank_008': 4, // 交通银行
+  'asset:bank_005': 5, // 邮储银行
+  'asset:bank_021': 6, // 招商银行
+  'asset:bank_003': 7, // 中信银行
+  'asset:bank_004': 8, // 民生银行
+  'asset:bank_024': 9, // 浦发银行
+  'asset:bank_009': 10, // 兴业银行
+  'asset:bank_016': 11, // 平安银行
+  'asset:bank_012': 12, // 华夏银行
+  'asset:bank_017': 13, // 广发银行
+  'asset:bank_011': 14, // 北京银行
+  'asset:bank_001': 15, // 上海银行
+  'asset:bank_022': 16, // 江苏银行
+};
+
+List<AccountIconOption> get orderedAccountAssetIconOptions {
+  final indexed = accountAssetIconOptions.indexed.toList(growable: false);
+  indexed.sort((left, right) {
+    final leftPriority =
+        _accountIconPriorityOverrides[left.$2.code] ?? left.$2.priority;
+    final rightPriority =
+        _accountIconPriorityOverrides[right.$2.code] ?? right.$2.priority;
+    final byPriority = leftPriority.compareTo(rightPriority);
+    return byPriority != 0 ? byPriority : left.$1.compareTo(right.$1);
+  });
+  return indexed.map((item) => item.$2).toList(growable: false);
+}
 
 AccountIconOption? accountAssetIconByCode(String code) {
   for (final option in accountAssetIconOptions) {

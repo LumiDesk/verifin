@@ -22,7 +22,7 @@ Future<String?> showAccountIconPickerSheet({
         groupLabel: l10n.iconGroupGeneric,
         searchTerms: <String>[code],
       ),
-    for (final option in accountAssetIconOptions)
+    for (final option in orderedAccountAssetIconOptions)
       _AccountIconChoice(
         code: option.code,
         label: option.label,
@@ -56,7 +56,15 @@ class _AccountIconPickerBody extends StatefulWidget {
 }
 
 class _AccountIconPickerBodyState extends State<_AccountIconPickerBody> {
-  static const _groupOrder = <String>['generic', 'credit', 'payment', 'bank'];
+  static const _groupOrder = <String>[
+    'generic',
+    'payment',
+    'credit',
+    'investment',
+    'card',
+    'digital',
+    'bank',
+  ];
 
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
