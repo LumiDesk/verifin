@@ -2,8 +2,8 @@ part of 'common_widgets.dart';
 
 // 面板域：资产分组卡、日历预览、工具入口、区块标签。
 
-class AccountGroupCard extends StatelessWidget {
-  const AccountGroupCard({
+class AccountSectionCard extends StatelessWidget {
+  const AccountSectionCard({
     super.key,
     required this.title,
     required this.accounts,

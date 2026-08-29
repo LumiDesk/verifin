@@ -196,6 +196,13 @@ void main() {
       expect(book.baseCurrencyCode, 'CNY');
       expect(book.currencySetupStatus, CurrencySetupStatus.legacyUnconfirmed);
       expect((await repo.loadAccountGroups()).single.name, '资金');
+      final groupColumns = await app.db.rawQuery(
+        'PRAGMA table_info(account_groups)',
+      );
+      expect(
+        groupColumns.map((row) => row['name']),
+        isNot(contains('icon_code')),
+      );
       expect(await repo.loadMonthlyBudgets(), {'default:2026-01': 3000.0});
       expect(await repo.loadCategoryBudgets(), {'default:cat-a': 500.0});
       expect(await repo.loadDailyBudgets(), isEmpty);

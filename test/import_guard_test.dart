@@ -9,7 +9,7 @@ void main() {
 
   test('加密备份信封被拒绝，且不清空现有数据', () async {
     final controller = await makeController();
-    controller.addAccountGroup('我的分组');
+    await controller.addAccountGroup('我的分组');
     final groupsBefore = controller.accountGroups.length;
     expect(groupsBefore, greaterThan(0));
 
@@ -40,7 +40,7 @@ void main() {
 
   test('合法备份仍能正常导入', () async {
     final source = await makeController();
-    source.addAccountGroup('可导入分组');
+    await source.addAccountGroup('可导入分组');
     final exported = source.exportDataJson();
 
     final target = await makeController();

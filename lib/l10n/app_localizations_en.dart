@@ -848,7 +848,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get groupNameLabel => 'Group name';
 
   @override
-  String get groupIconPickerTitle => 'Choose group icon';
+  String get groupDeleteTitle => 'Delete group';
+
+  @override
+  String groupDeleteMessage(String name) {
+    return 'Delete the group “$name”?';
+  }
+
+  @override
+  String groupDeleteInUseMessage(String name, int count) {
+    return 'Deleting “$name” will move its $count accounts to Ungrouped. Accounts and transactions will not be deleted.';
+  }
 
   @override
   String get accountIconLabel => 'Account icon';

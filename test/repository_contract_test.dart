@@ -112,13 +112,7 @@ void _runContract(String name, Future<LedgerRepository> Function() openRepo) {
         ),
       ];
       const groups = <AccountGroup>[
-        AccountGroup(
-          id: 'grp-1',
-          bookId: 'default',
-          name: '资金',
-          iconCode: 'wallet',
-          sortOrder: 0,
-        ),
+        AccountGroup(id: 'grp-1', bookId: 'default', name: '资金', sortOrder: 0),
       ];
       const categories = <Category>[
         Category(

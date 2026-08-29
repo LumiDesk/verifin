@@ -3646,46 +3646,55 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     return true;
   }
 
-  void addAccountGroup(String name) {
+  Future<bool> addAccountGroup(String name) async {
     final trimmedName = name.trim();
     if (trimmedName.isEmpty) {
-      return;
+      return false;
     }
-    _accountGroups.add(
+    final next = <AccountGroup>[
+      ..._accountGroups,
       AccountGroup(
         id: _generateId('group'),
         bookId: _activeBookId,
         name: trimmedName,
-        iconCode: 'folder',
         sortOrder: accountGroups.length,
       ),
+    ];
+    final saved = await _runTrackedWrite(
+      () => _repository.saveAccountGroups(next),
     );
-    _persistAccountGroups();
+    if (!saved) {
+      return false;
+    }
+    _accountGroups
+      ..clear()
+      ..addAll(next);
     notifyListeners();
+    return true;
   }
 
-  void renameAccountGroup(String groupId, String name) {
+  Future<bool> renameAccountGroup(String groupId, String name) async {
     final trimmedName = name.trim();
     if (trimmedName.isEmpty) {
-      return;
+      return false;
     }
     final index = _accountGroups.indexWhere((group) => group.id == groupId);
     if (index == -1) {
-      return;
+      return false;
     }
-    _accountGroups[index] = _accountGroups[index].copyWith(name: trimmedName);
-    _persistAccountGroups();
-    notifyListeners();
-  }
-
-  void updateAccountGroupIcon(String groupId, String iconCode) {
-    final index = _accountGroups.indexWhere((group) => group.id == groupId);
-    if (index == -1) {
-      return;
+    final next = List<AccountGroup>.of(_accountGroups);
+    next[index] = next[index].copyWith(name: trimmedName);
+    final saved = await _runTrackedWrite(
+      () => _repository.saveAccountGroups(next),
+    );
+    if (!saved) {
+      return false;
     }
-    _accountGroups[index] = _accountGroups[index].copyWith(iconCode: iconCode);
-    _persistAccountGroups();
+    _accountGroups
+      ..clear()
+      ..addAll(next);
     notifyListeners();
+    return true;
   }
 
   Future<bool> deleteAccountGroup(String groupId) async {

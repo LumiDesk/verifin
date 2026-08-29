@@ -278,7 +278,7 @@ void main() {
       zhMaterialApp(
         theme: buildVeriFinTheme(Brightness.light),
         home: Scaffold(
-          body: AccountGroupCard(
+          body: AccountSectionCard(
             title: '现金',
             accounts: const <Account>[included, excluded],
             balances: const <Account, double>{included: 100, excluded: 500},
@@ -373,7 +373,7 @@ void main() {
       zhMaterialApp(
         theme: buildVeriFinTheme(Brightness.light),
         home: Scaffold(
-          body: AccountGroupCard(
+          body: AccountSectionCard(
             title: '信用卡',
             accounts: const <Account>[account],
             balances: const <Account, double>{account: -120},

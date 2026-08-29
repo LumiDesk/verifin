@@ -507,7 +507,26 @@
   "commonIcon": "图标",
   "groupRenameTitle": "重命名分组",
   "groupNameLabel": "分组名称",
-  "groupIconPickerTitle": "选择分组图标",
+  "groupDeleteTitle": "删除分组",
+  "groupDeleteMessage": "确定删除“{name}”分组吗？",
+  "@groupDeleteMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupDeleteInUseMessage": "删除“{name}”分组后，其中 {count} 个账户将移到“未分组”。账户和交易不会被删除。",
+  "@groupDeleteInUseMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "accountIconLabel": "账户图标",
   "accountSaveTooltip": "保存账户",
   "accountTypeLabel": "账户类型",

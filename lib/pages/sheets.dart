@@ -841,7 +841,6 @@ List<({String title, List<Account> accounts})> _accountPickerSections(
           id: 'ungrouped',
           bookId: controller.activeBook.id,
           name: l10n.assetsUngrouped,
-          iconCode: 'folder',
           sortOrder: 999,
         ),
       ],
