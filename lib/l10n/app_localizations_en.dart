@@ -4121,6 +4121,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get currencyRatesTitle => 'Currencies & rates';
 
   @override
+  String get currencyRatesHelpTitle => 'About exchange rates';
+
+  @override
   String get currencyRatesOfflineDesc =>
       'Rates are stored on this device and maintained by you. The app never downloads or refreshes them, and changing a rate does not rewrite historical transaction reports.';
 

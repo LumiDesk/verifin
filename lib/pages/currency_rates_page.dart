@@ -62,6 +62,11 @@ class _CurrencyRatesPageState extends State<CurrencyRatesPage> {
                 subtitle: l10n.currentBookLabel(book.name),
                 showBack: true,
                 actions: <Widget>[
+                  HeaderAction(
+                    icon: Icons.help_outline,
+                    tooltip: l10n.currencyRatesHelpTitle,
+                    onPressed: _showRateHelp,
+                  ),
                   if (book.currencySetupStatus == CurrencySetupStatus.confirmed)
                     HeaderAction(
                       icon: Icons.add,
@@ -109,22 +114,6 @@ class _CurrencyRatesPageState extends State<CurrencyRatesPage> {
                   CurrencySetupStatus.legacyUnconfirmed)
                 _LegacySetupCard(book: book)
               else ...<Widget>[
-                VeriCard(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      const Icon(Icons.offline_bolt_outlined, color: veriRoyal),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          l10n.currencyRatesOfflineDesc,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
                 SectionLabel(l10n.exchangeRateCurrencies),
                 if (codes.isEmpty)
                   VeriCard(
@@ -167,6 +156,15 @@ class _CurrencyRatesPageState extends State<CurrencyRatesPage> {
     );
     if (!mounted || selected == null) return;
     await editExchangeRate(context: context, currencyCode: selected.code);
+  }
+
+  Future<void> _showRateHelp() {
+    final l10n = AppLocalizations.of(context);
+    return showInfoDialog(
+      context: context,
+      title: l10n.currencyRatesHelpTitle,
+      message: l10n.currencyRatesOfflineDesc,
+    );
   }
 }
 

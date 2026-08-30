@@ -4008,6 +4008,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get currencyRatesTitle => '货币与汇率';
 
   @override
+  String get currencyRatesHelpTitle => '汇率说明';
+
+  @override
   String get currencyRatesOfflineDesc =>
       '汇率保存在本机并由你维护。应用不会联网获取或自动刷新汇率；修改汇率也不会改变已保存交易的历史统计。';
 

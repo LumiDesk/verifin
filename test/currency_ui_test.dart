@@ -150,7 +150,23 @@ void main() {
     expect(controller.exchangeRates.single.rateToBase, 7.123456);
     await tester.pumpAndSettle();
     expect(find.text('1 USD = 7.1235 CNY'), findsOneWidget);
+    expect(find.textContaining('应用不会联网'), findsNothing);
+  });
+
+  testWidgets('汇率说明从页头问号打开且不再常驻显示', (tester) async {
+    final controller = await makeController();
+    addTearDown(controller.dispose);
+    await pumpPage(tester, controller, const CurrencyRatesPage());
+
+    expect(find.textContaining('应用不会联网'), findsNothing);
+    await tester.tap(find.byTooltip('汇率说明'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('汇率说明'), findsOneWidget);
     expect(find.textContaining('应用不会联网'), findsOneWidget);
+    await tester.tap(find.text('知道了'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('应用不会联网'), findsNothing);
   });
 
   testWidgets('汇率历史行使用锚点菜单提供编辑和删除', (tester) async {

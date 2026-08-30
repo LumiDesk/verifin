@@ -134,6 +134,29 @@ class SelectField extends StatelessWidget {
   }
 }
 
+/// 统一的只读说明对话框：正文 + 单个“知道了”按钮。
+Future<void> showInfoDialog({
+  required BuildContext context,
+  required String title,
+  required String message,
+  String? closeLabel,
+}) {
+  final l10n = AppLocalizations.of(context);
+  return showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text(title),
+      content: Text(message),
+      actions: <Widget>[
+        FilledButton(
+          onPressed: () => Navigator.of(dialogContext).pop(),
+          child: Text(closeLabel ?? l10n.gotIt),
+        ),
+      ],
+    ),
+  );
+}
+
 class CompactSwitchRow extends StatelessWidget {
   const CompactSwitchRow({
     super.key,

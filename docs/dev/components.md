@@ -116,6 +116,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | 名称 | 类型 | 位置 | 用途 / 返回约定 |
 |---|---|---|---|
 | `showConfirmDialog` | Dialog 函数 | `common_widgets.dart` | **统一确认框**；`destructive` 红色；返回 `bool`（取消/点外=false）。**禁止内联两按钮 `AlertDialog`** |
+| `showInfoDialog` | Dialog 函数 | `common_widgets.dart` | 统一只读说明框（标题、正文、单个“知道了”按钮）；新调用使用具名 `context:` |
 | `showUnsavedChangesDialog` / `EditorExitDecision` | Dialog 函数 / 枚举 | `common_widgets.dart` | 未保存修改的“保存 / 不保存 / 取消”三操作对话框；点遮罩或系统返回视为取消 |
 | `UnsavedChangesGuard` / `EditorExitController` | Widget / Controller | `common_widgets.dart` | 统一拦截编辑页 Header、系统与预测性返回；仅 `onSave` 成功后放行，未修改时不拦截；显式保存成功后用 `EditorExitController.exit()` 走同一受控退出路径，避免同帧旧 dirty 状态拦截程序化返回 |
 | `showTextInputDialog` | Dialog 函数 | `sheets.dart` | **统一文本输入**；`allowEmpty`、`keyboardType`；返回 trim 后 `String?` |

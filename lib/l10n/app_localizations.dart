@@ -7316,6 +7316,12 @@ abstract class AppLocalizations {
   /// **'货币与汇率'**
   String get currencyRatesTitle;
 
+  /// No description provided for @currencyRatesHelpTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'汇率说明'**
+  String get currencyRatesHelpTitle;
+
   /// No description provided for @currencyRatesOfflineDesc.
   ///
   /// In zh, this message translates to:
