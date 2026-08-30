@@ -2373,6 +2373,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get birthdayLabel => '生日';
 
   @override
+  String get birthdayClear => '清除生日';
+
+  @override
   String get cityLabel => '城市';
 
   @override

@@ -2416,6 +2416,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get birthdayLabel => 'Birthday';
 
   @override
+  String get birthdayClear => 'Clear birthday';
+
+  @override
   String get cityLabel => 'City';
 
   @override

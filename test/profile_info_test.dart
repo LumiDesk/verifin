@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/app/veri_fin_scope.dart';
+import 'package:verifin/local_storage/local_storage.dart';
 import 'package:verifin/pages/profile_pages.dart';
 
 import 'support/test_harness.dart';
@@ -75,6 +76,37 @@ void main() {
     await tester.tap(find.byTooltip('保存'));
     await tester.pumpAndSettle();
     expect(controller.profile.gender, ProfileGender.female);
+  });
+
+  testWidgets('已设置生日可清除并在保存后提交', (tester) async {
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store);
+    addTearDown(controller.dispose);
+    controller.updateProfile(
+      controller.profile.copyWith(nickname: '张三', birthday: '1990-01-02'),
+    );
+
+    await pumpProfilePage(tester, controller);
+
+    expect(find.text('1990-01-02'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('profile_birthday_clear')));
+    await tester.pump();
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('profile_birthday_field')),
+        matching: find.text('不设置'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byType(DatePickerDialog), findsNothing);
+    expect(controller.profile.birthday, '1990-01-02');
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+    expect(controller.profile.birthday, '');
+    final restored = await makeController(store);
+    addTearDown(restored.dispose);
+    expect(restored.profile.birthday, '');
   });
 
   testWidgets('昵称留空保存时弹确认框，取消则不保存', (tester) async {

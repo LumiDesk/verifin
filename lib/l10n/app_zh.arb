@@ -1624,6 +1624,7 @@
   "bioLabel": "简介",
   "genderLabel": "性别",
   "birthdayLabel": "生日",
+  "birthdayClear": "清除生日",
   "cityLabel": "城市",
   "occupationLabel": "职业",
   "pickGenderTitle": "选择性别",

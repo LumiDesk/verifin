@@ -4352,6 +4352,12 @@ abstract class AppLocalizations {
   /// **'生日'**
   String get birthdayLabel;
 
+  /// No description provided for @birthdayClear.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除生日'**
+  String get birthdayClear;
+
   /// No description provided for @cityLabel.
   ///
   /// In zh, this message translates to:

@@ -94,6 +94,7 @@ class SelectField extends StatelessWidget {
     required this.value,
     this.icon,
     this.leading,
+    this.suffixIcon,
     required this.onTap,
   }) : assert(icon != null || leading != null, '需要提供 icon 或 leading');
 
@@ -103,6 +104,9 @@ class SelectField extends StatelessWidget {
 
   /// 自定义前置组件(如账户图标);提供时优先于 [icon]。
   final Widget? leading;
+
+  /// 自定义尾部操作；未提供时显示默认下拉箭头。
+  final Widget? suffixIcon;
   final VoidCallback? onTap;
 
   @override
@@ -118,7 +122,7 @@ class SelectField extends StatelessWidget {
             prefixIcon: leading == null
                 ? Icon(icon)
                 : Center(widthFactor: 1, heightFactor: 1, child: leading),
-            suffixIcon: const Icon(Icons.keyboard_arrow_down),
+            suffixIcon: suffixIcon ?? const Icon(Icons.keyboard_arrow_down),
           ),
           child: Text(
             value,

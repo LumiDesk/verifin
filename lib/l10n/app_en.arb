@@ -856,6 +856,7 @@
   "bioLabel": "Bio",
   "genderLabel": "Gender",
   "birthdayLabel": "Birthday",
+  "birthdayClear": "Clear birthday",
   "cityLabel": "City",
   "occupationLabel": "Occupation",
   "pickGenderTitle": "Choose gender",
