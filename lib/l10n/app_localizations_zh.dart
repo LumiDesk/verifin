@@ -2373,6 +2373,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get birthdayLabel => '生日';
 
   @override
+  String get birthdayClear => '清除生日';
+
+  @override
   String get cityLabel => '城市';
 
   @override
@@ -4006,6 +4009,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get currencyRatesTitle => '货币与汇率';
+
+  @override
+  String get currencyRatesHelpTitle => '汇率说明';
 
   @override
   String get currencyRatesOfflineDesc =>

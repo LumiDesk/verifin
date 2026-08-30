@@ -2416,6 +2416,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get birthdayLabel => 'Birthday';
 
   @override
+  String get birthdayClear => 'Clear birthday';
+
+  @override
   String get cityLabel => 'City';
 
   @override
@@ -4119,6 +4122,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get currencyRatesTitle => 'Currencies & rates';
+
+  @override
+  String get currencyRatesHelpTitle => 'About exchange rates';
 
   @override
   String get currencyRatesOfflineDesc =>

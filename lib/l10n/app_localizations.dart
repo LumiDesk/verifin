@@ -4352,6 +4352,12 @@ abstract class AppLocalizations {
   /// **'生日'**
   String get birthdayLabel;
 
+  /// No description provided for @birthdayClear.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除生日'**
+  String get birthdayClear;
+
   /// No description provided for @cityLabel.
   ///
   /// In zh, this message translates to:
@@ -7315,6 +7321,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'货币与汇率'**
   String get currencyRatesTitle;
+
+  /// No description provided for @currencyRatesHelpTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'汇率说明'**
+  String get currencyRatesHelpTitle;
 
   /// No description provided for @currencyRatesOfflineDesc.
   ///

@@ -135,11 +135,20 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
                 ),
                 const SizedBox(height: 10),
                 SelectField(
+                  key: const Key('profile_birthday_field'),
                   label: AppLocalizations.of(context).birthdayLabel,
                   value: _birthday.isEmpty
                       ? AppLocalizations.of(context).clearOption
                       : _birthday,
                   icon: Icons.cake_outlined,
+                  suffixIcon: _birthday.isEmpty
+                      ? null
+                      : IconButton(
+                          key: const Key('profile_birthday_clear'),
+                          tooltip: AppLocalizations.of(context).birthdayClear,
+                          onPressed: _clearBirthday,
+                          icon: const Icon(Icons.close),
+                        ),
                   onTap: _pickBirthday,
                 ),
                 const SizedBox(height: 10),
@@ -180,6 +189,10 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
             '${selected.year}-${selected.month.toString().padLeft(2, '0')}-${selected.day.toString().padLeft(2, '0')}';
       });
     }
+  }
+
+  void _clearBirthday() {
+    setState(() => _birthday = '');
   }
 
   Future<void> _pickAvatar() async {

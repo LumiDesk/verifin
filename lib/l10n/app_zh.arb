@@ -1624,6 +1624,7 @@
   "bioLabel": "简介",
   "genderLabel": "性别",
   "birthdayLabel": "生日",
+  "birthdayClear": "清除生日",
   "cityLabel": "城市",
   "occupationLabel": "职业",
   "pickGenderTitle": "选择性别",
@@ -2558,6 +2559,7 @@
     "placeholders": {"code": {"type": "String"}}
   },
   "currencyRatesTitle": "货币与汇率",
+  "currencyRatesHelpTitle": "汇率说明",
   "currencyRatesOfflineDesc": "汇率保存在本机并由你维护。应用不会联网获取或自动刷新汇率；修改汇率也不会改变已保存交易的历史统计。",
   "exchangeRateCurrencies": "外币汇率",
   "exchangeRateAdd": "添加汇率",
