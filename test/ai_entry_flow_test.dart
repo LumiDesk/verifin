@@ -33,6 +33,9 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(find.text('记一笔按钮'), 120);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('记一笔按钮'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('记一笔按钮'));
     await tester.pumpAndSettle();
     expect(

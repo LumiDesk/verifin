@@ -866,6 +866,8 @@
   "avatarGenerating": "Generating avatar…",
   "profileDefaultBio": "Completely free · Own your data",
   "settingsTitle": "Settings",
+  "settingsSectionAppearance": "Appearance",
+  "settingsSectionAmountDisplay": "Amount display",
   "settingsSectionGeneral": "General",
   "settingsSectionBookkeeping": "Bookkeeping",
   "settingsSectionAbout": "About",

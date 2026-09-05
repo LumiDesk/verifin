@@ -173,6 +173,8 @@ void main() {
     await tapBottomTab(tester, 3);
     await tester.tap(find.byIcon(Icons.settings_outlined));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('应用锁'), 120);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('应用锁'));
     await tester.pumpAndSettle();
 
@@ -202,6 +204,8 @@ void main() {
 
     await tapBottomTab(tester, 3);
     await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('应用锁'), 120);
     await tester.pumpAndSettle();
     await tester.tap(find.text('应用锁'));
     await tester.pumpAndSettle();

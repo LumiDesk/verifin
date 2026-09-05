@@ -20,16 +20,18 @@ class VeriGlassLightPainter extends CustomPainter {
     this.brightness = Brightness.light,
     this.activity = 0,
     this.motion = 0,
+    this.opacity = 1,
   });
   final double radius;
   final Brightness brightness;
   double get peakOpacity => brightness == Brightness.dark ? 0.22 : 0.46;
   final double activity;
   final double motion;
+  final double opacity;
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (size.shortestSide < 2) return;
+    if (size.shortestSide < 2 || opacity <= 0) return;
     final rect = (Offset.zero & size).deflate(0.7);
     final path = Path()
       ..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
@@ -90,13 +92,20 @@ class VeriGlassLightPainter extends CustomPainter {
       vertices.dispose();
     }
 
-    drawRibbon(3.8 + activity * 1.6, peakOpacity * 0.20 + activity * 0.04);
-    drawRibbon(0.85 + activity * 0.5, peakOpacity + activity * 0.10);
+    drawRibbon(
+      3.8 + activity * 1.6,
+      (peakOpacity * 0.20 + activity * 0.04) * opacity,
+    );
+    drawRibbon(
+      0.85 + activity * 0.5,
+      (peakOpacity + activity * 0.10) * opacity,
+    );
   }
 
   @override
   bool shouldRepaint(VeriGlassLightPainter oldDelegate) =>
       brightness != oldDelegate.brightness ||
+      opacity != oldDelegate.opacity ||
       radius != oldDelegate.radius ||
       activity != oldDelegate.activity ||
       motion != oldDelegate.motion;

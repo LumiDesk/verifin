@@ -14,15 +14,7 @@
 ### Android 图形隔离诊断
 
 若 Android 真机报告高级材质导致原生崩溃，不得把旧的不安全实现放回正式应用来复现。
-使用独立 applicationId 的 `diagnostic` flavor 和
-`tool/advanced_material_diagnostic.dart`，依次验证方向高光、Shader 加载、
-以及单次导航纹理读回。该 target 不初始化 Controller、SQLite 或 KV，不能访问
-正式应用数据。完成定位后应保留最小复现与验收结论，删除只为临时实验而存在的路径。
-
-```bash
-flutter run -d <android-device-id> --flavor diagnostic \
-  -t tool/advanced_material_diagnostic.dart
-```
+使用独立 applicationId 的 `diagnostic` flavor 运行正式应用，或使用 `integration_test/glass_navigation_test.dart`、`integration_test/menu_animation_test.dart` 验证现行渲染。旧的三场景截图诊断 target、绘制器与 Shader 已按用户要求移除；历史复现代码可从 `8ebe552` 提取到本地临时目录，不再打包。具体命令见 [Android 开发](android-development.md)。
 
 ## 先恢复预算结构
 
@@ -50,7 +42,7 @@ pub 依赖。实时背景模糊不同于真实折射，不用静态高光或渐�
 - `navigation_glass_lens.dart` 仅把导航自己的图标和文字绘制层采样为临时 GPU 纹理；
   不包含账目、不写文件、不发送。源文字在透镜覆盖区裁去，再由 Shader 显示变形结果，
   避免把原文字与放大文字重复叠加。
-- `shaders/navigation_lens.frag` 对真实采样坐标执行放大、边缘弯曲和分通道偏移；
+- 历史截图 Shader（现已删除）对采样坐标执行放大、边缘弯曲和分通道偏移；
   滑块按压时膨胀，随拖动方向改变形状和边缘光，松手/取消时恢复并沿原状态机吸附。
 - 导航底座、选中滑块和快捷按钮均使用对应方向高光；原点击、拖动、取消与无障碍入口保留。
 - 高级材质由用户选择；关闭时不创建透镜，保留普通磨砂路径。

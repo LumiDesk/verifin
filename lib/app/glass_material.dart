@@ -43,12 +43,16 @@ class VeriGlassSurface extends StatelessWidget {
     this.grouped = true,
     this.tint,
     this.enabled = true,
+    this.reveal = 1,
   });
   final Widget child;
   final double radius;
   final bool grouped;
   final Color? tint;
   final bool enabled;
+
+  /// 表面单独消退，不能用父级 Opacity 把背景模糊一起放入离屏层。
+  final double reveal;
 
   @override
   Widget build(BuildContext context) {
@@ -57,17 +61,19 @@ class VeriGlassSurface extends StatelessWidget {
     final dark = brightness == Brightness.dark;
     final highContrast = MediaQuery.highContrastOf(context);
     final borderRadius = BorderRadius.circular(radius);
+    final visibility = reveal.clamp(0.0, 1.0);
+    final surface = highContrast
+        ? veriContentSurfaceColor(brightness)
+        : tint ?? veriGlassTint(brightness, overlay: !grouped);
     final content = DecoratedBox(
       decoration: BoxDecoration(
-        color: highContrast
-            ? veriContentSurfaceColor(brightness)
-            : tint ?? veriGlassTint(brightness, overlay: !grouped),
+        color: surface.withValues(alpha: surface.a * visibility),
         borderRadius: borderRadius,
         border: highContrast
             ? Border.all(
                 color: Theme.of(
                   context,
-                ).colorScheme.onSurface.withValues(alpha: 0.3),
+                ).colorScheme.onSurface.withValues(alpha: 0.3 * visibility),
               )
             : null,
       ),
@@ -78,12 +84,18 @@ class VeriGlassSurface extends StatelessWidget {
         : grouped
         ? BackdropFilter.grouped(
             blendMode: BlendMode.src,
-            filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            filter: ui.ImageFilter.blur(
+              sigmaX: 16 * visibility,
+              sigmaY: 16 * visibility,
+            ),
             child: content,
           )
         : BackdropFilter(
             blendMode: BlendMode.src,
-            filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            filter: ui.ImageFilter.blur(
+              sigmaX: 16 * visibility,
+              sigmaY: 16 * visibility,
+            ),
             child: content,
           );
     return DecoratedBox(
@@ -91,7 +103,9 @@ class VeriGlassSurface extends StatelessWidget {
         borderRadius: borderRadius,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: dark ? 0.18 : 0.055),
+            color: Colors.black.withValues(
+              alpha: (dark ? 0.18 : 0.055) * visibility,
+            ),
             blurRadius: 16,
             offset: const Offset(0, 5),
           ),
@@ -101,7 +115,11 @@ class VeriGlassSurface extends StatelessWidget {
         foregroundPainter:
             highContrast || !VeriMaterialScope.advancedOf(context)
             ? null
-            : VeriGlassLightPainter(radius: radius, brightness: brightness),
+            : VeriGlassLightPainter(
+                radius: radius,
+                brightness: brightness,
+                opacity: visibility,
+              ),
         child: ClipRRect(borderRadius: borderRadius, child: filtered),
       ),
     );

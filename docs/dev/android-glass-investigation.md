@@ -80,8 +80,7 @@ CI 两个工作流固定 Flutter 3.47.2，并在普通 CI 增加发布材质参�
 锁文件随同版 SDK 的约束解析；升级 Flutter 时同步修改两个工作流并重做下列真机步骤。
 
 ```powershell
-# 分别运行 A 高光 / B 加载 / C 纹理折射。
-& C:/Dev/flutter-3.47.2/bin/flutter.bat build apk --release --flavor diagnostic --target-platform android-arm64 -t tool/advanced_material_diagnostic.dart
+# 旧三场景入口已删除；历史复现请使用独立临时工作树的 8ebe552。
 
 # 真正的应用入口、独立数据目录；不是复制的演示页面。
 & C:/Dev/flutter-3.47.2/bin/flutter.bat build apk --release --flavor diagnostic --target-platform android-arm64 --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true

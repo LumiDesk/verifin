@@ -2447,6 +2447,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTitle => 'Settings';
 
   @override
+  String get settingsSectionAppearance => 'Appearance';
+
+  @override
+  String get settingsSectionAmountDisplay => 'Amount display';
+
+  @override
   String get settingsSectionGeneral => 'General';
 
   @override

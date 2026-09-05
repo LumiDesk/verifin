@@ -2403,6 +2403,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTitle => '设置';
 
   @override
+  String get settingsSectionAppearance => '外观';
+
+  @override
+  String get settingsSectionAmountDisplay => '金额显示';
+
+  @override
   String get settingsSectionGeneral => '通用';
 
   @override

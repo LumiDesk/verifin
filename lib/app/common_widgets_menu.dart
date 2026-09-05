@@ -181,7 +181,9 @@ class _VeriAnchoredMenuAnchorState extends State<VeriAnchoredMenuAnchor> {
       barrierColor: Theme.of(context).brightness == Brightness.dark
           ? Colors.black.withValues(alpha: veriGlassDesignPreview ? 0.12 : 0.28)
           : Colors.black.withValues(alpha: 0.08),
-      transitionDuration: const Duration(milliseconds: 240),
+      transitionDuration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 220),
       pageBuilder: (context, animation, secondaryAnimation) =>
           _VeriAnchoredMenuRoute(
             anchor: anchor,
@@ -191,20 +193,22 @@ class _VeriAnchoredMenuAnchorState extends State<VeriAnchoredMenuAnchor> {
             semanticLabel: widget.semanticLabel,
           ),
       transitionBuilder: (context, animation, secondaryAnimation, child) {
-        final curved = CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOutCubic,
-          reverseCurve: Curves.easeInOutCubic,
+        final curved = animation.drive(
+          CurveTween(curve: Curves.easeInOutCubic),
         );
         final scaled = ScaleTransition(
-          scale: Tween<double>(begin: 0.98, end: 1).animate(curved),
+          scale: Tween<double>(begin: 0.96, end: 1).animate(curved),
           alignment: Alignment.topRight,
           child: child,
         );
-        // 不把玻璃放进 Opacity 的离屏层；保留缩放，直接采样下层页面。
-        return veriGlassDesignPreview
-            ? scaled
-            : FadeTransition(opacity: curved, child: scaled);
+        if (!veriGlassDesignPreview) {
+          return FadeTransition(opacity: curved, child: scaled);
+        }
+        return AnimatedBuilder(
+          animation: curved,
+          builder: (_, _) =>
+              _VeriMenuVisibility(progress: curved.value, child: scaled),
+        );
       },
     );
 
@@ -587,6 +591,19 @@ class _VeriAnchoredMenuRouteState extends State<_VeriAnchoredMenuRoute>
   }
 }
 
+class _VeriMenuVisibility extends InheritedWidget {
+  const _VeriMenuVisibility({required this.progress, required super.child});
+  final double progress;
+  static double of(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<_VeriMenuVisibility>()
+          ?.progress ??
+      1;
+  @override
+  bool updateShouldNotify(_VeriMenuVisibility oldWidget) =>
+      oldWidget.progress != progress;
+}
+
 class _VeriMenuPanel extends StatelessWidget {
   const _VeriMenuPanel({
     required this.entries,
@@ -610,6 +627,7 @@ class _VeriMenuPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final visibility = _VeriMenuVisibility.of(context);
     final dark = Theme.of(context).brightness == Brightness.dark;
     final baseSurface = veriGlassDesignPreview
         ? veriGlassTint(Theme.of(context).brightness, overlay: true)
@@ -667,27 +685,31 @@ class _VeriMenuPanel extends StatelessWidget {
         grouped: false,
         radius: veriRadiusXl,
         tint: surface,
-        child: Material(
-          color: veriGlassDesignPreview ? Colors.transparent : surface,
-          elevation: 0,
-          clipBehavior: Clip.antiAlias,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(veriRadiusXl),
-            side: BorderSide(
-              color: veriGlassDesignPreview
-                  ? Colors.transparent
-                  : dark
-                  ? Colors.white.withValues(alpha: 0.12)
-                  : veriLine,
+        reveal: visibility,
+        child: FadeTransition(
+          opacity: AlwaysStoppedAnimation(visibility),
+          child: Material(
+            color: veriGlassDesignPreview ? Colors.transparent : surface,
+            elevation: 0,
+            clipBehavior: Clip.antiAlias,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(veriRadiusXl),
+              side: BorderSide(
+                color: veriGlassDesignPreview
+                    ? Colors.transparent
+                    : dark
+                    ? Colors.white.withValues(alpha: 0.12)
+                    : veriLine,
+              ),
             ),
-          ),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              vertical: _veriMenuPanelPadding,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: panelEntries,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                vertical: _veriMenuPanelPadding,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: panelEntries,
+              ),
             ),
           ),
         ),

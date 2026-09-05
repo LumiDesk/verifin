@@ -12,6 +12,28 @@ import 'support/test_harness.dart';
 void main() {
   useTestDatabases();
 
+  testWidgets('设置的外观金额显示与通用各自成组', (tester) async {
+    await pumpApp(tester);
+    await tapBottomTab(tester, 3);
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.pumpAndSettle();
+    for (final item in {
+      '主题模式': 'settingsSectionAppearance',
+      '金额保留两位小数': 'settingsSectionAmountDisplay',
+      '触感反馈': 'settingsSectionGeneral',
+    }.entries) {
+      expect(
+        find.descendant(
+          of: find.byKey(ValueKey(item.value)),
+          matching: find.text(item.key),
+        ),
+        findsOneWidget,
+      );
+    }
+    expect(find.text('外观'), findsOneWidget);
+    expect(find.text('金额显示'), findsOneWidget);
+  });
+
   testWidgets('shows the main tabs and switches between pages', (
     WidgetTester tester,
   ) async {
@@ -172,7 +194,7 @@ void main() {
     await tester.scrollUntilVisible(find.text('VeriFin $appVersionLabel'), 120);
     expect(find.text('VeriFin $appVersionLabel'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('主题模式'));
+    await tester.scrollUntilVisible(find.text('主题模式'), -180);
     await tester.pumpAndSettle();
     await tester.tap(find.text('主题模式'));
     await tester.pumpAndSettle();

@@ -4412,6 +4412,18 @@ abstract class AppLocalizations {
   /// **'设置'**
   String get settingsTitle;
 
+  /// No description provided for @settingsSectionAppearance.
+  ///
+  /// In zh, this message translates to:
+  /// **'外观'**
+  String get settingsSectionAppearance;
+
+  /// No description provided for @settingsSectionAmountDisplay.
+  ///
+  /// In zh, this message translates to:
+  /// **'金额显示'**
+  String get settingsSectionAmountDisplay;
+
   /// No description provided for @settingsSectionGeneral.
   ///
   /// In zh, this message translates to:

@@ -94,7 +94,6 @@ flutter:
   generate: true
 
   shaders:
-    - shaders/navigation_lens.frag
     - shaders/navigation_live_lens.frag
 
   assets:

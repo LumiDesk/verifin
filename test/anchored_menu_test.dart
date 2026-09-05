@@ -4,6 +4,38 @@ import 'package:verifin/app/app_theme.dart';
 import 'package:verifin/app/common_widgets.dart';
 
 void main() {
+  testWidgets('玻璃菜单关闭中途表面逐渐消退而不是保持原色', (tester) async {
+    await tester.pumpWidget(
+      _MenuTestApp(
+        entries: const [
+          VeriMenuItem(id: 'close_probe', title: '动画检查', onPressed: _noop),
+        ],
+      ),
+    );
+    await tester.tap(find.byTooltip('更多'));
+    await tester.pumpAndSettle();
+    double tintAlpha() => tester
+        .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+        .map((box) => box.decoration)
+        .whereType<BoxDecoration>()
+        .where(
+          (box) =>
+              box.color != null &&
+              box.borderRadius == BorderRadius.circular(veriRadiusXl),
+        )
+        .first
+        .color!
+        .a;
+    final resting = tintAlpha();
+    await tester.tap(find.text('动画检查'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 110));
+    expect(find.text('动画检查'), findsOneWidget);
+    expect(tintAlpha(), lessThan(resting * 0.9));
+    expect(tintAlpha(), greaterThan(0));
+    await tester.pumpAndSettle();
+    expect(find.text('动画检查'), findsNothing);
+  }, skip: !veriGlassDesignPreview);
   testWidgets('renders icon title subtitle divider and selected state', (
     tester,
   ) async {

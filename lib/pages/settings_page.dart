@@ -97,9 +97,10 @@ class _SettingsPageState extends State<SettingsPage> {
                 const SizedBox(height: 10),
                 _sectionLabel(
                   context,
-                  AppLocalizations.of(context).settingsSectionGeneral,
+                  AppLocalizations.of(context).settingsSectionAppearance,
                 ),
                 VeriCard(
+                  key: const ValueKey('settingsSectionAppearance'),
                   child: Column(
                     children: <Widget>[
                       VeriAnchoredChoice<ThemePreference>(
@@ -126,9 +127,10 @@ class _SettingsPageState extends State<SettingsPage> {
                           onTap: openMenu,
                         ),
                       ),
-                      const Divider(height: 1),
                       if (veriGlassDesignPreview &&
                           veriAdvancedMaterialAvailable) ...[
+                        const Divider(height: 1),
+
                         CompactSwitchRow(
                           key: const ValueKey('advanced_material_setting'),
                           icon: Icons.auto_awesome_outlined,
@@ -142,40 +144,19 @@ class _SettingsPageState extends State<SettingsPage> {
                           onChanged: (value) =>
                               setState(() => _advancedMaterial = value),
                         ),
-                        const Divider(height: 1),
                       ],
-                      VeriAnchoredChoice<LocalePreference>(
-                        values: LocalePreference.values,
-                        selected: _locale,
-                        idOf: (value) => 'settings_locale_${value.name}',
-                        labelOf: (value) =>
-                            value.label(AppLocalizations.of(context)),
-                        iconOf: (value) => switch (value) {
-                          LocalePreference.system => Icons.language_outlined,
-                          LocalePreference.zh => Icons.translate_outlined,
-                          LocalePreference.en => Icons.abc_rounded,
-                        },
-                        onSelected: (value) => setState(() => _locale = value),
-                        semanticLabel: AppLocalizations.of(
-                          context,
-                        ).languagePickerTitle,
-                        width: 208,
-                        builder: (context, openMenu, menuOpen) => SettingsRow(
-                          icon: Icons.translate_outlined,
-                          title: AppLocalizations.of(context).settingsLanguage,
-                          trailing: _locale.label(AppLocalizations.of(context)),
-                          trailingIcon: Icons.chevron_right,
-                          onTap: openMenu,
-                        ),
-                      ),
-                      const Divider(height: 1),
-                      CompactSwitchRow(
-                        icon: Icons.touch_app_outlined,
-                        title: Text(AppLocalizations.of(context).hapticsLabel),
-                        value: _haptics,
-                        onChanged: (value) => setState(() => _haptics = value),
-                      ),
-                      const Divider(height: 1),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _sectionLabel(
+                  context,
+                  AppLocalizations.of(context).settingsSectionAmountDisplay,
+                ),
+                VeriCard(
+                  key: const ValueKey('settingsSectionAmountDisplay'),
+                  child: Column(
+                    children: <Widget>[
                       CompactSwitchRow(
                         icon: Icons.plus_one_outlined,
                         title: Text(
@@ -237,6 +218,49 @@ class _SettingsPageState extends State<SettingsPage> {
                         value: _hideSingleCurrencyUnit,
                         onChanged: (value) =>
                             setState(() => _hideSingleCurrencyUnit = value),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _sectionLabel(
+                  context,
+                  AppLocalizations.of(context).settingsSectionGeneral,
+                ),
+                VeriCard(
+                  key: const ValueKey('settingsSectionGeneral'),
+                  child: Column(
+                    children: <Widget>[
+                      VeriAnchoredChoice<LocalePreference>(
+                        values: LocalePreference.values,
+                        selected: _locale,
+                        idOf: (value) => 'settings_locale_${value.name}',
+                        labelOf: (value) =>
+                            value.label(AppLocalizations.of(context)),
+                        iconOf: (value) => switch (value) {
+                          LocalePreference.system => Icons.language_outlined,
+                          LocalePreference.zh => Icons.translate_outlined,
+                          LocalePreference.en => Icons.abc_rounded,
+                        },
+                        onSelected: (value) => setState(() => _locale = value),
+                        semanticLabel: AppLocalizations.of(
+                          context,
+                        ).languagePickerTitle,
+                        width: 208,
+                        builder: (context, openMenu, menuOpen) => SettingsRow(
+                          icon: Icons.translate_outlined,
+                          title: AppLocalizations.of(context).settingsLanguage,
+                          trailing: _locale.label(AppLocalizations.of(context)),
+                          trailingIcon: Icons.chevron_right,
+                          onTap: openMenu,
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      CompactSwitchRow(
+                        icon: Icons.touch_app_outlined,
+                        title: Text(AppLocalizations.of(context).hapticsLabel),
+                        value: _haptics,
+                        onChanged: (value) => setState(() => _haptics = value),
                       ),
                       const Divider(height: 1),
                       SettingsRow(

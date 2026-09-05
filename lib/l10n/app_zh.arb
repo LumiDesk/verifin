@@ -1634,6 +1634,8 @@
   "avatarGenerating": "正在生成头像…",
   "profileDefaultBio": "完全免费 · 数据自主",
   "settingsTitle": "设置",
+  "settingsSectionAppearance": "外观",
+  "settingsSectionAmountDisplay": "金额显示",
   "settingsSectionGeneral": "通用",
   "settingsSectionBookkeeping": "记账",
   "settingsSectionAbout": "关于",

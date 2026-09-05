@@ -23,11 +23,13 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 `VeriPageTransitionsBuilder` 在 Android 转场内部包裹每个路由自己的背景，保留系统预测性返回。
 Material 全局 surface 不透明；具体玻璃表面用 src 混合，导航使用同帧 ImageFiltered，不再生成截图。
 `sheets.dart` 的 `_showVeriModalSheet` 只统一材质封装，外部仍使用各领域 `show…Sheet`。
+`VeriGlassSurface.reveal`（默认 1）用于分层消退染色、模糊、阴影与方向光；菜单文字单独淡出，
+不能把背景过滤器包进整层 Opacity。`VeriGlassLightPainter.opacity` 对应控制光照消退。
 范围见 [玻璃材质预览](glass-material-preview.md)。
 
 `VeriGlassLightPainter` / `veriGlassEdgeLight`（`glass_lighting.dart`）提供边界法线驱动的
 方向高光；`VeriNavigationGlassLens`（`navigation_glass_lens.dart`）通过 `navigation_live_lens.frag`
-过滤当前帧导航内容；`VeriNavigationLensPainter` 仅保留供旧图形诊断入口使用。
+过滤当前帧导航内容。旧截图绘制器、旧 Shader 和三场景诊断 target 已删除，历史复现从 Git 取回。
 `OnboardingGate`（`onboarding_page.dart`）位于 PrivacyConsentGate / AppLockGate 内部，完成引导前不构建首页。
 
 `VeriPage`、`VeriHeader` / `PageHeader` 与 `VeriCard` 支持显式 `compact` 参数。
