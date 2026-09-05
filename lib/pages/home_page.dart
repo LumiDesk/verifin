@@ -54,7 +54,7 @@ class HomePage extends StatelessWidget {
     // 退款条目在原支出上管理，不单独进时间线（净额已体现在支出行）。
     final recentEntries = entries
         .where((e) => e.type != EntryType.refund)
-        .take(5)
+        .take(veriUnifiedDesignPreview ? 3 : 5)
         .toList();
     // 预算面板按预算周期取数（键月 + 周期窗口）；首页其余统计仍按自然月。
     final budgetKeyMonth = controller.budgetKeyMonthFor(now);
@@ -94,6 +94,7 @@ class HomePage extends StatelessWidget {
           );
         case 'recent':
           return VeriCard(
+            compact: veriUnifiedDesignPreview,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
@@ -179,10 +180,12 @@ class HomePage extends StatelessWidget {
     }
 
     return VeriPage(
+      compact: veriUnifiedDesignPreview,
       child: ListView(
         padding: veriRootPageListPadding(context),
         children: <Widget>[
           PageHeader(
+            compact: veriUnifiedDesignPreview,
             title: AppLocalizations.of(context).tabHome,
             subtitle:
                 '${controller.activeBook.name} · '
@@ -382,10 +385,11 @@ class HomeTrendPanel extends StatelessWidget {
     final seriesLabel = homeTrendSeriesLabel(l10n, config.series);
 
     return VeriCard(
+      compact: veriUnifiedDesignPreview,
       onTap: onTap,
       quietTap: true,
       padding: veriUnifiedDesignPreview
-          ? const EdgeInsets.all(20)
+          ? const EdgeInsets.all(14)
           : const EdgeInsets.fromLTRB(14, 13, 14, 12),
       child: RepaintBoundary(
         child: Column(
@@ -397,14 +401,16 @@ class HomeTrendPanel extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(
-                        window.label,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: mutedColor,
-                          fontWeight: FontWeight.w700,
+                      if (!veriUnifiedDesignPreview)
+                        Text(
+                          window.label,
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: mutedColor,
+                                fontWeight: FontWeight.w700,
+                              ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
+                      if (!veriUnifiedDesignPreview) const SizedBox(height: 2),
                       Text(
                         title,
                         maxLines: 1,
@@ -415,12 +421,20 @@ class HomeTrendPanel extends StatelessWidget {
                     ],
                   ),
                 ),
-                MoneyUnitLabel(currencyCode: currencyCode),
+                if (veriUnifiedDesignPreview)
+                  Text(
+                    window.label,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: mutedColor),
+                  )
+                else
+                  MoneyUnitLabel(currencyCode: currencyCode),
                 const SizedBox(width: 8),
                 const _CircleArrow(),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: veriUnifiedDesignPreview ? 8 : 12),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: <Widget>[
@@ -442,7 +456,7 @@ class HomeTrendPanel extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style:
                             (veriUnifiedDesignPreview
-                                    ? Theme.of(context).textTheme.displayLarge
+                                    ? Theme.of(context).textTheme.displayMedium
                                     : Theme.of(context).textTheme.displaySmall)
                                 ?.copyWith(
                                   color: bigColor,
@@ -473,7 +487,7 @@ class HomeTrendPanel extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: veriUnifiedDesignPreview ? 24 : 10),
+            const SizedBox(height: veriUnifiedDesignPreview ? 12 : 10),
             if (veriUnifiedDesignPreview)
               Row(
                 children: [
@@ -527,9 +541,9 @@ class HomeTrendPanel extends StatelessWidget {
                   ),
                 ],
               ),
-            const SizedBox(height: 12),
+            const SizedBox(height: veriUnifiedDesignPreview ? 8 : 12),
             SizedBox(
-              height: 138,
+              height: veriUnifiedDesignPreview ? 96 : 138,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(2, 6, 2, 0),
                 // 图表区域自行响应点击展示数据,不触发卡片跳转。
@@ -690,6 +704,72 @@ class BudgetPanel extends StatelessWidget {
             context,
           ).budgetCycleRange(window.start, window.end)
         : AppLocalizations.of(context).monthBudgetTitle(month);
+
+    if (veriUnifiedDesignPreview) {
+      final l10n = AppLocalizations.of(context);
+      final textColor = Theme.of(context).colorScheme.onSurface;
+      return VeriCard(
+        key: const Key('home_compact_budget'),
+        compact: true,
+        onTap: onTap,
+        quietTap: true,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const _CircleArrow(),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 12,
+              runSpacing: 4,
+              children: [
+                Text(
+                  budget <= 0
+                      ? l10n.notSetBudget
+                      : '${overspent ? l10n.overBudgetLabel : l10n.budgetRemaining} ${formatAmount(remaining.abs())}',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: overspent ? veriExpense : textColor,
+                  ),
+                ),
+                Text(
+                  budget <= 0
+                      ? '${l10n.entryTypeExpense} ${formatExpenseAmount(expense)}'
+                      : l10n.budgetTotalLabel(formatAmount(budget)),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: textColor.withValues(alpha: 0.68),
+                  ),
+                ),
+              ],
+            ),
+            if (budget > 0) ...[
+              const SizedBox(height: 8),
+              LinearProgressIndicator(
+                value: ratio.clamp(0.0, 1.0),
+                minHeight: 4,
+                borderRadius: BorderRadius.circular(veriRadiusSm),
+                color: budgetProgressColor(budget, remaining, ratio),
+                backgroundColor: textColor.withValues(alpha: 0.08),
+              ),
+            ],
+            if (categoryRisk != null) ...[
+              const SizedBox(height: 8),
+              _HomeBudgetRiskBanner(snapshot: categoryRisk!),
+            ],
+          ],
+        ),
+      );
+    }
 
     return VeriCard(
       onTap: onTap,

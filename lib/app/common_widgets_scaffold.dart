@@ -3,15 +3,16 @@ part of 'common_widgets.dart';
 // 页面骨架域：VeriPage/VeriCard/VeriHeader 与头部动作、区块标题、空态。
 
 class VeriPage extends StatelessWidget {
-  const VeriPage({super.key, required this.child});
+  const VeriPage({super.key, required this.child, this.compact = false});
 
   final Widget child;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: veriUnifiedDesignPreview ? 6 : 0,
+      padding: EdgeInsets.symmetric(
+        horizontal: veriUnifiedDesignPreview ? (compact ? 2 : 6) : 0,
       ),
       decoration: BoxDecoration(
         color: veriUnifiedDesignPreview
@@ -43,18 +44,26 @@ class VeriCard extends StatelessWidget {
     required this.child,
     this.onTap,
     this.quietTap = false,
-    this.padding = const EdgeInsets.all(veriUnifiedDesignPreview ? 18 : 13),
-  });
+    this.compact = false,
+    EdgeInsetsGeometry? padding,
+  }) : padding =
+           padding ??
+           (compact
+               ? const EdgeInsets.all(14)
+               : const EdgeInsets.all(veriUnifiedDesignPreview ? 18 : 13));
 
   final Widget child;
   final VoidCallback? onTap;
   final bool quietTap;
+  final bool compact;
   final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final borderRadius = BorderRadius.circular(veriCardRadius);
+    final borderRadius = BorderRadius.circular(
+      compact ? veriCompactCardRadius : veriCardRadius,
+    );
     final decoration = BoxDecoration(
       color: veriContentSurfaceColor(Theme.of(context).brightness),
       borderRadius: borderRadius,
@@ -115,15 +124,18 @@ class PageHeader extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.trailing,
+    this.compact = false,
   });
 
   final String title;
   final String? subtitle;
   final Widget? trailing;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return VeriHeader(
+      compact: compact,
       title: title,
       subtitle: subtitle,
       actions: trailing == null ? null : [trailing!],
@@ -139,6 +151,7 @@ class VeriHeader extends StatelessWidget {
     this.showBack = false,
     this.onBack,
     this.actions,
+    this.compact = false,
   });
 
   final String title;
@@ -146,12 +159,13 @@ class VeriHeader extends StatelessWidget {
   final bool showBack;
   final VoidCallback? onBack;
   final List<Widget>? actions;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final actionWidgets = actions ?? const <Widget>[];
     return SizedBox(
-      height: veriHeaderHeight,
+      height: compact ? veriCompactHeaderHeight : veriHeaderHeight,
       child: Row(
         children: <Widget>[
           if (showBack) ...<Widget>[

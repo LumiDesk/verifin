@@ -10,6 +10,8 @@ const Color veriPreviewCanvasLight = Color(0xFFF3F5F8);
 const Color veriPreviewCanvasDark = Color(0xFF101318);
 const Color veriPreviewSurfaceDark = Color(0xFF1A1F27);
 const double veriCardRadius = veriUnifiedDesignPreview ? 20 : veriRadiusMd;
+const double veriCompactCardRadius = 16;
+const double veriCompactHeaderHeight = 56;
 
 /// 内容卡片与资产封面共用的实体基色。
 Color veriContentSurfaceColor(Brightness brightness) =>
