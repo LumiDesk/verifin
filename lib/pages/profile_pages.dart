@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
@@ -69,6 +70,12 @@ class ProfilePage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
+          if (kIsWeb) ...<Widget>[
+            VeriCard(
+              child: Text(AppLocalizations.of(context).webPreviewStorageHint),
+            ),
+            const SizedBox(height: 10),
+          ],
           InkWell(
             borderRadius: BorderRadius.circular(veriRadiusMd),
             onTap: () {

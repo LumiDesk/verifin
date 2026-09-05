@@ -7663,6 +7663,30 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'默认关闭；开启后只保存最终纳入交易使用的当日汇率。'**
   String get importSaveExchangeRatesHint;
+
+  /// No description provided for @webPreviewStorageHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Web 开发预览 · 使用真实页面和本地数据。账目只保存在当前浏览器，不与手机同步。请固定预览地址并只打开一个标签页；清除网站数据会删除账目，需要保留时请先导出备份。'**
+  String get webPreviewStorageHint;
+
+  /// No description provided for @webPreviewUnsupported.
+  ///
+  /// In zh, this message translates to:
+  /// **'Web 预览支持手动记账、统计、图片和文件导入导出。AI 网络请求、截图 OCR、WebDAV、目录自动备份、系统通知和桌面小组件仍需在 Android 验证。'**
+  String get webPreviewUnsupported;
+
+  /// No description provided for @webDownloadRequested.
+  ///
+  /// In zh, this message translates to:
+  /// **'已交给浏览器下载，请在浏览器下载列表中确认文件。'**
+  String get webDownloadRequested;
+
+  /// No description provided for @webDownloadLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'浏览器下载'**
+  String get webDownloadLabel;
 }
 
 class _AppLocalizationsDelegate

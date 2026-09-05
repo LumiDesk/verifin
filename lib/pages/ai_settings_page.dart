@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../app/ai/ai_capabilities.dart';
 import '../app/ai/ai_client.dart';
@@ -296,6 +297,10 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                   ],
                 ),
                 const SizedBox(height: 10),
+                if (kIsWeb) ...<Widget>[
+                  Text(l10n.webPreviewUnsupported),
+                  const SizedBox(height: 10),
+                ],
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: Text(

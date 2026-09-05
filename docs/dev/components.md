@@ -103,7 +103,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `SelectField` | Widget | `common_widgets.dart` | 下拉选择字段；`leading` 可传自定义前置（如账户图标），`suffixIcon` 可替换默认箭头提供清除等局部操作 |
 | `SectionLabel` | Widget | `common_widgets.dart` | 分组小标题（分区 `VeriCard` 上方的灰色标签，设置页/账户详情页分模块用） |
 | `SettingsRow` | Widget | `common_widgets.dart` | 设置行（图标+标题+trailing 文本+chevron）；`leading` 可传账户图标等自定义前置，`contentColor` 可上色（如危险操作红色） |
-| `CompactSwitchRow` | Widget | `common_widgets.dart` | 紧凑开关行 |
+| `CompactSwitchRow` | Widget | `common_widgets.dart` | 紧凑开关行；`onChanged:null` 保留原生禁用语义，用于不支持的浏览器能力 |
 | `DetailInfoRow` | Widget | `common_widgets.dart` | 详情页 label/value 行（可点击带 chevron） |
 | `CurrencyAmountField` | Widget | `common_widgets.dart` | 交易/退款/周期编辑器统一的货币金额行；按 ISO minor unit 格式化且强制带单位，避免同一表单多币换算歧义；`amount == null` 时显示明确缺失态 |
 | `MoneyUnitLabel` | Widget | `common_widgets.dart` | 聚合卡片/页面的轻量「单位：¥/CNY」提示；概览、预算、日历、看板等已在统一上下文标单位的组件复用，不要在每个数字旁堆标识 |

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import '../veri_fin_controller.dart';
 import 'backup_service.dart';
 import 'webdav_client.dart';
@@ -24,6 +26,9 @@ class BackupCoordinator {
     VeriFinController controller, {
     required bool afterEntry,
   }) async {
+    // 浏览器预览不具备 SAF 目录授权或 WebDAV 传输；不能触发静默下载来冒充
+    // 自动备份。手动导出继续走浏览器下载，导入也不应激活设备端备份配置。
+    if (kIsWeb) return;
     final settings = controller.backupSettings;
     final webdav = controller.webdavConfig;
     final now = DateTime.now();

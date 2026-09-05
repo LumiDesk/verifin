@@ -175,7 +175,9 @@ class CompactSwitchRow extends StatelessWidget {
   final Widget title;
   final Widget? subtitle;
   final bool value;
-  final ValueChanged<bool> onChanged;
+
+  /// null 表示当前平台/状态不可用，同时保留 Switch 的禁用语义。
+  final ValueChanged<bool>? onChanged;
 
   @override
   Widget build(BuildContext context) {

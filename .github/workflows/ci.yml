@@ -45,3 +45,7 @@ jobs:
       # 只在打发布标签后才发现 Kotlin 无法编译。
       - name: Build Android debug APK
         run: flutter build apk --debug --flavor github
+
+      # 直接编译正式入口，数据库 WASM/worker 资源已随源码提交。
+      - name: Build application Web preview
+        run: flutter build web --no-web-resources-cdn

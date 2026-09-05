@@ -16,7 +16,18 @@ flutter test --plain-name "关键字"      # 按名称运行单个测试
 dart format .                          # 提交前格式化
 ```
 
-旧独立 UI Lab 已移除，不再维护演示页面副本。组件验证使用根项目测试，Android 预览使用上述正式入口。
+电脑端直接运行正式应用的 Web 开发预览（同一 `lib/main.dart`、Controller 和仓储）：
+
+```bash
+flutter pub get
+flutter run -d chrome --web-port 7357
+flutter build web --no-web-resources-cdn
+```
+
+Web 的 SQLite WASM 文件系统持久化到 IndexedDB，偏好通过 SharedPreferences
+存入浏览器 localStorage。固定 origin/端口并只使用一个标签页编辑；浏览器数据与
+Android 独立。平台能力范围、资源更新与验收见 `docs/dev/web-preview.md`。
+不要再创建独立的演示 UI 工程或复制正式页面；设计评审直接使用真实应用。
 
 ## 发布与 CI
 
@@ -109,7 +120,7 @@ Android/测试差异统一用条件导出模式（`stub` + `if (dart.library.io)
 - **文档同步**：变更影响开发命令、架构、交付流程、配置或用户可见行为时，须在同一次变更中更新 `README.md`、`AGENTS.md`、`docs/`。
 - **CHANGELOG 同步**：凡用户可见的改动（新功能、界面/交互变化、修复、隐私安全项等），在同一次变更中往 `CHANGELOG.md` 的 `## [Unreleased]` 段落加一行（分类到 新增/优化/修复/安全 等小节）；纯内部重构、改测试/文档等对用户无感的不写。发版时再把 `Unreleased` 提升为版本号（见「发布与 CI」）。
 - UI 风格：紧凑型移动端工具风格；主色 `#346edb`，辅助蓝 `#3498db`，青绿色仅用于收入/正向状态。UI 规范见 `docs/ui-guidelines.md`。
-- 根导航使用 `lib/app/root_navigation.dart` 的 `VeriRootNavigation`：中性无渐变玻璃胶囊 + 仅首页显示的圆形快捷记账，选中滑块支持按压缩放、连续拖动与吸附。材质、手势、窄屏和 正式组件测试约定见 `docs/dev/liquid-glass-navigation.md`。
+- 根导航使用 `lib/app/root_navigation.dart` 的 `VeriRootNavigation`：中性无渐变玻璃胶囊 + 仅首页显示的圆形快捷记账，选中滑块支持按压缩放、连续拖动与吸附。材质、手势、窄屏和 Web 预览约定见 `docs/dev/liquid-glass-navigation.md`。
 - **日期算术禁用裸 `Duration`**：「相隔几天」走 `calendarDaysBetween`、「推 N 天」走 `addCalendarDays`（[lib/app/calendar_days.dart](lib/app/calendar_days.dart)，经 `ledger_math.dart` re-export），**不要写 `difference().inDays` / `add(Duration(days: n))`**——那是绝对时间，夏令时地区一天可能 23/25 小时，会少算一天或让时刻漂移一小时（历史 bug：自定义范围天数少 1、每日提醒 21:00 顺延后变 22:00、切换日次日把昨天的交易标成「今天」）。**这类缺陷在 UTC 与中国时区都不显现，CI 恒绿**，只在欧美时区暴露，故必须靠约定而非测试兜住。纯时间间隔（2 秒内双击返回、每隔 N 小时备份）仍用 `Duration`。
 - **组件化优先**：写任何 widget/弹窗/对话框/格式化/计算前，先查 `docs/dev/components.md` 组件清单，命中就复用或参数化扩展，不新建变体。2–8 项静态受控单选走 `VeriAnchoredChoice<T>`，动态/分区长列表走 `showOptionSheet` 或领域 Picker；图标渲染走 `CategoryIconBox`/`AccountIconBox`（勿直接 `iconForCode`），弹窗走 `show*Sheet`/`showConfirmDialog`/`showTextInputDialog`（勿裸包 `showModalBottomSheet`/内联 `AlertDialog`）。完整代码规范见 `AGENTS.md` 的「代码规范 · 组件化与工程约定」。已知架构限制与技术债见 `docs/dev/known-limitations.md`。
 - 不要重写生成的平台工程文件（`android/`），除非任务明确要求；不要为简单需求引入额外工具链或依赖。

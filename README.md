@@ -87,7 +87,7 @@
 
 | 领域 | 方案 |
 | --- | --- |
-| 框架 | Flutter 3 / Dart 3（仅 Android 交付） |
+| 框架 | Flutter 3 / Dart 3（Android 交付 + Web 开发预览） |
 | 状态管理 | 单一 `ChangeNotifier` Controller + `InheritedNotifier` 注入，无第三方状态库 |
 | 数据存储 | `sqflite`（账目类，含版本迁移）+ `SharedPreferences`（偏好类） |
 | 国际化 | Flutter 官方 gen-l10n（ARB，中文模板 + 英文） |
@@ -109,8 +109,12 @@ git clone git@github.com:LumiDesk/verifin.git
 cd verifin
 flutter pub get                      # 安装依赖（自动生成 l10n）
 flutter run -d <android-device-id> --flavor github  # Android 模拟器或真机预览
+flutter run -d chrome --web-port 7357 # 真实应用 Web 预览，浏览器独立保存数据
+flutter build web --no-web-resources-cdn # Web 编译门禁
 flutter analyze && flutter test      # 静态检查 + 全部测试
 ```
+
+Web 预览的存储、平台限制和资源维护见 [开发说明](docs/dev/web-preview.md)。
 
 Android 包名 `top.talyra42.verifin`。本地不构建交付 APK——正式安装包由 GitHub CI 生成。
 

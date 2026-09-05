@@ -3,6 +3,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../app/app_theme.dart';
 import '../app/backup/backup_service.dart';
@@ -85,6 +86,10 @@ class _DataManagementPageState extends State<DataManagementPage> {
                   ],
                 ),
                 const SizedBox(height: 10),
+                if (kIsWeb) ...<Widget>[
+                  Text(AppLocalizations.of(context).webPreviewUnsupported),
+                  const SizedBox(height: 10),
+                ],
                 _sectionLabel(
                   context,
                   AppLocalizations.of(context).dataSectionLocalBackup,
@@ -99,8 +104,9 @@ class _DataManagementPageState extends State<DataManagementPage> {
                             ? controller.backupSettings.directoryLabel
                             : AppLocalizations.of(context).notChosen,
                         trailingIcon: Icons.chevron_right,
-                        onTap: () =>
-                            _chooseBackupDirectory(context, controller),
+                        onTap: kIsWeb
+                            ? null
+                            : () => _chooseBackupDirectory(context, controller),
                       ),
                       const Divider(),
                       SettingsRow(
@@ -111,13 +117,17 @@ class _DataManagementPageState extends State<DataManagementPage> {
                           controller.backupSettings,
                         ),
                         trailingIcon: Icons.chevron_right,
-                        onTap: () => _backupNow(context, controller),
+                        onTap: kIsWeb
+                            ? null
+                            : () => _backupNow(context, controller),
                       ),
                       const Divider(),
                       SettingsRow(
                         icon: Icons.download_outlined,
                         title: AppLocalizations.of(context).exportData,
-                        trailing: AppLocalizations.of(context).jsonBackup,
+                        trailing: kIsWeb
+                            ? AppLocalizations.of(context).webDownloadLabel
+                            : AppLocalizations.of(context).jsonBackup,
                         trailingIcon: Icons.chevron_right,
                         onTap: () => _exportData(context, controller),
                       ),
@@ -129,7 +139,8 @@ class _DataManagementPageState extends State<DataManagementPage> {
                         trailingIcon: Icons.chevron_right,
                         onTap: () => _confirmImport(context, controller),
                       ),
-                      if (controller.backupSettings.hasDirectory) ...<Widget>[
+                      if (!kIsWeb &&
+                          controller.backupSettings.hasDirectory) ...<Widget>[
                         const Divider(),
                         SettingsRow(
                           icon: Icons.link_off,
@@ -145,7 +156,8 @@ class _DataManagementPageState extends State<DataManagementPage> {
                     ],
                   ),
                 ),
-                if (controller.backupSettings.hasDirectory) ...<Widget>[
+                if (!kIsWeb &&
+                    controller.backupSettings.hasDirectory) ...<Widget>[
                   const SizedBox(height: 10),
                   _sectionLabel(
                     context,
@@ -299,9 +311,12 @@ class _DataManagementPageState extends State<DataManagementPage> {
                             ? AppLocalizations.of(context).configuredLabel
                             : AppLocalizations.of(context).notConfigured,
                         trailingIcon: Icons.chevron_right,
-                        onTap: () => _editWebdav(context, controller),
+                        onTap: kIsWeb
+                            ? null
+                            : () => _editWebdav(context, controller),
                       ),
-                      if (controller.webdavConfig.isConfigured) ...<Widget>[
+                      if (!kIsWeb &&
+                          controller.webdavConfig.isConfigured) ...<Widget>[
                         const Divider(),
                         SettingsRow(
                           icon: Icons.cloud_upload_outlined,
@@ -596,7 +611,9 @@ class _DataManagementPageState extends State<DataManagementPage> {
             : '';
         _notify(
           context,
-          message: AppLocalizations.of(context).exportedTo(hint),
+          message: kIsWeb
+              ? AppLocalizations.of(context).webDownloadRequested
+              : AppLocalizations.of(context).exportedTo(hint),
           tone: VeriFeedbackTone.success,
         );
       }
@@ -995,7 +1012,9 @@ class _DataManagementPageState extends State<DataManagementPage> {
       if (saved && context.mounted) {
         _notify(
           context,
-          message: AppLocalizations.of(context).csvTemplateSaved,
+          message: kIsWeb
+              ? AppLocalizations.of(context).webDownloadRequested
+              : AppLocalizations.of(context).csvTemplateSaved,
           tone: VeriFeedbackTone.success,
         );
       }
@@ -1033,7 +1052,9 @@ class _DataManagementPageState extends State<DataManagementPage> {
       if (saved && context.mounted) {
         _notify(
           context,
-          message: AppLocalizations.of(context).transactionsCsvExported,
+          message: kIsWeb
+              ? AppLocalizations.of(context).webDownloadRequested
+              : AppLocalizations.of(context).transactionsCsvExported,
           tone: VeriFeedbackTone.success,
         );
       }

@@ -4,6 +4,7 @@ Veri Fin 关键技术选型与理由。变更相关实现时同步更新本表�
 
 | 决策 | 选择 | 原因 |
 |------|------|------|
+| Web 开发预览 | 同一入口/Controller/SQLite 仓储；`sqflite_common_ffi_web` 的 WASM 文件系统写 IndexedDB，SharedPreferences 写 localStorage | 避免复制页面和另造仓储；浏览器单标签编辑，数据与 Android 隔离，能力与限制见 [web-preview.md](web-preview.md) |
 | SQLite 方案 | `sqflite` + `sqflite_common_ffi`（测试） | 单一 API，无需 build_runner 代码生成，符合仓库「不引入额外工具链」约定；drift 需常驻 codegen |
 | 分类参照完整性 | 三道防线消除「幽灵同名分类」：① 显示层——`rootIdOf`/`ancestorIds` 遇孤儿/悬空 id 截断不冒名，`categoryByIdFrom` 未知 id 返回「已删除分类」占位（不再回退列表首个分类），分类排行下钻按聚合原始 key（`ReportCategoryStat.categoryId`）而非可能被占位的 `category.id`；② 载入/导入时 `_healCategoryData` 自愈——孤儿 parentId 重挂顶级、重复分类（同 label+type+parentId）合并且引用迁移、悬空交易/规则引用与**空分类的收/支交易**（历史导入把缺失分类落成空串，issue #16）归入固定 id 的「未分类」、空分类的转账补齐到「转账」分类（issue #14）（幂等，收敛循环）；③ DB `categories` 加 `(label,type,IFNULL(parent_id,''))` 唯一索引（v9→v10 迁移先按同键去重再建索引），创建路径（`addCategory`、导入 `resolveCategory`）按 `normalizedCategoryLabel`（trim+小写+全半角）查重复用，导入侧 `plan_builder` 对缺失分类兜底到固定 id 的「未分类」（与自愈同一约定，不再产出空 `categoryId`） | 本 App 无同步，重复/悬空分类只可能来自 `importFromJson` 覆盖内部不一致的外部/异构备份（零参照校验）。显示层单独修即止血；自愈清存量；唯一约束+归一化查重堵源头。唯一索引用表达式 `IFNULL(parent_id,'')` 让顶级分类（parent_id NULL）也参与去重（NULL 在唯一索引中互不相等）；迁移必须「先去重再建索引」否则建索引即失败 |
 | i18n 方案 | Flutter 内置 gen-l10n（ARB，zh 为模板语言） | 官方方案零额外依赖；`generate: true` 由 pub get 自动生成 |
