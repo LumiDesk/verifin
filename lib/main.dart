@@ -303,6 +303,10 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
             valueListenable: _controller.localePreferenceListenable,
             builder: (context, localePreference, _) {
               return MaterialApp(
+                // 拉伸越界会把列表放进独立滤镜缓冲，玻璃不能再采到路由背景。
+                scrollBehavior: veriGlassDesignPreview
+                    ? const MaterialScrollBehavior().copyWith(overscroll: false)
+                    : null,
                 onGenerateTitle: (context) =>
                     AppLocalizations.of(context).appTitle,
                 debugShowCheckedModeBanner: false,

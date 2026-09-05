@@ -65,16 +65,19 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
   final canvas = isDark ? veriPreviewCanvasDark : veriPreviewCanvasLight;
   final colorScheme = veriUnifiedDesignPreview
       ? seedScheme.copyWith(
-          surface: veriGlassDesignPreview ? veriGlassTint(brightness) : canvas,
-          surfaceContainerHighest: veriGlassDesignPreview
-              ? veriGlassTint(brightness)
-              : seedScheme.surfaceContainerHighest,
+          surface: canvas,
+          surfaceContainerHighest: seedScheme.surfaceContainerHighest,
           onSurface: isDark ? const Color(0xFFF0F3F8) : veriInk,
         )
       : seedScheme;
 
   final baseTheme = ThemeData(
     useMaterial3: true,
+    pageTransitionsTheme: veriGlassDesignPreview
+        ? const PageTransitionsTheme(
+            builders: {TargetPlatform.android: VeriPageTransitionsBuilder()},
+          )
+        : const PageTransitionsTheme(),
     brightness: brightness,
     colorScheme: colorScheme,
     scaffoldBackgroundColor: veriGlassDesignPreview
@@ -177,7 +180,7 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
   return baseTheme.copyWith(
     textTheme: baseTheme.textTheme.copyWith(
       displayLarge: baseTheme.textTheme.displayLarge?.copyWith(
-        fontSize: veriUnifiedDesignPreview ? 40 : 38,
+        fontSize: 38,
         height: 1.05,
         letterSpacing: 0,
       ),
@@ -187,7 +190,7 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
         letterSpacing: 0,
       ),
       displaySmall: baseTheme.textTheme.displaySmall?.copyWith(
-        fontSize: veriUnifiedDesignPreview ? 32 : 26,
+        fontSize: 26,
         height: 1.12,
         letterSpacing: 0,
       ),
@@ -202,17 +205,17 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
         letterSpacing: 0,
       ),
       titleLarge: baseTheme.textTheme.titleLarge?.copyWith(
-        fontSize: veriUnifiedDesignPreview ? 22 : 17,
+        fontSize: 17,
         height: 1.25,
         letterSpacing: 0,
       ),
       titleMedium: baseTheme.textTheme.titleMedium?.copyWith(
-        fontSize: veriUnifiedDesignPreview ? 16 : 14,
+        fontSize: 14,
         height: 1.25,
         letterSpacing: 0,
       ),
       titleSmall: baseTheme.textTheme.titleSmall?.copyWith(
-        fontSize: veriUnifiedDesignPreview ? 14 : 13,
+        fontSize: 13,
         height: 1.25,
         letterSpacing: 0,
       ),
@@ -237,15 +240,72 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
         letterSpacing: 0,
       ),
       labelMedium: baseTheme.textTheme.labelMedium?.copyWith(
-        fontSize: veriUnifiedDesignPreview ? 12 : 11,
+        fontSize: 11,
         height: 1.25,
         letterSpacing: 0,
       ),
       labelSmall: baseTheme.textTheme.labelSmall?.copyWith(
-        fontSize: veriUnifiedDesignPreview ? 11 : 10,
+        fontSize: 10,
         height: 1.2,
         letterSpacing: 0,
       ),
     ),
   );
+}
+
+/// 实际绘制在内容后方的低饱和背景。颜色来自背景，不在玻璃前景伪造折射。
+class VeriGlassBackdrop extends StatelessWidget {
+  const VeriGlassBackdrop({super.key, required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!veriGlassDesignPreview) return child;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return RepaintBoundary(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: dark
+                ? const [
+                    veriGlassCanvasTopDark,
+                    veriPreviewCanvasDark,
+                    veriGlassCanvasBottomDark,
+                  ]
+                : const [
+                    veriGlassCanvasTopLight,
+                    veriPreviewCanvasLight,
+                    veriGlassCanvasBottomLight,
+                  ],
+            stops: const [0, 0.50, 1],
+          ),
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+/// 背景属于路由画面，必须一起参与进入、退出和预测性返回。
+class VeriPageTransitionsBuilder extends PredictiveBackPageTransitionsBuilder {
+  const VeriPageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return super.buildTransitions(
+      route,
+      context,
+      animation,
+      secondaryAnimation,
+      VeriGlassBackdrop(child: child),
+    );
+  }
 }

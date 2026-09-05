@@ -38,10 +38,12 @@ class _VeriNavigationGlassLensState extends State<VeriNavigationGlassLens> {
   Object? _capturedRevision;
   Size? _capturedSize;
   bool _captureScheduled = false;
+  int _interactionGeneration = 0;
 
   @override
   void didUpdateWidget(VeriNavigationGlassLens oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.pressed != oldWidget.pressed) _interactionGeneration++;
     // 每次交互重新采样，不能复用初次字体尚未就绪或旧布局的文字纹理。
     if (widget.pressed && !oldWidget.pressed) _capturedRevision = null;
   }
@@ -75,8 +77,16 @@ class _VeriNavigationGlassLensState extends State<VeriNavigationGlassLens> {
     }
     _captureScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _captureScheduled = false;
-      if (!mounted) return;
+      unawaited(_capture(size));
+    });
+  }
+
+  Future<void> _capture(Size size) async {
+    var retryStaleRequest = false;
+    final generation = _interactionGeneration;
+    final revision = widget.revision;
+    try {
+      if (!mounted || !widget.pressed) return;
       final boundary = _sourceKey.currentContext?.findRenderObject();
       if (boundary is! RenderRepaintBoundary || !boundary.hasSize) return;
       var paintReady = true;
@@ -85,26 +95,36 @@ class _VeriNavigationGlassLensState extends State<VeriNavigationGlassLens> {
         return true;
       }());
       if (!paintReady) return;
-      try {
-        final next = boundary.toImageSync(
-          // 透镜放大时保留图标/文字的细节，避免低分辨率采样产生重影感。
-          pixelRatio: MediaQuery.devicePixelRatioOf(context) * 2,
-        );
-        final previous = _image;
-        setState(() {
-          _image = next;
-          _capturedRevision = widget.revision;
-          _capturedSize = size;
-        });
-        if (previous != null) {
-          WidgetsBinding.instance.addPostFrameCallback(
-            (_) => previous.dispose(),
-          );
-        }
-      } catch (_) {
-        // 页面切换/宿主分离瞬间可能不能读回图层；保留上一帧，下次有效重建重试。
+      final next = await boundary.toImage(
+        // 透镜放大时保留图标/文字的细节，避免低分辨率采样产生重影感。
+        pixelRatio: MediaQuery.devicePixelRatioOf(context) * 2,
+      );
+      // 同步 API 返回不代表 GPU 纹理已完成。旧请求也不能在松手、
+      // 再次按下、主题/尺寸变化后替换当前图标，避免空纹理闪烁。
+      if (!mounted ||
+          !widget.pressed ||
+          generation != _interactionGeneration ||
+          revision != widget.revision ||
+          boundary.size != size) {
+        next.dispose();
+        retryStaleRequest = true;
+        return;
       }
-    });
+      final previous = _image;
+      setState(() {
+        _image = next;
+        _capturedRevision = revision;
+        _capturedSize = size;
+      });
+      if (previous != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => previous.dispose());
+      }
+    } catch (_) {
+      // 纯绘制降级：宿主分离时保留实时图标，不隐藏内容，也不自旋重试。
+    } finally {
+      _captureScheduled = false;
+      if (mounted && widget.pressed && retryStaleRequest) setState(() {});
+    }
   }
 
   @override

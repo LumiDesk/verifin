@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'app_theme.dart';
 import 'glass_lighting.dart';
 
+export 'app_theme.dart' show VeriGlassBackdrop;
+
 /// Android 的逐段模糊高光已改为连续网格，并完成 release/R8 真机验收。
 /// 仅开放 Android；其他尚未验收的平台仍不加载高级绘制资源。
 bool get veriAdvancedMaterialAvailable =>
@@ -29,39 +31,6 @@ class VeriMaterialScope extends InheritedWidget {
   @override
   bool updateShouldNotify(VeriMaterialScope oldWidget) =>
       advanced != oldWidget.advanced;
-}
-
-/// 实际绘制在内容后方的低饱和背景。颜色来自背景，不在玻璃前景伪造折射。
-class VeriGlassBackdrop extends StatelessWidget {
-  const VeriGlassBackdrop({super.key, required this.child});
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    if (!veriGlassDesignPreview) return child;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: dark
-              ? const [
-                  veriGlassCanvasTopDark,
-                  veriPreviewCanvasDark,
-                  veriGlassCanvasBottomDark,
-                ]
-              : const [
-                  veriGlassCanvasTopLight,
-                  veriPreviewCanvasLight,
-                  veriGlassCanvasBottomLight,
-                ],
-          stops: const [0, 0.50, 1],
-        ),
-      ),
-      child: child,
-    );
-  }
 }
 
 /// 共用玻璃内容表面：背景模糊、中性填色和根据边缘法线绘制的方向高光。
@@ -108,10 +77,12 @@ class VeriGlassSurface extends StatelessWidget {
         ? content
         : grouped
         ? BackdropFilter.grouped(
+            blendMode: BlendMode.src,
             filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
             child: content,
           )
         : BackdropFilter(
+            blendMode: BlendMode.src,
             filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
             child: content,
           );

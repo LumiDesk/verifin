@@ -91,6 +91,23 @@ void main() {
           .currentIndex,
       2,
     );
+    // 快速按下/松手让异步采样与下一次交互交错；旧结果不能重新盖住活文字。
+    for (var index = 0; index < 6; index++) {
+      final rapid = await tester.startGesture(
+        tester.getCenter(find.byKey(Key('main_tab_${index % 4}'))),
+      );
+      await tester.pump();
+      await rapid.up();
+      await tester.pump();
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 80)),
+      );
+      await tester.pumpAndSettle();
+      expect(refraction, findsNothing, reason: '松手后的异步结果不得恢复折射层');
+      for (final label in ['首页', '资产', '看板', '我的']) {
+        expect(find.text(label), findsOneWidget);
+      }
+    }
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(body: Center(child: Text('Glass lens PASS'))),

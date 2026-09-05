@@ -214,9 +214,7 @@ class VeriHeader extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: veriUnifiedDesignPreview
-                        ? FontWeight.w700
-                        : FontWeight.w800,
+                    fontWeight: FontWeight.w800,
                     letterSpacing: 0,
                   ),
                 ),

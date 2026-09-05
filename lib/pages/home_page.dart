@@ -268,6 +268,8 @@ class SectionHeaderAction extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(veriRadiusSm),
       hoverColor: Colors.transparent,
+      highlightColor: Colors.transparent,
+      splashColor: Colors.transparent,
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 2),
