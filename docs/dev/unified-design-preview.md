@@ -1,6 +1,7 @@
 # 统一设计候选方案
 
 状态：待用户评审，默认关闭。分支 `talyra42/unified-design-preview`。
+用户反馈第一轮密度偏低后的研究与下一轮试验建议见 [信息密度研究](design-density-research.md)；该研究尚未应用到当前预览。
 该方案直接使用正式页面、Controller 和仓储，不重建 UI Lab，也不引入演示数据层。
 
 ## 当前问题与方向
