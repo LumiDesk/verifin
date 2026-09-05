@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:verifin/app/app_theme.dart';
@@ -96,6 +97,161 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('page:2'), findsOneWidget);
+  });
+  testWidgets('pressing the current slider gives a subtle compression', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const _NavigationHarness());
+
+    final capsuleRect = tester.getRect(
+      find.byKey(const Key('main_nav_capsule')),
+    );
+    final gesture = await tester.startGesture(
+      Offset(capsuleRect.left + capsuleRect.width / 8, capsuleRect.center.dy),
+    );
+    await tester.pump();
+
+    expect(
+      tester
+          .widget<AnimatedScale>(
+            find.byKey(const Key('main_nav_indicator_scale')),
+          )
+          .scale,
+      0.94,
+    );
+    expect(
+      tester
+          .widget<AnimatedScale>(
+            find.byKey(const Key('main_nav_indicator_scale')),
+          )
+          .duration,
+      const Duration(milliseconds: 160),
+    );
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<AnimatedScale>(
+            find.byKey(const Key('main_nav_indicator_scale')),
+          )
+          .scale,
+      1,
+    );
+  });
+
+  testWidgets('a tap on a tab boundary always resolves to one tab', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const _NavigationHarness());
+
+    final capsuleRect = tester.getRect(
+      find.byKey(const Key('main_nav_capsule')),
+    );
+    final slotWidth = capsuleRect.width / 4;
+    final gesture = await tester.startGesture(
+      Offset(capsuleRect.left + slotWidth, capsuleRect.center.dy),
+    );
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    final resolvedPageCount =
+        find.textContaining('page:0').evaluate().length +
+        find.textContaining('page:1').evaluate().length;
+    expect(resolvedPageCount, 1);
+    final indicatorRect = tester.getRect(
+      find.byKey(const Key('main_nav_indicator')),
+    );
+    final firstCenter = tester
+        .getCenter(find.byKey(const Key('main_tab_0')))
+        .dx;
+    final secondCenter = tester
+        .getCenter(find.byKey(const Key('main_tab_1')))
+        .dx;
+    final nearestCenterDistance = <double>[
+      (indicatorRect.center.dx - firstCenter).abs(),
+      (indicatorRect.center.dx - secondCenter).abs(),
+    ].reduce((a, b) => a < b ? a : b);
+    expect(nearestCenterDistance, lessThan(0.5));
+  });
+
+  testWidgets(
+    'pressing a distant tab moves toward the finger without jumping',
+    (tester) async {
+      await tester.pumpWidget(const _NavigationHarness());
+
+      final capsuleRect = tester.getRect(
+        find.byKey(const Key('main_nav_capsule')),
+      );
+      final slotWidth = capsuleRect.width / 4;
+      final firstCenter = tester
+          .getCenter(find.byKey(const Key('main_tab_0')))
+          .dx;
+      final fourthCenter = tester
+          .getCenter(find.byKey(const Key('main_tab_3')))
+          .dx;
+      final gesture = await tester.startGesture(
+        Offset(fourthCenter, capsuleRect.center.dy),
+      );
+      await tester.pump();
+
+      expect(
+        tester.getRect(find.byKey(const Key('main_nav_indicator'))).center.dx,
+        closeTo(firstCenter, 0.5),
+      );
+
+      await tester.pump(const Duration(milliseconds: 40));
+      final movingCenter = tester
+          .getRect(find.byKey(const Key('main_nav_indicator')))
+          .center
+          .dx;
+      expect(movingCenter, greaterThan(firstCenter));
+      expect(movingCenter, lessThan(fourthCenter));
+
+      await gesture.moveTo(
+        Offset(capsuleRect.left + slotWidth * 2.5, capsuleRect.center.dy),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('page:2'), findsOneWidget);
+    },
+  );
+
+  testWidgets('hover changes content color without painting a background', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const _NavigationHarness());
+
+    final tab = find.byKey(const Key('main_tab_3'));
+    final iconFinder = find
+        .descendant(of: tab, matching: find.byType(Icon))
+        .first;
+    final tabContext = tester.element(tab);
+    final scheme = Theme.of(tabContext).colorScheme;
+
+    expect(
+      tester.widget<Icon>(iconFinder).color,
+      scheme.onSurface.withValues(alpha: 0.48),
+    );
+    final ink = tester.widget<InkWell>(find.byKey(const Key('main_tab_ink_3')));
+    expect(ink.hoverColor, Colors.transparent);
+    expect(ink.highlightColor, Colors.transparent);
+    expect(ink.splashColor, Colors.transparent);
+
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(tester.getCenter(tab));
+    await tester.pump();
+
+    expect(
+      tester.widget<Icon>(iconFinder).color,
+      scheme.onSurface.withValues(alpha: 0.76),
+    );
+
+    await mouse.removePointer();
   });
 }
 

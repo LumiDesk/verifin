@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show PointerDeviceKind;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -12,6 +13,33 @@ import 'support/test_harness.dart';
 
 void main() {
   useTestDatabases();
+
+  testWidgets('鼠标悬停暂停提示，移开后恢复倒计时', (tester) async {
+    final controller = VeriFeedbackController();
+    await _pumpHost(tester, controller: controller);
+    final result = controller.showMessage(
+      message: '浏览器悬停',
+      duration: VeriFeedbackDuration.short,
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 240));
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(
+      tester.getCenter(find.byKey(const Key('veri_feedback_card_0'))),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 3));
+    expect(find.text('浏览器悬停'), findsOneWidget);
+    await mouse.moveTo(Offset.zero);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    expect(find.text('浏览器悬停'), findsNothing);
+    expect(await result, VeriFeedbackResult.timedOut);
+    await mouse.removePointer();
+    controller.dispose();
+  });
 
   testWidgets('常驻提示不占进度区域并可手动关闭', (tester) async {
     final controller = VeriFeedbackController();

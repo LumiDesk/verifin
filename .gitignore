@@ -31,7 +31,6 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
-/tool/ui_lab/build/
 /coverage/
 
 # Symbolication related

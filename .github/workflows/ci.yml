@@ -45,20 +45,3 @@ jobs:
       # 只在打发布标签后才发现 Kotlin 无法编译。
       - name: Build Android debug APK
         run: flutter build apk --debug --flavor github
-
-      # 独立的 Web UI Lab 只做视觉预览，不是 Veri Fin 的产品 Web 平台。
-      - name: Install UI Lab dependencies
-        working-directory: tool/ui_lab
-        run: flutter pub get
-
-      - name: Analyze UI Lab
-        working-directory: tool/ui_lab
-        run: flutter analyze
-
-      - name: Test UI Lab
-        working-directory: tool/ui_lab
-        run: flutter test
-
-      - name: Build UI Lab Web preview
-        working-directory: tool/ui_lab
-        run: flutter build web

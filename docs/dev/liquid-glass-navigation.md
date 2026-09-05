@@ -6,7 +6,7 @@
 
 - Veri Fin 仍是本地优先、紧凑、可信的 Android 记账工具。导航服务于看账和记账，材质不能成为主角。
 - 玻璃仅用于悬浮导航/控制层；账目、卡片、列表和图表仍使用稳定实体表面。
-- 正式产品仍然只支持 Android。`tool/ui_lab` 的 Web 入口只做静态视觉与交互预览，不得把 Web 存储或平台兼容带入产品代码。
+- 预览以正式应用页面为依据；旧独立实验工程已移除，不能用复制的组件代替生产实现验收。
 - 第一版不引入第三方液态玻璃依赖和 Fragment Shader；Android 真折射必须另做性能、Impeller 和中低端设备专项验证。
 
 ## 研究结论
@@ -60,14 +60,13 @@ Shell 调用 `PageController.animateToPage` 跨越多个页面时，`onPageChang
 - 滑块四周间距 3dp；上下用 `top/bottom` 等距约束，不用 `top + 固定高度`。
 - 每个 Tab 的触控区仍覆盖完整槽位，不能跟随视觉滑块一起缩小。
 
-## UI Lab 与验证
+## 正式组件验证
 
-电脑预览：
+正式应用预览：
 
 ```bash
-cd tool/ui_lab
 flutter pub get
-flutter run -d chrome
+flutter run -d <android-device-id> --flavor github
 ```
 
 必须验证：
@@ -83,4 +82,6 @@ flutter run -d chrome
 - 360dp 视口无溢出；
 - decoration 无渐变，浏览器/Flutter 日志无异常。
 
-提交前运行根项目与 UI Lab 的 format、analyze、test，并构建一次 UI Lab Web。正式交付仍需 Android 模拟器或真机检查触控、性能、系统安全区和不同刷新率下的动画手感。
+提交前运行根项目的 format、analyze、test。正式交付仍需 Android 模拟器或真机检查触控、性能、系统安全区和不同刷新率下的动画手感。
+
+原实验中的按压缩放、边界点击、远端追踪与 Hover 断言迁入 `test/root_navigation_test.dart`，直接验证 `VeriRootNavigation`。提示悬停暂停断言迁入 `test/feedback_test.dart`；记账/图标继续使用已有正式组件测试。

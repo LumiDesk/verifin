@@ -20,7 +20,7 @@
 - `docs/dev/category-budget-override-design.md`：分类默认预算与单期覆盖的职责、Issue #28 兼容方案和验收范围。
 - `docs/dev/multi-currency-design.md`：已落地的多币种、离线汇率、跨币种交易/退款、迁移与验收依据；后续修改须保持三层金额和历史冻结口径。
 - `docs/dev/refund-design.md`、`docs/dev/auto-capture-plan.md`、`docs/dev/i18n-verification.md`、`docs/automation.md`：对应领域的设计与验收资料。`refund-design.md` 含历史方案，退款当前行为以源码、测试和 `docs/dev/known-limitations.md` 为准。
-- `docs/dev/liquid-glass-navigation.md`：浮动根导航的材质边界、指针拖动状态机、窄屏适配、UI Lab 验证与后续 Shader 取舍；修改根导航或新增类似玻璃控件前必读。
+- `docs/dev/liquid-glass-navigation.md`：浮动根导航的材质边界、指针拖动状态机、窄屏适配、正式组件验证与后续 Shader 取舍；修改根导航或新增类似玻璃控件前必读。
 - `docs/dev/feedback-system.md`：根级轻提示 Host 的调用、时长、操作结果、去重、优先级队列与迁移规范；新增或替换短反馈前必读。
 - `README.md`、`docs/product.md`、`docs/acceptance-checklist.md`：用于理解产品和验收范围；其中少量历史描述可能落后，必须与当前实现交叉核对。
 
@@ -78,20 +78,9 @@ flutter test --plain-name "关键字"
 dart format .
 ```
 
-电脑端 UI 方案预览使用仓库内独立工程，不给正式应用增加 Web 平台：
+旧独立 UI Lab 已移除，不再复制正式页面作为设计依据；相关交互断言迁入根项目测试。
 
-```bash
-cd tool/ui_lab
-flutter pub get
-flutter run -d chrome
-```
-
-`tool/ui_lab` 只能使用静态演示数据并复用纯主题/纯展示代码，不得导入
-`main.dart`、Controller、repository、SQLite、KV、备份、AI 或平台桥；正式产品仍是
-Android-only，根目录不得新增 `web/`。UI Lab 自行运行 `flutter analyze`、
-`flutter test` 和 `flutter build web`，根 `analysis_options.yaml` 故意排除该嵌套 package。
-
-- **正式应用**的本地预览与验收只在 Android 模拟器或真机进行。项目已定义 `github` / `play` flavor，任何 Android 运行或构建都必须显式选择 flavor；日常本地预览/调试使用 `--flavor github`，只有明确验证 Play 渠道时才使用 `--flavor play --dart-define=SELF_UPDATE=false`。`tool/ui_lab` 的浏览器预览不构成 Web 支持或产品验收。
+- Android 运行或构建必须显式选择 `--flavor github`；只有明确验证 Play 渠道时才使用 `--flavor play --dart-define=SELF_UPDATE=false`。
 - 提交前执行 `dart format .`、`flutter analyze` 和 `flutter test`。只改文档时至少做 diff/链接/路径校验，可不运行 Flutter 测试，但要在汇报中说明。
 - 不把本地 `flutter build apk` 当成交付依据；正式 APK/AAB 由 GitHub Actions 构建。
 
