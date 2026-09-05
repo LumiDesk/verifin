@@ -445,17 +445,11 @@ class BarChartPainter extends CustomPainter {
 
 class BudgetRingPainter extends CustomPainter {
   const BudgetRingPainter({
-    this.glass = false,
-    this.advanced = false,
-    this.brightness = Brightness.light,
     required this.value,
     required this.trackColor,
     required this.progressColor,
   });
 
-  final bool glass;
-  final bool advanced;
-  final Brightness brightness;
   final double value;
   final Color trackColor;
   final Color progressColor;
@@ -485,30 +479,6 @@ class BudgetRingPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
-    if (glass) {
-      // 同一条弧的半透明色体与内外表面，不改变预算比例、颜色语义或占位。
-      final dark = brightness == Brightness.dark;
-      trackPaint.color = trackColor.withValues(alpha: dark ? 0.18 : 0.24);
-      progressPaint.shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          Color.lerp(
-            progressColor,
-            Colors.white,
-            dark ? 0.20 : 0.36,
-          )!.withValues(alpha: 0.85),
-          progressColor.withValues(alpha: dark ? 0.58 : 0.65),
-          progressColor.withValues(alpha: 0.92),
-          Color.lerp(
-            progressColor,
-            Colors.white,
-            dark ? 0.14 : 0.28,
-          )!.withValues(alpha: 0.78),
-        ],
-        stops: const [0, 0.36, 0.68, 1],
-      ).createShader(rect);
-    }
     canvas.drawArc(rect, -math.pi / 2, math.pi * 2, false, trackPaint);
     canvas.drawArc(
       rect,
@@ -517,40 +487,11 @@ class BudgetRingPainter extends CustomPainter {
       false,
       progressPaint,
     );
-    if (glass && value > 0) {
-      // 宽而柔和的同色反光表现轻微隆起，禁止内外两道白色描线。
-      final dark = brightness == Brightness.dark;
-      final gleam = Color.lerp(progressColor, Colors.white, 0.45)!;
-      final section = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth
-        ..strokeCap = StrokeCap.round
-        ..shader = RadialGradient(
-          colors: [
-            Colors.transparent,
-            progressColor.withValues(alpha: 0.05),
-            gleam.withValues(alpha: advanced ? (dark ? 0.18 : 0.25) : 0.10),
-            progressColor.withValues(alpha: 0.05),
-            Colors.black.withValues(alpha: 0.09),
-          ],
-          stops: const [0, 0.78, 0.90, 0.98, 1],
-        ).createShader(Offset.zero & size);
-      canvas.drawArc(
-        rect,
-        -math.pi / 2,
-        math.pi * 2 * value.clamp(0, 1),
-        false,
-        section,
-      );
-    }
   }
 
   @override
   bool shouldRepaint(covariant BudgetRingPainter oldDelegate) {
-    return oldDelegate.glass != glass ||
-        oldDelegate.advanced != advanced ||
-        oldDelegate.brightness != brightness ||
-        oldDelegate.value != value ||
+    return oldDelegate.value != value ||
         oldDelegate.trackColor != trackColor ||
         oldDelegate.progressColor != progressColor;
   }

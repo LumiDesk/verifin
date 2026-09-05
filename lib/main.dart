@@ -22,6 +22,7 @@ import 'l10n/app_localizations.dart';
 import 'local_storage/local_storage.dart';
 import 'pages/app_lock_gate.dart';
 import 'pages/privacy_consent_gate.dart';
+import 'pages/onboarding_page.dart';
 import 'pages/shell.dart';
 
 Future<void> main() async {
@@ -324,9 +325,11 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
                   child: VeriGlassBackdrop(
                     child: PrivacyConsentGate(
                       child: AppLockGate(
-                        child: VeriFeedbackHost(
-                          controller: _feedbackController,
-                          child: child ?? const SizedBox.shrink(),
+                        child: OnboardingGate(
+                          child: VeriFeedbackHost(
+                            controller: _feedbackController,
+                            child: child ?? const SizedBox.shrink(),
+                          ),
                         ),
                       ),
                     ),

@@ -15,19 +15,20 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 ## 族 1 — 布局脚手架 / 页面容器
 
 `VeriMaterialScope`（`glass_material.dart`，公共入口导出）注入设备材质偏好；`advancedOf(context)` 同时检查候选构建开关与 `veriAdvancedMaterialAvailable` 平台保护，缺省 false。高光修复并通过真机验收后开放 Android；其他平台直接使用透镜组件也不会加载 Shader。`VeriGlassLightPainter` 以两次连续透明度网格绘制柔光和细高光，禁止恢复每个微小线段单独模糊的路径，验收见 `android-glass-investigation.md`。
-`BudgetRingPainter` 支持 glass/advanced/brightness 参数，仅改变光照，默认路径保持原样。
+`BudgetRingPainter` 仅保留 value/trackColor/progressColor，按用户要求恢复原常规渐变环；不再提供玻璃参数。
 
 `VeriGlassSurface` / `VeriGlassBackdrop` 通过 `glass_material.dart` 和公共入口导出，
 负责默认关闭的磨砂材质预览；卡片可共享过滤组，重叠菜单/弹层使用独立过滤。
 `VeriGlassBackdrop` 实现现位于 `app_theme.dart`，由 `glass_material.dart` 保持原入口导出；
 `VeriPageTransitionsBuilder` 在 Android 转场内部包裹每个路由自己的背景，保留系统预测性返回。
-Material 全局 surface 不透明；具体玻璃表面用 src 混合，导航采样使用异步完成与过期请求保护。
+Material 全局 surface 不透明；具体玻璃表面用 src 混合，导航使用同帧 ImageFiltered，不再生成截图。
 `sheets.dart` 的 `_showVeriModalSheet` 只统一材质封装，外部仍使用各领域 `show…Sheet`。
 范围见 [玻璃材质预览](glass-material-preview.md)。
 
 `VeriGlassLightPainter` / `veriGlassEdgeLight`（`glass_lighting.dart`）提供边界法线驱动的
-方向高光；`VeriNavigationGlassLens` / `VeriNavigationLensPainter`（`navigation_glass_lens.dart`）
-负责只采样导航源图层的透镜效果、资源生命周期和手势光效，供正式根导航复用。
+方向高光；`VeriNavigationGlassLens`（`navigation_glass_lens.dart`）通过 `navigation_live_lens.frag`
+过滤当前帧导航内容；`VeriNavigationLensPainter` 仅保留供旧图形诊断入口使用。
+`OnboardingGate`（`onboarding_page.dart`）位于 PrivacyConsentGate / AppLockGate 内部，完成引导前不构建首页。
 
 `VeriPage`、`VeriHeader` / `PageHeader` 与 `VeriCard` 支持显式 `compact` 参数。
 开启设计预览时所有公共骨架默认 compact=true：16dp 页边距、56dp Header、16dp 卡片圆角，默认内边距

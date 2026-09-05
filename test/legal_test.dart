@@ -2,11 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/local_storage/local_storage.dart';
 import 'package:verifin/main.dart';
+import 'package:verifin/pages/home_page.dart';
+import 'package:verifin/pages/onboarding_page.dart';
 
 import 'support/test_harness.dart';
 
 void main() {
   useTestDatabases();
+
+  testWidgets('同意后直接进入引导，过渡帧不构建首页', (tester) async {
+    await pumpApp(tester, null, false);
+    await tester.tap(find.text('同意并继续'));
+    for (var frame = 0; frame < 12; frame++) {
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(find.byType(HomePage, skipOffstage: false), findsNothing);
+    }
+    expect(find.byType(OnboardingPage), findsOneWidget);
+  });
 
   testWidgets('shows the privacy consent dialog on first launch', (
     WidgetTester tester,

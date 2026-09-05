@@ -12,6 +12,18 @@ void main() {
     }
   });
 
+  test('深色输入默认无白边，聚焦和错误保留语义边框', () {
+    final input = buildVeriFinTheme(Brightness.dark).inputDecorationTheme;
+    expect(input.enabledBorder!.borderSide.style, BorderStyle.none);
+    expect(input.focusedBorder!.borderSide.color, veriRoyal);
+    expect(input.errorBorder!.borderSide.color, veriExpense);
+    expect(veriGlassTint(Brightness.dark, overlay: true).a, lessThan(0.8));
+    expect(
+      veriGlassTint(Brightness.dark, overlay: true).r,
+      greaterThan(veriPreviewSurfaceDark.r),
+    );
+  });
+
   test('材质预览保留 v1.15 移动端全局字号', () {
     final text = buildVeriFinTheme(Brightness.dark).textTheme;
     expect(text.displayLarge!.fontSize, 38);

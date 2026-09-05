@@ -7,6 +7,20 @@ import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
 import 'sheets.dart';
 
+/// 位于应用锁内部；完成引导前不构建首页，也不以转场露出首页。
+class OnboardingGate extends StatelessWidget {
+  const OnboardingGate({super.key, required this.child});
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    if (VeriFinScope.of(context).onboardingCompleted) return child;
+    return Navigator(
+      onGenerateRoute: (_) =>
+          MaterialPageRoute<void>(builder: (_) => const OnboardingPage()),
+    );
+  }
+}
+
 /// 新用户引导：首启动（同意隐私政策后）出现，分步介绍并可快速建首个账户、设本月预算。
 /// 完成或跳过后写入 `verifin.onboarding.v1`，只出现一次。（阶段 4.5）
 ///
@@ -92,7 +106,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       controller.setDefaultMonthlyBudget(budget);
     }
     controller.completeOnboarding();
-    if (mounted) {
+    if (mounted && Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
     }
   }

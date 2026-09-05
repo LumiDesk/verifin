@@ -95,6 +95,7 @@ flutter:
 
   shaders:
     - shaders/navigation_lens.frag
+    - shaders/navigation_live_lens.frag
 
   assets:
     - assets/account_icons/

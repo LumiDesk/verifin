@@ -402,13 +402,6 @@ class _VeriRootNavigationState extends State<VeriRootNavigation>
                   ),
                   pressed: _indicatorPressed || _dragging,
                   motion: _lightMotion,
-                  revision: (
-                    selectedIndex,
-                    isDark,
-                    _indicatorPressed,
-                    MediaQuery.textScalerOf(context),
-                    widget.destinations.map((d) => d.label).join('|'),
-                  ),
                   source: Row(
                     children: [
                       for (

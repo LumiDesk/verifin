@@ -14,7 +14,6 @@ import 'assets_pages.dart';
 import 'capture_entry.dart';
 import 'entry_detail_page.dart';
 import 'home_page.dart';
-import 'onboarding_page.dart';
 import 'profile_pages.dart';
 import 'reports_page.dart';
 import 'sheets.dart';
@@ -40,12 +39,7 @@ class _VeriFinShellState extends State<VeriFinShell> {
     AppCaptureBridge.setQuickEntryHandler(_openQuickEntryFromPlatform);
     AppCaptureBridge.setSharedCaptureHandler(_openSharedCaptureFromPlatform);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // 隐私政策 / 用户协议同意由 PrivacyConsentGate 门卫处理；本壳只在同意后
-      // 才会被构建，故此处直接展示新用户引导。
-      await _maybeShowOnboarding();
-      if (!mounted) {
-        return;
-      }
+      // 同意与引导由外部门卫完成后才构建本壳。
       if (await AppCaptureBridge.consumeInitialQuickEntryIntent() && mounted) {
         await _openQuickEntryFromPlatform();
       }
@@ -55,19 +49,6 @@ class _VeriFinShellState extends State<VeriFinShell> {
       // 冷启动带着分享/外部采集内容时（分享截图给 Veri Fin 等），开屏即识别。
       await startSharedCaptureEntry(context);
     });
-  }
-
-  /// 新用户首启动展示引导页；已完成则跳过。
-  Future<void> _maybeShowOnboarding() async {
-    if (VeriFinScope.of(context).onboardingCompleted) {
-      return;
-    }
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        fullscreenDialog: true,
-        builder: (context) => const OnboardingPage(),
-      ),
-    );
   }
 
   @override

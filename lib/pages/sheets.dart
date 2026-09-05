@@ -36,7 +36,7 @@ Future<T?> _showVeriModalSheet<T>({
   builder: (context) => VeriGlassSurface(
     grouped: false,
     radius: veriRadiusXl,
-    child: builder(context),
+    child: Material(color: Colors.transparent, child: builder(context)),
   ),
 );
 

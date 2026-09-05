@@ -2,13 +2,12 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 
 import 'app_theme.dart';
 import 'glass_lighting.dart';
 import 'glass_material.dart';
 
-/// 只采样导航自己的图标/文字层；纹理不包含账目、不写磁盘、不对外发送。
+/// 由引擎过滤当前帧导航图标/文字；不截图、不读回纹理、不采样账目。
 class VeriNavigationGlassLens extends StatefulWidget {
   const VeriNavigationGlassLens({
     super.key,
@@ -16,14 +15,12 @@ class VeriNavigationGlassLens extends StatefulWidget {
     required this.target,
     required this.pressed,
     required this.motion,
-    required this.revision,
     required this.keyPrefix,
   });
   final Widget source;
   final Rect target;
   final bool pressed;
   final double motion;
-  final Object revision;
   final String keyPrefix;
 
   @override
@@ -32,21 +29,7 @@ class VeriNavigationGlassLens extends StatefulWidget {
 }
 
 class _VeriNavigationGlassLensState extends State<VeriNavigationGlassLens> {
-  final _sourceKey = GlobalKey();
   ui.FragmentShader? _shader;
-  ui.Image? _image;
-  Object? _capturedRevision;
-  Size? _capturedSize;
-  bool _captureScheduled = false;
-  int _interactionGeneration = 0;
-
-  @override
-  void didUpdateWidget(VeriNavigationGlassLens oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.pressed != oldWidget.pressed) _interactionGeneration++;
-    // 每次交互重新采样，不能复用初次字体尚未就绪或旧布局的文字纹理。
-    if (widget.pressed && !oldWidget.pressed) _capturedRevision = null;
-  }
 
   @override
   void initState() {
@@ -56,10 +39,13 @@ class _VeriNavigationGlassLensState extends State<VeriNavigationGlassLens> {
 
   Future<void> _loadShader() async {
     // 独立保护直接使用此组件的入口，未验收平台不加载 Shader。
-    if (!veriAdvancedMaterialAvailable) return;
+    if (!veriAdvancedMaterialAvailable ||
+        !ui.ImageFilter.isShaderFilterSupported) {
+      return;
+    }
     try {
       final program = await ui.FragmentProgram.fromAsset(
-        'shaders/navigation_lens.frag',
+        'shaders/navigation_live_lens.frag',
       );
       if (!mounted) return;
       setState(() => _shader = program.fragmentShader());
@@ -68,68 +54,8 @@ class _VeriNavigationGlassLensState extends State<VeriNavigationGlassLens> {
     }
   }
 
-  void _scheduleCapture(Size size) {
-    if (!widget.pressed ||
-        _shader == null ||
-        _captureScheduled ||
-        (_capturedRevision == widget.revision && _capturedSize == size)) {
-      return;
-    }
-    _captureScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(_capture(size));
-    });
-  }
-
-  Future<void> _capture(Size size) async {
-    var retryStaleRequest = false;
-    final generation = _interactionGeneration;
-    final revision = widget.revision;
-    try {
-      if (!mounted || !widget.pressed) return;
-      final boundary = _sourceKey.currentContext?.findRenderObject();
-      if (boundary is! RenderRepaintBoundary || !boundary.hasSize) return;
-      var paintReady = true;
-      assert(() {
-        paintReady = !boundary.debugNeedsPaint;
-        return true;
-      }());
-      if (!paintReady) return;
-      final next = await boundary.toImage(
-        // 透镜放大时保留图标/文字的细节，避免低分辨率采样产生重影感。
-        pixelRatio: MediaQuery.devicePixelRatioOf(context) * 2,
-      );
-      // 同步 API 返回不代表 GPU 纹理已完成。旧请求也不能在松手、
-      // 再次按下、主题/尺寸变化后替换当前图标，避免空纹理闪烁。
-      if (!mounted ||
-          !widget.pressed ||
-          generation != _interactionGeneration ||
-          revision != widget.revision ||
-          boundary.size != size) {
-        next.dispose();
-        retryStaleRequest = true;
-        return;
-      }
-      final previous = _image;
-      setState(() {
-        _image = next;
-        _capturedRevision = revision;
-        _capturedSize = size;
-      });
-      if (previous != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => previous.dispose());
-      }
-    } catch (_) {
-      // 纯绘制降级：宿主分离时保留实时图标，不隐藏内容，也不自旋重试。
-    } finally {
-      _captureScheduled = false;
-      if (mounted && widget.pressed && retryStaleRequest) setState(() {});
-    }
-  }
-
   @override
   void dispose() {
-    _image?.dispose();
     _shader?.dispose();
     super.dispose();
   }
@@ -141,7 +67,6 @@ class _VeriNavigationGlassLensState extends State<VeriNavigationGlassLens> {
           builder: (context, constraints) {
             final size = constraints.biggest;
             if (!size.isFinite || size.isEmpty) return const SizedBox.shrink();
-            _scheduleCapture(size);
             final dark = Theme.of(context).brightness == Brightness.dark;
             final highContrast = MediaQuery.highContrastOf(context);
             final reducedMotion = MediaQuery.disableAnimationsOf(context);
@@ -167,15 +92,31 @@ class _VeriNavigationGlassLensState extends State<VeriNavigationGlassLens> {
                   width: width,
                   height: height,
                 );
-                // 静止时永远绘制活文字；只在有效交互中以当前布局纹理替换。
+                // 高亮变化仅更新同一帧的 child，不触发快照失效/重新采样。
                 final ready =
                     widget.pressed &&
                     activity > 0 &&
                     _shader != null &&
-                    _image != null &&
-                    !highContrast &&
-                    _capturedRevision == widget.revision &&
-                    _capturedSize == size;
+                    !highContrast;
+                const paddingX = 6.0;
+                const paddingY = 12.0;
+                final filterSize = Size(
+                  size.width + paddingX * 2,
+                  size.height + paddingY * 2,
+                );
+                if (_shader != null) {
+                  final values = [
+                    (rect.left + paddingX) / filterSize.width,
+                    (rect.top + paddingY) / filterSize.height,
+                    rect.width / filterSize.width,
+                    rect.height / filterSize.height,
+                    ready ? activity : 0.0,
+                    motion,
+                  ];
+                  for (var i = 0; i < values.length; i++) {
+                    _shader!.setFloat(i + 2, values[i]);
+                  }
+                }
                 return Stack(
                   clipBehavior: Clip.none,
                   fit: StackFit.expand,
@@ -211,32 +152,31 @@ class _VeriNavigationGlassLensState extends State<VeriNavigationGlassLens> {
                         ),
                       ),
                     ),
-                    ClipPath(
-                      clipper: ready ? _OutsideLensClipper(rect) : null,
-                      child: RepaintBoundary(
-                        key: _sourceKey,
-                        child: widget.source,
-                      ),
-                    ),
-                    if (ready)
-                      Positioned.fromRect(
-                        rect: rect,
-                        child: IgnorePointer(
-                          child: CustomPaint(
-                            key: ValueKey(
-                              '${widget.keyPrefix}_lens_refraction',
+                    Positioned(
+                      left: -paddingX,
+                      right: -paddingX,
+                      top: -paddingY,
+                      bottom: -paddingY,
+                      child: ImageFiltered(
+                        key: ValueKey('${widget.keyPrefix}_lens_refraction'),
+                        enabled: ready,
+                        imageFilter: _shader != null
+                            ? ui.ImageFilter.shader(_shader!)
+                            : ui.ImageFilter.blur(sigmaX: 0, sigmaY: 0),
+                        child: CustomPaint(
+                          painter: ready
+                              ? const _LensInputBoundsPainter()
+                              : null,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: paddingX,
+                              vertical: paddingY,
                             ),
-                            painter: VeriNavigationLensPainter(
-                              shader: _shader!,
-                              source: _image!,
-                              origin: rect.topLeft,
-                              sourceSize: size,
-                              activity: activity,
-                              motion: motion,
-                            ),
+                            child: widget.source,
                           ),
                         ),
                       ),
+                    ),
                     if (!highContrast)
                       Positioned.fromRect(
                         rect: rect,
@@ -260,21 +200,22 @@ class _VeriNavigationGlassLensState extends State<VeriNavigationGlassLens> {
         );
 }
 
-class _OutsideLensClipper extends CustomClipper<Path> {
-  const _OutsideLensClipper(this.rect);
-  final Rect rect;
+// 仅在 ImageFiltered 启用的离屏输入中清空完整范围，保证输入边界不随
+// 图标字形的包围盒变化。禁用过滤时绝不能以 src 清空真实页面。
+class _LensInputBoundsPainter extends CustomPainter {
+  const _LensInputBoundsPainter();
   @override
-  Path getClip(Size size) => Path.combine(
-    PathOperation.difference,
-    Path()..addRect(Offset.zero & size),
-    Path()..addRRect(
-      RRect.fromRectAndRadius(rect, Radius.circular(rect.height / 2)),
-    ),
+  void paint(Canvas canvas, Size size) => canvas.drawRect(
+    Offset.zero & size,
+    Paint()
+      ..color = Colors.transparent
+      ..blendMode = BlendMode.src,
   );
   @override
-  bool shouldReclip(_OutsideLensClipper oldClipper) => rect != oldClipper.rect;
+  bool shouldRepaint(_LensInputBoundsPainter oldDelegate) => false;
 }
 
+/// 仅供历史图形诊断入口复现旧采样流程；正式导航使用同帧 ImageFiltered。
 class VeriNavigationLensPainter extends CustomPainter {
   const VeriNavigationLensPainter({
     required this.shader,

@@ -14,9 +14,13 @@ const Color veriGlassCanvasBottomDark = Color(0xFF152B30);
 Color veriGlassTint(Brightness brightness, {bool overlay = false}) =>
     brightness == Brightness.dark
     ? (overlay
-          ? veriSurfaceDark.withValues(alpha: 0.80)
+          ? Color.lerp(
+              veriPreviewSurfaceDark,
+              Colors.white,
+              0.12,
+            )!.withValues(alpha: 0.72)
           : Colors.white.withValues(alpha: 0.055))
-    : Colors.white.withValues(alpha: overlay ? 0.72 : 0.50);
+    : Colors.white.withValues(alpha: overlay ? 0.64 : 0.50);
 
 // 候选材质令牌：实体内容与中性画布；不用于模拟玻璃折射。
 const Color veriPreviewCanvasLight = Color(0xFFF3F5F8);
@@ -164,15 +168,27 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
                 ? veriPreviewSurfaceDark
                 : veriSurfaceAltDark)
           : veriSurfaceLight,
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(veriRadiusMd),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(veriRadiusMd),
+        borderSide: const BorderSide(color: veriRoyal, width: 1.4),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(veriRadiusMd),
+        borderSide: const BorderSide(color: veriExpense),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(veriRadiusMd),
+        borderSide: const BorderSide(color: veriExpense, width: 1.4),
+      ),
       isDense: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(veriRadiusMd),
-        borderSide: veriGlassDesignPreview
-            ? BorderSide(
-                color: Colors.white.withValues(alpha: isDark ? 0.17 : 0.65),
-              )
-            : BorderSide.none,
+        borderSide: BorderSide.none,
       ),
     ),
   );

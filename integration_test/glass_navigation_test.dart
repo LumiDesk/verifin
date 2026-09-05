@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:verifin/app/navigation_glass_lens.dart';
 import 'package:verifin/app/root_navigation.dart';
 import 'package:verifin/app/glass_material.dart';
 import 'package:verifin/app/app_theme.dart';
@@ -50,7 +49,12 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    final refraction = find.byKey(const Key('main_lens_refraction'));
+    final refraction = find.byWidgetPredicate(
+      (widget) =>
+          widget is ImageFiltered &&
+          widget.enabled &&
+          widget.key == const Key('main_lens_refraction'),
+    );
     expect(refraction, findsNothing, reason: '静止时保留实时文字，不显示缓存纹理');
     final lens = find.byKey(const Key('main_liquid_lens'));
     final before = tester.getSize(lens);
@@ -77,11 +81,18 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 180));
     expect(tester.getSize(lens).height, greaterThan(before.height));
-    final painter =
-        tester.widget<CustomPaint>(refraction).painter!
-            as VeriNavigationLensPainter;
-    expect(painter.activity, greaterThan(0.5));
-    expect(painter.source.width, greaterThan(100));
+    expect(tester.widget<ImageFiltered>(refraction).enabled, isTrue);
+    // 跨越高亮阈值的每一帧仍为实时过滤，不允许暂时退回未折射文字。
+    for (var i = 0; i < 12; i++) {
+      await gesture.moveTo(
+        tester.getCenter(find.byKey(const Key('main_tab_0'))) +
+            Offset(i * 12, 0),
+      );
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(refraction, findsOneWidget);
+    }
+    await gesture.moveTo(tester.getCenter(find.byKey(const Key('main_tab_2'))));
+    await tester.pump(const Duration(milliseconds: 180));
     await gesture.up();
     await tester.pumpAndSettle();
     expect(refraction, findsNothing, reason: '松手恢复实时文字');

@@ -118,7 +118,6 @@ void main() {
           target: Rect.fromLTWH(0, 0, 80, 48),
           pressed: true,
           motion: 1,
-          revision: 1,
           keyPrefix: 'native_guard',
         ),
       ),

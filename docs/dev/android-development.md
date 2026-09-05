@@ -78,6 +78,8 @@ debug 支持 hot reload；最终图形/OCR/插件行为必须另外用 release/R
 
 需要持续亮屏时，先记录 `adb shell settings get global stay_on_while_plugged_in`，
 可临时 `adb shell svc power stayon usb`；任务结束恢复原值，不改变用户永久息屏习惯。
+若连接电脑仍自动息屏，先看 `adb shell dumpsys battery`：本机 USB-PD 被识别为 AC 而不是 USB，
+此时可在已获准的测试期间临时使用 `svc power stayon true`，结束后仍恢复原值。
 
 ## 验收与交付
 

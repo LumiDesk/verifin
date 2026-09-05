@@ -16,12 +16,11 @@ class PrivacyConsentGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (VeriFinScope.of(context).privacyConsentAccepted) {
-      return child;
-    }
+    if (VeriFinScope.of(context).privacyConsentAccepted) return child;
     // 用独立 Navigator 承载同意页，使页内「查看《隐私政策》」等 push 可用，
     // 且未同意前不构建主界面（避免引导页在同意前抢先触发）。
     return Navigator(
+      key: const ValueKey('privacy_gate'),
       onGenerateRoute: (_) =>
           MaterialPageRoute<void>(builder: (_) => const PrivacyConsentPage()),
     );

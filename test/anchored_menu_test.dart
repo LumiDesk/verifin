@@ -76,10 +76,25 @@ void main() {
         .widgetList<Material>(find.byType(Material))
         .map((material) => material.color)
         .whereType<Color>();
-    expect(
-      panelMaterials,
-      contains(Color.lerp(veriSurfaceLight, Colors.black, 0.28 * 0.62)),
-    );
+    if (veriGlassDesignPreview) {
+      expect(
+        tester
+            .widgetList<VeriGlassSurface>(find.byType(VeriGlassSurface))
+            .map((surface) => surface.tint),
+        contains(
+          Color.lerp(
+            veriGlassTint(Brightness.light, overlay: true),
+            Colors.black,
+            0.28 * 0.62,
+          ),
+        ),
+      );
+    } else {
+      expect(
+        panelMaterials,
+        contains(Color.lerp(veriSurfaceLight, Colors.black, 0.28 * 0.62)),
+      );
+    }
     expect(find.text('列表视图'), findsOneWidget);
     expect(find.text('卡片视图'), findsNWidgets(3));
     expect(find.byIcon(Icons.check_rounded), findsOneWidget);

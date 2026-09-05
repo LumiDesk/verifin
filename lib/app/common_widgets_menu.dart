@@ -179,7 +179,7 @@ class _VeriAnchoredMenuAnchorState extends State<VeriAnchoredMenuAnchor> {
       barrierDismissible: false,
       barrierLabel: widget.semanticLabel,
       barrierColor: Theme.of(context).brightness == Brightness.dark
-          ? Colors.black.withValues(alpha: 0.28)
+          ? Colors.black.withValues(alpha: veriGlassDesignPreview ? 0.12 : 0.28)
           : Colors.black.withValues(alpha: 0.08),
       transitionDuration: const Duration(milliseconds: 240),
       pageBuilder: (context, animation, secondaryAnimation) =>
@@ -196,14 +196,15 @@ class _VeriAnchoredMenuAnchorState extends State<VeriAnchoredMenuAnchor> {
           curve: Curves.easeOutCubic,
           reverseCurve: Curves.easeInOutCubic,
         );
-        return FadeTransition(
-          opacity: curved,
-          child: ScaleTransition(
-            scale: Tween<double>(begin: 0.98, end: 1).animate(curved),
-            alignment: Alignment.topRight,
-            child: child,
-          ),
+        final scaled = ScaleTransition(
+          scale: Tween<double>(begin: 0.98, end: 1).animate(curved),
+          alignment: Alignment.topRight,
+          child: child,
         );
+        // 不把玻璃放进 Opacity 的离屏层；保留缩放，直接采样下层页面。
+        return veriGlassDesignPreview
+            ? scaled
+            : FadeTransition(opacity: curved, child: scaled);
       },
     );
 
