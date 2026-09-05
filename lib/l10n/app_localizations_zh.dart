@@ -9,6 +9,12 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get advancedMaterialLabel => '高级材质';
+
+  @override
+  String get advancedMaterialDesc => '开启动态折射与方向光效；关闭时使用普通磨砂玻璃。';
+
+  @override
   String get appTitle => 'Veri Fin';
 
   @override

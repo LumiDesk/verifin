@@ -13,7 +13,8 @@ import '../l10n/app_localizations.dart';
 import 'account_icon_assets.dart';
 import 'app_theme.dart';
 import 'glass_material.dart';
-export 'glass_material.dart' show VeriGlassSurface, VeriGlassBackdrop;
+export 'glass_material.dart'
+    show VeriGlassSurface, VeriGlassBackdrop, VeriMaterialScope;
 import 'category_tree.dart';
 import 'credit_card.dart';
 import 'currency_math.dart';

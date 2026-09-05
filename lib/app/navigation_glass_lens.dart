@@ -194,6 +194,7 @@ class _VeriNavigationGlassLensState extends State<VeriNavigationGlassLens> {
                       key: ValueKey('${widget.keyPrefix}_lens_light'),
                       painter: VeriGlassLightPainter(
                         radius: rect.height / 2,
+                        brightness: Theme.of(context).brightness,
                         activity: activity,
                         motion: motion,
                       ),

@@ -3,12 +3,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/app_theme.dart';
 import 'package:verifin/app/glass_lighting.dart';
 import 'package:verifin/app/root_navigation.dart';
+import 'package:verifin/app/glass_material.dart';
 
 void main() {
   testWidgets('玻璃滑块按压膨胀、拖动改变高光、取消复位且仍可切页', (tester) async {
     var selected = 0;
     await tester.pumpWidget(
       MaterialApp(
+        builder: (context, child) =>
+            VeriMaterialScope(advanced: true, child: child!),
         theme: buildVeriFinTheme(Brightness.light),
         home: StatefulBuilder(
           builder: (context, setState) => Scaffold(

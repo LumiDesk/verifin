@@ -445,11 +445,17 @@ class BarChartPainter extends CustomPainter {
 
 class BudgetRingPainter extends CustomPainter {
   const BudgetRingPainter({
+    this.glass = false,
+    this.advanced = false,
+    this.brightness = Brightness.light,
     required this.value,
     required this.trackColor,
     required this.progressColor,
   });
 
+  final bool glass;
+  final bool advanced;
+  final Brightness brightness;
   final double value;
   final Color trackColor;
   final Color progressColor;
@@ -479,6 +485,30 @@ class BudgetRingPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
+    if (glass) {
+      // 同一条弧的半透明色体与内外表面，不改变预算比例、颜色语义或占位。
+      final dark = brightness == Brightness.dark;
+      trackPaint.color = trackColor.withValues(alpha: dark ? 0.18 : 0.24);
+      progressPaint.shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color.lerp(
+            progressColor,
+            Colors.white,
+            dark ? 0.20 : 0.36,
+          )!.withValues(alpha: 0.85),
+          progressColor.withValues(alpha: dark ? 0.58 : 0.65),
+          progressColor.withValues(alpha: 0.92),
+          Color.lerp(
+            progressColor,
+            Colors.white,
+            dark ? 0.14 : 0.28,
+          )!.withValues(alpha: 0.78),
+        ],
+        stops: const [0, 0.36, 0.68, 1],
+      ).createShader(rect);
+    }
     canvas.drawArc(rect, -math.pi / 2, math.pi * 2, false, trackPaint);
     canvas.drawArc(
       rect,
@@ -487,11 +517,68 @@ class BudgetRingPainter extends CustomPainter {
       false,
       progressPaint,
     );
+    if (glass && value > 0) {
+      // 径向明暗表现圆环截面的厚度，方向光另沿内外边缘绘制。
+      final dark = brightness == Brightness.dark;
+      final section = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..strokeCap = StrokeCap.round
+        ..shader = RadialGradient(
+          colors: [
+            Colors.transparent,
+            Colors.black.withValues(alpha: 0.12),
+            Colors.white.withValues(alpha: dark ? 0.23 : 0.38),
+            Colors.transparent,
+            Colors.black.withValues(alpha: 0.16),
+          ],
+          stops: const [0, 0.80, 0.87, 0.94, 1],
+        ).createShader(Offset.zero & size);
+      canvas.drawArc(
+        rect,
+        -math.pi / 2,
+        math.pi * 2 * value.clamp(0, 1),
+        false,
+        section,
+      );
+    }
+    if (glass && advanced && value > 0) {
+      final light = brightness == Brightness.dark ? 0.20 : 0.42;
+      final rim = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.9
+        ..strokeCap = StrokeCap.round
+        ..shader = SweepGradient(
+          colors: [
+            Colors.transparent,
+            Colors.white.withValues(alpha: light),
+            Colors.transparent,
+            Colors.white.withValues(alpha: light),
+            Colors.transparent,
+          ],
+          stops: const [0, 0.125, 0.5, 0.625, 1],
+        ).createShader(rect);
+      for (final edge in [
+        rect.inflate(strokeWidth * 0.40),
+        rect.deflate(strokeWidth * 0.40),
+      ]) {
+        canvas.drawArc(
+          edge,
+          -math.pi / 2,
+          math.pi * 2 * value.clamp(0, 1),
+          false,
+          rim,
+        );
+      }
+    }
   }
 
   @override
   bool shouldRepaint(covariant BudgetRingPainter oldDelegate) {
-    return oldDelegate.value != value ||
+    return oldDelegate.glass != glass ||
+        oldDelegate.advanced != advanced ||
+        oldDelegate.brightness != brightness ||
+        oldDelegate.value != value ||
         oldDelegate.trackColor != trackColor ||
         oldDelegate.progressColor != progressColor;
   }

@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+界面调整必读 [统一设计与交互规范](docs/design-system.md)：集中记录已确认布局、两档材质、深浅色光照、设置持久化与验收约定；历史研究稿不得覆盖该规范。
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 Veri Fin (包名 `verifin`) 是一个完全免费、数据自主、本地优先的 Flutter 记账应用。仓库规则详见 `AGENTS.md`（中文），本文件是其摘要加架构说明。**与用户沟通时使用中文。**

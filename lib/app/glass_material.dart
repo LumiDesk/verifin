@@ -5,6 +5,25 @@ import 'package:flutter/material.dart';
 import 'app_theme.dart';
 import 'glass_lighting.dart';
 
+/// 纯展示层依赖；偏好由根组件注入，不让绘制组件访问 Controller/KV。
+class VeriMaterialScope extends InheritedWidget {
+  const VeriMaterialScope({
+    super.key,
+    required this.advanced,
+    required super.child,
+  });
+  final bool advanced;
+  static bool advancedOf(BuildContext context) =>
+      veriGlassDesignPreview &&
+      (context
+              .dependOnInheritedWidgetOfExactType<VeriMaterialScope>()
+              ?.advanced ??
+          false);
+  @override
+  bool updateShouldNotify(VeriMaterialScope oldWidget) =>
+      advanced != oldWidget.advanced;
+}
+
 /// 实际绘制在内容后方的低饱和背景。颜色来自背景，不在玻璃前景伪造折射。
 class VeriGlassBackdrop extends StatelessWidget {
   const VeriGlassBackdrop({super.key, required this.child});
@@ -101,9 +120,10 @@ class VeriGlassSurface extends StatelessWidget {
         ],
       ),
       child: CustomPaint(
-        foregroundPainter: highContrast
+        foregroundPainter:
+            highContrast || !VeriMaterialScope.advancedOf(context)
             ? null
-            : VeriGlassLightPainter(radius: radius),
+            : VeriGlassLightPainter(radius: radius, brightness: brightness),
         child: ClipRRect(borderRadius: borderRadius, child: filtered),
       ),
     );

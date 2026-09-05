@@ -9,6 +9,13 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get advancedMaterialLabel => 'Advanced materials';
+
+  @override
+  String get advancedMaterialDesc =>
+      'Enable dynamic refraction and directional lighting; turn off to use frosted glass.';
+
+  @override
   String get appTitle => 'Veri Fin';
 
   @override

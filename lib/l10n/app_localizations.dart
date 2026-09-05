@@ -98,6 +98,18 @@ abstract class AppLocalizations {
     Locale('zh'),
   ];
 
+  /// No description provided for @advancedMaterialLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'高级材质'**
+  String get advancedMaterialLabel;
+
+  /// No description provided for @advancedMaterialDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'开启动态折射与方向光效；关闭时使用普通磨砂玻璃。'**
+  String get advancedMaterialDesc;
+
   /// 应用名称
   ///
   /// In zh, this message translates to:

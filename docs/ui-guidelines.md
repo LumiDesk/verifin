@@ -1,5 +1,7 @@
 # Veri Fin UI 规范
 
+当前约定统一收录于 [设计与交互规范](design-system.md)。高级光照和透镜还需在设置中开启“高级材质”（默认关闭）；本文相关光学描述仅适用于开启后。
+
 当前默认规范继续有效。[统一设计候选方案](dev/unified-design-preview.md) 仅在显式
 预览构建中改变材质、间距和字号，等待用户确认后再提升为正式规范。
 用户要求的[磨砂玻璃材质预览](dev/glass-material-preview.md)另通过 `GLASS_DESIGN_PREVIEW` 开启；预算卡必须保持原始布局，不因材质迭代重做结构。

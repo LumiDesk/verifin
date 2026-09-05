@@ -96,6 +96,10 @@ mixin _ControllerState on ChangeNotifier {
           page: _defaultPanelSettings(page.specs),
       };
 
+  // 设备本地材质偏好：默认关闭，初始化及账本恢复保留，不进备份。
+  bool _advancedMaterialEnabled = false;
+  late final ValueNotifier<bool> advancedMaterialListenable;
+
   late final ValueNotifier<ThemePreference> themePreferenceListenable;
 
   /// 语言偏好通知器：驱动 `MaterialApp.locale` 即时切换。
@@ -188,6 +192,7 @@ mixin _ControllerState on ChangeNotifier {
   /// 删除账户时，清掉任何指向它的默认付款账户设置。
 
   void _loadPreferences() {
+    _advancedMaterialEnabled = _store.read(_advancedMaterialKey) == 'true';
     _themePreference = ThemePreference.fromStorage(_store.read(_themeKey));
     _localePreference = LocalePreference.fromStorage(_store.read(_localeKey));
     _loadProfile();

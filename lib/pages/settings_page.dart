@@ -32,6 +32,8 @@ class _SettingsPageState extends State<SettingsPage> {
   late ThemePreference _theme;
   late LocalePreference _initialLocale;
   late LocalePreference _locale;
+  late bool _initialAdvancedMaterial;
+  late bool _advancedMaterial;
   late bool _initialHaptics;
   late bool _haptics;
   late bool _initialTwoDecimals;
@@ -57,6 +59,8 @@ class _SettingsPageState extends State<SettingsPage> {
     final controller = VeriFinScope.of(context);
     _initialTheme = _theme = controller.themePreference;
     _initialLocale = _locale = controller.localePreference;
+    _initialAdvancedMaterial = _advancedMaterial =
+        controller.advancedMaterialEnabled;
     _initialHaptics = _haptics = controller.hapticsEnabled;
     _initialTwoDecimals = _twoDecimals = controller.amountForceTwoDecimals;
     _initialMoneyUnitStyle = _moneyUnitStyle = controller.moneyUnitStyle;
@@ -122,6 +126,22 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                       ),
                       const Divider(height: 1),
+                      if (veriGlassDesignPreview) ...[
+                        CompactSwitchRow(
+                          key: const ValueKey('advanced_material_setting'),
+                          icon: Icons.auto_awesome_outlined,
+                          title: Text(
+                            AppLocalizations.of(context).advancedMaterialLabel,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(context).advancedMaterialDesc,
+                          ),
+                          value: _advancedMaterial,
+                          onChanged: (value) =>
+                              setState(() => _advancedMaterial = value),
+                        ),
+                        const Divider(height: 1),
+                      ],
                       VeriAnchoredChoice<LocalePreference>(
                         values: LocalePreference.values,
                         selected: _locale,
@@ -458,6 +478,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   bool get _isDirty =>
+      _advancedMaterial != _initialAdvancedMaterial ||
       _theme != _initialTheme ||
       _locale != _initialLocale ||
       _haptics != _initialHaptics ||
@@ -471,6 +492,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _saveAndExit() async {
     if (await _save() && mounted) {
       setState(() {
+        _initialAdvancedMaterial = _advancedMaterial;
         _initialTheme = _theme;
         _initialLocale = _locale;
         _initialHaptics = _haptics;
@@ -487,6 +509,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<bool> _save() {
     return VeriFinScope.of(context).saveAppPreferencesDraft(
+      advancedMaterialEnabled: _advancedMaterial,
       themePreference: _theme,
       localePreference: _locale,
       hapticsEnabled: _haptics,

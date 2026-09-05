@@ -14,6 +14,9 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 
 ## 族 1 — 布局脚手架 / 页面容器
 
+`VeriMaterialScope`（`glass_material.dart`，公共入口导出）注入设备材质偏好；`advancedOf(context)` 同时检查候选构建开关，缺省 false。
+`BudgetRingPainter` 支持 glass/advanced/brightness 参数，仅改变光照，默认路径保持原样。
+
 `VeriGlassSurface` / `VeriGlassBackdrop` 位于 `glass_material.dart`，经公共入口导出，
 负责默认关闭的磨砂材质预览；卡片可共享过滤组，重叠菜单/弹层使用独立过滤。
 `sheets.dart` 的 `_showVeriModalSheet` 只统一材质封装，外部仍使用各领域 `show…Sheet`。

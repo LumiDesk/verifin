@@ -16,10 +16,13 @@ double veriGlassEdgeLight(Offset point, Offset normal, {double motion = 0}) {
 class VeriGlassLightPainter extends CustomPainter {
   const VeriGlassLightPainter({
     required this.radius,
+    this.brightness = Brightness.light,
     this.activity = 0,
     this.motion = 0,
   });
   final double radius;
+  final Brightness brightness;
+  double get peakOpacity => brightness == Brightness.dark ? 0.22 : 0.46;
   final double activity;
   final double motion;
 
@@ -54,7 +57,7 @@ class VeriGlassLightPainter extends CustomPainter {
           ..strokeWidth = 3.2 + activity * 1.2
           ..maskFilter = MaskFilter.blur(BlurStyle.normal, 1.4 + activity)
           ..color = Colors.white.withValues(
-            alpha: (light * (0.17 + activity * 0.16)).clamp(0, 1),
+            alpha: (light * (peakOpacity * 0.20 + activity * 0.04)).clamp(0, 1),
           ),
       );
       canvas.drawPath(
@@ -64,7 +67,7 @@ class VeriGlassLightPainter extends CustomPainter {
           ..strokeWidth = 0.85 + activity * 0.5
           ..strokeCap = StrokeCap.round
           ..color = Colors.white.withValues(
-            alpha: (light * (0.82 + activity * 0.18)).clamp(0, 1),
+            alpha: (light * (peakOpacity + activity * 0.10)).clamp(0, 1),
           ),
       );
     }
@@ -72,6 +75,7 @@ class VeriGlassLightPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(VeriGlassLightPainter oldDelegate) =>
+      brightness != oldDelegate.brightness ||
       radius != oldDelegate.radius ||
       activity != oldDelegate.activity ||
       motion != oldDelegate.motion;

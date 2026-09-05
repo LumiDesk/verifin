@@ -1,5 +1,7 @@
 # Veri Fin Agent 开发指南
 
+界面调整必读 [统一设计与交互规范](docs/design-system.md)：集中记录已确认布局、两档材质、深浅色光照、设置持久化与验收约定；历史研究稿不得覆盖该规范。
+
 ## 文档作用与工作语言
 
 本文件是仓库内 Agent 与贡献者的执行规范。Veri Fin 是一个以 Android 交付、支持真实应用 Web 开发预览的 Flutter 记账应用：Dart 包名为 `verifin`，Android applicationId 为 `top.talyra42.verifin`。
@@ -23,7 +25,7 @@
 - `docs/dev/web-preview.md`：正式应用 Web 预览、浏览器存储与平台能力边界。
 - `docs/dev/unified-design-preview.md`：默认关闭的统一设计候选方案；用户确认前不得把 `UNIFIED_DESIGN_PREVIEW` 默认开启或移除旧外观路径。
 - `docs/dev/glass-material-preview.md`：用户主动要求的内容磨砂玻璃预览，通过额外的 `GLASS_DESIGN_PREVIEW` 开关试验；不得以材质调整为由改动预算等既有结构。
-- 玻璃光效按用户参考图：左上/右下渐隐高光，不用均匀白边；导航允许真实纹理透镜与动态光照，本轮不以帧率、功耗为简化理由。与旧玻璃文档冲突时以该用户指定方向及最新预览文档为准。
+- 玻璃光效按用户参考图：左上/右下渐隐高光，不用均匀白边；导航允许真实纹理透镜与动态光照，高级材质默认关闭、保存后启用；关闭使用普通磨砂且不创建透镜，深色高光需单独减弱。与旧玻璃文档冲突时以该用户指定方向及最新预览文档为准。
 - `docs/dev/liquid-glass-navigation.md`：浮动根导航的材质边界、指针拖动状态机、窄屏适配、真实应用 Web 验证与后续 Shader 取舍；修改根导航或新增类似玻璃控件前必读。
 - `docs/dev/feedback-system.md`：根级轻提示 Host 的调用、时长、操作结果、去重、优先级队列与迁移规范；新增或替换短反馈前必读。
 - `README.md`、`docs/product.md`、`docs/acceptance-checklist.md`：用于理解产品和验收范围；其中少量历史描述可能落后，必须与当前实现交叉核对。

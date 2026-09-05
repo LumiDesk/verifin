@@ -267,6 +267,7 @@ class SectionHeaderAction extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(veriRadiusSm),
+      hoverColor: Colors.transparent,
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 2),
@@ -731,6 +732,11 @@ class BudgetPanel extends StatelessWidget {
                       height: 116,
                       child: CustomPaint(
                         painter: BudgetRingPainter(
+                          glass:
+                              veriGlassDesignPreview &&
+                              !MediaQuery.highContrastOf(context),
+                          advanced: VeriMaterialScope.advancedOf(context),
+                          brightness: Theme.of(context).brightness,
                           value: ratio,
                           trackColor: Theme.of(context)
                               .colorScheme

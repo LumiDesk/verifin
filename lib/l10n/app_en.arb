@@ -1,4 +1,6 @@
 {
+  "advancedMaterialLabel": "Advanced materials",
+  "advancedMaterialDesc": "Enable dynamic refraction and directional lighting; turn off to use frosted glass.",
   "@@locale": "en",
   "appTitle": "Veri Fin",
   "backupInvalidFile": "The backup file is invalid or corrupted.",

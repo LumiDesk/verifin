@@ -364,7 +364,8 @@ class _VeriRootNavigationState extends State<VeriRootNavigation>
   }
 
   Widget _buildGlassCapsule(bool isDark) {
-    if (veriGlassDesignPreview) {
+    if (VeriMaterialScope.advancedOf(context) &&
+        !MediaQuery.highContrastOf(context)) {
       return Stack(
         clipBehavior: Clip.none,
         fit: StackFit.expand,
@@ -564,8 +565,12 @@ class _QuickEntryButton extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return CustomPaint(
       foregroundPainter:
-          veriGlassDesignPreview && !MediaQuery.highContrastOf(context)
-          ? const VeriGlassLightPainter(radius: 999)
+          VeriMaterialScope.advancedOf(context) &&
+              !MediaQuery.highContrastOf(context)
+          ? VeriGlassLightPainter(
+              radius: 999,
+              brightness: Theme.of(context).brightness,
+            )
           : null,
       child: DecoratedBox(
         decoration: BoxDecoration(

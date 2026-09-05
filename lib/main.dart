@@ -313,12 +313,17 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
                 themeMode: themePreference.themeMode,
                 theme: buildVeriFinTheme(Brightness.light),
                 darkTheme: buildVeriFinTheme(Brightness.dark),
-                builder: (context, child) => VeriGlassBackdrop(
-                  child: PrivacyConsentGate(
-                    child: AppLockGate(
-                      child: VeriFeedbackHost(
-                        controller: _feedbackController,
-                        child: child ?? const SizedBox.shrink(),
+                builder: (context, child) => ValueListenableBuilder<bool>(
+                  valueListenable: _controller.advancedMaterialListenable,
+                  builder: (context, advanced, content) =>
+                      VeriMaterialScope(advanced: advanced, child: content!),
+                  child: VeriGlassBackdrop(
+                    child: PrivacyConsentGate(
+                      child: AppLockGate(
+                        child: VeriFeedbackHost(
+                          controller: _feedbackController,
+                          child: child ?? const SizedBox.shrink(),
+                        ),
                       ),
                     ),
                   ),

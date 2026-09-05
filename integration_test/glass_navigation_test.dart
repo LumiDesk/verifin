@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:verifin/app/navigation_glass_lens.dart';
 import 'package:verifin/app/root_navigation.dart';
+import 'package:verifin/app/glass_material.dart';
 import 'package:verifin/app/app_theme.dart';
 
 void main() {
@@ -11,6 +12,8 @@ void main() {
     var selected = 0;
     await tester.pumpWidget(
       MaterialApp(
+        builder: (context, child) =>
+            VeriMaterialScope(advanced: true, child: child!),
         theme: buildVeriFinTheme(Brightness.light),
         home: StatefulBuilder(
           builder: (context, setState) => Scaffold(
