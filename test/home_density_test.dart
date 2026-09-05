@@ -25,7 +25,7 @@ void main() {
     expect(pill.right, closeTo(row.right, 0.5));
     expect(tester.takeException(), isNull);
   });
-  testWidgets('首页保留指标方块和预算圆环，三条交易与预算首屏可见', (tester) async {
+  testWidgets('首页保留指标方块与原预算布局，预算仍可打开详情', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(393, 852);
     addTearDown(tester.view.reset);
@@ -50,9 +50,7 @@ void main() {
         .getRect(find.byKey(const Key('main_nav_capsule')))
         .top;
     expect(tester.getRect(transactions.last).bottom, lessThan(navTop));
-    final budget = find.byKey(const Key('home_compact_budget'));
-    expect(find.byKey(const Key('home_budget_expense')), findsOneWidget);
-    expect(find.byKey(const Key('home_budget_daily')), findsOneWidget);
+    final budget = find.byType(BudgetPanel);
     expect(
       find.descendant(of: budget, matching: find.text('支出')),
       findsOneWidget,
@@ -61,7 +59,6 @@ void main() {
       find.descendant(of: budget, matching: find.text('剩余日均')),
       findsOneWidget,
     );
-    expect(find.byKey(const Key('home_budget_ring')), findsOneWidget);
     expect(
       find.descendant(
         of: budget,
@@ -79,7 +76,10 @@ void main() {
       ),
       findsNothing,
     );
-    expect(tester.getRect(budget).bottom, lessThan(navTop));
+    // 原预算卡保留完整圆环与原信息层级，不再为首屏目标压缩结构。
+    expect(tester.getRect(budget).height, greaterThan(180));
+    await tester.drag(firstVerticalScrollable(), const Offset(0, -240));
+    await tester.pumpAndSettle();
     await tester.tap(budget);
     await tester.pumpAndSettle();
     expect(find.byType(HomeTrendPanel), findsNothing);
