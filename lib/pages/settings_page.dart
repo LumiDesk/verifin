@@ -7,6 +7,7 @@ import '../app/app_version.dart';
 import '../app/build_config.dart';
 import '../app/common_widgets.dart';
 import '../app/feedback.dart';
+import '../app/glass_material.dart';
 import '../app/legal_content.dart';
 import '../l10n/app_localizations.dart';
 import '../app/models.dart';
@@ -126,7 +127,8 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                       ),
                       const Divider(height: 1),
-                      if (veriGlassDesignPreview) ...[
+                      if (veriGlassDesignPreview &&
+                          veriAdvancedMaterialAvailable) ...[
                         CompactSwitchRow(
                           key: const ValueKey('advanced_material_setting'),
                           icon: Icons.auto_awesome_outlined,

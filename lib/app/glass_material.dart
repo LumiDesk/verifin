@@ -1,9 +1,14 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app_theme.dart';
 import 'glass_lighting.dart';
+
+/// 原生端在 v1.16.0 真机出现开启后持续闪退；未完成原生崩溃定位与
+/// release 真机验收前，仅允许已验证的 Web 路径。旧偏好不得绕过此保护。
+const bool veriAdvancedMaterialAvailable = kIsWeb;
 
 /// 纯展示层依赖；偏好由根组件注入，不让绘制组件访问 Controller/KV。
 class VeriMaterialScope extends InheritedWidget {
@@ -14,6 +19,7 @@ class VeriMaterialScope extends InheritedWidget {
   });
   final bool advanced;
   static bool advancedOf(BuildContext context) =>
+      veriAdvancedMaterialAvailable &&
       veriGlassDesignPreview &&
       (context
               .dependOnInheritedWidgetOfExactType<VeriMaterialScope>()

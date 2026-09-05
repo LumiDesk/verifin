@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 
 import 'app_theme.dart';
 import 'glass_lighting.dart';
+import 'glass_material.dart';
 
 /// 只采样导航自己的图标/文字层；纹理不包含账目、不写磁盘、不对外发送。
 class VeriNavigationGlassLens extends StatefulWidget {
@@ -52,6 +53,8 @@ class _VeriNavigationGlassLensState extends State<VeriNavigationGlassLens> {
   }
 
   Future<void> _loadShader() async {
+    // 独立保护直接使用此组件的入口；原生崩溃无法依靠 Dart catch 恢复。
+    if (!veriAdvancedMaterialAvailable) return;
     try {
       final program = await ui.FragmentProgram.fromAsset(
         'shaders/navigation_lens.frag',
@@ -112,117 +115,129 @@ class _VeriNavigationGlassLensState extends State<VeriNavigationGlassLens> {
   }
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final size = constraints.biggest;
-      if (!size.isFinite || size.isEmpty) return const SizedBox.shrink();
-      _scheduleCapture(size);
-      final dark = Theme.of(context).brightness == Brightness.dark;
-      final highContrast = MediaQuery.highContrastOf(context);
-      final reducedMotion = MediaQuery.disableAnimationsOf(context);
-      return TweenAnimationBuilder<Offset>(
-        tween: Tween(end: Offset(widget.pressed ? 1 : 0, widget.motion)),
-        duration: Duration(milliseconds: reducedMotion ? 0 : 160),
-        curve: Curves.easeOutCubic,
-        builder: (context, state, _) {
-          final activity = state.dx;
-          final motion = state.dy;
-          final width =
-              (widget.target.width *
-                      (1 + activity * (0.30 + motion.abs() * 0.08)))
-                  .clamp(0.0, size.width + 4)
-                  .toDouble();
-          final height = widget.target.height * (1 + activity * 0.26);
-          final centerX = (widget.target.center.dx + motion * activity * 2)
-              .clamp(width / 2 - 2, size.width - width / 2 + 2)
-              .toDouble();
-          final rect = Rect.fromCenter(
-            center: Offset(centerX, widget.target.center.dy),
-            width: width,
-            height: height,
-          );
-          // 静止时永远绘制活文字；只在有效交互中以当前布局纹理替换。
-          final ready =
-              widget.pressed &&
-              activity > 0 &&
-              _shader != null &&
-              _image != null &&
-              !highContrast &&
-              _capturedRevision == widget.revision &&
-              _capturedSize == size;
-          return Stack(
-            clipBehavior: Clip.none,
-            fit: StackFit.expand,
-            children: [
-              Positioned.fromRect(
-                rect: rect,
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    key: ValueKey('${widget.keyPrefix}_liquid_lens'),
-                    decoration: BoxDecoration(
-                      color: highContrast
-                          ? (dark ? veriSurfaceAltDark : veriSurfaceAltLight)
-                          : Colors.white.withValues(
-                              alpha: dark
-                                  ? 0.10 + activity * 0.10
-                                  : 0.28 + activity * 0.26,
+  Widget build(BuildContext context) => !veriAdvancedMaterialAvailable
+      ? widget.source
+      : LayoutBuilder(
+          builder: (context, constraints) {
+            final size = constraints.biggest;
+            if (!size.isFinite || size.isEmpty) return const SizedBox.shrink();
+            _scheduleCapture(size);
+            final dark = Theme.of(context).brightness == Brightness.dark;
+            final highContrast = MediaQuery.highContrastOf(context);
+            final reducedMotion = MediaQuery.disableAnimationsOf(context);
+            return TweenAnimationBuilder<Offset>(
+              tween: Tween(end: Offset(widget.pressed ? 1 : 0, widget.motion)),
+              duration: Duration(milliseconds: reducedMotion ? 0 : 160),
+              curve: Curves.easeOutCubic,
+              builder: (context, state, _) {
+                final activity = state.dx;
+                final motion = state.dy;
+                final width =
+                    (widget.target.width *
+                            (1 + activity * (0.30 + motion.abs() * 0.08)))
+                        .clamp(0.0, size.width + 4)
+                        .toDouble();
+                final height = widget.target.height * (1 + activity * 0.26);
+                final centerX =
+                    (widget.target.center.dx + motion * activity * 2)
+                        .clamp(width / 2 - 2, size.width - width / 2 + 2)
+                        .toDouble();
+                final rect = Rect.fromCenter(
+                  center: Offset(centerX, widget.target.center.dy),
+                  width: width,
+                  height: height,
+                );
+                // 静止时永远绘制活文字；只在有效交互中以当前布局纹理替换。
+                final ready =
+                    widget.pressed &&
+                    activity > 0 &&
+                    _shader != null &&
+                    _image != null &&
+                    !highContrast &&
+                    _capturedRevision == widget.revision &&
+                    _capturedSize == size;
+                return Stack(
+                  clipBehavior: Clip.none,
+                  fit: StackFit.expand,
+                  children: [
+                    Positioned.fromRect(
+                      rect: rect,
+                      child: IgnorePointer(
+                        child: DecoratedBox(
+                          key: ValueKey('${widget.keyPrefix}_liquid_lens'),
+                          decoration: BoxDecoration(
+                            color: highContrast
+                                ? (dark
+                                      ? veriSurfaceAltDark
+                                      : veriSurfaceAltLight)
+                                : Colors.white.withValues(
+                                    alpha: dark
+                                        ? 0.10 + activity * 0.10
+                                        : 0.28 + activity * 0.26,
+                                  ),
+                            borderRadius: BorderRadius.circular(
+                              rect.height / 2,
                             ),
-                      borderRadius: BorderRadius.circular(rect.height / 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(
-                            alpha: 0.08 + activity * 0.05,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(
+                                  alpha: 0.08 + activity * 0.05,
+                                ),
+                                blurRadius: 10 + activity * 10,
+                                offset: Offset(motion * 2, 3 + activity * 3),
+                              ),
+                            ],
                           ),
-                          blurRadius: 10 + activity * 10,
-                          offset: Offset(motion * 2, 3 + activity * 3),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              ClipPath(
-                clipper: ready ? _OutsideLensClipper(rect) : null,
-                child: RepaintBoundary(key: _sourceKey, child: widget.source),
-              ),
-              if (ready)
-                Positioned.fromRect(
-                  rect: rect,
-                  child: IgnorePointer(
-                    child: CustomPaint(
-                      key: ValueKey('${widget.keyPrefix}_lens_refraction'),
-                      painter: VeriNavigationLensPainter(
-                        shader: _shader!,
-                        source: _image!,
-                        origin: rect.topLeft,
-                        sourceSize: size,
-                        activity: activity,
-                        motion: motion,
                       ),
                     ),
-                  ),
-                ),
-              if (!highContrast)
-                Positioned.fromRect(
-                  rect: rect,
-                  child: IgnorePointer(
-                    child: CustomPaint(
-                      key: ValueKey('${widget.keyPrefix}_lens_light'),
-                      painter: VeriGlassLightPainter(
-                        radius: rect.height / 2,
-                        brightness: Theme.of(context).brightness,
-                        activity: activity,
-                        motion: motion,
+                    ClipPath(
+                      clipper: ready ? _OutsideLensClipper(rect) : null,
+                      child: RepaintBoundary(
+                        key: _sourceKey,
+                        child: widget.source,
                       ),
                     ),
-                  ),
-                ),
-            ],
-          );
-        },
-      );
-    },
-  );
+                    if (ready)
+                      Positioned.fromRect(
+                        rect: rect,
+                        child: IgnorePointer(
+                          child: CustomPaint(
+                            key: ValueKey(
+                              '${widget.keyPrefix}_lens_refraction',
+                            ),
+                            painter: VeriNavigationLensPainter(
+                              shader: _shader!,
+                              source: _image!,
+                              origin: rect.topLeft,
+                              sourceSize: size,
+                              activity: activity,
+                              motion: motion,
+                            ),
+                          ),
+                        ),
+                      ),
+                    if (!highContrast)
+                      Positioned.fromRect(
+                        rect: rect,
+                        child: IgnorePointer(
+                          child: CustomPaint(
+                            key: ValueKey('${widget.keyPrefix}_lens_light'),
+                            painter: VeriGlassLightPainter(
+                              radius: rect.height / 2,
+                              brightness: Theme.of(context).brightness,
+                              activity: activity,
+                              motion: motion,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            );
+          },
+        );
 }
 
 class _OutsideLensClipper extends CustomClipper<Path> {

@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:verifin/app/models.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/app_theme.dart';
+import 'package:verifin/app/glass_material.dart';
 import 'package:verifin/app/glass_lighting.dart';
 import 'package:verifin/app/navigation_glass_lens.dart';
 import 'package:verifin/app/veri_fin_controller.dart';
@@ -52,6 +54,65 @@ void main() {
     expect(reopened.advancedMaterialEnabled, isTrue);
   });
 
+  testWidgets(
+    '原生冷启动忽略已开启材质且保留交易和偏好',
+    (tester) async {
+      final store = LocalKeyValueStore();
+      store.write('verifin.advanced_material.v1', 'true');
+      final seed = await makeController(store);
+      seed.addEntry(
+        LedgerEntry(
+          id: 'recovery-entry',
+          bookId: defaultLedgerBookId,
+          type: EntryType.expense,
+          amount: 25,
+          categoryId: 'dining',
+          accountId: '',
+          note: 'recovery',
+          occurredAt: DateTime(2026, 9, 5),
+        ),
+      );
+      await seed.waitForPendingWrites();
+      seed.dispose();
+      final controller = await pumpApp(tester, store);
+      await tester.pumpAndSettle();
+      expect(controller.advancedMaterialEnabled, isTrue);
+      expect(controller.entries.single.id, 'recovery-entry');
+      expect(find.byType(VeriNavigationGlassLens), findsNothing);
+      final context = tester.element(find.byType(HomePage));
+      expect(VeriMaterialScope.advancedOf(context), isFalse);
+      unawaited(
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute<void>(builder: (_) => const SettingsPage())),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('advanced_material_setting')), findsNothing);
+      expect(store.read('verifin.advanced_material.v1'), 'true');
+      expect(tester.takeException(), isNull);
+    },
+    skip: !veriGlassDesignPreview || veriAdvancedMaterialAvailable,
+  );
+
+  testWidgets('原生直接创建透镜也只显示实时内容', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: VeriNavigationGlassLens(
+          source: Text('live navigation'),
+          target: Rect.fromLTWH(0, 0, 80, 48),
+          pressed: true,
+          motion: 1,
+          revision: 1,
+          keyPrefix: 'native_guard',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('live navigation'), findsOneWidget);
+    expect(find.byType(LayoutBuilder), findsNothing);
+    expect(tester.takeException(), isNull);
+  }, skip: veriAdvancedMaterialAvailable);
+
   test('材质保存失败不更新运行状态或冷读结果，并报告失败', () async {
     final store = FailingMaterialStore();
     final controller = await makeController(store);
@@ -94,29 +155,33 @@ void main() {
     expect(taps, 1);
   });
 
-  testWidgets('关闭不创建透镜，设置草稿保存后开启，再关闭会释放透镜', (tester) async {
-    final controller = await pumpApp(tester);
-    await tester.pumpAndSettle();
-    expect(find.byType(VeriNavigationGlassLens), findsNothing);
-    final context = tester.element(find.byType(HomePage));
-    // 等待路由关闭会阻塞后续表单交互；测试在下方通过保存主动关闭。
-    unawaited(
-      Navigator.of(
-        context,
-      ).push(MaterialPageRoute<void>(builder: (_) => const SettingsPage())),
-    );
-    await tester.pumpAndSettle();
-    final row = find.byKey(const Key('advanced_material_setting'));
-    await tester.tap(find.descendant(of: row, matching: find.byType(Switch)));
-    await tester.pumpAndSettle();
-    expect(controller.advancedMaterialEnabled, isFalse);
-    await tester.tap(find.byTooltip('保存'));
-    await tester.pumpAndSettle();
-    expect(controller.advancedMaterialEnabled, isTrue);
-    expect(find.byType(VeriNavigationGlassLens), findsOneWidget);
-    await saveMaterial(controller, false);
-    await tester.pumpAndSettle();
-    expect(find.byType(VeriNavigationGlassLens), findsNothing);
-    expect(tester.takeException(), isNull);
-  }, skip: !veriGlassDesignPreview);
+  testWidgets(
+    '关闭不创建透镜，设置草稿保存后开启，再关闭会释放透镜',
+    (tester) async {
+      final controller = await pumpApp(tester);
+      await tester.pumpAndSettle();
+      expect(find.byType(VeriNavigationGlassLens), findsNothing);
+      final context = tester.element(find.byType(HomePage));
+      // 等待路由关闭会阻塞后续表单交互；测试在下方通过保存主动关闭。
+      unawaited(
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute<void>(builder: (_) => const SettingsPage())),
+      );
+      await tester.pumpAndSettle();
+      final row = find.byKey(const Key('advanced_material_setting'));
+      await tester.tap(find.descendant(of: row, matching: find.byType(Switch)));
+      await tester.pumpAndSettle();
+      expect(controller.advancedMaterialEnabled, isFalse);
+      await tester.tap(find.byTooltip('保存'));
+      await tester.pumpAndSettle();
+      expect(controller.advancedMaterialEnabled, isTrue);
+      expect(find.byType(VeriNavigationGlassLens), findsOneWidget);
+      await saveMaterial(controller, false);
+      await tester.pumpAndSettle();
+      expect(find.byType(VeriNavigationGlassLens), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+    skip: !veriGlassDesignPreview || !veriAdvancedMaterialAvailable,
+  );
 }
