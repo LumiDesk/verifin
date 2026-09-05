@@ -1,5 +1,7 @@
 # Veri Fin Agent 开发指南
 
+v1.16.0 发布说明：CI Android 两渠道及 Web 门禁显式带 `--dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true`，保证手机包含已评审外观。高级材质仍默认关闭、由设置保存控制。本地与发布包对照时必须使用相同参数；无参数构建保留旧外观用于回归。
+
 界面调整必读 [统一设计与交互规范](docs/design-system.md)：集中记录已确认布局、两档材质、深浅色光照、设置持久化与验收约定；历史研究稿不得覆盖该规范。候选统一排版现覆盖全部页面；导航静止必须显示实时文字，预算环禁止内外白线。
 
 ## 文档作用与工作语言

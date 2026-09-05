@@ -60,18 +60,22 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      # v1.16 起将已评审的统一设计纳入两个渠道；高级材质仍由设备设置控制。
+      - name: Verify release design flows
+        run: flutter test test/design_consistency_test.dart test/unified_design_preview_test.dart test/advanced_material_test.dart test/home_density_test.dart test/navigation_lens_test.dart --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
+
       - name: Build release APK (github flavor)
         # GitHub 自分发包：github flavor，保留应用内一键自更新（REQUEST_INSTALL_PACKAGES）。
         # 只构建 arm64-v8a：2019 年后的安卓机几乎全是 arm64，一个包覆盖 99%+ 设备，
         # 相比 universal（打包 armeabi-v7a/arm64/x86_64 三套原生库）体积约减半。
         # 极老的 32 位机型装不了——已在 Release 说明中告知。
-        run: flutter build apk --release --target-platform android-arm64 --flavor github
+        run: flutter build apk --release --target-platform android-arm64 --flavor github --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
 
       - name: Build release App Bundle (play flavor)
         # Google Play 上架用 AAB：play flavor 移除 REQUEST_INSTALL_PACKAGES（Play 政策禁止
         # 应用自更新），并 --dart-define=SELF_UPDATE=false 隐藏应用内自更新入口。
         # 与 APK 同用 verifinRelease 签名；AAB 含全部 ABI，由 Play 按设备分发。
-        run: flutter build appbundle --release --flavor play --dart-define=SELF_UPDATE=false
+        run: flutter build appbundle --release --flavor play --dart-define=SELF_UPDATE=false --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
 
       - name: Prepare release artifacts
         shell: bash
@@ -113,4 +117,8 @@ jobs:
 
             📦 安装包为 **arm64-v8a** 架构，覆盖 2019 年后绝大多数安卓机型。极少数 32 位老设备可能无法安装。
 
-            💡 本版含存储与性能优化，更新前建议先在「数据管理」里**导出一次备份**以防万一。
+            本版包含统一页面排版、玻璃卡片与真实应用 Web 开发预览。
+
+            「设置 → 通用 → 高级材质」默认关闭；开启并保存后可体验导航动态透镜与方向光照，关闭使用普通磨砂。请分别体验开关两档的流畅度。
+
+            更新前可在「数据管理」中导出备份。

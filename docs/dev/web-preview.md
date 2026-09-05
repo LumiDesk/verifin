@@ -3,7 +3,7 @@
 状态：恢复根项目 Web 平台用于开发预览，Android 仍为 APK/AAB 交付渠道。
 Web 与 Android 共用页面布局，不在页面插入开发预览或平台说明卡片；平台限制集中记录
 在本文，仅在用户触发不支持的操作时反馈。
-此次只恢复预览能力，没有实施全局视觉重构。设计评审使用真实页面，不再复制一套实验 UI。
+Web 恢复后已完成统一视觉迭代。v1.16.0 发布包启用统一设计；要与手机保持一致，下列运行/构建命令追加 `--dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true`。设计评审使用真实页面，不再复制一套实验 UI。
 
 ## 运行与构建
 
