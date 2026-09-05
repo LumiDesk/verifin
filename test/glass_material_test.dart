@@ -46,8 +46,8 @@ void main() {
               .map((box) => box.decoration)
               .whereType<BoxDecoration>()
               .where(
-                (decoration) =>
-                    decoration.color != null && decoration.borderRadius != null,
+                (surface) =>
+                    surface.color != null && surface.borderRadius != null,
               );
           expect(surfaces.length, 2);
           for (final surface in surfaces) {
