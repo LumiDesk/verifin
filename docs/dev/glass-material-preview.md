@@ -1,11 +1,26 @@
 # 统一磨砂玻璃材质预览
 
-2026-09-05 启动恢复保护：v1.16.0 收到 Android 开启高级材质后持续闪退的真机报告。原生端现强制普通磨砂并隐藏高级材质入口；旧 KV 选择保留，但不能启用高级绘制或加载导航 Shader。仅 Web 保留高级材质实验。尚未取得原生崩溃日志，不能断言具体 GPU/引擎根因；重新开放前必须完成 Android release/R8 真机开启、冷启动、切页与关闭验收。恢复应使用同 applicationId、同签名、更高 versionCode 的 CI 修复包覆盖安装，禁止要求用户清数据。
+2026-09-05 Android 玻璃修复：旧方向高光的逐段模糊已在 REDMI K90 Pro Max（Android 17）独立复现 GPU 分配失败及 Vulkan 0x14 崩溃；连续透明度网格替换后，Flutter 3.47.2 release/R8 已完成该机开启、保存、冷启动、切页、深浅色及关闭验收，真实导航 Shader 集成测试通过。Android 与 Web 恢复高级材质，默认关闭，旧 KV 保留；其他平台仍保护。不能据此断言所有 GPU 均已验证。CI 固定 Flutter 3.47.2，升级引擎须重做真机验收；正式包仍由 CI 构建，须用户明确授权发版，禁止要求清除应用数据。
 
 当前约定统一收录于 [设计与交互规范](../design-system.md)。高级光照和透镜还需在设置中开启“高级材质”（默认关闭）；本文相关光学描述仅适用于开启后。
 
+本次原机复现、修复对照、工具链与剩余验收范围见 [Android 玻璃调查](android-glass-investigation.md)。
+
 状态：2026-09-05 用户主动要求内容卡片也探索玻璃质感；这是默认关闭的预览，
 不改变预算卡结构、指标方块、宫格、排序或数据流程。
+
+### Android 图形隔离诊断
+
+若 Android 真机报告高级材质导致原生崩溃，不得把旧的不安全实现放回正式应用来复现。
+使用独立 applicationId 的 `diagnostic` flavor 和
+`tool/advanced_material_diagnostic.dart`，依次验证方向高光、Shader 加载、
+以及单次导航纹理读回。该 target 不初始化 Controller、SQLite 或 KV，不能访问
+正式应用数据。完成定位后应保留最小复现与验收结论，删除只为临时实验而存在的路径。
+
+```bash
+flutter run -d <android-device-id> --flavor diagnostic \
+  -t tool/advanced_material_diagnostic.dart
+```
 
 ## 先恢复预算结构
 
@@ -29,6 +44,7 @@ pub 依赖。实时背景模糊不同于真实折射，不用静态高光或渐�
 
 - `glass_lighting.dart` 根据边界位置、曲面法线和光照方向绘制高光：左上/右下渐亮，
   右上/左下渐隐。柔光与细高光叠加，移除普通模式的整圈均匀白色 Border。
+  Android 修复后以两次连续透明度网格绘制，禁止恢复每个 2dp 片段单独模糊的旧实现。
 - `navigation_glass_lens.dart` 仅把导航自己的图标和文字绘制层采样为临时 GPU 纹理；
   不包含账目、不写文件、不发送。源文字在透镜覆盖区裁去，再由 Shader 显示变形结果，
   避免把原文字与放大文字重复叠加。

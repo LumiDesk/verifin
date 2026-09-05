@@ -8,7 +8,7 @@ import 'package:verifin/app/app_theme.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-  testWidgets('真实浏览器加载透镜 Shader 并采样导航，拖动仍可切页', (tester) async {
+  testWidgets('真实引擎加载透镜 Shader 并采样导航，拖动仍可切页', (tester) async {
     var selected = 0;
     await tester.pumpWidget(
       MaterialApp(

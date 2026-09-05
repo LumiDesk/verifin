@@ -1,6 +1,6 @@
 # Veri Fin Agent 开发指南
 
-2026-09-05 启动恢复保护：v1.16.0 收到 Android 开启高级材质后持续闪退的真机报告。原生端现强制普通磨砂并隐藏高级材质入口；旧 KV 选择保留，但不能启用高级绘制或加载导航 Shader。仅 Web 保留高级材质实验。尚未取得原生崩溃日志，不能断言具体 GPU/引擎根因；重新开放前必须完成 Android release/R8 真机开启、冷启动、切页与关闭验收。恢复应使用同 applicationId、同签名、更高 versionCode 的 CI 修复包覆盖安装，禁止要求用户清数据。
+2026-09-05 Android 玻璃修复：旧方向高光的逐段模糊已在 REDMI K90 Pro Max（Android 17）独立复现 GPU 分配失败及 Vulkan 0x14 崩溃；连续透明度网格替换后，Flutter 3.47.2 release/R8 已完成该机开启、保存、冷启动、切页、深浅色及关闭验收，真实导航 Shader 集成测试通过。Android 与 Web 恢复高级材质，默认关闭，旧 KV 保留；其他平台仍保护。不能据此断言所有 GPU 均已验证。CI 固定 Flutter 3.47.2，升级引擎须重做真机验收；正式包仍由 CI 构建，须用户明确授权发版，禁止要求清除应用数据。
 
 v1.16.0 发布说明：CI Android 两渠道及 Web 门禁显式带 `--dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true`，保证手机包含已评审外观。高级材质仍默认关闭、由设置保存控制。本地与发布包对照时必须使用相同参数；无参数构建保留旧外观用于回归。
 
@@ -106,6 +106,7 @@ Web 与 Android 保持相同的页面展示，不插入 Web 开发说明横幅�
 截图和交互检查保持同一尺寸，另按需要补窄屏验证。这不是 iOS 平台支持声明。
 
 - Android 运行/构建仍必须显式使用 `--flavor github`；验证 Play 时使用 `--flavor play --dart-define=SELF_UPDATE=false`。浏览器预览不能替代 Android 原生能力、生命周期和性能验收。
+- 图形故障隔离是例外：仅本地使用独立 applicationId 的 `--flavor diagnostic`，可运行最小绘制入口或正式 `lib/main.dart` 验收，不能当作交付物。命令、工具链与原机证据见 `docs/dev/android-glass-investigation.md`。
 - 提交前执行 `dart format .`、`flutter analyze` 和 `flutter test`。只改文档时至少做 diff/链接/路径校验，可不运行 Flutter 测试，但要在汇报中说明。
 - 不把本地 `flutter build apk` 当成交付依据；正式 APK/AAB 由 GitHub Actions 构建。
 

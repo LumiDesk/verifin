@@ -6,9 +6,10 @@ import 'package:flutter/material.dart';
 import 'app_theme.dart';
 import 'glass_lighting.dart';
 
-/// 原生端在 v1.16.0 真机出现开启后持续闪退；未完成原生崩溃定位与
-/// release 真机验收前，仅允许已验证的 Web 路径。旧偏好不得绕过此保护。
-const bool veriAdvancedMaterialAvailable = kIsWeb;
+/// Android 的逐段模糊高光已改为连续网格，并完成 release/R8 真机验收。
+/// 仅开放 Android 与 Web；其他尚未验收的平台仍不加载高级绘制资源。
+bool get veriAdvancedMaterialAvailable =>
+    kIsWeb || defaultTargetPlatform == TargetPlatform.android;
 
 /// 纯展示层依赖；偏好由根组件注入，不让绘制组件访问 Controller/KV。
 class VeriMaterialScope extends InheritedWidget {

@@ -56,6 +56,13 @@ android {
         create("play") {
             dimension = "distribution"
         }
+        // 仅用于 Android 图形问题的本地隔离复现。它使用独立 applicationId，
+        // 不能读取、覆盖或更新正式 Veri Fin 的本地数据。
+        create("diagnostic") {
+            dimension = "distribution"
+            applicationIdSuffix = ".graphicsdiagnostic"
+            versionNameSuffix = "-graphics-diagnostic"
+        }
     }
 
     buildTypes {

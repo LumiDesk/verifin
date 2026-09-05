@@ -26,6 +26,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: '3.47.2'
           cache: true
 
       - name: Install dependencies
@@ -55,14 +56,15 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: '3.47.2'
           cache: true
 
       - name: Install dependencies
         run: flutter pub get
 
-      # v1.16 起将已评审的统一设计纳入两个渠道；原生端高级材质因闪退暂时禁用。
+      # 固定到真机验收过的引擎版本；两渠道包含统一外观，高级材质仍默认关闭。
       - name: Verify release design flows
-        run: flutter test test/design_consistency_test.dart test/unified_design_preview_test.dart test/advanced_material_test.dart test/home_density_test.dart test/navigation_lens_test.dart --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
+        run: flutter test test/design_consistency_test.dart test/unified_design_preview_test.dart test/advanced_material_test.dart test/glass_lighting_test.dart test/home_density_test.dart test/navigation_lens_test.dart --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
 
       - name: Build release APK (github flavor)
         # GitHub 自分发包：github flavor，保留应用内一键自更新（REQUEST_INSTALL_PACKAGES）。
@@ -117,8 +119,8 @@ jobs:
 
             📦 安装包为 **arm64-v8a** 架构，覆盖 2019 年后绝大多数安卓机型。极少数 32 位老设备可能无法安装。
 
-            本版修复 v1.16.0 开启高级材质后无法启动的问题：原生端暂时停用高级光照与导航透镜，已保存开启的设备也会回退普通磨砂。统一页面布局保留。
+            本版修复高级高光逐段模糊造成的 GPU 资源压力，恢复 Android 高级材质开关。默认关闭，开启并保存后显示方向高光和导航折射，保留统一页面布局与原有偏好。
 
-            请下载 APK 直接覆盖安装，**不要卸载旧版本或清除应用数据**。修复不重置账目与偏好；具体设备上的启动恢复仍待真机验收。
+            请下载 APK 直接覆盖安装，**不要卸载旧版本或清除应用数据**。本地 release/R8 已在 REDMI K90 Pro Max 验证开启、冷启动、切页与关闭；本次 CI 安装包仍需覆盖安装验收。
 
             恢复启动后，建议在「数据管理」中导出备份。

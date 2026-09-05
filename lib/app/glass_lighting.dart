@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -33,44 +34,64 @@ class VeriGlassLightPainter extends CustomPainter {
     final path = Path()
       ..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
     final metric = path.computeMetrics().first;
-    const step = 2.0;
-    for (var distance = 0.0; distance < metric.length; distance += step) {
-      final tangent = metric.getTangentForOffset(distance + 0.1);
-      if (tangent == null) continue;
-      final light = veriGlassEdgeLight(
-        Offset(
-          tangent.position.dx / size.width,
-          tangent.position.dy / size.height,
+    // 把整条轮廓组成连续的透明度网格，两次绘制完成柔光与细高光。
+    // 不为每 2dp 小段建立 MaskFilter 离屏任务：一张普通卡片原本就会
+    // 产生数百次独立模糊，多个卡片同时显示时会放大原生 GPU 资源压力。
+    final samples = (metric.length / 2).ceil().clamp(12, 1024);
+    final points = <Offset>[];
+    final normals = <Offset>[];
+    final lights = <double>[];
+    for (var i = 0; i <= samples; i++) {
+      final tangent = metric.getTangentForOffset(
+        i == samples ? 0 : metric.length * i / samples,
+      )!;
+      final normal = Offset(tangent.vector.dy, -tangent.vector.dx);
+      points.add(tangent.position);
+      normals.add(normal);
+      lights.add(
+        veriGlassEdgeLight(
+          Offset(
+            tangent.position.dx / size.width,
+            tangent.position.dy / size.height,
+          ),
+          normal,
+          motion: motion,
         ),
-        Offset(tangent.vector.dy, -tangent.vector.dx),
-        motion: motion,
-      );
-      if (light < 0.008) continue;
-      final segment = metric.extractPath(
-        distance,
-        math.min(distance + step + 0.5, metric.length),
-      );
-      canvas.drawPath(
-        segment,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3.2 + activity * 1.2
-          ..maskFilter = MaskFilter.blur(BlurStyle.normal, 1.4 + activity)
-          ..color = Colors.white.withValues(
-            alpha: (light * (peakOpacity * 0.20 + activity * 0.04)).clamp(0, 1),
-          ),
-      );
-      canvas.drawPath(
-        segment,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 0.85 + activity * 0.5
-          ..strokeCap = StrokeCap.round
-          ..color = Colors.white.withValues(
-            alpha: (light * (peakOpacity + activity * 0.10)).clamp(0, 1),
-          ),
       );
     }
+    void drawRibbon(double halfWidth, double opacity) {
+      const offsets = [-1.0, -0.5, 0.0, 0.5, 1.0];
+      const weights = [0.0, 0.35, 1.0, 0.35, 0.0];
+      final positions = <Offset>[];
+      final colors = <Color>[];
+      final indices = <int>[];
+      for (var i = 0; i < points.length; i++) {
+        for (var j = 0; j < offsets.length; j++) {
+          positions.add(points[i] + normals[i] * (offsets[j] * halfWidth));
+          colors.add(
+            Colors.white.withValues(
+              alpha: (lights[i] * opacity * weights[j]).clamp(0, 1),
+            ),
+          );
+          if (i < samples && j < offsets.length - 1) {
+            final a = i * offsets.length + j;
+            final b = a + offsets.length;
+            indices.addAll([a, b, a + 1, a + 1, b, b + 1]);
+          }
+        }
+      }
+      final vertices = ui.Vertices(
+        ui.VertexMode.triangles,
+        positions,
+        colors: colors,
+        indices: indices,
+      );
+      canvas.drawVertices(vertices, BlendMode.dst, Paint());
+      vertices.dispose();
+    }
+
+    drawRibbon(3.8 + activity * 1.6, peakOpacity * 0.20 + activity * 0.04);
+    drawRibbon(0.85 + activity * 0.5, peakOpacity + activity * 0.10);
   }
 
   @override

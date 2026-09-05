@@ -53,7 +53,7 @@ class _VeriNavigationGlassLensState extends State<VeriNavigationGlassLens> {
   }
 
   Future<void> _loadShader() async {
-    // 独立保护直接使用此组件的入口；原生崩溃无法依靠 Dart catch 恢复。
+    // 独立保护直接使用此组件的入口，未验收平台不加载 Shader。
     if (!veriAdvancedMaterialAvailable) return;
     try {
       final program = await ui.FragmentProgram.fromAsset(

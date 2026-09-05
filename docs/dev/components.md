@@ -14,7 +14,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 
 ## 族 1 — 布局脚手架 / 页面容器
 
-`VeriMaterialScope`（`glass_material.dart`，公共入口导出）注入设备材质偏好；`advancedOf(context)` 同时检查候选构建开关与 `veriAdvancedMaterialAvailable` 平台保护，缺省 false。原生端因 v1.16.0 闪退报告暂时禁用高级绘制；透镜组件自身也阻止 Shader 加载并仅显示实时内容。
+`VeriMaterialScope`（`glass_material.dart`，公共入口导出）注入设备材质偏好；`advancedOf(context)` 同时检查候选构建开关与 `veriAdvancedMaterialAvailable` 平台保护，缺省 false。高光修复并通过真机验收后开放 Android 与 Web；其他平台直接使用透镜组件也不会加载 Shader。`VeriGlassLightPainter` 以两次连续透明度网格绘制柔光和细高光，禁止恢复每个微小线段单独模糊的路径，验收见 `android-glass-investigation.md`。
 `BudgetRingPainter` 支持 glass/advanced/brightness 参数，仅改变光照，默认路径保持原样。
 
 `VeriGlassSurface` / `VeriGlassBackdrop` 位于 `glass_material.dart`，经公共入口导出，

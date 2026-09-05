@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:verifin/app/models.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -37,8 +38,7 @@ class FailingMaterialStore extends LocalKeyValueStore {
 }
 
 void main() {
-  const skipWeb = !veriGlassDesignPreview || !veriAdvancedMaterialAvailable;
-  const skipNative = !veriGlassDesignPreview || veriAdvancedMaterialAvailable;
+  final skipWeb = !veriGlassDesignPreview || !veriAdvancedMaterialAvailable;
 
   useTestDatabases();
   test('材质默认关闭，保存后冷读，初始化及备份恢复保留本机选择', () async {
@@ -57,61 +57,81 @@ void main() {
     expect(reopened.advancedMaterialEnabled, isTrue);
   });
 
-  const nativeRecoveryDescription = '原生冷启动忽略已开启材质且保留交易和偏好';
-  testWidgets(nativeRecoveryDescription, (tester) async {
-    final store = LocalKeyValueStore();
-    store.write('verifin.advanced_material.v1', 'true');
-    final seed = await makeController(store);
-    seed.addEntry(
-      LedgerEntry(
-        id: 'recovery-entry',
-        bookId: defaultLedgerBookId,
-        type: EntryType.expense,
-        amount: 25,
-        categoryId: 'dining',
-        accountId: '',
-        note: 'recovery',
-        occurredAt: DateTime(2026, 9, 5),
-      ),
-    );
-    await seed.waitForPendingWrites();
-    seed.dispose();
-    final controller = await pumpApp(tester, store);
-    await tester.pumpAndSettle();
-    expect(controller.advancedMaterialEnabled, isTrue);
-    expect(controller.entries.single.id, 'recovery-entry');
-    expect(find.byType(VeriNavigationGlassLens), findsNothing);
-    final context = tester.element(find.byType(HomePage));
-    expect(VeriMaterialScope.advancedOf(context), isFalse);
-    unawaited(
-      Navigator.of(
-        context,
-      ).push(MaterialPageRoute<void>(builder: (_) => const SettingsPage())),
-    );
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('advanced_material_setting')), findsNothing);
-    expect(store.read('verifin.advanced_material.v1'), 'true');
-    expect(tester.takeException(), isNull);
-  }, skip: skipNative);
-
-  testWidgets('原生直接创建透镜也只显示实时内容', (tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: VeriNavigationGlassLens(
-          source: Text('live navigation'),
-          target: Rect.fromLTWH(0, 0, 80, 48),
-          pressed: true,
-          motion: 1,
-          revision: 1,
-          keyPrefix: 'native_guard',
+  const nativeRecoveryDescription = '旧材质偏好冷启动保留交易，Android 恢复高级绘制';
+  testWidgets(
+    nativeRecoveryDescription,
+    (tester) async {
+      final supported = defaultTargetPlatform == TargetPlatform.android;
+      final store = LocalKeyValueStore();
+      store.write('verifin.advanced_material.v1', 'true');
+      final seed = await makeController(store);
+      seed.addEntry(
+        LedgerEntry(
+          id: 'recovery-entry',
+          bookId: defaultLedgerBookId,
+          type: EntryType.expense,
+          amount: 25,
+          categoryId: 'dining',
+          accountId: '',
+          note: 'recovery',
+          occurredAt: DateTime(2026, 9, 5),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('live navigation'), findsOneWidget);
-    expect(find.byType(LayoutBuilder), findsNothing);
-    expect(tester.takeException(), isNull);
-  }, skip: veriAdvancedMaterialAvailable);
+      );
+      await seed.waitForPendingWrites();
+      seed.dispose();
+      final controller = await pumpApp(tester, store);
+      await tester.pumpAndSettle();
+      expect(controller.advancedMaterialEnabled, isTrue);
+      expect(controller.entries.single.id, 'recovery-entry');
+      expect(
+        find.byType(VeriNavigationGlassLens),
+        supported ? findsOneWidget : findsNothing,
+      );
+      final context = tester.element(find.byType(HomePage));
+      expect(VeriMaterialScope.advancedOf(context), supported);
+      unawaited(
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute<void>(builder: (_) => const SettingsPage())),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('advanced_material_setting')),
+        supported ? findsOneWidget : findsNothing,
+      );
+      expect(store.read('verifin.advanced_material.v1'), 'true');
+      expect(tester.takeException(), isNull);
+    },
+    skip: !veriGlassDesignPreview || kIsWeb,
+    variant: TargetPlatformVariant({
+      TargetPlatform.android,
+      TargetPlatform.windows,
+    }),
+  );
+
+  testWidgets(
+    '未验收平台直接创建透镜也只显示实时内容',
+    (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: VeriNavigationGlassLens(
+            source: Text('live navigation'),
+            target: Rect.fromLTWH(0, 0, 80, 48),
+            pressed: true,
+            motion: 1,
+            revision: 1,
+            keyPrefix: 'native_guard',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('live navigation'), findsOneWidget);
+      expect(find.byType(LayoutBuilder), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+    skip: kIsWeb,
+    variant: TargetPlatformVariant({TargetPlatform.windows}),
+  );
 
   test('材质保存失败不更新运行状态或冷读结果，并报告失败', () async {
     final store = FailingMaterialStore();

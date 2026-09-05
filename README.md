@@ -197,4 +197,4 @@ Veri Fin 是自由软件，基于 **GNU 通用公共许可证 v3.0 或更高版�
 
 开发界面前请阅读 [统一设计与交互规范](docs/design-system.md)。玻璃候选预览中的高级材质目前仅 Web 可开启，默认关闭，设置保存后启用；偏好仅保存在当前设备，不随账目备份迁移。
 
-v1.16.0 起发布包包含统一设计。复现手机外观时，Flutter 运行/构建命令附加 `--dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true`；Android 同时指定 `--flavor github`。高级材质在原生端因闪退报告暂时停用，仅 Web 保留实验开关；已保存开启的设备会回退普通磨砂，无需清除数据。
+v1.16.0 起发布包包含统一设计。复现手机外观时，Flutter 运行/构建命令附加 `--dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true`；Android 同时指定 `--flavor github`。当前源码已修复逐段模糊高光引起的 GPU 资源压力，恢复 Android 与 Web 高级材质开关；默认关闭，保存后生效，保留旧偏好和账目。CI 与本地验收统一使用 Flutter **3.47.2**；真机证据和独立诊断命令见 [Android 玻璃调查](docs/dev/android-glass-investigation.md)。已发布 v1.16.1 的保护行为不变，正式更新仍须通过 CI 发版。
