@@ -54,8 +54,9 @@ void main() {
     expect(reopened.advancedMaterialEnabled, isTrue);
   });
 
+  const nativeRecoveryDescription = '原生冷启动忽略已开启材质且保留交易和偏好';
   testWidgets(
-    '原生冷启动忽略已开启材质且保留交易和偏好',
+    nativeRecoveryDescription,
     (tester) async {
       final store = LocalKeyValueStore();
       store.write('verifin.advanced_material.v1', 'true');
@@ -155,8 +156,9 @@ void main() {
     expect(taps, 1);
   });
 
+  const materialToggleDescription = '关闭不创建透镜，设置草稿保存后开启，再关闭会释放透镜';
   testWidgets(
-    '关闭不创建透镜，设置草稿保存后开启，再关闭会释放透镜',
+    materialToggleDescription,
     (tester) async {
       final controller = await pumpApp(tester);
       await tester.pumpAndSettle();
