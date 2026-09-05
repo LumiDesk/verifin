@@ -1,5 +1,8 @@
 # Veri Fin UI 规范
 
+当前默认规范继续有效。[统一设计候选方案](dev/unified-design-preview.md) 仅在显式
+预览构建中改变材质、间距和字号，等待用户确认后再提升为正式规范。
+
 ## 真实应用 Web 预览
 
 视觉方案直接在根项目 `flutter run -d chrome --web-port 7357` 中评审，使用正式页面、

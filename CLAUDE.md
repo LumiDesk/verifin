@@ -28,6 +28,7 @@ Web 的 SQLite WASM 文件系统持久化到 IndexedDB，偏好通过 SharedPref
 存入浏览器 localStorage。固定 origin/端口并只使用一个标签页编辑；浏览器数据与
 Android 独立。平台能力范围、资源更新与验收见 `docs/dev/web-preview.md`。
 不要再创建独立的演示 UI 工程或复制正式页面；设计评审直接使用真实应用。
+候选统一样式通过 `--dart-define=UNIFIED_DESIGN_PREVIEW=true` 显式开启，默认关闭；范围与评审依据见 `docs/dev/unified-design-preview.md`。
 
 ## 发布与 CI
 

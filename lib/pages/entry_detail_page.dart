@@ -618,7 +618,12 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
             children: <Widget>[
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(14, 8, 14, 20),
+                  padding: const EdgeInsets.fromLTRB(
+                    veriUnifiedDesignPreview ? 20 : 14,
+                    8,
+                    veriUnifiedDesignPreview ? 20 : 14,
+                    20,
+                  ),
                   children: <Widget>[
                     VeriHeader(
                       // 标题展示当前账本名（此前误为固定文案）。

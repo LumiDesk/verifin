@@ -362,7 +362,13 @@ class HomeTrendPanel extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = Theme.of(context).colorScheme.onSurface;
-    final mutedColor = textColor.withValues(alpha: isDark ? 0.62 : 0.52);
+    final mutedColor = textColor.withValues(
+      alpha: veriUnifiedDesignPreview
+          ? 0.68
+          : isDark
+          ? 0.62
+          : 0.52,
+    );
 
     final bigValue = computeHomeMetric(config.big, metricContext);
     final bigColor = homeMetricColor(config.big, bigValue, mutedColor);
@@ -378,7 +384,9 @@ class HomeTrendPanel extends StatelessWidget {
     return VeriCard(
       onTap: onTap,
       quietTap: true,
-      padding: const EdgeInsets.fromLTRB(14, 13, 14, 12),
+      padding: veriUnifiedDesignPreview
+          ? const EdgeInsets.all(20)
+          : const EdgeInsets.fromLTRB(14, 13, 14, 12),
       child: RepaintBoundary(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -432,11 +440,14 @@ class HomeTrendPanel extends StatelessWidget {
                         formatHomeMetric(config.big, bigValue),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.displaySmall
-                            ?.copyWith(
-                              color: bigColor,
-                              fontWeight: FontWeight.w800,
-                            ),
+                        style:
+                            (veriUnifiedDesignPreview
+                                    ? Theme.of(context).textTheme.displayLarge
+                                    : Theme.of(context).textTheme.displaySmall)
+                                ?.copyWith(
+                                  color: bigColor,
+                                  fontWeight: FontWeight.w800,
+                                ),
                       ),
                     ],
                   ),
@@ -462,37 +473,60 @@ class HomeTrendPanel extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: _MetricTile(
-                    metric: config.card1,
-                    metricContext: metricContext,
-                    dark: isDark,
-                    mutedColor: mutedColor,
+            const SizedBox(height: veriUnifiedDesignPreview ? 24 : 10),
+            if (veriUnifiedDesignPreview)
+              Row(
+                children: [
+                  for (final metric in [
+                    config.card1,
+                    config.card2,
+                    config.card3,
+                  ])
+                    SummaryMetric(
+                      label: homeMetricLabel(l10n, metric),
+                      value: formatHomeMetric(
+                        metric,
+                        computeHomeMetric(metric, metricContext),
+                      ),
+                      color: homeMetricColor(
+                        metric,
+                        computeHomeMetric(metric, metricContext),
+                        mutedColor,
+                      ),
+                    ),
+                ],
+              )
+            else
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: _MetricTile(
+                      metric: config.card1,
+                      metricContext: metricContext,
+                      dark: isDark,
+                      mutedColor: mutedColor,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _MetricTile(
-                    metric: config.card2,
-                    metricContext: metricContext,
-                    dark: isDark,
-                    mutedColor: mutedColor,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _MetricTile(
+                      metric: config.card2,
+                      metricContext: metricContext,
+                      dark: isDark,
+                      mutedColor: mutedColor,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _MetricTile(
-                    metric: config.card3,
-                    metricContext: metricContext,
-                    dark: isDark,
-                    mutedColor: mutedColor,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _MetricTile(
+                      metric: config.card3,
+                      metricContext: metricContext,
+                      dark: isDark,
+                      mutedColor: mutedColor,
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
             const SizedBox(height: 12),
             SizedBox(
               height: 138,
@@ -507,7 +541,7 @@ class HomeTrendPanel extends StatelessWidget {
                     chartValues.map((v) => v.abs()).fold(0, math.max),
                   ),
                   labelColor: mutedColor,
-                  glow: isDark,
+                  glow: isDark && !veriUnifiedDesignPreview,
                   tooltipOf: (index) {
                     final day = window.days[index];
                     return ChartTooltip(

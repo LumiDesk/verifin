@@ -389,7 +389,15 @@ class _BudgetExecutionCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(color: color, fontWeight: FontWeight.w900),
+                          ?.copyWith(
+                            // 无预算时这里展示实际支出，不能继承进度条的浅分隔线色。
+                            color: veriUnifiedDesignPreview && budget <= 0
+                                ? (isZeroAmount(expense)
+                                      ? Theme.of(context).colorScheme.onSurface
+                                      : colorForType(EntryType.expense))
+                                : color,
+                            fontWeight: FontWeight.w900,
+                          ),
                     ),
                   ],
                 ),

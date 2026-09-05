@@ -10,14 +10,22 @@ class VeriPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: veriUnifiedDesignPreview ? 6 : 0,
+      ),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: Theme.of(context).brightness == Brightness.dark
-              ? const <Color>[Color(0xFF0B0F15), Color(0xFF111722)]
-              : const <Color>[Color(0xFFF5F8FC), Color(0xFFEFF4FB)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
+        color: veriUnifiedDesignPreview
+            ? Theme.of(context).scaffoldBackgroundColor
+            : null,
+        gradient: veriUnifiedDesignPreview
+            ? null
+            : LinearGradient(
+                colors: Theme.of(context).brightness == Brightness.dark
+                    ? const <Color>[Color(0xFF0B0F15), Color(0xFF111722)]
+                    : const <Color>[Color(0xFFF5F8FC), Color(0xFFEFF4FB)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
       ),
       child: Center(
         child: ConstrainedBox(
@@ -35,7 +43,7 @@ class VeriCard extends StatelessWidget {
     required this.child,
     this.onTap,
     this.quietTap = false,
-    this.padding = const EdgeInsets.all(13),
+    this.padding = const EdgeInsets.all(veriUnifiedDesignPreview ? 18 : 13),
   });
 
   final Widget child;
@@ -46,15 +54,19 @@ class VeriCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final borderRadius = BorderRadius.circular(veriRadiusMd);
+    final borderRadius = BorderRadius.circular(veriCardRadius);
     final decoration = BoxDecoration(
-      color: isDark ? veriSurfaceDark : veriSurfaceLight,
+      color: veriContentSurfaceColor(Theme.of(context).brightness),
       borderRadius: borderRadius,
       border: Border.all(
-        color: isDark ? Colors.white.withValues(alpha: 0.10) : veriLine,
+        color: veriUnifiedDesignPreview
+            ? (isDark ? Colors.white : veriInk).withValues(alpha: 0.045)
+            : isDark
+            ? Colors.white.withValues(alpha: 0.10)
+            : veriLine,
       ),
       boxShadow: <BoxShadow>[
-        if (!isDark)
+        if (!isDark && !veriUnifiedDesignPreview)
           BoxShadow(
             color: const Color(0xFF0F172A).withValues(alpha: 0.045),
             blurRadius: 12,
@@ -160,7 +172,9 @@ class VeriHeader extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
+                    fontWeight: veriUnifiedDesignPreview
+                        ? FontWeight.w700
+                        : FontWeight.w800,
                     letterSpacing: 0,
                   ),
                 ),
@@ -171,9 +185,9 @@ class VeriHeader extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.48),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(
+                        alpha: veriUnifiedDesignPreview ? 0.62 : 0.48,
+                      ),
                       fontWeight: FontWeight.w700,
                     ),
                   ),

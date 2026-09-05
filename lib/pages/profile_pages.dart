@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -302,17 +304,36 @@ class _FeatureGridCard extends StatelessWidget {
         children: <Widget>[
           SectionTitle(title: title),
           const SizedBox(height: 6),
-          GridView.count(
-            crossAxisCount: 4,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            childAspectRatio: 0.82,
-            mainAxisSpacing: 4,
-            crossAxisSpacing: 4,
-            children: tiles
-                .map((data) => _FeatureTile(data: data))
-                .toList(growable: false),
-          ),
+          if (veriUnifiedDesignPreview)
+            for (final item in tiles.indexed) ...<Widget>[
+              if (item.$1 > 0) const Divider(),
+              SettingsRow(
+                leading: VeriIconBox(icon: item.$2.icon, color: item.$2.color),
+                title: item.$2.label,
+                trailing: item.$2.subtitle,
+                trailingIcon: Icons.chevron_right,
+                onTap: item.$2.onTap,
+              ),
+            ]
+          else
+            LayoutBuilder(
+              builder: (context, constraints) => GridView.count(
+                crossAxisCount: 4,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                childAspectRatio: 0.82,
+                // 宫格含固定图标和两行文案，不能随窄屏按比例压低到内容高度以下。
+                mainAxisExtent: math.max(
+                  (constraints.maxWidth - 12) / 4 / 0.82,
+                  100 * MediaQuery.textScalerOf(context).scale(12) / 12,
+                ),
+                mainAxisSpacing: 4,
+                crossAxisSpacing: 4,
+                children: tiles
+                    .map((data) => _FeatureTile(data: data))
+                    .toList(growable: false),
+              ),
+            ),
         ],
       ),
     );

@@ -115,6 +115,7 @@ flutter analyze && flutter test      # 静态检查 + 全部测试
 ```
 
 Web 预览的存储、平台限制和资源维护见 [开发说明](docs/dev/web-preview.md)。
+整体样式评审的显式预览开关与验证方式见 [统一设计候选方案](docs/dev/unified-design-preview.md)，默认构建仍使用已发布外观。
 
 Android 包名 `top.talyra42.verifin`。本地不构建交付 APK——正式安装包由 GitHub CI 生成。
 

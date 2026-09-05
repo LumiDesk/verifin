@@ -1,5 +1,22 @@
 import 'package:flutter/material.dart';
 
+/// 候选设计只通过显式构建参数开启；正常 Android/Web 构建仍使用已发布外观。
+const bool veriUnifiedDesignPreview = bool.fromEnvironment(
+  'UNIFIED_DESIGN_PREVIEW',
+);
+
+// 候选材质令牌：实体内容与中性画布；不用于模拟玻璃折射。
+const Color veriPreviewCanvasLight = Color(0xFFF3F5F8);
+const Color veriPreviewCanvasDark = Color(0xFF101318);
+const Color veriPreviewSurfaceDark = Color(0xFF1A1F27);
+const double veriCardRadius = veriUnifiedDesignPreview ? 20 : veriRadiusMd;
+
+/// 内容卡片与资产封面共用的实体基色。
+Color veriContentSurfaceColor(Brightness brightness) =>
+    brightness == Brightness.dark
+    ? (veriUnifiedDesignPreview ? veriPreviewSurfaceDark : veriSurfaceDark)
+    : veriSurfaceLight;
+
 const Color veriMint = Color(0xFF34DBCB);
 const Color veriCyan = Color(0xFF34C2DB);
 const Color veriBlue = Color(0xFF3498DB);
@@ -15,27 +32,36 @@ const Color veriSurfaceDark = Color(0xFF0E1117);
 const Color veriSurfaceAltLight = Color(0xFFF5F8FC);
 const Color veriSurfaceAltDark = Color(0xFF151A22);
 const double veriRadiusSm = 6;
-const double veriRadiusMd = 8;
-const double veriRadiusLg = 12;
+const double veriRadiusMd = veriUnifiedDesignPreview ? 12 : 8;
+const double veriRadiusLg = veriUnifiedDesignPreview ? 16 : 12;
 const double veriRadiusXl = 24;
-const double veriHeaderHeight = 52;
+const double veriHeaderHeight = veriUnifiedDesignPreview ? 64 : 52;
 const double veriPageMaxWidth = 440;
 
 ThemeData buildVeriFinTheme(Brightness brightness) {
   final isDark = brightness == Brightness.dark;
-  final colorScheme = ColorScheme.fromSeed(
+  final seedScheme = ColorScheme.fromSeed(
     seedColor: veriRoyal,
     brightness: brightness,
     primary: veriRoyal,
     secondary: veriBlue,
     tertiary: veriIncome,
   );
+  final canvas = isDark ? veriPreviewCanvasDark : veriPreviewCanvasLight;
+  final colorScheme = veriUnifiedDesignPreview
+      ? seedScheme.copyWith(
+          surface: canvas,
+          onSurface: isDark ? const Color(0xFFF0F3F8) : veriInk,
+        )
+      : seedScheme;
 
   final baseTheme = ThemeData(
     useMaterial3: true,
     brightness: brightness,
     colorScheme: colorScheme,
-    scaffoldBackgroundColor: isDark
+    scaffoldBackgroundColor: veriUnifiedDesignPreview
+        ? canvas
+        : isDark
         ? const Color(0xFF0B0F15)
         : const Color(0xFFF3F7FC),
     fontFamily: 'Roboto',
@@ -108,7 +134,11 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: isDark ? veriSurfaceAltDark : veriSurfaceLight,
+      fillColor: isDark
+          ? (veriUnifiedDesignPreview
+                ? veriPreviewSurfaceDark
+                : veriSurfaceAltDark)
+          : veriSurfaceLight,
       isDense: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       border: OutlineInputBorder(
@@ -121,7 +151,7 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
   return baseTheme.copyWith(
     textTheme: baseTheme.textTheme.copyWith(
       displayLarge: baseTheme.textTheme.displayLarge?.copyWith(
-        fontSize: 38,
+        fontSize: veriUnifiedDesignPreview ? 40 : 38,
         height: 1.05,
         letterSpacing: 0,
       ),
@@ -131,7 +161,7 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
         letterSpacing: 0,
       ),
       displaySmall: baseTheme.textTheme.displaySmall?.copyWith(
-        fontSize: 26,
+        fontSize: veriUnifiedDesignPreview ? 32 : 26,
         height: 1.12,
         letterSpacing: 0,
       ),
@@ -146,17 +176,17 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
         letterSpacing: 0,
       ),
       titleLarge: baseTheme.textTheme.titleLarge?.copyWith(
-        fontSize: 17,
+        fontSize: veriUnifiedDesignPreview ? 22 : 17,
         height: 1.25,
         letterSpacing: 0,
       ),
       titleMedium: baseTheme.textTheme.titleMedium?.copyWith(
-        fontSize: 14,
+        fontSize: veriUnifiedDesignPreview ? 16 : 14,
         height: 1.25,
         letterSpacing: 0,
       ),
       titleSmall: baseTheme.textTheme.titleSmall?.copyWith(
-        fontSize: 13,
+        fontSize: veriUnifiedDesignPreview ? 14 : 13,
         height: 1.25,
         letterSpacing: 0,
       ),
@@ -186,7 +216,7 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
         letterSpacing: 0,
       ),
       labelSmall: baseTheme.textTheme.labelSmall?.copyWith(
-        fontSize: 10,
+        fontSize: veriUnifiedDesignPreview ? 12 : 10,
         height: 1.2,
         letterSpacing: 0,
       ),
