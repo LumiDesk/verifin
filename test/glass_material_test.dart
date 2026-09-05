@@ -45,10 +45,9 @@ void main() {
               .widgetList<DecoratedBox>(find.byType(DecoratedBox))
               .map((box) => box.decoration)
               .whereType<BoxDecoration>()
-              .where(
-                (surface) =>
-                    surface.color != null && surface.borderRadius != null,
-              );
+              .where((surface) {
+                return surface.color != null && surface.borderRadius != null;
+              });
           expect(surfaces.length, 2);
           for (final surface in surfaces) {
             expect(surface.gradient, isNull);
