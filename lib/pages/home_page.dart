@@ -389,7 +389,7 @@ class HomeTrendPanel extends StatelessWidget {
       onTap: onTap,
       quietTap: true,
       padding: veriUnifiedDesignPreview
-          ? const EdgeInsets.symmetric(horizontal: 14, vertical: 10)
+          ? const EdgeInsets.symmetric(horizontal: 14, vertical: 12)
           : const EdgeInsets.fromLTRB(14, 13, 14, 12),
       child: RepaintBoundary(
         child: Column(
@@ -436,9 +436,10 @@ class HomeTrendPanel extends StatelessWidget {
             ),
             const SizedBox(height: veriUnifiedDesignPreview ? 8 : 12),
             Row(
+              key: const Key('home_primary_metrics'),
               crossAxisAlignment: CrossAxisAlignment.end,
               children: <Widget>[
-                Flexible(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
@@ -468,6 +469,7 @@ class HomeTrendPanel extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Container(
+                  key: const Key('home_summary_pill'),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
                     vertical: 5,
@@ -699,6 +701,26 @@ class BudgetPanel extends StatelessWidget {
           children: [
             Row(
               children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const _CircleArrow(),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Row(
+              children: [
+                SummaryMetric(
+                  key: const Key('home_budget_expense'),
+                  label: l10n.entryTypeExpense,
+                  value: formatExpenseAmount(expense),
+                  color: textColor,
+                ),
                 SizedBox(
                   key: const Key('home_budget_ring'),
                   width: 72,
@@ -727,39 +749,39 @@ class BudgetPanel extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        budget <= 0
-                            ? l10n.notSetBudget
-                            : '${overspent ? l10n.overBudgetLabel : l10n.budgetRemaining} ${formatAmount(remaining.abs())}',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: overspent ? veriExpense : textColor,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        budget <= 0
-                            ? '${l10n.entryTypeExpense} ${formatExpenseAmount(expense)}'
-                            : l10n.budgetTotalLabel(formatAmount(budget)),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: textColor.withValues(alpha: 0.68),
-                        ),
-                      ),
-                    ],
+                SummaryMetric(
+                  key: const Key('home_budget_daily'),
+                  label: l10n.budgetDailyRemaining,
+                  value: formatAmount(
+                    (remaining < 0 ? 0.0 : remaining) / remainingDays,
+                  ),
+                  color: textColor,
+                ),
+              ],
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Flexible(
+                  child: Text(
+                    budget <= 0
+                        ? l10n.notSetBudget
+                        : '${overspent ? l10n.overBudgetLabel : l10n.budgetRemaining} ${formatAmount(remaining.abs())}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: overspent ? veriExpense : textColor,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                const _CircleArrow(),
+                Flexible(
+                  child: Text(
+                    l10n.budgetTotalLabel(formatAmount(budget)),
+                    textAlign: TextAlign.end,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: textColor.withValues(alpha: 0.68),
+                    ),
+                  ),
+                ),
               ],
             ),
             if (categoryRisk != null) ...[

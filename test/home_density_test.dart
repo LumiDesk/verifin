@@ -14,6 +14,17 @@ import 'support/test_harness.dart';
 
 void main() {
   useTestDatabases();
+  testWidgets('概览胶囊靠右对齐，不紧挨主金额', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(393, 852);
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    await tester.pumpAndSettle();
+    final row = tester.getRect(find.byKey(const Key('home_primary_metrics')));
+    final pill = tester.getRect(find.byKey(const Key('home_summary_pill')));
+    expect(pill.right, closeTo(row.right, 0.5));
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('首页保留指标方块和预算圆环，三条交易与预算首屏可见', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(393, 852);
@@ -40,6 +51,16 @@ void main() {
         .top;
     expect(tester.getRect(transactions.last).bottom, lessThan(navTop));
     final budget = find.byKey(const Key('home_compact_budget'));
+    expect(find.byKey(const Key('home_budget_expense')), findsOneWidget);
+    expect(find.byKey(const Key('home_budget_daily')), findsOneWidget);
+    expect(
+      find.descendant(of: budget, matching: find.text('支出')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: budget, matching: find.text('剩余日均')),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('home_budget_ring')), findsOneWidget);
     expect(
       find.descendant(

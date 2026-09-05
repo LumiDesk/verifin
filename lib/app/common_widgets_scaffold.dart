@@ -49,7 +49,7 @@ class VeriCard extends StatelessWidget {
   }) : padding =
            padding ??
            (compact
-               ? const EdgeInsets.symmetric(horizontal: 14, vertical: 10)
+               ? const EdgeInsets.symmetric(horizontal: 14, vertical: 12)
                : const EdgeInsets.all(veriUnifiedDesignPreview ? 18 : 13));
 
   final Widget child;
