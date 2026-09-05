@@ -7,12 +7,10 @@
 用户要求的[磨砂玻璃材质预览](dev/glass-material-preview.md)另通过 `GLASS_DESIGN_PREVIEW` 开启；预算卡必须保持原始布局，不因材质迭代重做结构。
 该预览现按用户参考图使用方向高光和导航透镜 Shader，替代均匀白边；下文旧导航材质的禁止高光规则仅适用于默认实现。
 
-## 真实应用 Web 预览
+## Android 真机评审
 
-视觉方案直接在根项目 `flutter run -d chrome --web-port 7357` 中评审，使用正式页面、
-组件、Controller 和持久化仓储。原独立实验工程已移除，不以演示样式代替产品样式。
-Android 的系统安全区、手势手感、性能与原生功能仍需模拟器/真机验收。
-平台范围见 [Web 开发预览](dev/web-preview.md)。
+视觉方案使用独立 diagnostic flavor 的正式入口在手机上评审；保留桌面 widget 布局测试。
+环境检测、缺失工具自动安装、日志和 release/R8 验收见 [Android 开发](dev/android-development.md)。
 
 ## 浮动根导航与中性玻璃
 

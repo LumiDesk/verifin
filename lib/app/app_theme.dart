@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// 候选设计只通过显式构建参数开启；正常 Android/Web 构建仍使用已发布外观。
+/// 候选设计只通过显式构建参数开启；正常 Android 构建仍使用已发布外观。
 const bool veriUnifiedDesignPreview = bool.fromEnvironment(
   'UNIFIED_DESIGN_PREVIEW',
 );

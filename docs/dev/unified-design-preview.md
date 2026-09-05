@@ -1,5 +1,7 @@
 # 统一设计候选方案
 
+> 当前平台范围（2026-09-05）：已移除 Web 开发预览，使用 [Android 真机流程](android-development.md)。下文涉及浏览器的结果仅保留为历史验证记录，不代表当前支持。
+
 当前约定统一收录于 [设计与交互规范](../design-system.md)。高级光照和透镜还需在设置中开启“高级材质”（默认关闭）；本文相关光学描述仅适用于开启后。
 
 状态：待用户评审，默认关闭。分支 `talyra42/unified-design-preview`。
@@ -58,9 +60,9 @@
 
 ```bash
 # 正式应用 + 候选样式，固定端口以复用浏览器预览数据
-flutter run -d web-server --web-hostname 127.0.0.1 --web-port 7357 --dart-define=UNIFIED_DESIGN_PREVIEW=true
+# 历史 Web 命令已移除；当前真机命令见 android-development.md。
 # 或生成可由静态服务器打开的候选构建
-flutter build web --no-web-resources-cdn --dart-define=UNIFIED_DESIGN_PREVIEW=true
+# 历史 Web 命令已移除；当前真机命令见 android-development.md。
 ```
 
 在真实设置页切换浅/深主题。浏览器保持 393 × 852；另外用 360dp 测试窄屏。

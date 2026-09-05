@@ -18,9 +18,6 @@ migration:
     - platform: android
       create_revision: ad70ec4617166f1c38e5d2bfd388af71fda14f06
       base_revision: ad70ec4617166f1c38e5d2bfd388af71fda14f06
-    - platform: web
-      create_revision: ad70ec4617166f1c38e5d2bfd388af71fda14f06
-      base_revision: ad70ec4617166f1c38e5d2bfd388af71fda14f06
 
   # User provided section
 

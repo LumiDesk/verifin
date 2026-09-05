@@ -38,7 +38,8 @@ class FailingMaterialStore extends LocalKeyValueStore {
 }
 
 void main() {
-  final skipWeb = !veriGlassDesignPreview || !veriAdvancedMaterialAvailable;
+  final skipAdvanced =
+      !veriGlassDesignPreview || !veriAdvancedMaterialAvailable;
 
   useTestDatabases();
   test('材质默认关闭，保存后冷读，初始化及备份恢复保留本机选择', () async {
@@ -102,36 +103,31 @@ void main() {
       expect(store.read('verifin.advanced_material.v1'), 'true');
       expect(tester.takeException(), isNull);
     },
-    skip: !veriGlassDesignPreview || kIsWeb,
+    skip: !veriGlassDesignPreview,
     variant: TargetPlatformVariant({
       TargetPlatform.android,
       TargetPlatform.windows,
     }),
   );
 
-  testWidgets(
-    '未验收平台直接创建透镜也只显示实时内容',
-    (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: VeriNavigationGlassLens(
-            source: Text('live navigation'),
-            target: Rect.fromLTWH(0, 0, 80, 48),
-            pressed: true,
-            motion: 1,
-            revision: 1,
-            keyPrefix: 'native_guard',
-          ),
+  testWidgets('未验收平台直接创建透镜也只显示实时内容', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: VeriNavigationGlassLens(
+          source: Text('live navigation'),
+          target: Rect.fromLTWH(0, 0, 80, 48),
+          pressed: true,
+          motion: 1,
+          revision: 1,
+          keyPrefix: 'native_guard',
         ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('live navigation'), findsOneWidget);
-      expect(find.byType(LayoutBuilder), findsNothing);
-      expect(tester.takeException(), isNull);
-    },
-    skip: kIsWeb,
-    variant: TargetPlatformVariant({TargetPlatform.windows}),
-  );
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('live navigation'), findsOneWidget);
+    expect(find.byType(LayoutBuilder), findsNothing);
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant({TargetPlatform.windows}));
 
   test('材质保存失败不更新运行状态或冷读结果，并报告失败', () async {
     final store = FailingMaterialStore();
@@ -200,5 +196,5 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(VeriNavigationGlassLens), findsNothing);
     expect(tester.takeException(), isNull);
-  }, skip: skipWeb);
+  }, skip: skipAdvanced);
 }

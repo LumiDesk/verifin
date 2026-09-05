@@ -7,9 +7,9 @@ import 'app_theme.dart';
 import 'glass_lighting.dart';
 
 /// Android 的逐段模糊高光已改为连续网格，并完成 release/R8 真机验收。
-/// 仅开放 Android 与 Web；其他尚未验收的平台仍不加载高级绘制资源。
+/// 仅开放 Android；其他尚未验收的平台仍不加载高级绘制资源。
 bool get veriAdvancedMaterialAvailable =>
-    kIsWeb || defaultTargetPlatform == TargetPlatform.android;
+    defaultTargetPlatform == TargetPlatform.android;
 
 /// 纯展示层依赖；偏好由根组件注入，不让绘制组件访问 Controller/KV。
 class VeriMaterialScope extends InheritedWidget {

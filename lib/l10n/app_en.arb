@@ -1726,8 +1726,5 @@
     "placeholders": {"currency": {"type": "String"}}
   },
   "importSaveExchangeRates": "Save imported rates",
-  "importSaveExchangeRatesHint": "Off by default. When enabled, only rates used by included transactions are saved.",
-  "webPreviewUnsupported": "Web preview supports manual entries, reports, images, and file import/export. AI requests, screenshot OCR, WebDAV, automatic folder backups, system notifications, and home screen widgets require Android verification.",
-  "webDownloadRequested": "Download requested. Check your browser downloads to confirm the file.",
-  "webDownloadLabel": "Browser download"
+  "importSaveExchangeRatesHint": "Off by default. When enabled, only rates used by included transactions are saved."
 }

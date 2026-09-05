@@ -87,7 +87,7 @@
 
 | 领域 | 方案 |
 | --- | --- |
-| 框架 | Flutter 3 / Dart 3（Android 交付 + Web 开发预览） |
+| 框架 | Flutter 3 / Dart 3（仅 Android） |
 | 状态管理 | 单一 `ChangeNotifier` Controller + `InheritedNotifier` 注入，无第三方状态库 |
 | 数据存储 | `sqflite`（账目类，含版本迁移）+ `SharedPreferences`（偏好类） |
 | 国际化 | Flutter 官方 gen-l10n（ARB，中文模板 + 英文） |
@@ -109,12 +109,10 @@ git clone git@github.com:LumiDesk/verifin.git
 cd verifin
 flutter pub get                      # 安装依赖（自动生成 l10n）
 flutter run -d <android-device-id> --flavor github  # Android 模拟器或真机预览
-flutter run -d chrome --web-port 7357 # 真实应用 Web 预览，浏览器独立保存数据
-flutter build web --no-web-resources-cdn # Web 编译门禁
 flutter analyze && flutter test      # 静态检查 + 全部测试
 ```
 
-Web 预览的存储、平台限制和资源维护见 [开发说明](docs/dev/web-preview.md)。
+真机调试、缺失工具自动安装和隔离验收见 [Android 开发说明](docs/dev/android-development.md)。
 整体样式评审的显式预览开关与验证方式见 [统一设计候选方案](docs/dev/unified-design-preview.md)，默认构建仍使用已发布外观。
 
 Android 包名 `top.talyra42.verifin`。本地不构建交付 APK——正式安装包由 GitHub CI 生成。
@@ -195,6 +193,8 @@ Veri Fin 是自由软件，基于 **GNU 通用公共许可证 v3.0 或更高版�
 
 </div>
 
-开发界面前请阅读 [统一设计与交互规范](docs/design-system.md)。玻璃候选预览中的高级材质目前仅 Web 可开启，默认关闭，设置保存后启用；偏好仅保存在当前设备，不随账目备份迁移。
+开发界面前请阅读 [统一设计与交互规范](docs/design-system.md)。Android 玻璃候选预览中的高级材质可开启，默认关闭，设置保存后启用；偏好仅保存在当前设备，不随账目备份迁移。
 
-v1.16.0 起发布包包含统一设计。复现手机外观时，Flutter 运行/构建命令附加 `--dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true`；Android 同时指定 `--flavor github`。当前源码已修复逐段模糊高光引起的 GPU 资源压力，恢复 Android 与 Web 高级材质开关；默认关闭，保存后生效，保留旧偏好和账目。CI 与本地验收统一使用 Flutter **3.47.2**；真机证据和独立诊断命令见 [Android 玻璃调查](docs/dev/android-glass-investigation.md)。已发布 v1.16.1 的保护行为不变，正式更新仍须通过 CI 发版。
+v1.16.0 起发布包包含统一设计。复现手机外观时，Flutter 运行/构建命令附加 `--dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true`；Android 同时指定 `--flavor github`。当前源码已修复逐段模糊高光引起的 GPU 资源压力，恢复 Android 高级材质开关；默认关闭，保存后生效，保留旧偏好和账目。CI 与本地验收统一使用 Flutter **3.47.2**；真机证据和独立诊断命令见 [Android 开发与环境自动补齐](docs/dev/android-development.md)。已发布 v1.16.1 的保护行为不变，正式更新仍须通过 CI 发版。
+
+开发与评审仅使用 Android；Web 工程及浏览器适配已移除。规范入口为 [AGENTS.md](AGENTS.md)，架构导览见 [docs/dev/architecture.md](docs/dev/architecture.md)。

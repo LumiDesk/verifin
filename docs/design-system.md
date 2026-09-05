@@ -1,14 +1,14 @@
 # Veri Fin 统一设计与交互规范
 
-2026-09-05 Android 玻璃修复：旧方向高光的逐段模糊已在 REDMI K90 Pro Max（Android 17）独立复现 GPU 分配失败及 Vulkan 0x14 崩溃；连续透明度网格替换后，Flutter 3.47.2 release/R8 已完成该机开启、保存、冷启动、切页、深浅色及关闭验收，真实导航 Shader 集成测试通过。Android 与 Web 恢复高级材质，默认关闭，旧 KV 保留；其他平台仍保护。不能据此断言所有 GPU 均已验证。CI 固定 Flutter 3.47.2，升级引擎须重做真机验收；正式包仍由 CI 构建，须用户明确授权发版，禁止要求清除应用数据。
+2026-09-05 Android 玻璃修复：旧方向高光的逐段模糊已在 REDMI K90 Pro Max（Android 17）独立复现 GPU 分配失败及 Vulkan 0x14 崩溃；连续透明度网格替换后，Flutter 3.47.2 release/R8 已完成该机开启、保存、冷启动、切页、深浅色及关闭验收，真实导航 Shader 集成测试通过。Android 恢复高级材质，默认关闭，旧 KV 保留；其他平台仍保护。不能据此断言所有 GPU 均已验证。CI 固定 Flutter 3.47.2，升级引擎须重做真机验收；正式包仍由 CI 构建，须用户明确授权发版，禁止要求清除应用数据。
 
 本文件是后续页面、组件和材质修改的统一入口。以用户已确认的约定为准；研究稿只解释背景，不能用旧实验方案覆盖这里的布局。更新规则时同步本文件、组件注册表及相关测试。
 
 ## 生效范围
 
-正式应用以 Android 交付，Web 使用同一套真实页面、Controller、组件和持久化逻辑进行开发预览。禁止在页面插入“Web 开发预览”等开发提示，平台能力边界写入开发文档。
+正式应用仅以 Android 交付，真机调试使用同一套真实页面、Controller、组件和持久化逻辑。独立 diagnostic applicationId 隔离数据；不再维护 Web 预览。
 
-候选外观仍由 `UNIFIED_DESIGN_PREVIEW` 控制，内容玻璃还需 `GLASS_DESIGN_PREVIEW`。用户于 2026-09-05 授权发布 minor 版本真机体验：从 v1.16.0 开始，CI 的 APK/AAB 及 Web 编译门禁均显式开启上述两个参数。无参数开发构建暂保留旧路径用于回归；本地复现手机外观须传同样参数。候选方案的共享排版现覆盖全部页面：公共页面骨架、标题、卡片默认使用同一套紧凑参数，独立记账编辑页同步 16dp 页边距；图表、表单和弹层的业务专用占位仍按内容保留。
+候选外观仍由 `UNIFIED_DESIGN_PREVIEW` 控制，内容玻璃还需 `GLASS_DESIGN_PREVIEW`。用户于 2026-09-05 授权发布 minor 版本真机体验：从 v1.16.0 开始，CI 的 APK/AAB 编译门禁均显式开启上述两个参数。无参数开发构建暂保留旧路径用于回归；本地复现手机外观须传同样参数。候选方案的共享排版现覆盖全部页面：公共页面骨架、标题、卡片默认使用同一套紧凑参数，独立记账编辑页同步 16dp 页边距；图表、表单和弹层的业务专用占位仍按内容保留。
 
 ## 已确认的布局
 
@@ -58,13 +58,13 @@
 
 高级材质使用设备 KV `verifin.advanced_material.v1`，默认 false，全局不分账本，不进账目备份，恢复备份和初始化账目都保留当前设备选择。Controller 完成落盘后才更新独立 `ValueNotifier`；根组件注入 `VeriMaterialScope`，绘制组件不直接访问 Controller/KV。
 
-账目仍以 SQLite 为权威，Web 持久化到 IndexedDB；本地优先、AI 只生成待确认草稿、Android 原生能力必须真实可用。完整工程和业务不变量仍以 [AGENTS.md](../AGENTS.md) 与 [技术决策](dev/tech-decisions.md) 为准。
+账目仍以 Android 本机 SQLite 为权威；本地优先、AI 只生成待确认草稿、Android 原生能力必须真实可用。完整工程和业务不变量仍以 [AGENTS.md](../AGENTS.md) 与 [技术决策](dev/tech-decisions.md) 为准。
 
 ## 修改与验收
 
 先查 [组件注册表](dev/components.md)，复用后再扩展。新增可见文案完成中英文 l10n；不为材质调整改动金额、预算或退款口径。按独立功能提交，不积压工作区，不擅自推送或发版。
 
-浏览器设为 **393×852**，补充 360dp、大字号、浅/深色和高对比度测试。实际检查保存/取消/刷新、导航点击/拖动/取消、菜单、键盘和滚动末项；材质开关开、关都验证。运行 format、analyze、相关测试与全量测试。Android 手势、系统安全区及真实流畅度仍需真机验证，Web 截图不替代它。
+widget 布局测试使用 **393×852**，补充 360dp、大字号、浅/深色和高对比度测试。实际检查保存/取消/冷启动、导航点击/拖动/取消、菜单、键盘和滚动末项；材质开关开、关都验证。运行 format、analyze、相关测试与全量测试。Android 手势、系统安全区及真实流畅度仍需真机验证，桌面截图不替代它。
 
 ## 详细资料
 
@@ -74,5 +74,5 @@
 - [玻璃实现与研究出处](dev/glass-material-preview.md)
 - [统一设计候选记录](dev/unified-design-preview.md) / [密度研究](dev/design-density-research.md)
 - [短反馈系统](dev/feedback-system.md)
-- [Web 预览与平台能力](dev/web-preview.md)
+- [Android 开发与工具链](dev/android-development.md)
 - [架构、数据与备份取舍](dev/tech-decisions.md) / [已接受限制](dev/known-limitations.md)

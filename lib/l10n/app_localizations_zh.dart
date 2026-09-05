@@ -4215,14 +4215,4 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get importSaveExchangeRatesHint => '默认关闭；开启后只保存最终纳入交易使用的当日汇率。';
-
-  @override
-  String get webPreviewUnsupported =>
-      'Web 预览支持手动记账、统计、图片和文件导入导出。AI 网络请求、截图 OCR、WebDAV、目录自动备份、系统通知和桌面小组件仍需在 Android 验证。';
-
-  @override
-  String get webDownloadRequested => '已交给浏览器下载，请在浏览器下载列表中确认文件。';
-
-  @override
-  String get webDownloadLabel => '浏览器下载';
 }

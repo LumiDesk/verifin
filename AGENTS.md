@@ -1,14 +1,14 @@
 # Veri Fin Agent 开发指南
 
-2026-09-05 Android 玻璃修复：旧方向高光的逐段模糊已在 REDMI K90 Pro Max（Android 17）独立复现 GPU 分配失败及 Vulkan 0x14 崩溃；连续透明度网格替换后，Flutter 3.47.2 release/R8 已完成该机开启、保存、冷启动、切页、深浅色及关闭验收，真实导航 Shader 集成测试通过。Android 与 Web 恢复高级材质，默认关闭，旧 KV 保留；其他平台仍保护。不能据此断言所有 GPU 均已验证。CI 固定 Flutter 3.47.2，升级引擎须重做真机验收；正式包仍由 CI 构建，须用户明确授权发版，禁止要求清除应用数据。
+2026-09-05 Android 玻璃修复：旧方向高光的逐段模糊已在 REDMI K90 Pro Max（Android 17）独立复现 GPU 分配失败及 Vulkan 0x14 崩溃；连续透明度网格替换后，Flutter 3.47.2 release/R8 已完成该机开启、保存、冷启动、切页、深浅色及关闭验收，真实导航 Shader 集成测试通过。Android 恢复高级材质，默认关闭，旧 KV 保留；其他平台仍保护。不能据此断言所有 GPU 均已验证。CI 固定 Flutter 3.47.2，升级引擎须重做真机验收；正式包仍由 CI 构建，须用户明确授权发版，禁止要求清除应用数据。
 
-v1.16.0 发布说明：CI Android 两渠道及 Web 门禁显式带 `--dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true`，保证手机包含已评审外观。高级材质仍默认关闭、由设置保存控制。本地与发布包对照时必须使用相同参数；无参数构建保留旧外观用于回归。
+v1.16.0 发布说明：CI Android 两渠道显式带 `--dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true`，保证手机包含已评审外观。高级材质仍默认关闭、由设置保存控制。本地与发布包对照时必须使用相同参数；无参数构建保留旧外观用于回归。
 
 界面调整必读 [统一设计与交互规范](docs/design-system.md)：集中记录已确认布局、两档材质、深浅色光照、设置持久化与验收约定；历史研究稿不得覆盖该规范。候选统一排版现覆盖全部页面；导航静止必须显示实时文字，预算环禁止内外白线。
 
 ## 文档作用与工作语言
 
-本文件是仓库内 Agent 与贡献者的执行规范。Veri Fin 是一个以 Android 交付、支持真实应用 Web 开发预览的 Flutter 记账应用：Dart 包名为 `verifin`，Android applicationId 为 `top.talyra42.verifin`。
+本文件是仓库内 Agent 与贡献者的执行规范。Veri Fin 是一个仅交付 Android 的 Flutter 记账应用：Dart 包名为 `verifin`，Android applicationId 为 `top.talyra42.verifin`。
 
 - 与用户沟通、说明方案和汇报结果时使用中文；代码符号、命令和提交类型保留英文。
 - 改动聚焦用户请求，不顺手重构无关代码，不覆盖用户已有修改。
@@ -17,7 +17,7 @@ v1.16.0 发布说明：CI Android 两渠道及 Web 门禁显式带 `--dart-defin
 
 ### 文档阅读路线
 
-- `CLAUDE.md`：当前架构与主要功能总览；内容很全，但细节仍需用代码和配置复核。
+- `docs/dev/architecture.md`：架构与源码导航。`CLAUDE.md` 仅链接本文件，不维护第二份规范。
 - `docs/dev/components.md`：组件、弹窗、格式化与纯函数注册表；写相关代码前必读。
 - `docs/ui-guidelines.md`：页面骨架、交互、图表和视觉规范。
 - `docs/dev/tech-decisions.md`：数据口径、备份范围和关键技术取舍；个别历史背景可能已被新实现取代，仍需与代码和测试核对。
@@ -26,11 +26,11 @@ v1.16.0 发布说明：CI Android 两渠道及 Web 门禁显式带 `--dart-defin
 - `docs/dev/category-budget-override-design.md`：分类默认预算与单期覆盖的职责、Issue #28 兼容方案和验收范围。
 - `docs/dev/multi-currency-design.md`：已落地的多币种、离线汇率、跨币种交易/退款、迁移与验收依据；后续修改须保持三层金额和历史冻结口径。
 - `docs/dev/refund-design.md`、`docs/dev/auto-capture-plan.md`、`docs/dev/i18n-verification.md`、`docs/automation.md`：对应领域的设计与验收资料。`refund-design.md` 含历史方案，退款当前行为以源码、测试和 `docs/dev/known-limitations.md` 为准。
-- `docs/dev/web-preview.md`：正式应用 Web 预览、浏览器存储与平台能力边界。
+- `docs/dev/android-development.md`：真机开发、工具链检测和缺失时自动安装、日志、隔离验收及测试应用清理。
 - `docs/dev/unified-design-preview.md`：默认关闭的统一设计候选方案；用户确认前不得把 `UNIFIED_DESIGN_PREVIEW` 默认开启或移除旧外观路径。
 - `docs/dev/glass-material-preview.md`：用户主动要求的内容磨砂玻璃预览，通过额外的 `GLASS_DESIGN_PREVIEW` 开关试验；不得以材质调整为由改动预算等既有结构。
 - 玻璃光效按用户参考图：左上/右下渐隐高光，不用均匀白边；导航允许真实纹理透镜与动态光照，高级材质默认关闭、保存后启用；关闭使用普通磨砂且不创建透镜，深色高光需单独减弱。与旧玻璃文档冲突时以该用户指定方向及最新预览文档为准。
-- `docs/dev/liquid-glass-navigation.md`：浮动根导航的材质边界、指针拖动状态机、窄屏适配、真实应用 Web 验证与后续 Shader 取舍；修改根导航或新增类似玻璃控件前必读。
+- `docs/dev/liquid-glass-navigation.md`：浮动根导航的材质边界、指针拖动状态机、窄屏适配、真实 Android 应用验证与后续 Shader 取舍；修改根导航或新增类似玻璃控件前必读。
 - `docs/dev/feedback-system.md`：根级轻提示 Host 的调用、时长、操作结果、去重、优先级队列与迁移规范；新增或替换短反馈前必读。
 - `README.md`、`docs/product.md`、`docs/acceptance-checklist.md`：用于理解产品和验收范围；其中少量历史描述可能落后，必须与当前实现交叉核对。
 
@@ -64,7 +64,7 @@ v1.16.0 发布说明：CI Android 两渠道及 Web 门禁显式带 `--dart-defin
 - 账本、交易、账户、分组、分类、标签、附件、周期规则和预算等核心数据只认 SQLite。Controller 的内存集合是运行时读取源，不存在 KV 回退。
 - `LedgerRepository.saveX` 的对外语义是“落库后该表内容等于传入集合”。生产实现把“读取行快照、计算 `_incrementalReplace` 差分、事务写入、更新快照”整体串行化；单次失败不得阻塞后续写。附件大 blob 与小型预算表仍可整表覆盖；导入、恢复、重置、删账本及跨表删除走 `replaceAllLedgerData` 原子整替，显式删除命令落库成功后才替换 Controller 内存。
 - 主题、语言、触感、面板配置、备份设置、AI 配置等偏好类小数据走 `LocalKeyValueStore`。新增偏好优先参考主题/语言的独立 `ValueNotifier`，避免继续扩大全树 `notifyListeners()`。
-- Android/Web/测试差异统一采用条件导出；Web 使用 `dart.library.js_interop`，跨平台插件实现共用文件。真实存储、图片、文件能力不得落到测试 stub；Web 明确不支持的系统/网络能力须标注边界。
+- 只维护 Android；保留生产原生实现与测试注入/stub 边界，禁止重新引入浏览器适配。真实存储、图片、文件能力不得落到测试 stub。
 
 ### 领域不变量
 
@@ -88,24 +88,14 @@ flutter test --plain-name "关键字"
 dart format .
 ```
 
-电脑端直接运行正式应用的 Web 开发预览（同一 `lib/main.dart`、Controller 和仓储）：
+手机开发前先按 `docs/dev/android-development.md` 检测 Flutter（与 CI 固定版本一致）、Java、Android SDK 与 adb。
+**当前环境缺工具时，必须自动尝试从官方来源安装/补齐并复检；不能仅报告“没有环境”。**
+优先复用已安装版本，不覆盖其他项目的 SDK 或签名；权限、下载或手机授权实际受阻时才请求用户处理。
+默认使用独立 `diagnostic` flavor 运行正式入口做 hot reload 和 release/R8 验收，避免覆盖用户账目。
+不再维护 Web 预览、WASM 或浏览器测试；不要创建独立演示 UI。布局测试保留 393×852 与窄屏尺寸，
+视觉迭代保留首页预算圆环、支出/剩余日均、概览指标方块和“我的”四列宫格。
 
-```bash
-flutter pub get
-flutter run -d chrome --web-port 7357
-flutter build web --no-web-resources-cdn
-```
-
-Web 的 SQLite WASM 文件系统持久化到 IndexedDB，偏好通过 SharedPreferences
-存入浏览器 localStorage。固定 origin/端口并只使用一个标签页编辑；浏览器数据与
-Android 独立。平台能力范围、资源更新与验收见 `docs/dev/web-preview.md`。
-不要再创建独立的演示 UI 工程或复制正式页面；设计评审直接使用真实应用。
-Web 与 Android 保持相同的页面展示，不插入 Web 开发说明横幅或卡片；平台限制写入开发文档，在实际触发不支持的操作时反馈。
-视觉迭代保留用户指定的首页预算圆环及支出、剩余日均等指标、概览指标方块和“我的”四列宫格，优先调整尺寸与间距；未经新的明确要求，不再移除或替换这些结构。
-浏览器 UI 验证先设置标准手机逻辑视口，默认使用 iPhone 15 的 393 × 852；
-截图和交互检查保持同一尺寸，另按需要补窄屏验证。这不是 iOS 平台支持声明。
-
-- Android 运行/构建仍必须显式使用 `--flavor github`；验证 Play 时使用 `--flavor play --dart-define=SELF_UPDATE=false`。浏览器预览不能替代 Android 原生能力、生命周期和性能验收。
+- Android 运行/构建仍必须显式使用 `--flavor github`；验证 Play 时使用 `--flavor play --dart-define=SELF_UPDATE=false`。桌面 widget 测试不能替代 Android 原生能力、生命周期和性能验收。
 - 图形故障隔离是例外：仅本地使用独立 applicationId 的 `--flavor diagnostic`，可运行最小绘制入口或正式 `lib/main.dart` 验收，不能当作交付物。命令、工具链与原机证据见 `docs/dev/android-glass-investigation.md`。
 - 提交前执行 `dart format .`、`flutter analyze` 和 `flutter test`。只改文档时至少做 diff/链接/路径校验，可不运行 Flutter 测试，但要在汇报中说明。
 - 不把本地 `flutter build apk` 当成交付依据；正式 APK/AAB 由 GitHub Actions 构建。

@@ -6,7 +6,8 @@ import 'package:verifin/app/root_navigation.dart';
 import 'package:verifin/app/glass_material.dart';
 
 void main() {
-  final skipWeb = !veriGlassDesignPreview || !veriAdvancedMaterialAvailable;
+  final skipAdvanced =
+      !veriGlassDesignPreview || !veriAdvancedMaterialAvailable;
 
   const navigationDescription = '玻璃滑块按压膨胀、拖动改变高光、取消复位且仍可切页';
   testWidgets(navigationDescription, (tester) async {
@@ -80,5 +81,5 @@ void main() {
     expect(selected, 3);
     expect(find.byKey(const Key('lens_lens_refraction')), findsNothing);
     expect(tester.takeException(), isNull);
-  }, skip: skipWeb);
+  }, skip: skipAdvanced);
 }

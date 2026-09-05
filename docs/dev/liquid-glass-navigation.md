@@ -1,5 +1,7 @@
 # 浮动玻璃根导航：设计与实现经验
 
+> 当前平台范围（2026-09-05）：已移除 Web 开发预览，使用 [Android 真机流程](android-development.md)。下文涉及浏览器的结果仅保留为历史验证记录，不代表当前支持。
+
 当前约定统一收录于 [设计与交互规范](../design-system.md)。高级光照和透镜还需在设置中开启“高级材质”（默认关闭）；本文相关光学描述仅适用于开启后。
 
 2026-09-05 Android 高光资源修复及原机 release Shader 验收已完成，证据与平台范围见
@@ -16,7 +18,7 @@
 
 - Veri Fin 仍是本地优先、紧凑、可信的 Android 记账工具。导航服务于看账和记账，材质不能成为主角。
 - 默认设计中玻璃仅用于悬浮导航/控制层。用户主动要求的[内容玻璃预览](glass-material-preview.md)通过独立开关试验磨砂卡片；不改变此处导航材质和手势约定。
-- Android 是正式交付渠道；Web 开发预览直接运行真实页面和玻璃导航，使用浏览器独立持久化。边界见 [Web 开发预览](web-preview.md)。
+- Android 是正式交付渠道；Web 开发预览直接运行真实页面和玻璃导航，使用浏览器独立持久化。边界见 [Android 真机开发](android-development.md)。
 - 第一版不引入第三方液态玻璃依赖和 Fragment Shader；Android 真折射必须另做性能、Impeller 和中低端设备专项验证。
 
 ## 研究结论
@@ -76,7 +78,7 @@ Shell 调用 `PageController.animateToPage` 跨越多个页面时，`onPageChang
 
 ```bash
 flutter pub get
-flutter run -d chrome --web-port 7357
+flutter run -d <android-device-id> --flavor diagnostic --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
 ```
 
 必须验证：
@@ -92,6 +94,6 @@ flutter run -d chrome --web-port 7357
 - 360dp 视口无溢出；
 - decoration 无渐变，浏览器/Flutter 日志无异常。
 
-提交前运行根项目的 format、analyze、test，并执行 `flutter build web --no-web-resources-cdn`。正式交付仍需 Android 模拟器或真机检查触控、性能、系统安全区和不同刷新率下的动画手感。
+提交前运行根项目的 format、analyze、test，并执行 Android release/R8 真机验收。正式交付仍需 Android 模拟器或真机检查触控、性能、系统安全区和不同刷新率下的动画手感。
 
 高级透镜静止时直接绘制实时图标/文字，仅交互期间使用本次采样且尺寸/revision 匹配的纹理；不得缓存初始文字作为静态选中项。松手恢复实时内容，避免首次显示或切换主题后字形失真。

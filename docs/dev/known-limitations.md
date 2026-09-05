@@ -1,6 +1,6 @@
 # 已知限制与技术债台账
 
-2026-09-05 Android 玻璃修复：旧方向高光的逐段模糊已在 REDMI K90 Pro Max（Android 17）独立复现 GPU 分配失败及 Vulkan 0x14 崩溃；连续透明度网格替换后，Flutter 3.47.2 release/R8 已完成该机开启、保存、冷启动、切页、深浅色及关闭验收，真实导航 Shader 集成测试通过。Android 与 Web 恢复高级材质，默认关闭，旧 KV 保留；其他平台仍保护。不能据此断言所有 GPU 均已验证。CI 固定 Flutter 3.47.2，升级引擎须重做真机验收；正式包仍由 CI 构建，须用户明确授权发版，禁止要求清除应用数据。
+2026-09-05 Android 玻璃修复：旧方向高光的逐段模糊已在 REDMI K90 Pro Max（Android 17）独立复现 GPU 分配失败及 Vulkan 0x14 崩溃；连续透明度网格替换后，Flutter 3.47.2 release/R8 已完成该机开启、保存、冷启动、切页、深浅色及关闭验收，真实导航 Shader 集成测试通过。Android 恢复高级材质，默认关闭，旧 KV 保留；其他平台仍保护。不能据此断言所有 GPU 均已验证。CI 固定 Flutter 3.47.2，升级引擎须重做真机验收；正式包仍由 CI 构建，须用户明确授权发版，禁止要求清除应用数据。
 
 记录 Veri Fin **已知的架构限制、被有意接受的技术债、以及触发整改的阈值**。与 `tech-decisions.md`（记「已决策」）互补：本文件记「已知会痛、但当前不改或分阶段改」的东西，让隐性认知显性化、可追踪。
 
@@ -82,12 +82,3 @@ extension 不行——其调用 `notifyListeners()` 会触发 `invalid_use_of_pr
   量化基线（2026-07 审查 M1）：controller 共 84 处 `notifyListeners()`，`VeriFinScope` 为裸 `InheritedNotifier`，任一通知全树重建 + 四个派生视图缓存全失效。**约定：新增偏好一律照主题/语言的独立 `ValueNotifier` 先例做**（`themePreferenceListenable`/`localePreferenceListenable`），不再往全树广播里加。
 - **BackupCoordinator 窄接口化**（2026-07 审查 M6）：其静态方法直接接收整个 `VeriFinController`、读六七个成员，是全项目唯一「吃整个 controller」的服务（notification_scheduler、ai_client 都是窄注入）。当前可测（`backup_coordinator_test.dart`）、行为正确，改注入面收益有限，暂不动。触发阈值：新增第二个类似协调器、或备份决策逻辑需要独立轻量单测时，改为窄参数注入（settings、webdavConfig、`exportJson` 回调、logger）。**勿再复制此模式。**
 - **`Clock` 依赖注入**：ID 碰撞隐患已通过统一的 `_generateId`（微秒时间戳 + 单调序号）根治；批量/幂等路径（导入计数器、周期规则确定性 id）本就安全。剩余的「时间可控测试」需求已由 `applyDueRecurring(now)` 这类传参覆盖，全量注入 Clock 收益有限，暂缓。
-
-### Web 开发预览边界
-
-Web 直接运行真实页面和 SQLite 仓储；当前定位是开发预览。AI 网络请求、WebDAV、
-目录自动备份、OCR、系统通知、生物识别、FLAG_SECURE、桌面小组件和 APK 安装不支持。
-数据按 origin 隔离，仅支持单标签页编辑（Controller 内存状态尚无跨标签失效广播）；
-清理站点数据/隐私模式/浏览器存储回收可能丢失本地预览数据。触发公开 Web 交付或
-多人/多标签需求时，必须补存储持久化权限、跨标签协调、浏览器兼容和平台功能验收。
-当前验收与替代操作见 [web-preview.md](web-preview.md)。

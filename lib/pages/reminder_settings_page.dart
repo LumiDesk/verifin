@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../app/common_widgets.dart';
 import '../app/feedback.dart';
@@ -87,13 +86,11 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                         icon: Icons.notifications_active_outlined,
                         title: Text(AppLocalizations.of(context).reminderDaily),
                         value: settings.enabled,
-                        onChanged: kIsWeb
-                            ? null
-                            : (enabled) => setState(
-                                () => _draftSettings = settings.copyWith(
-                                  enabled: enabled,
-                                ),
-                              ),
+                        onChanged: (enabled) => setState(
+                          () => _draftSettings = settings.copyWith(
+                            enabled: enabled,
+                          ),
+                        ),
                       ),
                       if (settings.enabled) ...<Widget>[
                         const Divider(height: 1),

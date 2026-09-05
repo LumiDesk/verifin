@@ -4339,15 +4339,4 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get importSaveExchangeRatesHint =>
       'Off by default. When enabled, only rates used by included transactions are saved.';
-
-  @override
-  String get webPreviewUnsupported =>
-      'Web preview supports manual entries, reports, images, and file import/export. AI requests, screenshot OCR, WebDAV, automatic folder backups, system notifications, and home screen widgets require Android verification.';
-
-  @override
-  String get webDownloadRequested =>
-      'Download requested. Check your browser downloads to confirm the file.';
-
-  @override
-  String get webDownloadLabel => 'Browser download';
 }

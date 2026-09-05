@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../app/ai/ai_client.dart';
 import '../app/ai/ai_entry_parser.dart';
@@ -22,14 +21,6 @@ import 'entry_detail_page.dart';
 
 /// AI 未配置时弹引导（去 AI 设置页），返回是否已配置可继续。
 Future<bool> ensureAiConfigured(BuildContext context) async {
-  if (kIsWeb) {
-    unawaited(
-      VeriFeedbackHost.of(context).showMessage(
-        message: AppLocalizations.of(context).webPreviewUnsupported,
-      ),
-    );
-    return false;
-  }
   final controller = VeriFinScope.of(context);
   if (controller.aiSettings.isConfigured) {
     return true;

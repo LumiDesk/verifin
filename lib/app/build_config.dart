@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
-
 /// 构建期分发渠道开关。
 ///
 /// 应用内自更新（检查 GitHub Release → 下载 APK → 拉起安装）仅用于 GitHub 自分发。
@@ -8,5 +6,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 ///
 /// CI 构建 Play 版（play flavor 的 AAB）时传 `--dart-define=SELF_UPDATE=false`；
 /// GitHub 版（github flavor 的 APK）默认 `true`，保留自更新。
-const bool kSelfUpdateEnabled =
-    !kIsWeb && bool.fromEnvironment('SELF_UPDATE', defaultValue: true);
+const bool kSelfUpdateEnabled = bool.fromEnvironment(
+  'SELF_UPDATE',
+  defaultValue: true,
+);

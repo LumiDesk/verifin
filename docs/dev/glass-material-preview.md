@@ -1,6 +1,8 @@
 # 统一磨砂玻璃材质预览
 
-2026-09-05 Android 玻璃修复：旧方向高光的逐段模糊已在 REDMI K90 Pro Max（Android 17）独立复现 GPU 分配失败及 Vulkan 0x14 崩溃；连续透明度网格替换后，Flutter 3.47.2 release/R8 已完成该机开启、保存、冷启动、切页、深浅色及关闭验收，真实导航 Shader 集成测试通过。Android 与 Web 恢复高级材质，默认关闭，旧 KV 保留；其他平台仍保护。不能据此断言所有 GPU 均已验证。CI 固定 Flutter 3.47.2，升级引擎须重做真机验收；正式包仍由 CI 构建，须用户明确授权发版，禁止要求清除应用数据。
+> 当前平台范围（2026-09-05）：已移除 Web 开发预览，使用 [Android 真机流程](android-development.md)。下文涉及浏览器的结果仅保留为历史验证记录，不代表当前支持。
+
+2026-09-05 Android 玻璃修复：旧方向高光的逐段模糊已在 REDMI K90 Pro Max（Android 17）独立复现 GPU 分配失败及 Vulkan 0x14 崩溃；连续透明度网格替换后，Flutter 3.47.2 release/R8 已完成该机开启、保存、冷启动、切页、深浅色及关闭验收，真实导航 Shader 集成测试通过。Android 恢复高级材质，默认关闭，旧 KV 保留；其他平台仍保护。不能据此断言所有 GPU 均已验证。CI 固定 Flutter 3.47.2，升级引擎须重做真机验收；正式包仍由 CI 构建，须用户明确授权发版，禁止要求清除应用数据。
 
 当前约定统一收录于 [设计与交互规范](../design-system.md)。高级光照和透镜还需在设置中开启“高级材质”（默认关闭）；本文相关光学描述仅适用于开启后。
 
@@ -57,7 +59,7 @@ pub 依赖。实时背景模糊不同于真实折射，不用静态高光或渐�
 和纹理就绪，检查膨胀、拖动与选中结果，不能以 fallback 通过。
 
 ```bash
-flutter run --no-pub -d web-server --web-port 7358 --target integration_test/glass_navigation_test.dart --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
+# 历史 Web 命令已移除；当前真机命令见 android-development.md。
 ```
 
 本轮方向光更新验证：默认回归 919 项通过（6 项候选专用测试跳过）；方向光、材质、
@@ -82,7 +84,7 @@ flutter run --no-pub -d web-server --web-port 7358 --target integration_test/gla
 ## 运行与验证
 
 ```bash
-flutter build web --no-web-resources-cdn --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
+# 历史 Web 命令已移除；当前真机命令见 android-development.md。
 flutter test test/glass_material_test.dart test/home_density_test.dart test/unified_design_preview_test.dart --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
 ```
 

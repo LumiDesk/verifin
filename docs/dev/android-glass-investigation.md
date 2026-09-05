@@ -1,5 +1,7 @@
 # Android 高级材质崩溃调查
 
+> 当前平台范围（2026-09-05）：已移除 Web 开发预览，使用 [Android 真机流程](android-development.md)。下文涉及浏览器的结果仅保留为历史验证记录，不代表当前支持。
+
 ## 2026-09-05 历史证据
 
 - 手机：REDMI K90 Pro Max（25102RKBEC / myron），SM8850，Android 17 / API 37。
