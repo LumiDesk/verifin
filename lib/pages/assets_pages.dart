@@ -186,177 +186,186 @@ class _AssetsPageState extends State<AssetsPage> {
             ),
           ),
           const SizedBox(height: 10),
-          Container(
-            key: const Key('asset_cover_card'),
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              color: hasAssetCover
-                  ? null
-                  : veriContentSurfaceColor(Theme.of(context).brightness),
-              borderRadius: BorderRadius.circular(veriCardRadius),
-              border: Border.all(
-                color: veriUnifiedDesignPreview
-                    ? Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.045)
-                    : Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white.withValues(alpha: 0.10)
-                    : veriLine,
-              ),
-              image: !hasAssetCover
-                  ? null
-                  : DecorationImage(
-                      image: imageProviderForSource(controller.assetCoverUrl),
-                      fit: BoxFit.cover,
-                      alignment: Alignment.center,
-                    ),
-              boxShadow: <BoxShadow>[
-                if (!veriUnifiedDesignPreview &&
-                    Theme.of(context).brightness == Brightness.light)
-                  BoxShadow(
-                    color: const Color(0xFF0F172A).withValues(alpha: 0.045),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
-                  ),
-              ],
-            ),
-            child: Stack(
-              children: <Widget>[
-                if (hasAssetCover)
-                  Positioned.fill(
-                    child: ColoredBox(
-                      color: Colors.black.withValues(alpha: 0.28),
-                    ),
-                  ),
-                Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: Text(
-                              AppLocalizations.of(context).netAssets,
-                              style: TextStyle(color: assetCardMutedColor),
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: AppLocalizations.of(
-                              context,
-                            ).assetsChangeCover,
-                            onPressed: () => _openDisplaySettings(context),
-                            style: IconButton.styleFrom(
-                              fixedSize: const Size(32, 32),
-                              minimumSize: const Size(32, 32),
-                              padding: EdgeInsets.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            icon: Icon(
-                              Icons.photo_size_select_actual_outlined,
-                              color: assetCardMutedColor,
-                              size: 18,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        assets == null || liabilities == null
-                            ? '—'
-                            : formatUserMoney(
-                                assets + liabilities,
-                                baseCurrencyCode,
-                              ),
-                        style: Theme.of(context).textTheme.displaySmall
-                            ?.copyWith(
-                              color: assetCardTextColor,
-                              fontWeight: FontWeight.w800,
-                            ),
-                      ),
-                      const SizedBox(height: 18),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: <Widget>[
-                          Text(
-                            AppLocalizations.of(context).assetsAmount(
-                              assets == null
-                                  ? '—'
-                                  : formatUserMoney(assets, baseCurrencyCode),
-                            ),
-                            style: TextStyle(color: assetCardTextColor),
-                          ),
-                          Text(
-                            AppLocalizations.of(context).liabilitiesAmount(
-                              liabilities == null
-                                  ? '—'
-                                  : formatUserMoney(
-                                      liabilities.abs(),
-                                      baseCurrencyCode,
-                                    ),
-                            ),
-                            style: TextStyle(color: assetCardTextColor),
-                          ),
-                        ],
-                      ),
-                      if (oldestValuationRateDate != null) ...<Widget>[
-                        const SizedBox(height: 8),
-                        Text(
-                          AppLocalizations.of(context).assetValuationRateTrace(
-                            currencyDateKey(oldestValuationRateDate),
-                            valuation.staleAccountIds.isEmpty
-                                ? ''
-                                : ' · ${AppLocalizations.of(context).exchangeRateStale}',
-                          ),
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: assetCardMutedColor),
-                        ),
-                      ],
-                      const SizedBox(height: 14),
-                      if (assetTrendValues == null)
-                        SizedBox(
-                          height: 112,
-                          child: Center(
-                            child: Text(
-                              AppLocalizations.of(
-                                context,
-                              ).assetTrendMissingRate,
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: assetCardMutedColor),
-                            ),
-                          ),
-                        )
-                      else
-                        SizedBox(
-                          height: 112,
-                          child: InteractiveTrendChart(
-                            color: assetCardTextColor,
-                            values: assetTrendValues,
-                            xLabels: evenMonthAxisLabels(),
-                            labelColor: assetCardMutedColor,
-                            tooltipOf: (index) => ChartTooltip(
-                              title: AppLocalizations.of(
-                                context,
-                              ).monthNumber(index + 1),
-                              lines: <ChartTooltipLine>[
-                                ChartTooltipLine(
-                                  text: AppLocalizations.of(context)
-                                      .netAssetsAmount(
-                                        formatUserMoney(
-                                          assetTrendValues[index],
-                                          baseCurrencyCode,
-                                        ),
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+          VeriGlassSurface(
+            enabled: !hasAssetCover,
+            child: Container(
+              key: const Key('asset_cover_card'),
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: hasAssetCover
+                    ? null
+                    : veriGlassDesignPreview
+                    ? Colors.transparent
+                    : veriContentSurfaceColor(Theme.of(context).brightness),
+                borderRadius: BorderRadius.circular(veriCardRadius),
+                border: Border.all(
+                  color: veriGlassDesignPreview && !hasAssetCover
+                      ? Colors.transparent
+                      : veriUnifiedDesignPreview
+                      ? Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.045)
+                      : Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white.withValues(alpha: 0.10)
+                      : veriLine,
                 ),
-              ],
+                image: !hasAssetCover
+                    ? null
+                    : DecorationImage(
+                        image: imageProviderForSource(controller.assetCoverUrl),
+                        fit: BoxFit.cover,
+                        alignment: Alignment.center,
+                      ),
+                boxShadow: <BoxShadow>[
+                  if (!veriUnifiedDesignPreview &&
+                      Theme.of(context).brightness == Brightness.light)
+                    BoxShadow(
+                      color: const Color(0xFF0F172A).withValues(alpha: 0.045),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                ],
+              ),
+              child: Stack(
+                children: <Widget>[
+                  if (hasAssetCover)
+                    Positioned.fill(
+                      child: ColoredBox(
+                        color: Colors.black.withValues(alpha: 0.28),
+                      ),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: Text(
+                                AppLocalizations.of(context).netAssets,
+                                style: TextStyle(color: assetCardMutedColor),
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: AppLocalizations.of(
+                                context,
+                              ).assetsChangeCover,
+                              onPressed: () => _openDisplaySettings(context),
+                              style: IconButton.styleFrom(
+                                fixedSize: const Size(32, 32),
+                                minimumSize: const Size(32, 32),
+                                padding: EdgeInsets.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              icon: Icon(
+                                Icons.photo_size_select_actual_outlined,
+                                color: assetCardMutedColor,
+                                size: 18,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          assets == null || liabilities == null
+                              ? '—'
+                              : formatUserMoney(
+                                  assets + liabilities,
+                                  baseCurrencyCode,
+                                ),
+                          style: Theme.of(context).textTheme.displaySmall
+                              ?.copyWith(
+                                color: assetCardTextColor,
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                        const SizedBox(height: 18),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: <Widget>[
+                            Text(
+                              AppLocalizations.of(context).assetsAmount(
+                                assets == null
+                                    ? '—'
+                                    : formatUserMoney(assets, baseCurrencyCode),
+                              ),
+                              style: TextStyle(color: assetCardTextColor),
+                            ),
+                            Text(
+                              AppLocalizations.of(context).liabilitiesAmount(
+                                liabilities == null
+                                    ? '—'
+                                    : formatUserMoney(
+                                        liabilities.abs(),
+                                        baseCurrencyCode,
+                                      ),
+                              ),
+                              style: TextStyle(color: assetCardTextColor),
+                            ),
+                          ],
+                        ),
+                        if (oldestValuationRateDate != null) ...<Widget>[
+                          const SizedBox(height: 8),
+                          Text(
+                            AppLocalizations.of(
+                              context,
+                            ).assetValuationRateTrace(
+                              currencyDateKey(oldestValuationRateDate),
+                              valuation.staleAccountIds.isEmpty
+                                  ? ''
+                                  : ' · ${AppLocalizations.of(context).exchangeRateStale}',
+                            ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: assetCardMutedColor),
+                          ),
+                        ],
+                        const SizedBox(height: 14),
+                        if (assetTrendValues == null)
+                          SizedBox(
+                            height: 112,
+                            child: Center(
+                              child: Text(
+                                AppLocalizations.of(
+                                  context,
+                                ).assetTrendMissingRate,
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: assetCardMutedColor),
+                              ),
+                            ),
+                          )
+                        else
+                          SizedBox(
+                            height: 112,
+                            child: InteractiveTrendChart(
+                              color: assetCardTextColor,
+                              values: assetTrendValues,
+                              xLabels: evenMonthAxisLabels(),
+                              labelColor: assetCardMutedColor,
+                              tooltipOf: (index) => ChartTooltip(
+                                title: AppLocalizations.of(
+                                  context,
+                                ).monthNumber(index + 1),
+                                lines: <ChartTooltipLine>[
+                                  ChartTooltipLine(
+                                    text: AppLocalizations.of(context)
+                                        .netAssetsAmount(
+                                          formatUserMoney(
+                                            assetTrendValues[index],
+                                            baseCurrencyCode,
+                                          ),
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 12),

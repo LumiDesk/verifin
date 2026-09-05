@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/app_lock.dart';
+import 'package:verifin/app/veri_fin_scope.dart';
+import 'package:verifin/pages/app_lock_gate.dart';
 import 'package:verifin/local_storage/local_storage.dart';
 import 'package:verifin/pages/app_lock_page.dart';
 
@@ -16,6 +18,30 @@ Future<void> _enterPin(WidgetTester tester, String pin) async {
 
 void main() {
   useTestDatabases();
+  testWidgets('锁屏不绘制下层账目，解锁后保留原页面', (tester) async {
+    final controller = await makeController();
+    await controller.setAppLock(kind: AppLockKind.pin, secret: '123456');
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(
+          home: AppLockGate(
+            child: const Scaffold(body: Text('private-ledger-content')),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('private-ledger-content'), findsNothing);
+    expect(
+      find.text('private-ledger-content', skipOffstage: false),
+      findsOneWidget,
+    );
+    await _enterPin(tester, '123456');
+    expect(find.text('private-ledger-content'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+    controller.dispose();
+  });
 
   group('AppLockConfig', () {
     test('hashes secret with salt and verifies without storing plaintext', () {

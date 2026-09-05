@@ -14,6 +14,11 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 
 ## 族 1 — 布局脚手架 / 页面容器
 
+`VeriGlassSurface` / `VeriGlassBackdrop` 位于 `glass_material.dart`，经公共入口导出，
+负责默认关闭的磨砂材质预览；卡片可共享过滤组，重叠菜单/弹层使用独立过滤。
+`sheets.dart` 的 `_showVeriModalSheet` 只统一材质封装，外部仍使用各领域 `show…Sheet`。
+范围见 [玻璃材质预览](glass-material-preview.md)。
+
 `VeriPage`、`VeriHeader` / `PageHeader` 与 `VeriCard` 支持显式 `compact` 参数。
 当前只由开启设计预览的首页使用：16dp 页边距、56dp Header、16dp 卡片圆角，默认内边距
 横向 14dp、纵向 12dp；`VeriCard.padding` 显式传入时仍优先。其余调用默认行为保持不变。

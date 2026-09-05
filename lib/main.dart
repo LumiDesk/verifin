@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app/app_theme.dart';
+import 'app/glass_material.dart';
 import 'app/backup/backup_coordinator.dart';
 import 'app/feedback.dart';
 import 'app/home_widget_service.dart';
@@ -312,11 +313,13 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
                 themeMode: themePreference.themeMode,
                 theme: buildVeriFinTheme(Brightness.light),
                 darkTheme: buildVeriFinTheme(Brightness.dark),
-                builder: (context, child) => PrivacyConsentGate(
-                  child: AppLockGate(
-                    child: VeriFeedbackHost(
-                      controller: _feedbackController,
-                      child: child ?? const SizedBox.shrink(),
+                builder: (context, child) => VeriGlassBackdrop(
+                  child: PrivacyConsentGate(
+                    child: AppLockGate(
+                      child: VeriFeedbackHost(
+                        controller: _feedbackController,
+                        child: child ?? const SizedBox.shrink(),
+                      ),
                     ),
                   ),
                 ),

@@ -12,6 +12,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../l10n/app_localizations.dart';
 import 'account_icon_assets.dart';
 import 'app_theme.dart';
+import 'glass_material.dart';
+export 'glass_material.dart' show VeriGlassSurface, VeriGlassBackdrop;
 import 'category_tree.dart';
 import 'credit_card.dart';
 import 'currency_math.dart';

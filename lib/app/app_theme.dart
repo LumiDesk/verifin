@@ -4,6 +4,19 @@ import 'package:flutter/material.dart';
 const bool veriUnifiedDesignPreview = bool.fromEnvironment(
   'UNIFIED_DESIGN_PREVIEW',
 );
+const bool veriGlassDesignPreview =
+    veriUnifiedDesignPreview && bool.fromEnvironment('GLASS_DESIGN_PREVIEW');
+const Color veriGlassCanvasTopLight = Color(0xFFDCE8F5);
+const Color veriGlassCanvasBottomLight = Color(0xFFDFEDEE);
+const Color veriGlassCanvasTopDark = Color(0xFF152238);
+const Color veriGlassCanvasBottomDark = Color(0xFF152B30);
+
+Color veriGlassTint(Brightness brightness, {bool overlay = false}) =>
+    brightness == Brightness.dark
+    ? (overlay
+          ? veriSurfaceDark.withValues(alpha: 0.80)
+          : Colors.white.withValues(alpha: 0.055))
+    : Colors.white.withValues(alpha: overlay ? 0.72 : 0.50);
 
 // 候选材质令牌：实体内容与中性画布；不用于模拟玻璃折射。
 const Color veriPreviewCanvasLight = Color(0xFFF3F5F8);
@@ -52,7 +65,10 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
   final canvas = isDark ? veriPreviewCanvasDark : veriPreviewCanvasLight;
   final colorScheme = veriUnifiedDesignPreview
       ? seedScheme.copyWith(
-          surface: canvas,
+          surface: veriGlassDesignPreview ? veriGlassTint(brightness) : canvas,
+          surfaceContainerHighest: veriGlassDesignPreview
+              ? veriGlassTint(brightness)
+              : seedScheme.surfaceContainerHighest,
           onSurface: isDark ? const Color(0xFFF0F3F8) : veriInk,
         )
       : seedScheme;
@@ -61,7 +77,9 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
     useMaterial3: true,
     brightness: brightness,
     colorScheme: colorScheme,
-    scaffoldBackgroundColor: veriUnifiedDesignPreview
+    scaffoldBackgroundColor: veriGlassDesignPreview
+        ? Colors.transparent
+        : veriUnifiedDesignPreview
         ? canvas
         : isDark
         ? const Color(0xFF0B0F15)
@@ -136,7 +154,9 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: isDark
+      fillColor: veriGlassDesignPreview
+          ? veriGlassTint(brightness)
+          : isDark
           ? (veriUnifiedDesignPreview
                 ? veriPreviewSurfaceDark
                 : veriSurfaceAltDark)
@@ -145,7 +165,11 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(veriRadiusMd),
-        borderSide: BorderSide.none,
+        borderSide: veriGlassDesignPreview
+            ? BorderSide(
+                color: Colors.white.withValues(alpha: isDark ? 0.17 : 0.65),
+              )
+            : BorderSide.none,
       ),
     ),
   );

@@ -64,7 +64,11 @@ class _AppLockGateState extends State<AppLockGate> with WidgetsBindingObserver {
     final showLock = _locked && controller.appLockEnabled;
     return Stack(
       children: <Widget>[
-        widget.child,
+        // 半透明材质不能透出锁屏下方的账目；保留页面状态，但停止绘制、语义和焦点访问。
+        ExcludeFocus(
+          excluding: showLock,
+          child: Offstage(offstage: showLock, child: widget.child),
+        ),
         if (showLock)
           AppLockScreen(onUnlocked: () => setState(() => _locked = false)),
       ],

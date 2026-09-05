@@ -3,6 +3,7 @@
 状态：待用户评审，默认关闭。分支 `talyra42/unified-design-preview`。
 用户反馈第一轮密度偏低后的研究见 [信息密度研究](design-density-research.md)；第二轮已先应用到首页，其他页面保持第一轮方案。
 该方案直接使用正式页面、Controller 和仓储，不重建 UI Lab，也不引入演示数据层。
+当前预算卡已恢复原始布局；另有默认关闭的[磨砂玻璃材质预览](glass-material-preview.md)，用于统一内容卡片、菜单和弹层的质感，不重新设计布局。
 
 ## 当前问题与方向
 

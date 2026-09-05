@@ -17,6 +17,29 @@ import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
 import 'account_icon_picker.dart';
 
+/// 保留现有 Sheet 语义，仅在材质预览中为内容加入共享玻璃层。
+Future<T?> _showVeriModalSheet<T>({
+  required BuildContext context,
+  required WidgetBuilder builder,
+  bool? showDragHandle,
+  bool isScrollControlled = false,
+  Color? backgroundColor,
+  ShapeBorder? shape,
+}) => showModalBottomSheet<T>(
+  context: context,
+  showDragHandle: showDragHandle,
+  isScrollControlled: isScrollControlled,
+  backgroundColor: veriGlassDesignPreview
+      ? Colors.transparent
+      : backgroundColor,
+  shape: shape,
+  builder: (context) => VeriGlassSurface(
+    grouped: false,
+    radius: veriRadiusXl,
+    child: builder(context),
+  ),
+);
+
 /// 若 [url] 会以明文 http 把凭证发往公网主机，弹确认对话框让用户知情后再继续；
 /// 非风险地址（https / 本机 / 内网）直接返回 true。用户取消返回 false。
 Future<bool> confirmCleartextIfRisky(BuildContext context, String url) async {
@@ -54,7 +77,7 @@ Future<T?> showOptionSheet<T>({
   bool showSelectedMarker = true,
   String Function(T value)? sectionOf,
 }) {
-  return showModalBottomSheet<T>(
+  return _showVeriModalSheet<T>(
     context: context,
     showDragHandle: true,
     backgroundColor: Theme.of(context).colorScheme.surface,
@@ -158,7 +181,7 @@ Future<CurrencyDefinition?> showCurrencyPickerSheet({
   Iterable<String> preferredCodes = const <String>[],
   Iterable<String> excludedCodes = const <String>[],
 }) {
-  return showModalBottomSheet<CurrencyDefinition>(
+  return _showVeriModalSheet<CurrencyDefinition>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
@@ -336,7 +359,7 @@ Future<({String name, String currencyCode})?> showLedgerBookEditorSheet({
   required BuildContext context,
   required String initialCurrencyCode,
 }) {
-  return showModalBottomSheet<({String name, String currencyCode})>(
+  return _showVeriModalSheet<({String name, String currencyCode})>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
@@ -646,7 +669,7 @@ Future<double?> showNumberPadSheet(
       (currencyCode == null
           ? 2
           : CurrencyCatalog.require(currencyCode).minorUnit);
-  return showModalBottomSheet<double>(
+  return _showVeriModalSheet<double>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
@@ -675,7 +698,7 @@ Future<String?> showCategoryPickerSheet(
   String? topLevelLabel,
   String? allLabel,
 }) {
-  return showModalBottomSheet<String>(
+  return _showVeriModalSheet<String>(
     context: context,
     showDragHandle: true,
     backgroundColor: Theme.of(context).colorScheme.surface,
@@ -724,7 +747,7 @@ Future<Account?> showAccountPickerSheet({
   String? noneHint,
   String? allLabel,
 }) {
-  return showModalBottomSheet<Account>(
+  return _showVeriModalSheet<Account>(
     context: context,
     showDragHandle: true,
     backgroundColor: Theme.of(context).colorScheme.surface,
@@ -1134,7 +1157,7 @@ Future<String?> showCategoryIconPickerSheet({
   required BuildContext context,
   required String selected,
 }) {
-  return showModalBottomSheet<String>(
+  return _showVeriModalSheet<String>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
@@ -1525,7 +1548,7 @@ Future<List<String>?> pickEntryTags({
     ...controller.tags,
     ...extraTags.where((tag) => !existingIds.contains(tag.id)),
   ];
-  return showModalBottomSheet<List<String>>(
+  return _showVeriModalSheet<List<String>>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,

@@ -22,6 +22,7 @@
 - `docs/dev/refund-design.md`、`docs/dev/auto-capture-plan.md`、`docs/dev/i18n-verification.md`、`docs/automation.md`：对应领域的设计与验收资料。`refund-design.md` 含历史方案，退款当前行为以源码、测试和 `docs/dev/known-limitations.md` 为准。
 - `docs/dev/web-preview.md`：正式应用 Web 预览、浏览器存储与平台能力边界。
 - `docs/dev/unified-design-preview.md`：默认关闭的统一设计候选方案；用户确认前不得把 `UNIFIED_DESIGN_PREVIEW` 默认开启或移除旧外观路径。
+- `docs/dev/glass-material-preview.md`：用户主动要求的内容磨砂玻璃预览，通过额外的 `GLASS_DESIGN_PREVIEW` 开关试验；不得以材质调整为由改动预算等既有结构。
 - `docs/dev/liquid-glass-navigation.md`：浮动根导航的材质边界、指针拖动状态机、窄屏适配、真实应用 Web 验证与后续 Shader 取舍；修改根导航或新增类似玻璃控件前必读。
 - `docs/dev/feedback-system.md`：根级轻提示 Host 的调用、时长、操作结果、去重、优先级队列与迁移规范；新增或替换短反馈前必读。
 - `README.md`、`docs/product.md`、`docs/acceptance-checklist.md`：用于理解产品和验收范围；其中少量历史描述可能落后，必须与当前实现交叉核对。

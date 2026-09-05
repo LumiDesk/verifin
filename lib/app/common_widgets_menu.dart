@@ -610,7 +610,11 @@ class _VeriMenuPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final baseSurface = dark ? veriSurfaceAltDark : veriSurfaceLight;
+    final baseSurface = veriGlassDesignPreview
+        ? veriGlassTint(Theme.of(context).brightness, overlay: true)
+        : dark
+        ? veriSurfaceAltDark
+        : veriSurfaceLight;
     final surface = Color.lerp(
       baseSurface,
       Colors.black,
@@ -658,19 +662,33 @@ class _VeriMenuPanel extends StatelessWidget {
         maxWidth: width,
         maxHeight: maxHeight.clamp(120.0, double.infinity),
       ),
-      child: Material(
-        color: surface,
-        elevation: 0,
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(veriRadiusXl),
-          side: BorderSide(
-            color: dark ? Colors.white.withValues(alpha: 0.12) : veriLine,
+      child: VeriGlassSurface(
+        grouped: false,
+        radius: veriRadiusXl,
+        tint: surface,
+        child: Material(
+          color: veriGlassDesignPreview ? Colors.transparent : surface,
+          elevation: 0,
+          clipBehavior: Clip.antiAlias,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(veriRadiusXl),
+            side: BorderSide(
+              color: veriGlassDesignPreview
+                  ? Colors.transparent
+                  : dark
+                  ? Colors.white.withValues(alpha: 0.12)
+                  : veriLine,
+            ),
           ),
-        ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(vertical: _veriMenuPanelPadding),
-          child: Column(mainAxisSize: MainAxisSize.min, children: panelEntries),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+              vertical: _veriMenuPanelPadding,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: panelEntries,
+            ),
+          ),
         ),
       ),
     );
