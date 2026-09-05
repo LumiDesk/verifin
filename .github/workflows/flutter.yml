@@ -60,7 +60,7 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      # v1.16 起将已评审的统一设计纳入两个渠道；高级材质仍由设备设置控制。
+      # v1.16 起将已评审的统一设计纳入两个渠道；原生端高级材质因闪退暂时禁用。
       - name: Verify release design flows
         run: flutter test test/design_consistency_test.dart test/unified_design_preview_test.dart test/advanced_material_test.dart test/home_density_test.dart test/navigation_lens_test.dart --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
 
@@ -117,8 +117,8 @@ jobs:
 
             📦 安装包为 **arm64-v8a** 架构，覆盖 2019 年后绝大多数安卓机型。极少数 32 位老设备可能无法安装。
 
-            本版包含统一页面排版、玻璃卡片与真实应用 Web 开发预览。
+            本版修复 v1.16.0 开启高级材质后无法启动的问题：原生端暂时停用高级光照与导航透镜，已保存开启的设备也会回退普通磨砂。统一页面布局保留。
 
-            「设置 → 通用 → 高级材质」默认关闭；开启并保存后可体验导航动态透镜与方向光照，关闭使用普通磨砂。请分别体验开关两档的流畅度。
+            请下载 APK 直接覆盖安装，**不要卸载旧版本或清除应用数据**。修复不重置账目与偏好；具体设备上的启动恢复仍待真机验收。
 
-            更新前可在「数据管理」中导出备份。
+            恢复启动后，建议在「数据管理」中导出备份。
