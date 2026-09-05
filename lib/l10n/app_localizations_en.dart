@@ -4334,10 +4334,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Off by default. When enabled, only rates used by included transactions are saved.';
 
   @override
-  String get webPreviewStorageHint =>
-      'Web development preview · Real screens and local data. Entries stay in this browser and do not sync with your phone. Use a fixed preview address and one tab at a time. Clearing site data deletes entries; export a backup to keep them.';
-
-  @override
   String get webPreviewUnsupported =>
       'Web preview supports manual entries, reports, images, and file import/export. AI requests, screenshot OCR, WebDAV, automatic folder backups, system notifications, and home screen widgets require Android verification.';
 

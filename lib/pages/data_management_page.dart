@@ -86,10 +86,6 @@ class _DataManagementPageState extends State<DataManagementPage> {
                   ],
                 ),
                 const SizedBox(height: 10),
-                if (kIsWeb) ...<Widget>[
-                  Text(AppLocalizations.of(context).webPreviewUnsupported),
-                  const SizedBox(height: 10),
-                ],
                 _sectionLabel(
                   context,
                   AppLocalizations.of(context).dataSectionLocalBackup,
