@@ -17,10 +17,38 @@
 本轮参考上述分层和兼容策略，自己实现小型公共材质组件，未复制第三方源码、没有新增
 pub 依赖。实时背景模糊不同于真实折射，不用静态高光或渐变冒充折射。
 
+## 方向高光与导航透镜（按用户参考图更新）
+
+参考用户提供的音乐播放器玻璃面板、Week/Month/Year 滑块截图，以及
+[TRAE 文章](https://forum.trae.cn/t/topic/12384)的分离光照层/位移采样思路。
+[掘金原文](https://juejin.cn/post/7514618352829448244)直读未返回正文，具体视觉目标以用户附件为准。
+
+- `glass_lighting.dart` 根据边界位置、曲面法线和光照方向绘制高光：左上/右下渐亮，
+  右上/左下渐隐。柔光与细高光叠加，移除普通模式的整圈均匀白色 Border。
+- `navigation_glass_lens.dart` 仅把导航自己的图标和文字绘制层采样为临时 GPU 纹理；
+  不包含账目、不写文件、不发送。源文字在透镜覆盖区裁去，再由 Shader 显示变形结果，
+  避免把原文字与放大文字重复叠加。
+- `shaders/navigation_lens.frag` 对真实采样坐标执行放大、边缘弯曲和分通道偏移；
+  滑块按压时膨胀，随拖动方向改变形状和边缘光，松手/取消时恢复并沿原状态机吸附。
+- 导航底座、选中滑块和快捷按钮均使用对应方向高光；原点击、拖动、取消与无障碍入口保留。
+- 本轮按用户要求优先匹配光效与形变，不以帧率、功耗作为简化依据。
+
+浏览器端验证使用 `integration_test/glass_navigation_test.dart`；测试要求实际 Shader
+和纹理就绪，检查膨胀、拖动与选中结果，不能以 fallback 通过。
+
+```bash
+flutter run --no-pub -d web-server --web-port 7358 --target integration_test/glass_navigation_test.dart --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
+```
+
+本轮方向光更新验证：默认回归 919 项通过（6 项候选专用测试跳过）；方向光、材质、
+主流程与滑块测试分别通过；真实浏览器集成测试显示 `Glass lens PASS`。静止时恢复
+原比例采样，按压/拖动时才加强放大和弯曲，并以较高分辨率采样避免静止文字重影。
+正式预览手动跨 Tab 拖动通过，浏览器未记录渲染 error；预算、交易和宫格结构未改。
+
 ## 实现范围
 
 - `VeriGlassBackdrop`：在应用内容后方绘制固定低饱和背景，让半透明表面有真实的背景颜色可透出。背景渐变属于底层画布，玻璃前景没有渐变。
-- `VeriGlassSurface`：单层轮廓、均匀中性半透明色、裁切后的 BackdropFilter 和轻阴影；正文、金额和图标保持清晰，不对前景执行 ImageFiltered。
+- `VeriGlassSurface`：方向性边缘光、均匀中性半透明色、裁切后的 BackdropFilter 和轻阴影；内容卡片的正文、金额和图标保持清晰，不对前景执行 ImageFiltered。导航源图层则单独由透镜 Shader 采样。
 - 普通卡片、账户分组、无自定义图片的资产卡使用公共玻璃表面；用户设置的资产图片仍作为内容保留。
 - 锚点菜单和 `sheets.dart` 的统一底部弹层使用独立过滤层，避免和下方内容重叠时错误共享背景。
 - 内容表面采用轻染色；菜单/弹层使用同一材质的较高遮盖度变体，避免下层内容干扰阅读。

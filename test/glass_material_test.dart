@@ -47,11 +47,12 @@ void main() {
               .whereType<BoxDecoration>()
               .where(
                 (decoration) =>
-                    decoration.color != null && decoration.border != null,
+                    decoration.color != null && decoration.borderRadius != null,
               );
           expect(surfaces.length, 2);
           for (final surface in surfaces) {
             expect(surface.gradient, isNull);
+            expect(surface.border, highContrast ? isNotNull : isNull);
             expect(surface.color!.a, highContrast ? 1 : lessThan(1));
           }
           await tester.tap(find.text('查看账目'));

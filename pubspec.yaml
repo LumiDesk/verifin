@@ -97,6 +97,9 @@ flutter:
   # 由 lib/l10n/*.arb 生成本地化代码(见 l10n.yaml)。
   generate: true
 
+  shaders:
+    - shaders/navigation_lens.frag
+
   assets:
     - assets/account_icons/
     - assets/import_icons/

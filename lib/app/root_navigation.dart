@@ -3,6 +3,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import 'app_theme.dart';
+import 'glass_material.dart';
+import 'glass_lighting.dart';
+import 'navigation_glass_lens.dart';
 
 @immutable
 class VeriNavigationDestination {
@@ -116,6 +119,8 @@ class _VeriRootNavigationState extends State<VeriRootNavigation>
   int? _activePointer;
   int? _pressedTargetIndex;
   double? _pointerDownX;
+  double? _lastPointerX;
+  double _lightMotion = 0;
 
   Key _key(String suffix) => ValueKey('${widget.keyPrefix}_$suffix');
 
@@ -190,6 +195,8 @@ class _VeriRootNavigationState extends State<VeriRootNavigation>
     setState(() {
       _activePointer = event.pointer;
       _pointerDownX = event.localPosition.dx;
+      _lastPointerX = event.localPosition.dx;
+      _lightMotion = 0;
       _pressedTargetIndex = pressedIndex;
       _dragging = false;
       _indicatorPressed = true;
@@ -203,6 +210,15 @@ class _VeriRootNavigationState extends State<VeriRootNavigation>
         _pressedTargetIndex == null) {
       return;
     }
+    final movement =
+        event.localPosition.dx - (_lastPointerX ?? event.localPosition.dx);
+    _lastPointerX = event.localPosition.dx;
+    setState(
+      () => _lightMotion = (_lightMotion * 0.5 + movement / 12 * 0.5).clamp(
+        -1.0,
+        1.0,
+      ),
+    );
     final delta = event.localPosition.dx - _pointerDownX!;
     if (!_dragging && delta.abs() < 2) {
       return;
@@ -233,6 +249,8 @@ class _VeriRootNavigationState extends State<VeriRootNavigation>
     setState(() {
       _activePointer = null;
       _pointerDownX = null;
+      _lastPointerX = null;
+      _lightMotion = 0;
       _pressedTargetIndex = null;
       _dragging = false;
       _indicatorPressed = false;
@@ -267,6 +285,8 @@ class _VeriRootNavigationState extends State<VeriRootNavigation>
     setState(() {
       _activePointer = null;
       _pointerDownX = null;
+      _lastPointerX = null;
+      _lightMotion = 0;
       _pressedTargetIndex = null;
       _dragging = false;
       _indicatorPressed = false;
@@ -344,6 +364,75 @@ class _VeriRootNavigationState extends State<VeriRootNavigation>
   }
 
   Widget _buildGlassCapsule(bool isDark) {
+    if (veriGlassDesignPreview) {
+      return Stack(
+        clipBehavior: Clip.none,
+        fit: StackFit.expand,
+        children: [
+          Positioned.fill(
+            child: VeriGlassSurface(
+              radius: 999,
+              grouped: false,
+              tint: Colors.white.withValues(alpha: isDark ? 0.055 : 0.14),
+              child: const SizedBox.expand(),
+            ),
+          ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final slotWidth =
+                  constraints.maxWidth / widget.destinations.length;
+              final selectedIndex = _displayIndex.round().clamp(
+                0,
+                widget.destinations.length - 1,
+              );
+              return Listener(
+                behavior: HitTestBehavior.opaque,
+                onPointerDown: (event) => _handlePointerDown(event, slotWidth),
+                onPointerMove: (event) => _handlePointerMove(event, slotWidth),
+                onPointerUp: _handlePointerUp,
+                onPointerCancel: _handlePointerCancel,
+                child: VeriNavigationGlassLens(
+                  keyPrefix: widget.keyPrefix,
+                  target: Rect.fromLTWH(
+                    _displayIndex * slotWidth + 3,
+                    3,
+                    slotWidth - 6,
+                    constraints.maxHeight - 6,
+                  ),
+                  pressed: _indicatorPressed || _dragging,
+                  motion: _lightMotion,
+                  revision: (
+                    selectedIndex,
+                    isDark,
+                    _indicatorPressed,
+                    MediaQuery.textScalerOf(context),
+                    widget.destinations.map((d) => d.label).join('|'),
+                  ),
+                  source: Row(
+                    children: [
+                      for (
+                        var index = 0;
+                        index < widget.destinations.length;
+                        index++
+                      )
+                        Expanded(
+                          child: _DestinationButton(
+                            key: _key('tab_$index'),
+                            inkKey: _key('tab_ink_$index'),
+                            destination: widget.destinations[index],
+                            selected: index == selectedIndex,
+                            onTap: () => _handleDestinationTap(index),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      );
+    }
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
@@ -473,53 +562,63 @@ class _QuickEntryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.12),
-            blurRadius: 16,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: ClipOval(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: SizedBox(
-            width: 60,
-            height: 60,
-            child: Material(
-              key: ValueKey('${keyPrefix}_quick_entry_material'),
-              color: Colors.transparent,
-              shape: const CircleBorder(),
-              clipBehavior: Clip.antiAlias,
-              child: Ink(
-                key: ValueKey('${keyPrefix}_quick_entry_ink'),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: isDark ? 0.055 : 0.14),
-                  border: Border.all(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.16)
-                        : Colors.black.withValues(alpha: 0.10),
+    return CustomPaint(
+      foregroundPainter:
+          veriGlassDesignPreview && !MediaQuery.highContrastOf(context)
+          ? const VeriGlassLightPainter(radius: 999)
+          : null,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.12),
+              blurRadius: 16,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: ClipOval(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: SizedBox(
+              width: 60,
+              height: 60,
+              child: Material(
+                key: ValueKey('${keyPrefix}_quick_entry_material'),
+                color: Colors.transparent,
+                shape: const CircleBorder(),
+                clipBehavior: Clip.antiAlias,
+                child: Ink(
+                  key: ValueKey('${keyPrefix}_quick_entry_ink'),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(
+                      alpha: isDark ? 0.055 : 0.14,
+                    ),
+                    border: veriGlassDesignPreview
+                        ? null
+                        : Border.all(
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.16)
+                                : Colors.black.withValues(alpha: 0.10),
+                          ),
                   ),
-                ),
-                child: Tooltip(
-                  message: label,
-                  child: InkWell(
-                    key: actionKey,
-                    customBorder: const CircleBorder(),
-                    hoverColor: Colors.white.withValues(
-                      alpha: isDark ? 0.08 : 0.26,
+                  child: Tooltip(
+                    message: label,
+                    child: InkWell(
+                      key: actionKey,
+                      customBorder: const CircleBorder(),
+                      hoverColor: Colors.white.withValues(
+                        alpha: isDark ? 0.08 : 0.26,
+                      ),
+                      splashColor: Colors.white.withValues(
+                        alpha: isDark ? 0.12 : 0.34,
+                      ),
+                      onTap: onTap,
+                      onLongPress: onLongPress,
+                      child: const Icon(Icons.add_rounded, color: veriRoyal),
                     ),
-                    splashColor: Colors.white.withValues(
-                      alpha: isDark ? 0.12 : 0.34,
-                    ),
-                    onTap: onTap,
-                    onLongPress: onLongPress,
-                    child: const Icon(Icons.add_rounded, color: veriRoyal),
                   ),
                 ),
               ),

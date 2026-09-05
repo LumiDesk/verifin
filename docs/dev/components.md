@@ -19,6 +19,10 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 `sheets.dart` 的 `_showVeriModalSheet` 只统一材质封装，外部仍使用各领域 `show…Sheet`。
 范围见 [玻璃材质预览](glass-material-preview.md)。
 
+`VeriGlassLightPainter` / `veriGlassEdgeLight`（`glass_lighting.dart`）提供边界法线驱动的
+方向高光；`VeriNavigationGlassLens` / `VeriNavigationLensPainter`（`navigation_glass_lens.dart`）
+负责只采样导航源图层的透镜效果、资源生命周期和手势光效，供正式根导航复用。
+
 `VeriPage`、`VeriHeader` / `PageHeader` 与 `VeriCard` 支持显式 `compact` 参数。
 当前只由开启设计预览的首页使用：16dp 页边距、56dp Header、16dp 卡片圆角，默认内边距
 横向 14dp、纵向 12dp；`VeriCard.padding` 显式传入时仍优先。其余调用默认行为保持不变。

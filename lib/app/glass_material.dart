@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import 'app_theme.dart';
+import 'glass_lighting.dart';
 
 /// 实际绘制在内容后方的低饱和背景。颜色来自背景，不在玻璃前景伪造折射。
 class VeriGlassBackdrop extends StatelessWidget {
@@ -37,8 +38,8 @@ class VeriGlassBackdrop extends StatelessWidget {
   }
 }
 
-/// Web/Android 共用的磨砂玻璃：裁切后的真实背景模糊、均匀中性填色和单层轮廓。
-/// 不采集截图，不使用平台专属 Shader，不宣称模拟真实折射。
+/// 共用玻璃内容表面：背景模糊、中性填色和根据边缘法线绘制的方向高光。
+/// 导航透镜的纹理采样另由 navigation_glass_lens.dart 负责。
 class VeriGlassSurface extends StatelessWidget {
   const VeriGlassSurface({
     super.key,
@@ -67,9 +68,13 @@ class VeriGlassSurface extends StatelessWidget {
             ? veriContentSurfaceColor(brightness)
             : tint ?? veriGlassTint(brightness, overlay: !grouped),
         borderRadius: borderRadius,
-        border: Border.all(
-          color: Colors.white.withValues(alpha: dark ? 0.17 : 0.72),
-        ),
+        border: highContrast
+            ? Border.all(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.3),
+              )
+            : null,
       ),
       child: child,
     );
@@ -95,7 +100,12 @@ class VeriGlassSurface extends StatelessWidget {
           ),
         ],
       ),
-      child: ClipRRect(borderRadius: borderRadius, child: filtered),
+      child: CustomPaint(
+        foregroundPainter: highContrast
+            ? null
+            : VeriGlassLightPainter(radius: radius),
+        child: ClipRRect(borderRadius: borderRadius, child: filtered),
+      ),
     );
   }
 }
