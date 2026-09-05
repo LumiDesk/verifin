@@ -700,6 +700,7 @@ class _DestinationButtonState extends State<_DestinationButton> {
                   Text(
                     widget.destination.label,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontSize: veriUnifiedDesignPreview ? 12 : 10,
                       color: color,
                       fontWeight: widget.selected
                           ? FontWeight.w700

@@ -3,7 +3,11 @@ part of 'common_widgets.dart';
 // 页面骨架域：VeriPage/VeriCard/VeriHeader 与头部动作、区块标题、空态。
 
 class VeriPage extends StatelessWidget {
-  const VeriPage({super.key, required this.child, this.compact = false});
+  const VeriPage({
+    super.key,
+    required this.child,
+    this.compact = veriUnifiedDesignPreview,
+  });
 
   final Widget child;
   final bool compact;
@@ -44,7 +48,7 @@ class VeriCard extends StatelessWidget {
     required this.child,
     this.onTap,
     this.quietTap = false,
-    this.compact = false,
+    this.compact = veriUnifiedDesignPreview,
     EdgeInsetsGeometry? padding,
   }) : padding =
            padding ??
@@ -148,7 +152,7 @@ class PageHeader extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.trailing,
-    this.compact = false,
+    this.compact = veriUnifiedDesignPreview,
   });
 
   final String title;
@@ -175,7 +179,7 @@ class VeriHeader extends StatelessWidget {
     this.showBack = false,
     this.onBack,
     this.actions,
-    this.compact = false,
+    this.compact = veriUnifiedDesignPreview,
   });
 
   final String title;

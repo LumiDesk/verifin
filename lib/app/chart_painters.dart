@@ -518,8 +518,9 @@ class BudgetRingPainter extends CustomPainter {
       progressPaint,
     );
     if (glass && value > 0) {
-      // 径向明暗表现圆环截面的厚度，方向光另沿内外边缘绘制。
+      // 宽而柔和的同色反光表现轻微隆起，禁止内外两道白色描线。
       final dark = brightness == Brightness.dark;
+      final gleam = Color.lerp(progressColor, Colors.white, 0.45)!;
       final section = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = strokeWidth
@@ -527,12 +528,12 @@ class BudgetRingPainter extends CustomPainter {
         ..shader = RadialGradient(
           colors: [
             Colors.transparent,
-            Colors.black.withValues(alpha: 0.12),
-            Colors.white.withValues(alpha: dark ? 0.23 : 0.38),
-            Colors.transparent,
-            Colors.black.withValues(alpha: 0.16),
+            progressColor.withValues(alpha: 0.05),
+            gleam.withValues(alpha: advanced ? (dark ? 0.18 : 0.25) : 0.10),
+            progressColor.withValues(alpha: 0.05),
+            Colors.black.withValues(alpha: 0.09),
           ],
-          stops: const [0, 0.80, 0.87, 0.94, 1],
+          stops: const [0, 0.78, 0.90, 0.98, 1],
         ).createShader(Offset.zero & size);
       canvas.drawArc(
         rect,
@@ -541,35 +542,6 @@ class BudgetRingPainter extends CustomPainter {
         false,
         section,
       );
-    }
-    if (glass && advanced && value > 0) {
-      final light = brightness == Brightness.dark ? 0.20 : 0.42;
-      final rim = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.9
-        ..strokeCap = StrokeCap.round
-        ..shader = SweepGradient(
-          colors: [
-            Colors.transparent,
-            Colors.white.withValues(alpha: light),
-            Colors.transparent,
-            Colors.white.withValues(alpha: light),
-            Colors.transparent,
-          ],
-          stops: const [0, 0.125, 0.5, 0.625, 1],
-        ).createShader(rect);
-      for (final edge in [
-        rect.inflate(strokeWidth * 0.40),
-        rect.deflate(strokeWidth * 0.40),
-      ]) {
-        canvas.drawArc(
-          edge,
-          -math.pi / 2,
-          math.pi * 2 * value.clamp(0, 1),
-          false,
-          rim,
-        );
-      }
     }
   }
 

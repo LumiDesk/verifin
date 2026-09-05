@@ -22,7 +22,7 @@ Color veriGlassTint(Brightness brightness, {bool overlay = false}) =>
 const Color veriPreviewCanvasLight = Color(0xFFF3F5F8);
 const Color veriPreviewCanvasDark = Color(0xFF101318);
 const Color veriPreviewSurfaceDark = Color(0xFF1A1F27);
-const double veriCardRadius = veriUnifiedDesignPreview ? 20 : veriRadiusMd;
+const double veriCardRadius = veriUnifiedDesignPreview ? 16 : veriRadiusMd;
 const double veriCompactCardRadius = 16;
 const double veriCompactHeaderHeight = 56;
 
@@ -50,7 +50,7 @@ const double veriRadiusSm = 6;
 const double veriRadiusMd = veriUnifiedDesignPreview ? 12 : 8;
 const double veriRadiusLg = veriUnifiedDesignPreview ? 16 : 12;
 const double veriRadiusXl = 24;
-const double veriHeaderHeight = veriUnifiedDesignPreview ? 64 : 52;
+const double veriHeaderHeight = veriUnifiedDesignPreview ? 56 : 52;
 const double veriPageMaxWidth = 440;
 
 ThemeData buildVeriFinTheme(Brightness brightness) {
@@ -237,12 +237,12 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
         letterSpacing: 0,
       ),
       labelMedium: baseTheme.textTheme.labelMedium?.copyWith(
-        fontSize: 11,
+        fontSize: veriUnifiedDesignPreview ? 12 : 11,
         height: 1.25,
         letterSpacing: 0,
       ),
       labelSmall: baseTheme.textTheme.labelSmall?.copyWith(
-        fontSize: veriUnifiedDesignPreview ? 12 : 10,
+        fontSize: veriUnifiedDesignPreview ? 11 : 10,
         height: 1.2,
         letterSpacing: 0,
       ),

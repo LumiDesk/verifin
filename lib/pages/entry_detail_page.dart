@@ -619,9 +619,9 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(
-                    veriUnifiedDesignPreview ? 20 : 14,
+                    veriUnifiedDesignPreview ? 16 : 14,
                     8,
-                    veriUnifiedDesignPreview ? 20 : 14,
+                    veriUnifiedDesignPreview ? 16 : 14,
                     20,
                   ),
                   children: <Widget>[
