@@ -51,6 +51,13 @@ void main() {
     );
     await tester.pumpAndSettle();
     final refraction = find.byKey(const Key('main_lens_refraction'));
+    expect(refraction, findsNothing, reason: '静止时保留实时文字，不显示缓存纹理');
+    final lens = find.byKey(const Key('main_liquid_lens'));
+    final before = tester.getSize(lens);
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byKey(const Key('main_tab_0'))),
+    );
+    await tester.pump();
     for (
       var attempt = 0;
       attempt < 40 && refraction.evaluate().isEmpty;
@@ -66,13 +73,6 @@ void main() {
       findsOneWidget,
       reason: '必须实际载入 shader 与导航纹理，不能把降级效果当作通过',
     );
-    final lens = find.byKey(const Key('main_liquid_lens'));
-    final before = tester.getSize(lens);
-    final gesture = await tester.startGesture(
-      tester.getCenter(find.byKey(const Key('main_tab_0'))),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 180));
     await gesture.moveTo(tester.getCenter(find.byKey(const Key('main_tab_2'))));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 180));
@@ -84,6 +84,7 @@ void main() {
     expect(painter.source.width, greaterThan(100));
     await gesture.up();
     await tester.pumpAndSettle();
+    expect(refraction, findsNothing, reason: '松手恢复实时文字');
     expect(
       tester
           .widget<VeriRootNavigation>(find.byType(VeriRootNavigation))

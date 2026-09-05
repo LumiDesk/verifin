@@ -50,6 +50,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     final lens = find.byKey(const Key('lens_liquid_lens'));
+    expect(find.byKey(const Key('lens_lens_refraction')), findsNothing);
     final original = tester.getRect(lens);
     final gesture = await tester.startGesture(
       tester.getCenter(find.byKey(const Key('lens_tab_0'))),
@@ -74,6 +75,7 @@ void main() {
     await tester.tap(find.byKey(const Key('lens_tab_3')));
     await tester.pumpAndSettle();
     expect(selected, 3);
+    expect(find.byKey(const Key('lens_lens_refraction')), findsNothing);
     expect(tester.takeException(), isNull);
   }, skip: !veriGlassDesignPreview);
 }

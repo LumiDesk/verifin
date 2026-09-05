@@ -90,3 +90,5 @@ flutter run -d chrome --web-port 7357
 - decoration 无渐变，浏览器/Flutter 日志无异常。
 
 提交前运行根项目的 format、analyze、test，并执行 `flutter build web --no-web-resources-cdn`。正式交付仍需 Android 模拟器或真机检查触控、性能、系统安全区和不同刷新率下的动画手感。
+
+高级透镜静止时直接绘制实时图标/文字，仅交互期间使用本次采样且尺寸/revision 匹配的纹理；不得缓存初始文字作为静态选中项。松手恢复实时内容，避免首次显示或切换主题后字形失真。

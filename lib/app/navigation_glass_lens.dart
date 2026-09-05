@@ -39,6 +39,13 @@ class _VeriNavigationGlassLensState extends State<VeriNavigationGlassLens> {
   bool _captureScheduled = false;
 
   @override
+  void didUpdateWidget(VeriNavigationGlassLens oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 每次交互重新采样，不能复用初次字体尚未就绪或旧布局的文字纹理。
+    if (widget.pressed && !oldWidget.pressed) _capturedRevision = null;
+  }
+
+  @override
   void initState() {
     super.initState();
     unawaited(_loadShader());
@@ -57,7 +64,8 @@ class _VeriNavigationGlassLensState extends State<VeriNavigationGlassLens> {
   }
 
   void _scheduleCapture(Size size) {
-    if (_shader == null ||
+    if (!widget.pressed ||
+        _shader == null ||
         _captureScheduled ||
         (_capturedRevision == widget.revision && _capturedSize == size)) {
       return;
@@ -133,7 +141,15 @@ class _VeriNavigationGlassLensState extends State<VeriNavigationGlassLens> {
             width: width,
             height: height,
           );
-          final ready = _shader != null && _image != null && !highContrast;
+          // 静止时永远绘制活文字；只在有效交互中以当前布局纹理替换。
+          final ready =
+              widget.pressed &&
+              activity > 0 &&
+              _shader != null &&
+              _image != null &&
+              !highContrast &&
+              _capturedRevision == widget.revision &&
+              _capturedSize == size;
           return Stack(
             clipBehavior: Clip.none,
             fit: StackFit.expand,
