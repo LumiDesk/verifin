@@ -64,7 +64,7 @@ jobs:
 
       # 固定到真机验收过的引擎版本；两渠道包含统一外观，高级材质仍默认关闭。
       - name: Verify release design flows
-        run: flutter test test/design_consistency_test.dart test/unified_design_preview_test.dart test/advanced_material_test.dart test/glass_lighting_test.dart test/home_density_test.dart test/navigation_lens_test.dart --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
+        run: flutter test test/design_consistency_test.dart test/unified_design_preview_test.dart test/advanced_material_test.dart test/glass_lighting_test.dart test/home_density_test.dart test/navigation_lens_test.dart test/anchored_menu_test.dart test/material_stability_test.dart test/navigation_settings_test.dart --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
 
       - name: Build release APK (github flavor)
         # GitHub 自分发包：github flavor，保留应用内一键自更新（REQUEST_INSTALL_PACKAGES）。
@@ -119,10 +119,12 @@ jobs:
 
             📦 安装包为 **arm64-v8a** 架构，覆盖 2019 年后绝大多数安卓机型。极少数 32 位老设备可能无法安装。
 
-            本版修复高级高光逐段模糊造成的 GPU 资源压力，恢复 Android 高级材质开关。默认关闭，开启并保存后显示方向高光和导航折射，保留统一页面布局与原有偏好。
+            本版优化玻璃动态效果：修复页面背景与预测性返回重叠、Tab 高亮切换闪烁、菜单进出突然消失；导航采用同帧过滤，清理旧截图方案。高级材质仍默认关闭，在「设置 → 外观」开启并保存。
 
-            开发与交付聚焦 Android，已移除 Web 预览及浏览器适配；手机 WebDAV 备份保留。
+            设置拆分外观、金额显示、通用与记账分组；恢复原全局字号和预算环，优化深色输入框与菜单材质，修复同意协议后短暂露出首页。
 
             请下载 APK 直接覆盖安装，**不要卸载旧版本或清除应用数据**。本地 release/R8 已在 REDMI K90 Pro Max 验证开启、冷启动、切页与关闭；本次 CI 安装包仍需覆盖安装验收。
 
             恢复启动后，建议在「数据管理」中导出备份。
+
+            应用内更新请开启「包含预发布版本（Beta）」以检测此版本；本次仍为预发布，不标记 Latest。

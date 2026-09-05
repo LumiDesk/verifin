@@ -90,6 +90,8 @@ debug 支持 hot reload；最终图形/OCR/插件行为必须另外用 release/R
 - 提交前 format、analyze、全量测试及发布外观专项；数据库相关改动跑 ffi 持久化/迁移矩阵。
 - 正式 APK/AAB 只由授权后的 CI 发布生成。本地 APK 是诊断证据，不作为正式交付。
 - CI 成功后下载同签名、更高 versionCode APK 覆盖安装，保留账目；用户验收后才提升 Latest。
+- 应用内检查预发布需开启“包含预发布版本（Beta）”；发布后核对 releases 列表中的版本与 APK 元数据。
+  用户要求自行通过应用更新时，不代替用户安装或触发下载。
 - 清理测试应用前先列出并核对 package。只卸载确认为本任务测试用途的
   `top.talyra42.verifin.graphicsdiagnostic`；**不得卸载 `top.talyra42.verifin` 或清数据**。
   如果测试应用里已有用户新录入的数据，先明确处理方式再删除。
