@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/app_theme.dart';
 import 'package:verifin/app/common_widgets.dart';
+import 'package:verifin/app/chart_painters.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/main.dart';
 import 'package:verifin/pages/home_page.dart';
@@ -13,7 +14,7 @@ import 'support/test_harness.dart';
 
 void main() {
   useTestDatabases();
-  testWidgets('紧凑首页首屏可见总览、三条交易和预算摘要，点击仍进入详情', (tester) async {
+  testWidgets('首页保留指标方块和预算圆环，三条交易与预算首屏可见', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(393, 852);
     addTearDown(tester.view.reset);
@@ -29,6 +30,9 @@ void main() {
     expect(tester.takeException(), isNull);
     final overview = tester.getRect(find.byType(HomeTrendPanel));
     expect(overview.height, lessThanOrEqualTo(280));
+    for (var i = 1; i <= 3; i++) {
+      expect(find.byKey(Key('home_metric_$i')), findsOneWidget);
+    }
     final transactions = find.byType(TransactionTile);
     expect(transactions, findsNWidgets(3));
     final navTop = tester
@@ -36,6 +40,24 @@ void main() {
         .top;
     expect(tester.getRect(transactions.last).bottom, lessThan(navTop));
     final budget = find.byKey(const Key('home_compact_budget'));
+    expect(find.byKey(const Key('home_budget_ring')), findsOneWidget);
+    expect(
+      find.descendant(
+        of: budget,
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is CustomPaint && widget.painter is BudgetRingPainter,
+        ),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: budget,
+        matching: find.byType(LinearProgressIndicator),
+      ),
+      findsNothing,
+    );
     expect(tester.getRect(budget).bottom, lessThan(navTop));
     await tester.tap(budget);
     await tester.pumpAndSettle();

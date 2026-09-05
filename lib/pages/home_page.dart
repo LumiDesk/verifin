@@ -389,7 +389,7 @@ class HomeTrendPanel extends StatelessWidget {
       onTap: onTap,
       quietTap: true,
       padding: veriUnifiedDesignPreview
-          ? const EdgeInsets.all(14)
+          ? const EdgeInsets.symmetric(horizontal: 14, vertical: 10)
           : const EdgeInsets.fromLTRB(14, 13, 14, 12),
       child: RepaintBoundary(
         child: Column(
@@ -488,59 +488,39 @@ class HomeTrendPanel extends StatelessWidget {
               ],
             ),
             const SizedBox(height: veriUnifiedDesignPreview ? 12 : 10),
-            if (veriUnifiedDesignPreview)
-              Row(
-                children: [
-                  for (final metric in [
-                    config.card1,
-                    config.card2,
-                    config.card3,
-                  ])
-                    SummaryMetric(
-                      label: homeMetricLabel(l10n, metric),
-                      value: formatHomeMetric(
-                        metric,
-                        computeHomeMetric(metric, metricContext),
-                      ),
-                      color: homeMetricColor(
-                        metric,
-                        computeHomeMetric(metric, metricContext),
-                        mutedColor,
-                      ),
-                    ),
-                ],
-              )
-            else
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: _MetricTile(
-                      metric: config.card1,
-                      metricContext: metricContext,
-                      dark: isDark,
-                      mutedColor: mutedColor,
-                    ),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: _MetricTile(
+                    key: const Key('home_metric_1'),
+                    metric: config.card1,
+                    metricContext: metricContext,
+                    dark: isDark,
+                    mutedColor: mutedColor,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _MetricTile(
-                      metric: config.card2,
-                      metricContext: metricContext,
-                      dark: isDark,
-                      mutedColor: mutedColor,
-                    ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _MetricTile(
+                    key: const Key('home_metric_2'),
+                    metric: config.card2,
+                    metricContext: metricContext,
+                    dark: isDark,
+                    mutedColor: mutedColor,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _MetricTile(
-                      metric: config.card3,
-                      metricContext: metricContext,
-                      dark: isDark,
-                      mutedColor: mutedColor,
-                    ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _MetricTile(
+                    key: const Key('home_metric_3'),
+                    metric: config.card3,
+                    metricContext: metricContext,
+                    dark: isDark,
+                    mutedColor: mutedColor,
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
             const SizedBox(height: veriUnifiedDesignPreview ? 8 : 12),
             SizedBox(
               height: veriUnifiedDesignPreview ? 96 : 138,
@@ -581,6 +561,7 @@ class HomeTrendPanel extends StatelessWidget {
 /// 走势卡片里的一个可自定义小卡片：展示某个指标的名称与数值。
 class _MetricTile extends StatelessWidget {
   const _MetricTile({
+    super.key,
     required this.metric,
     required this.metricContext,
     required this.dark,
@@ -718,50 +699,69 @@ class BudgetPanel extends StatelessWidget {
           children: [
             Row(
               children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                SizedBox(
+                  key: const Key('home_budget_ring'),
+                  width: 72,
+                  height: 72,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: BudgetRingPainter(
+                            value: ratio,
+                            trackColor: textColor.withValues(alpha: 0.08),
+                            progressColor: budgetProgressColor(
+                              budget,
+                              remaining,
+                              ratio,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${(ratio * 100).toStringAsFixed(0)}%',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                    ],
                   ),
                 ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        budget <= 0
+                            ? l10n.notSetBudget
+                            : '${overspent ? l10n.overBudgetLabel : l10n.budgetRemaining} ${formatAmount(remaining.abs())}',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: overspent ? veriExpense : textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        budget <= 0
+                            ? '${l10n.entryTypeExpense} ${formatExpenseAmount(expense)}'
+                            : l10n.budgetTotalLabel(formatAmount(budget)),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: textColor.withValues(alpha: 0.68),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
                 const _CircleArrow(),
               ],
             ),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 12,
-              runSpacing: 4,
-              children: [
-                Text(
-                  budget <= 0
-                      ? l10n.notSetBudget
-                      : '${overspent ? l10n.overBudgetLabel : l10n.budgetRemaining} ${formatAmount(remaining.abs())}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: overspent ? veriExpense : textColor,
-                  ),
-                ),
-                Text(
-                  budget <= 0
-                      ? '${l10n.entryTypeExpense} ${formatExpenseAmount(expense)}'
-                      : l10n.budgetTotalLabel(formatAmount(budget)),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: textColor.withValues(alpha: 0.68),
-                  ),
-                ),
-              ],
-            ),
-            if (budget > 0) ...[
-              const SizedBox(height: 8),
-              LinearProgressIndicator(
-                value: ratio.clamp(0.0, 1.0),
-                minHeight: 4,
-                borderRadius: BorderRadius.circular(veriRadiusSm),
-                color: budgetProgressColor(budget, remaining, ratio),
-                backgroundColor: textColor.withValues(alpha: 0.08),
-              ),
-            ],
             if (categoryRisk != null) ...[
               const SizedBox(height: 8),
               _HomeBudgetRiskBanner(snapshot: categoryRisk!),
