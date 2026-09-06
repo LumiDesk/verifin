@@ -54,7 +54,7 @@ class HomePage extends StatelessWidget {
     // 退款条目在原支出上管理，不单独进时间线（净额已体现在支出行）。
     final recentEntries = entries
         .where((e) => e.type != EntryType.refund)
-        .take(veriUnifiedDesignPreview ? 3 : 5)
+        .take(5)
         .toList();
     // 预算面板按预算周期取数（键月 + 周期窗口）；首页其余统计仍按自然月。
     final budgetKeyMonth = controller.budgetKeyMonthFor(now);

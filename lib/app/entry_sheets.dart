@@ -62,9 +62,6 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final titleStyle = Theme.of(context).textTheme.titleMedium;
-    final titleSlotHeight =
-        (titleStyle?.fontSize ?? 16) * (titleStyle?.height ?? 1.5) + 10;
     return SafeArea(
       top: false,
       child: Align(
@@ -91,9 +88,7 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                ] else
-                  // 快速记账隐藏文字，但保留标题行的原始高度，避免数字区域上移。
-                  SizedBox(height: titleSlotHeight),
+                ],
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(

@@ -16,7 +16,7 @@ void main() {
     expect(find.byType(NumberPadSheet), findsOneWidget);
   });
 
-  testWidgets('隐藏快速记账标题仍保留数字区域的原始顶部间距', (tester) async {
+  testWidgets('隐藏快速记账标题后数字区域不保留标题占位', (tester) async {
     Future<Rect> pumpPad(bool showTitle) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -31,7 +31,7 @@ void main() {
 
     final withTitle = await pumpPad(true);
     final withoutTitle = await pumpPad(false);
-    expect(withoutTitle.top, closeTo(withTitle.top, 0.01));
+    expect(withoutTitle.top, lessThan(withTitle.top));
     expect(withoutTitle.height, closeTo(withTitle.height, 0.01));
   });
 }

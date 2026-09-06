@@ -82,7 +82,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     _conversionSource = entry.conversionSource;
     _categoryId = entry.categoryId;
     _accountId = entry.accountId;
-    _noAccount = entry.type != EntryType.transfer && entry.accountId.isEmpty;
+    _noAccount = entry.accountId.isEmpty;
     _toAccountId = entry.toAccountId;
     _occurredAt = entry.occurredAt;
     _tagIds = List<String>.of(entry.tagIds);
@@ -116,10 +116,6 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       );
     }
 
-    final currentCategories = controller.categoriesForType(_type);
-    if (!currentCategories.any((category) => category.id == _categoryId)) {
-      _categoryId = currentCategories.first.id;
-    }
     final category = controller.categoryById(_categoryId);
     final accounts = controller.accounts
         .where((account) => !account.hidden || account.id == _accountId)
@@ -131,10 +127,6 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
         (account) => account.id == _toAccountId,
       );
       accounts.addAll(toAccount);
-    }
-    // 转账必须落到具体账户，不允许「无账户」。
-    if (_type == EntryType.transfer) {
-      _noAccount = false;
     }
     _normalizeTransferAccounts(accounts);
     final account = accountById(accounts, _accountId);
@@ -152,7 +144,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
         (_type != EntryType.transfer ||
             (_toAccountId != null &&
                 _toAccountId != _accountId &&
-                (_accountAmount ?? 0) > 0 &&
+                (_accountId.isEmpty || (_accountAmount ?? 0) > 0) &&
                 (_toAccountAmount ?? 0) > 0)) &&
         (_type == EntryType.expense
             ? _refundTotal <= _amount + currencyAmountTolerance(_currencyCode)
@@ -298,8 +290,10 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                           label: AppLocalizations.of(
                             context,
                           ).transferOutAccount,
-                          value:
-                              '${account.name} (${formatUserMoney(controller.accountBalance(account), account.currencyCode)})',
+                          value: _accountId.isEmpty
+                              ? AppLocalizations.of(context).noAccountLabel
+                              : '${account.name} (${formatUserMoney(controller.accountBalance(account), account.currencyCode)})',
+                          placeholder: _accountId.isEmpty,
                           onTap: accounts.isEmpty
                               ? null
                               : () => _pickAccount(accounts),
@@ -310,7 +304,12 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                               ? AppLocalizations.of(context).pleaseSelect
                               : '${toAccount.name} (${formatUserMoney(controller.accountBalance(toAccount), toAccount.currencyCode)})',
                           placeholder: toAccount == null,
-                          onTap: accounts.length < 2
+                          onTap:
+                              accounts
+                                  .where(
+                                    (candidate) => candidate.id != _accountId,
+                                  )
+                                  .isEmpty
                               ? null
                               : () => _pickToAccount(accounts),
                         ),
@@ -911,16 +910,15 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       accounts: accounts,
       selectedId: _noAccount ? '' : _accountId,
       balanceOf: VeriFinScope.of(context).accountBalance,
-      // 转账两端都必须是具体账户，故转出账户不提供「无账户」。
-      noneLabel: isTransfer
-          ? null
-          : AppLocalizations.of(context).noAccountLabel,
-      noneHint: isTransfer ? null : AppLocalizations.of(context).noAccountHint,
+      // 转出账户允许「无账户（代还）」；转入账户仍必须选择真实账户。
+      noneLabel: AppLocalizations.of(context).noAccountLabel,
+      noneHint: AppLocalizations.of(context).noAccountHint,
     );
     if (selected != null && mounted) {
       setState(() {
         if (selected.id.isEmpty) {
           _noAccount = true;
+          _accountId = '';
           if (!_currencyTouched) {
             _currencyCode = VeriFinScope.of(
               context,
@@ -982,16 +980,17 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       return;
     }
     final available = accounts;
-    if (available.length < 2) {
+    final candidates = available
+        .where((account) => account.id != _accountId)
+        .toList(growable: false);
+    if (candidates.isEmpty) {
       _toAccountId = null;
       return;
     }
     if (_toAccountId == null ||
         _toAccountId == _accountId ||
-        !available.any((account) => account.id == _toAccountId)) {
-      _toAccountId = available
-          .firstWhere((account) => account.id != _accountId)
-          .id;
+        !candidates.any((account) => account.id == _toAccountId)) {
+      _toAccountId = candidates.first.id;
     }
   }
 
@@ -1057,7 +1056,8 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     if (entry == null) {
       throw StateError('Transaction draft is not initialized.');
     }
-    final noAccount = _type != EntryType.transfer && _noAccount;
+    final noAccount =
+        _accountId.isEmpty || (_type != EntryType.transfer && _noAccount);
     return entry.copyWith(
       type: _type,
       amount: normalizeCurrencyAmount(_amount, _currencyCode),

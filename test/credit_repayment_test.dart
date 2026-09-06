@@ -4,6 +4,7 @@ import 'package:verifin/app/models.dart';
 import 'package:verifin/app/veri_fin_scope.dart';
 import 'package:verifin/local_storage/local_storage.dart';
 import 'package:verifin/pages/credit_repayment_page.dart';
+import 'package:verifin/pages/transaction_detail_page.dart';
 
 import 'support/test_harness.dart';
 
@@ -155,5 +156,18 @@ void main() {
     );
     expect(repayment.accountId, '');
     expect(repayment.amount, 300);
+
+    // 无账户代还仍可在交易详情中识别来源和转入账户，不能被归一化成首个账户或清空转入端。
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(
+          home: TransactionDetailPage(entryId: repayment.id),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('无账户'), findsOneWidget);
+    expect(find.textContaining('花呗'), findsWidgets);
   });
 }
