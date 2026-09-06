@@ -45,7 +45,7 @@ void main() {
       expect(find.byKey(Key('home_metric_$i')), findsOneWidget);
     }
     final transactions = find.byType(TransactionTile);
-    expect(transactions, findsNWidgets(3));
+    expect(transactions, findsNWidgets(5));
     final navTop = tester
         .getRect(find.byKey(const Key('main_nav_capsule')))
         .top;
