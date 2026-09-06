@@ -79,11 +79,13 @@ class VeriGlassSurface extends StatelessWidget {
       ),
       child: child,
     );
+    // 零模糊会被引擎简化为空过滤；src 会清掉该层背后的像素。
+    // 始终 srcOver 合成，保留首次出现和极小进度帧的原背景。
     final filtered = highContrast
         ? content
         : grouped
         ? BackdropFilter.grouped(
-            blendMode: BlendMode.src,
+            blendMode: BlendMode.srcOver,
             filter: ui.ImageFilter.blur(
               sigmaX: 16 * visibility,
               sigmaY: 16 * visibility,
@@ -91,7 +93,7 @@ class VeriGlassSurface extends StatelessWidget {
             child: content,
           )
         : BackdropFilter(
-            blendMode: BlendMode.src,
+            blendMode: BlendMode.srcOver,
             filter: ui.ImageFilter.blur(
               sigmaX: 16 * visibility,
               sigmaY: 16 * visibility,

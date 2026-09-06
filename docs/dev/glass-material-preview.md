@@ -39,19 +39,19 @@ pub 依赖。实时背景模糊不同于真实折射，不用静态高光或渐�
 - `glass_lighting.dart` 根据边界位置、曲面法线和光照方向绘制高光：左上/右下渐亮，
   右上/左下渐隐。柔光与细高光叠加，移除普通模式的整圈均匀白色 Border。
   Android 修复后以两次连续透明度网格绘制，禁止恢复每个 2dp 片段单独模糊的旧实现。
-- `navigation_glass_lens.dart` 仅把导航自己的图标和文字绘制层采样为临时 GPU 纹理；
-  不包含账目、不写文件、不发送。源文字在透镜覆盖区裁去，再由 Shader 显示变形结果，
-  避免把原文字与放大文字重复叠加。
+- `navigation_glass_lens.dart` 通过当前帧 `ImageFiltered` 过滤导航自己的图标和文字；
+  不包含账目、不写文件、不发送。无截图读回和额外纹理生命周期，避免高亮切换时旧结果覆盖实时文字。
 - 历史截图 Shader（现已删除）对采样坐标执行放大、边缘弯曲和分通道偏移；
   滑块按压时膨胀，随拖动方向改变形状和边缘光，松手/取消时恢复并沿原状态机吸附。
 - 导航底座、选中滑块和快捷按钮均使用对应方向高光；原点击、拖动、取消与无障碍入口保留。
 - 高级材质由用户选择；关闭时不创建透镜，保留普通磨砂路径。
 
-浏览器端验证使用 `integration_test/glass_navigation_test.dart`；测试要求实际 Shader
-和纹理就绪，检查膨胀、拖动与选中结果，不能以 fallback 通过。
+Android release 验证使用 `integration_test/glass_navigation_test.dart` 和
+`integration_test/menu_animation_test.dart`；测试要求实际 Shader/filter 就绪，
+检查膨胀、拖动、选中、首次打开和中间帧结果，不能以 fallback 通过。
 
 ```bash
-# 历史 Web 命令已移除；当前真机命令见 android-development.md。
+# 当前真机命令见 android-development.md。
 ```
 
 本轮方向光更新验证：默认回归 919 项通过（6 项候选专用测试跳过）；方向光、材质、

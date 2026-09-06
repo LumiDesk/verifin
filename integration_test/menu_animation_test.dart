@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:verifin/app/app_theme.dart';
 import 'package:verifin/app/common_widgets.dart';
+import '../test/glass_reveal_pixels_test.dart' as pixel_regression;
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -52,12 +53,12 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      // 首次绘制先暖机，单点计时不能包含 shader/字体首次准备成本。
-      await tester.tap(find.byTooltip('菜单检查'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('关闭菜单'));
-      await tester.pumpAndSettle();
+      // 不暖机：首次打开就是用户报告的故障路径。
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(seconds: 2)),
+      );
       for (var i = 0; i < 3; i++) {
+        debugPrint('MENU_COLD_FRAME brightness=$brightness cycle=$i opening');
         await tester.tap(find.byTooltip('菜单检查'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 70));
@@ -88,4 +89,6 @@ void main() {
       );
     }
   });
+  // 放在菜单冷启动检查之后，避免像素用例替菜单预热图形管线。
+  pixel_regression.main();
 }

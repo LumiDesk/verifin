@@ -21,7 +21,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 负责默认关闭的磨砂材质预览；卡片可共享过滤组，重叠菜单/弹层使用独立过滤。
 `VeriGlassBackdrop` 实现现位于 `app_theme.dart`，由 `glass_material.dart` 保持原入口导出；
 `VeriPageTransitionsBuilder` 在 Android 转场内部包裹每个路由自己的背景，保留系统预测性返回。
-Material 全局 surface 不透明；具体玻璃表面用 src 混合，导航使用同帧 ImageFiltered，不再生成截图。
+Material 全局 surface 不透明；玻璃表面使用 srcOver 混合以保留首帧背景，导航使用同帧 ImageFiltered，不再生成截图。
 `sheets.dart` 的 `_showVeriModalSheet` 只统一材质封装，外部仍使用各领域 `show…Sheet`。
 `VeriGlassSurface.reveal`（默认 1）用于分层消退染色、模糊、阴影与方向光；菜单文字单独淡出，
 不能把背景过滤器包进整层 Opacity。`VeriGlassLightPainter.opacity` 对应控制光照消退。
