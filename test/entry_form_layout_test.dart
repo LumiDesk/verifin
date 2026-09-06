@@ -36,6 +36,11 @@ void main() {
     );
     expect(find.byIcon(Icons.save_outlined), findsNothing);
     expect(find.byKey(const Key('save_entry_button')), findsOneWidget);
+    final saveButton = tester.widget<FilledButton>(
+      find.byKey(const Key('save_entry_button')),
+    );
+    expect(saveButton.style?.backgroundColor, isNotNull);
+    expect(saveButton.style?.foregroundColor, isNotNull);
     expect(
       tester
           .widget<Padding>(find.byKey(const Key('entry_bottom_save_padding')))
