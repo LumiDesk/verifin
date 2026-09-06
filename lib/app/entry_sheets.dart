@@ -89,8 +89,8 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
                   ),
                   const SizedBox(height: 10),
                 ] else
-                  // 无标题模式仍保留弹窗内容与顶部边缘的统一间距；只隐藏文字，不压缩弹窗 chrome。
-                  const SizedBox(height: 10),
+                  // 无标题模式保留底部 Sheet 自带的拖拽把手间距；不要再叠加一层空白。
+                  const SizedBox.shrink(),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
