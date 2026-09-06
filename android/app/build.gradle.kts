@@ -4,17 +4,6 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-val releaseKeystorePath = providers.environmentVariable("VERIFIN_RELEASE_KEYSTORE_PATH").orNull
-val releaseStorePassword = providers.environmentVariable("VERIFIN_RELEASE_STORE_PASSWORD").orNull
-val releaseKeyAlias = providers.environmentVariable("VERIFIN_RELEASE_KEY_ALIAS").orNull
-val releaseKeyPassword = providers.environmentVariable("VERIFIN_RELEASE_KEY_PASSWORD").orNull
-val hasReleaseSigning = listOf(
-    releaseKeystorePath,
-    releaseStorePassword,
-    releaseKeyAlias,
-    releaseKeyPassword,
-).all { !it.isNullOrBlank() }
-
 android {
     namespace = "top.talyra42.verifin"
     compileSdk = flutter.compileSdkVersion
@@ -44,13 +33,11 @@ android {
     }
 
     signingConfigs {
-        if (hasReleaseSigning) {
-            create("verifinRelease") {
-                storeFile = file(releaseKeystorePath!!)
-                storePassword = releaseStorePassword!!
-                keyAlias = releaseKeyAlias!!
-                keyPassword = releaseKeyPassword!!
-            }
+        create("verifinRelease") {
+            storeFile = file("verifin-release.jks")
+            storePassword = "verifin-release"
+            keyAlias = "verifin"
+            keyPassword = "verifin-release"
         }
     }
 
@@ -80,9 +67,7 @@ android {
 
     buildTypes {
         release {
-            if (hasReleaseSigning) {
-                signingConfig = signingConfigs.getByName("verifinRelease")
-            }
+            signingConfig = signingConfigs.getByName("verifinRelease")
             // 开启 R8 代码裁剪 + 资源裁剪，减小 APK：裁掉未用到的插件 Java/Kotlin
             // 代码与未引用资源。反射依赖点（ML Kit 识别器、本地通知的 Gson 序列化等）
             // 由 proguard-rules.pro 的 keep 规则保护，勿删。改动后必须用 CI 的 release
