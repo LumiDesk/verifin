@@ -56,6 +56,12 @@ void main() {
     );
     expect(
       tester
+          .widget<ColoredBox>(find.byKey(const Key('entry_bottom_save_bar')))
+          .color,
+      Colors.transparent,
+    );
+    expect(
+      tester
           .widget<CategoryGlyph>(
             find.descendant(
               of: find.byKey(const Key('entry_category_dining')),
