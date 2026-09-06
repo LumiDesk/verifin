@@ -230,6 +230,8 @@ class MainActivity : FlutterFragmentActivity() {
         val values = mapOf(
             WidgetData.KEY_TODAY_AMOUNT to (call.argument<String>("todayAmount") ?: "0"),
             WidgetData.KEY_TODAY_LABEL to (call.argument<String>("todayLabel") ?: "今日支出"),
+            WidgetData.KEY_QUICK_ENTRY_LABEL to
+                (call.argument<String>("quickEntryLabel") ?: "记一笔"),
             WidgetData.KEY_BUDGET_AMOUNT to (call.argument<String>("budgetAmount") ?: "0"),
             WidgetData.KEY_BUDGET_LABEL to (call.argument<String>("budgetLabel") ?: "本月可用预算"),
             WidgetData.KEY_NET_WORTH_AMOUNT to (call.argument<String>("netWorthAmount") ?: "0"),
@@ -237,10 +239,22 @@ class MainActivity : FlutterFragmentActivity() {
             // 跨天/跨期自愈锚点（预算锚点为周期截止日 yyyy-MM-dd，支持自定义预算周期）。
             WidgetData.KEY_TODAY_DATE to (call.argument<String>("todayDate") ?: ""),
             WidgetData.KEY_TODAY_ZERO to (call.argument<String>("todayZeroAmount") ?: "0"),
+            WidgetData.KEY_TODAY_STALE_AMOUNT to
+                (call.argument<String>("todayStaleAmount") ?: "—"),
+            WidgetData.KEY_TODAY_STALE_LABEL to
+                (call.argument<String>("todayStaleLabel") ?: "打开应用刷新"),
             WidgetData.KEY_BUDGET_EXPIRY to (call.argument<String>("budgetExpiry") ?: ""),
             WidgetData.KEY_BUDGET_FULL to (call.argument<String>("budgetFullAmount") ?: "0"),
             WidgetData.KEY_BUDGET_FULL_LABEL to
                 (call.argument<String>("budgetFullLabel") ?: "本月可用预算"),
+            WidgetData.KEY_BUDGET_NEXT_EXPIRY to
+                (call.argument<String>("budgetNextExpiry") ?: ""),
+            WidgetData.KEY_BUDGET_NEXT_AMOUNT to
+                (call.argument<String>("budgetNextAmount") ?: "0"),
+            WidgetData.KEY_BUDGET_NEXT_LABEL to
+                (call.argument<String>("budgetNextLabel") ?: "本月可用预算"),
+            WidgetData.KEY_BUDGET_STALE_LABEL to
+                (call.argument<String>("budgetStaleLabel") ?: "打开应用刷新"),
         )
         WidgetData.write(this, values)
         WidgetData.refresh(this, QuickEntryWidgetProvider::class.java)
@@ -1145,7 +1159,7 @@ class MainActivity : FlutterFragmentActivity() {
         Thread {
             try {
                 val bytes = contentResolver.openInputStream(Uri.parse(fileUri))?.use { input ->
-                    input.readBytes()
+                    readLimitedBytes(input)
                 } ?: throw IllegalStateException("无法读取备份文件。")
                 runOnUiThread { result.success(bytes) }
             } catch (error: Exception) {
@@ -1230,7 +1244,7 @@ class MainActivity : FlutterFragmentActivity() {
         Thread {
             try {
                 val text = contentResolver.openInputStream(Uri.parse(fileUri))?.use { input ->
-                    input.readBytes().toString(Charsets.UTF_8)
+                    readLimitedBytes(input).toString(Charsets.UTF_8)
                 } ?: throw IllegalStateException("无法读取备份文件。")
                 runOnUiThread { result.success(text) }
             } catch (error: Exception) {
@@ -1253,6 +1267,24 @@ class MainActivity : FlutterFragmentActivity() {
                 }
             }
         }.start()
+    }
+
+    /// 备份可能来自用户选择的任意 SAF 文件，读取前后都限制大小，避免把异常大文件
+    /// 一次性装入 Dart/Android 内存。zip 解包层还会检查解压后的累计大小。
+    private fun readLimitedBytes(input: java.io.InputStream): ByteArray {
+        val output = ByteArrayOutputStream(DEFAULT_BUFFER_SIZE)
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        var total = 0
+        while (true) {
+            val read = input.read(buffer)
+            if (read == -1) break
+            total += read
+            if (total > MAX_BACKUP_BYTES) {
+                throw IllegalStateException("备份文件过大")
+            }
+            output.write(buffer, 0, read)
+        }
+        return output.toByteArray()
     }
 
     private fun isNewerVersion(latest: String, current: String): Boolean {
@@ -1311,6 +1343,7 @@ class MainActivity : FlutterFragmentActivity() {
         const val EXTRA_CAPTURE_IMAGE_URI = "imageUri"
         private const val MAX_CAPTURE_TEXT_LENGTH = 8_000
         private const val MAX_CAPTURE_IMAGE_BYTES = 25 * 1024 * 1024
+        private const val MAX_BACKUP_BYTES = 256 * 1024 * 1024
         private const val CHANNEL_NAME = "verifin/app"
         private const val REQUEST_WRITE_DOWNLOADS = 4301
         private const val REQUEST_PICK_BACKUP_DIR = 4302

@@ -3727,6 +3727,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get widgetBudgetAvailable => 'Budget left this month';
 
   @override
+  String get widgetRefreshRequired => 'Open app to refresh';
+
+  @override
   String get widgetBudgetOverspent => 'Over budget this month';
 
   @override

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="quick_entry_tile_label">Quick entry</string>
+    <string name="quick_entry_button">Add entry</string>
+</resources>

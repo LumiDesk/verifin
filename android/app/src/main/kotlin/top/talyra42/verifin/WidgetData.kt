@@ -17,6 +17,7 @@ object WidgetData {
     // 今日支出小组件（沿用旧键名，避免历史数据失效）。
     const val KEY_TODAY_AMOUNT = "today_expense"
     const val KEY_TODAY_LABEL = "today_label"
+    const val KEY_QUICK_ENTRY_LABEL = "quick_entry_label"
 
     // 本月预算小组件（展示本月可用/超支金额）。
     const val KEY_BUDGET_AMOUNT = "month_budget"
@@ -30,6 +31,8 @@ object WidgetData {
     // 今日支出所对应的日期（yyyy-MM-dd）；若与当前日期不同，说明已跨天，展示归零值。
     const val KEY_TODAY_DATE = "today_date"
     const val KEY_TODAY_ZERO = "today_zero"
+    const val KEY_TODAY_STALE_AMOUNT = "today_stale_amount"
+    const val KEY_TODAY_STALE_LABEL = "today_stale_label"
     // 预算所属周期的截止日（yyyy-MM-dd，含当天）；过期后展示整期预算（新周期尚无支出）。
     // 支持应用内自定义预算周期起始日，截止日不再一定是自然月末。
     const val KEY_BUDGET_EXPIRY = "month_budget_expiry"
@@ -38,6 +41,10 @@ object WidgetData {
     const val KEY_BUDGET_MONTH = "month_budget_month"
     const val KEY_BUDGET_FULL = "month_budget_full"
     const val KEY_BUDGET_FULL_LABEL = "month_budget_full_label"
+    const val KEY_BUDGET_NEXT_EXPIRY = "month_budget_next_expiry"
+    const val KEY_BUDGET_NEXT_AMOUNT = "month_budget_next_amount"
+    const val KEY_BUDGET_NEXT_LABEL = "month_budget_next_label"
+    const val KEY_BUDGET_STALE_LABEL = "month_budget_stale_label"
 
     /// 当前本地日期 yyyy-MM-dd。
     fun currentDate(): String {
@@ -56,13 +63,14 @@ object WidgetData {
     }
 
     /// 今日支出的展示值：推送日期即当天则用原值，已跨天则用归零值（新的一天尚无支出）。
-    fun todayAmountForToday(context: Context): String {
+    fun todayForToday(context: Context): Pair<String, String> {
         val stamp = read(context, KEY_TODAY_DATE, "")
         val amount = read(context, KEY_TODAY_AMOUNT, "0")
         if (stamp.isEmpty() || stamp == currentDate()) {
-            return amount
+            return amount to read(context, KEY_TODAY_LABEL, "今日支出")
         }
-        return read(context, KEY_TODAY_ZERO, "0")
+        return read(context, KEY_TODAY_STALE_AMOUNT, "—") to
+            read(context, KEY_TODAY_STALE_LABEL, "打开应用刷新")
     }
 
     /// 可用预算的展示值 / 标签：过了周期截止日后回到整期预算与「可用」文案。
@@ -74,6 +82,18 @@ object WidgetData {
             // ISO 日期字符串可直接字典序比较：今天 <= 截止日则周期内。
             if (currentDate() <= expiry) {
                 return amount to label
+            }
+            val nextExpiry = read(context, KEY_BUDGET_NEXT_EXPIRY, "")
+            if (nextExpiry.isNotEmpty() && currentDate() <= nextExpiry) {
+                return read(context, KEY_BUDGET_NEXT_AMOUNT, amount) to
+                    read(context, KEY_BUDGET_NEXT_LABEL, label)
+            }
+            if (nextExpiry.isNotEmpty()) {
+                return amount to read(
+                    context,
+                    KEY_BUDGET_STALE_LABEL,
+                    "打开应用刷新",
+                )
             }
             return read(context, KEY_BUDGET_FULL, amount) to
                 read(context, KEY_BUDGET_FULL_LABEL, label)

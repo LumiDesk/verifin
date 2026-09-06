@@ -28,12 +28,17 @@ class QuickEntryWidgetProvider : AppWidgetProvider() {
             widgetId: Int,
         ) {
             // 跨天自愈：已过午夜则展示归零值，不必等应用打开重新推送。
-            val amount = WidgetData.todayAmountForToday(context)
-            val label = WidgetData.read(context, WidgetData.KEY_TODAY_LABEL, "今日支出")
+            val (amount, label) = WidgetData.todayForToday(context)
+            val quickEntryLabel = WidgetData.read(
+                context,
+                WidgetData.KEY_QUICK_ENTRY_LABEL,
+                "记一笔",
+            )
 
             val views = RemoteViews(context.packageName, R.layout.quick_entry_widget)
             views.setTextViewText(R.id.widget_amount, amount)
             views.setTextViewText(R.id.widget_label, label)
+            views.setTextViewText(R.id.widget_add_button, quickEntryLabel)
 
             val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
 

@@ -9,20 +9,28 @@ class AppWidgetBridge {
   static Future<void> updateWidgetData({
     required String todayAmount,
     required String todayLabel,
+    required String quickEntryLabel,
     required String budgetAmount,
     required String budgetLabel,
     required String netWorthAmount,
     required String netWorthLabel,
     required String todayDate,
     required String todayZeroAmount,
+    required String todayStaleAmount,
+    required String todayStaleLabel,
     required String budgetExpiry,
     required String budgetFullAmount,
     required String budgetFullLabel,
+    required String budgetNextExpiry,
+    required String budgetNextAmount,
+    required String budgetNextLabel,
+    required String budgetStaleLabel,
   }) async {
     try {
       await _channel.invokeMethod<void>('updateWidgetData', {
         'todayAmount': todayAmount,
         'todayLabel': todayLabel,
+        'quickEntryLabel': quickEntryLabel,
         'budgetAmount': budgetAmount,
         'budgetLabel': budgetLabel,
         'netWorthAmount': netWorthAmount,
@@ -32,9 +40,15 @@ class AppWidgetBridge {
         // （yyyy-MM-dd，含当天；自定义预算周期起始日后不再是自然月末）。
         'todayDate': todayDate,
         'todayZeroAmount': todayZeroAmount,
+        'todayStaleAmount': todayStaleAmount,
+        'todayStaleLabel': todayStaleLabel,
         'budgetExpiry': budgetExpiry,
         'budgetFullAmount': budgetFullAmount,
         'budgetFullLabel': budgetFullLabel,
+        'budgetNextExpiry': budgetNextExpiry,
+        'budgetNextAmount': budgetNextAmount,
+        'budgetNextLabel': budgetNextLabel,
+        'budgetStaleLabel': budgetStaleLabel,
       });
     } on MissingPluginException {
       // 非 Android 平台没有桌面小组件。

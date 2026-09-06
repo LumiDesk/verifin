@@ -6680,6 +6680,12 @@ abstract class AppLocalizations {
   /// **'本月可用预算'**
   String get widgetBudgetAvailable;
 
+  /// No description provided for @widgetRefreshRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开应用刷新'**
+  String get widgetRefreshRequired;
+
   /// No description provided for @widgetBudgetOverspent.
   ///
   /// In zh, this message translates to:

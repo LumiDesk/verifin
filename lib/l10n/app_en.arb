@@ -1366,6 +1366,7 @@
   "bioGoToSettingsDesc": "No biometrics enrolled; add them in system settings",
   "widgetTodayExpense": "Today's spending",
   "widgetBudgetAvailable": "Budget left this month",
+  "widgetRefreshRequired": "Open app to refresh",
   "widgetBudgetOverspent": "Over budget this month",
   "widgetNetWorth": "Total assets",
   "widgetGalleryTitle": "Home widgets",

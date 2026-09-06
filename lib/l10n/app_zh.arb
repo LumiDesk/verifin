@@ -2319,6 +2319,7 @@
   "bioGoToSettingsDesc": "尚未录入生物识别，请在系统设置中添加",
   "widgetTodayExpense": "今日支出",
   "widgetBudgetAvailable": "本月可用预算",
+  "widgetRefreshRequired": "打开应用刷新",
   "widgetBudgetOverspent": "本月已超支",
   "widgetNetWorth": "资产总额",
   "widgetGalleryTitle": "桌面小组件",

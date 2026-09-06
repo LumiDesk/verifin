@@ -30,6 +30,15 @@ Future<void> pushWidgetData(VeriFinController controller) async {
   final overspentLabel = cyclic
       ? l10n.widgetPeriodBudgetOverspent
       : l10n.widgetBudgetOverspent;
+  final nextCycleStart = addCalendarDays(budgetWindow.end, 1);
+  final nextBudgetKeyMonth = controller.budgetKeyMonthFor(nextCycleStart);
+  final nextBudgetWindow = controller.budgetWindow(nextBudgetKeyMonth);
+  final nextBudget = controller.monthlyBudget(nextBudgetKeyMonth);
+  final nextCycleExpense = sumByType(
+    entriesInWindow(entries, nextBudgetWindow),
+    EntryType.expense,
+  );
+  final nextRemaining = nextBudget - nextCycleExpense;
   final baseCurrencyCode = controller.activeBook.baseCurrencyCode;
   final accountValuation = controller.accountBalancesInBase(
     accounts: controller.accounts.where(
@@ -43,6 +52,7 @@ Future<void> pushWidgetData(VeriFinController controller) async {
   await AppWidgetBridge.updateWidgetData(
     todayAmount: formatUserMoney(todayTotal, baseCurrencyCode),
     todayLabel: l10n.widgetTodayExpense,
+    quickEntryLabel: l10n.addEntryTooltip,
     budgetAmount: formatUserMoney(remaining.abs(), baseCurrencyCode),
     budgetLabel: remaining < 0 ? overspentLabel : availableLabel,
     netWorthAmount: accountValuation.completeTotal == null
@@ -55,9 +65,16 @@ Future<void> pushWidgetData(VeriFinController controller) async {
     // 过了预算周期截止日后「可用预算」回到整期预算（新周期尚无支出）。
     todayDate: '${now.year}-${two(now.month)}-${two(now.day)}',
     todayZeroAmount: formatUserMoney(0, baseCurrencyCode),
+    todayStaleAmount: '—',
+    todayStaleLabel: l10n.widgetRefreshRequired,
     budgetExpiry:
         '${budgetWindow.end.year}-${two(budgetWindow.end.month)}-${two(budgetWindow.end.day)}',
     budgetFullAmount: formatUserMoney(monthBudget, baseCurrencyCode),
     budgetFullLabel: availableLabel,
+    budgetNextExpiry:
+        '${nextBudgetWindow.end.year}-${two(nextBudgetWindow.end.month)}-${two(nextBudgetWindow.end.day)}',
+    budgetNextAmount: formatUserMoney(nextRemaining.abs(), baseCurrencyCode),
+    budgetNextLabel: nextRemaining < 0 ? overspentLabel : availableLabel,
+    budgetStaleLabel: l10n.widgetRefreshRequired,
   );
 }

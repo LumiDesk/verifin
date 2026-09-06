@@ -56,6 +56,25 @@ void main() {
     expect((data['profile'] as Map)['signature'], '数据自主 · 本地优先');
   });
 
+  test('pack/unpack 保留非 JPEG 附件的 MIME 类型', () {
+    final png = 'data:image/png;base64,${base64Encode(<int>[1, 2, 3])}';
+    final json = const JsonEncoder().convert(<String, Object?>{
+      'app': 'verifin',
+      'data': <String, Object?>{
+        'attachments': <Object?>[
+          <String, Object?>{'id': 'png-1', 'dataUrl': png},
+        ],
+      },
+    });
+    final restored =
+        jsonDecode(unpackBackupArchive(packBackupArchive(json)))
+            as Map<String, Object?>;
+    final data = restored['data'] as Map<String, Object?>;
+    final attachment =
+        (data['attachments'] as List<Object?>).single as Map<String, Object?>;
+    expect(attachment['dataUrl'], png);
+  });
+
   test('zip 明显小于内嵌 base64 的原始 JSON（附件不再膨胀）', () {
     final exportJson = buildExportJson(withAttachments: true);
     final zip = packBackupArchive(exportJson);

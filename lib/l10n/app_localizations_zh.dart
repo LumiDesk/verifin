@@ -3637,6 +3637,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get widgetBudgetAvailable => '本月可用预算';
 
   @override
+  String get widgetRefreshRequired => '打开应用刷新';
+
+  @override
   String get widgetBudgetOverspent => '本月已超支';
 
   @override
