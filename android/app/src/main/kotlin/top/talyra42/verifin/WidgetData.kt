@@ -67,16 +67,28 @@ object WidgetData {
         val stamp = read(context, KEY_TODAY_DATE, "")
         val amount = read(context, KEY_TODAY_AMOUNT, "0")
         if (stamp.isEmpty() || stamp == currentDate()) {
-            return amount to read(context, KEY_TODAY_LABEL, "今日支出")
+            return amount to read(
+                context,
+                KEY_TODAY_LABEL,
+                context.getString(R.string.widget_today_expense),
+            )
         }
         return read(context, KEY_TODAY_STALE_AMOUNT, "—") to
-            read(context, KEY_TODAY_STALE_LABEL, "打开应用刷新")
+            read(
+                context,
+                KEY_TODAY_STALE_LABEL,
+                context.getString(R.string.widget_refresh_required),
+            )
     }
 
     /// 可用预算的展示值 / 标签：过了周期截止日后回到整期预算与「可用」文案。
     fun budgetForMonth(context: Context): Pair<String, String> {
         val amount = read(context, KEY_BUDGET_AMOUNT, "0")
-        val label = read(context, KEY_BUDGET_LABEL, "本月可用预算")
+        val label = read(
+            context,
+            KEY_BUDGET_LABEL,
+            context.getString(R.string.widget_budget_available),
+        )
         val expiry = read(context, KEY_BUDGET_EXPIRY, "")
         if (expiry.isNotEmpty()) {
             // ISO 日期字符串可直接字典序比较：今天 <= 截止日则周期内。
@@ -92,7 +104,7 @@ object WidgetData {
                 return amount to read(
                     context,
                     KEY_BUDGET_STALE_LABEL,
-                    "打开应用刷新",
+                    context.getString(R.string.widget_refresh_required),
                 )
             }
             return read(context, KEY_BUDGET_FULL, amount) to

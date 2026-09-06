@@ -32,7 +32,7 @@ class QuickEntryWidgetProvider : AppWidgetProvider() {
             val quickEntryLabel = WidgetData.read(
                 context,
                 WidgetData.KEY_QUICK_ENTRY_LABEL,
-                "记一笔",
+                context.getString(R.string.quick_entry_button),
             )
 
             val views = RemoteViews(context.packageName, R.layout.quick_entry_widget)

@@ -229,7 +229,8 @@ class MainActivity : FlutterFragmentActivity() {
     private fun updateWidgetData(call: io.flutter.plugin.common.MethodCall) {
         val values = mapOf(
             WidgetData.KEY_TODAY_AMOUNT to (call.argument<String>("todayAmount") ?: "0"),
-            WidgetData.KEY_TODAY_LABEL to (call.argument<String>("todayLabel") ?: "今日支出"),
+            WidgetData.KEY_TODAY_LABEL to
+                (call.argument<String>("todayLabel") ?: getString(R.string.widget_today_expense)),
             WidgetData.KEY_QUICK_ENTRY_LABEL to
                 (call.argument<String>("quickEntryLabel") ?: "记一笔"),
             WidgetData.KEY_BUDGET_AMOUNT to (call.argument<String>("budgetAmount") ?: "0"),
@@ -242,19 +243,19 @@ class MainActivity : FlutterFragmentActivity() {
             WidgetData.KEY_TODAY_STALE_AMOUNT to
                 (call.argument<String>("todayStaleAmount") ?: "—"),
             WidgetData.KEY_TODAY_STALE_LABEL to
-                (call.argument<String>("todayStaleLabel") ?: "打开应用刷新"),
+                (call.argument<String>("todayStaleLabel") ?: getString(R.string.widget_refresh_required)),
             WidgetData.KEY_BUDGET_EXPIRY to (call.argument<String>("budgetExpiry") ?: ""),
             WidgetData.KEY_BUDGET_FULL to (call.argument<String>("budgetFullAmount") ?: "0"),
             WidgetData.KEY_BUDGET_FULL_LABEL to
-                (call.argument<String>("budgetFullLabel") ?: "本月可用预算"),
+                (call.argument<String>("budgetFullLabel") ?: getString(R.string.widget_budget_available)),
             WidgetData.KEY_BUDGET_NEXT_EXPIRY to
                 (call.argument<String>("budgetNextExpiry") ?: ""),
             WidgetData.KEY_BUDGET_NEXT_AMOUNT to
                 (call.argument<String>("budgetNextAmount") ?: "0"),
             WidgetData.KEY_BUDGET_NEXT_LABEL to
-                (call.argument<String>("budgetNextLabel") ?: "本月可用预算"),
+                (call.argument<String>("budgetNextLabel") ?: getString(R.string.widget_budget_available)),
             WidgetData.KEY_BUDGET_STALE_LABEL to
-                (call.argument<String>("budgetStaleLabel") ?: "打开应用刷新"),
+                (call.argument<String>("budgetStaleLabel") ?: getString(R.string.widget_refresh_required)),
         )
         WidgetData.write(this, values)
         WidgetData.refresh(this, QuickEntryWidgetProvider::class.java)

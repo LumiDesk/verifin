@@ -5,4 +5,8 @@
     <string name="net_worth_widget_description">全部账户资产总额</string>
     <string name="quick_entry_tile_label">快速记账</string>
     <string name="quick_entry_button">记一笔</string>
+    <string name="widget_today_expense">今日支出</string>
+    <string name="widget_budget_available">本月可用预算</string>
+    <string name="widget_net_worth">资产总额</string>
+    <string name="widget_refresh_required">打开应用刷新</string>
 </resources>

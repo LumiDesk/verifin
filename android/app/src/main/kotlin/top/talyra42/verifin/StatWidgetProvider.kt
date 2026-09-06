@@ -14,12 +14,12 @@ abstract class StatWidgetProvider : AppWidgetProvider() {
     /// 该小组件在 [WidgetData] 中读取的数值 / 标签键，与缺省文案。
     protected abstract val amountKey: String
     protected abstract val labelKey: String
-    protected abstract val defaultLabel: String
+    protected abstract val defaultLabelRes: Int
 
     /// 解析展示的数值与标签；默认直接读取推送值。需要跨天/跨月自愈的子类（如预算）覆写。
     protected open fun resolveAmountLabel(context: Context): Pair<String, String> {
         return WidgetData.read(context, amountKey, "0") to
-            WidgetData.read(context, labelKey, defaultLabel)
+            WidgetData.read(context, labelKey, context.getString(defaultLabelRes))
     }
 
     override fun onUpdate(
@@ -63,7 +63,7 @@ abstract class StatWidgetProvider : AppWidgetProvider() {
 class BudgetWidgetProvider : StatWidgetProvider() {
     override val amountKey = WidgetData.KEY_BUDGET_AMOUNT
     override val labelKey = WidgetData.KEY_BUDGET_LABEL
-    override val defaultLabel = "本月可用预算"
+    override val defaultLabelRes = R.string.widget_budget_available
 
     // 跨月自愈：进入新月后展示整月预算与「可用」文案。
     override fun resolveAmountLabel(context: Context) =
@@ -74,5 +74,5 @@ class BudgetWidgetProvider : StatWidgetProvider() {
 class NetWorthWidgetProvider : StatWidgetProvider() {
     override val amountKey = WidgetData.KEY_NET_WORTH_AMOUNT
     override val labelKey = WidgetData.KEY_NET_WORTH_LABEL
-    override val defaultLabel = "资产总额"
+    override val defaultLabelRes = R.string.widget_net_worth
 }
