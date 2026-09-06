@@ -227,6 +227,7 @@ class _VeriFinShellState extends State<VeriFinShell> {
     final amount = await showNumberPadSheet(
       context,
       title: AppLocalizations.of(context).quickEntry,
+      showTitle: false,
       currencyCode: inputCurrencyCode,
     );
 

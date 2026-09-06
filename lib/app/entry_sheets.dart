@@ -23,6 +23,7 @@ class NumberPadSheet extends StatefulWidget {
     this.maxAmount,
     this.maxFractionDigits = 2,
     this.currencyCode,
+    this.showTitle = true,
   }) : assert(maxFractionDigits >= 0 && maxFractionDigits <= 12);
 
   final String title;
@@ -34,6 +35,9 @@ class NumberPadSheet extends StatefulWidget {
   /// 单个操作数允许的小数位数。普通金额默认为 2；本地汇率可提高到 10。
   final int maxFractionDigits;
   final String? currencyCode;
+
+  /// 快速记账入口已由底部按钮表达语义，金额键盘不重复显示标题。
+  final bool showTitle;
 
   /// 可选金额上限：非空时输入框下方展示「最多 {max}」提示（超上限时变红），
   /// 点 OK 确认的结果会被封顶到该值。用于退款「剩余可退」等有上限的输入。
@@ -76,13 +80,15 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
-                  widget.title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
+                if (widget.showTitle) ...[
+                  Text(
+                    widget.title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 10),
+                  const SizedBox(height: 10),
+                ],
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(

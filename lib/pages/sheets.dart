@@ -662,6 +662,7 @@ Future<double?> showNumberPadSheet(
   double? maxAmount,
   int? maxFractionDigits,
   String? currencyCode,
+  bool showTitle = true,
 }) {
   final hapticsEnabled = VeriFinScope.of(context).hapticsEnabled;
   final resolvedFractionDigits =
@@ -682,6 +683,7 @@ Future<double?> showNumberPadSheet(
       maxAmount: maxAmount,
       maxFractionDigits: resolvedFractionDigits,
       currencyCode: currencyCode,
+      showTitle: showTitle,
     ),
   );
 }
