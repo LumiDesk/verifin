@@ -44,19 +44,17 @@ String accountDisplayName(List<Account> accounts, String id, String noneLabel) {
 Account accountById(List<Account> accounts, String id) {
   return accounts.firstWhere(
     (account) => account.id == id,
-    orElse: () => accounts.isEmpty
-        ? const Account(
-            id: 'missing',
-            bookId: defaultLedgerBookId,
-            name: '已删除账户',
-            type: AccountType.cash,
-            groupId: null,
-            initialBalance: 0,
-            iconCode: 'wallet',
-            note: '',
-            includeInAssets: false,
-            hidden: true,
-          )
-        : accounts.first,
+    orElse: () => const Account(
+      id: 'missing',
+      bookId: defaultLedgerBookId,
+      name: '已删除账户',
+      type: AccountType.cash,
+      groupId: null,
+      initialBalance: 0,
+      iconCode: 'wallet',
+      note: '',
+      includeInAssets: false,
+      hidden: true,
+    ),
   );
 }

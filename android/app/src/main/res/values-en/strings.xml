@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="quick_entry_tile_label">Quick entry</string>
+    <string name="quick_entry_button">Add entry</string>
+    <string name="quick_entry_widget_description">Today's spending and quick entry</string>
+    <string name="budget_widget_description">Budget remaining this period</string>
+    <string name="net_worth_widget_description">Total assets across accounts</string>
+    <string name="widget_today_expense">Today's spending</string>
+    <string name="widget_budget_available">Budget left this month</string>
+    <string name="widget_net_worth">Net worth</string>
+    <string name="widget_refresh_required">Open app to refresh</string>
+</resources>

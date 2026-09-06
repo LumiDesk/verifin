@@ -44,7 +44,7 @@
         android:id="@+id/widget_add_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="记一笔"
+        android:text="@string/quick_entry_button"
         android:textColor="@color/widget_button_text"
         android:textSize="14sp"
         android:textStyle="bold"

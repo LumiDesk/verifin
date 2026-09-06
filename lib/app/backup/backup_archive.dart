@@ -14,6 +14,12 @@ import 'package:archive/archive.dart';
 /// zip 内 JSON 条目名。
 const String backupJsonEntryName = 'backup.json';
 const String _attachmentsDir = 'attachments';
+const String _archiveMimeKey = '_archiveMime';
+
+/// 防止用户选择异常大的备份或压缩炸弹，把解包工作限制在可控范围内。
+const int maxBackupArchiveBytes = 256 * 1024 * 1024;
+const int maxBackupArchiveUncompressedBytes = 512 * 1024 * 1024;
+const int maxBackupAttachmentCount = 2000;
 
 /// 是否为 zip 字节流（魔数 `PK\x03\x04`）。用于导入时区分新版 zip 备份与旧版
 /// 纯 JSON / 加密信封文本。
@@ -39,8 +45,9 @@ Uint8List packBackupArchive(String exportJson) {
         final file = ArchiveFile('$_attachmentsDir/$id', bytes.length, bytes)
           ..compression = CompressionType.none;
         archive.addFile(file);
-        // 从 JSON 剥离 base64，只留结构；解包时按 id 拼回。
+        // 从 JSON 剥离 base64，只留结构和 MIME；解包时按 id 拼回。
         attachment['dataUrl'] = '';
+        attachment[_archiveMimeKey] = _dataUrlMime(dataUrl);
       }
     }
   }
@@ -55,17 +62,30 @@ Uint8List packBackupArchive(String exportJson) {
 
 /// 解包 zip：把 `attachments/<id>` 字节拼回各附件 `dataUrl`，返回内嵌式 JSON 字符串。
 String unpackBackupArchive(List<int> zipBytes) {
+  if (zipBytes.length > maxBackupArchiveBytes) {
+    throw const FormatException('备份文件过大');
+  }
   final archive = ZipDecoder().decodeBytes(zipBytes);
   List<int>? jsonBytes;
   final attachmentFiles = <String, List<int>>{};
+  var uncompressedBytes = 0;
+  var attachmentCount = 0;
   for (final file in archive) {
     if (!file.isFile) {
       continue;
     }
     final content = file.content as List<int>;
+    uncompressedBytes += content.length;
+    if (uncompressedBytes > maxBackupArchiveUncompressedBytes) {
+      throw const FormatException('备份解压后过大');
+    }
     if (file.name == backupJsonEntryName) {
       jsonBytes = content;
     } else if (file.name.startsWith('$_attachmentsDir/')) {
+      attachmentCount++;
+      if (attachmentCount > maxBackupAttachmentCount) {
+        throw const FormatException('备份附件数量过多');
+      }
       attachmentFiles[file.name.substring('$_attachmentsDir/'.length)] =
           content;
     }
@@ -79,8 +99,15 @@ String unpackBackupArchive(List<int> zipBytes) {
     if (id is String) {
       final bytes = attachmentFiles[id];
       if (bytes != null) {
-        attachment['dataUrl'] = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+        final mime = attachment[_archiveMimeKey];
+        final safeMime =
+            mime is String &&
+                RegExp(r'^[a-zA-Z0-9.+-]+/[a-zA-Z0-9.+-]+$').hasMatch(mime)
+            ? mime
+            : 'image/jpeg';
+        attachment['dataUrl'] = 'data:$safeMime;base64,${base64Encode(bytes)}';
       }
+      attachment.remove(_archiveMimeKey);
     }
   }
   return jsonEncode(root);
@@ -109,4 +136,15 @@ Uint8List? _decodeDataUrl(String dataUrl) {
   } catch (_) {
     return null;
   }
+}
+
+String _dataUrlMime(String dataUrl) {
+  final comma = dataUrl.indexOf(',');
+  if (comma <= 5) return 'image/jpeg';
+  final header = dataUrl.substring(5, comma);
+  final semicolon = header.indexOf(';');
+  final mime = (semicolon < 0 ? header : header.substring(0, semicolon)).trim();
+  return RegExp(r'^[a-zA-Z0-9.+-]+/[a-zA-Z0-9.+-]+$').hasMatch(mime)
+      ? mime
+      : 'image/jpeg';
 }
