@@ -133,7 +133,7 @@ Android 包名 `top.talyra42.verifin`。本地不构建交付 APK——正式安
   ```
 
   脚本会更新版本号、提交、打标签并推送。
-- Release APK 使用项目内稳定 keystore（`android/app/verifin-release.jks`）签名，版本间可覆盖安装。
+- Release APK/AAB 使用 GitHub Actions Secret 注入的稳定 keystore 签名，私钥不进入仓库；版本间可覆盖安装。发布工作流需要配置 `VERIFIN_RELEASE_KEYSTORE_B64`、`VERIFIN_RELEASE_STORE_PASSWORD`、`VERIFIN_RELEASE_KEY_ALIAS` 和 `VERIFIN_RELEASE_KEY_PASSWORD`。
 
 ## 📁 项目结构
 

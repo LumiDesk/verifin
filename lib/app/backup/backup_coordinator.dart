@@ -88,8 +88,9 @@ class BackupCoordinator {
       if (anySucceeded) {
         controller.recordBackupTime(now);
       }
-    } catch (_) {
-      // 兜底：任何未预期错误都不打断用户操作。
+    } catch (error) {
+      // 兜底：任何未预期错误都不打断用户操作，但必须留下隐私友好的诊断线索。
+      controller.logger?.error('自动备份未预期失败', source: 'backup', error: error);
     } finally {
       _running = false;
     }
