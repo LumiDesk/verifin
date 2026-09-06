@@ -148,7 +148,7 @@ Future<T?> showOptionSheet<T>({
       }
       return SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 16),
           child: ConstrainedBox(
             constraints: BoxConstraints(maxHeight: maxHeight),
             child: Column(
@@ -265,7 +265,7 @@ class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           14,
-          0,
+          10,
           14,
           16 + MediaQuery.viewInsetsOf(context).bottom,
         ),
@@ -405,7 +405,7 @@ class _LedgerBookEditorSheetState extends State<_LedgerBookEditorSheet> {
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           14,
-          0,
+          10,
           14,
           16 + MediaQuery.viewInsetsOf(context).bottom,
         ),
@@ -823,7 +823,7 @@ Future<Account?> showAccountPickerSheet({
 
       return SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 16),
           child: ConstrainedBox(
             constraints: BoxConstraints(maxHeight: maxHeight),
             child: Column(
@@ -1239,7 +1239,7 @@ class _CategoryIconPickerBodyState extends State<_CategoryIconPickerBody> {
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           16,
-          0,
+          10,
           16,
           16 + MediaQuery.of(context).viewInsets.bottom,
         ),

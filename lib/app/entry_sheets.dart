@@ -88,7 +88,9 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                ],
+                ] else
+                  // 无标题模式仍保留弹窗内容与顶部边缘的统一间距；只隐藏文字，不压缩弹窗 chrome。
+                  const SizedBox(height: 10),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
@@ -555,7 +557,7 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
     // 「全部」「移到顶级」等非分类的元操作项用中性主题色（深浅色自适应），不用蓝色。
     final metaIconColor = Theme.of(context).colorScheme.onSurfaceVariant;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 0, 14, 18),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 18),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -777,7 +779,7 @@ class _TagSelectorSheetState extends State<TagSelectorSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,

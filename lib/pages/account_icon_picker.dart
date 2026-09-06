@@ -270,7 +270,7 @@ class _AccountIconPickerBodyState extends State<_AccountIconPickerBody> {
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           14,
-          0,
+          10,
           14,
           16 + MediaQuery.viewInsetsOf(context).bottom,
         ),
