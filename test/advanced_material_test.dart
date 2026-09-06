@@ -110,23 +110,27 @@ void main() {
     }),
   );
 
-  testWidgets('未验收平台直接创建透镜也只显示实时内容', (tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: VeriNavigationGlassLens(
-          source: Text('live navigation'),
-          target: Rect.fromLTWH(0, 0, 80, 48),
-          pressed: true,
-          motion: 1,
-          keyPrefix: 'native_guard',
+  testWidgets(
+    '未验收平台直接创建透镜也只显示实时内容',
+    (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: VeriNavigationGlassLens(
+            source: Text('live navigation'),
+            target: Rect.fromLTWH(0, 0, 80, 48),
+            pressed: true,
+            motion: 1,
+            keyPrefix: 'native_guard',
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('live navigation'), findsOneWidget);
-    expect(find.byType(LayoutBuilder), findsNothing);
-    expect(tester.takeException(), isNull);
-  }, variant: TargetPlatformVariant({TargetPlatform.windows}));
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('live navigation'), findsOneWidget);
+      expect(find.byType(LayoutBuilder), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant({TargetPlatform.windows}),
+  );
 
   test('材质保存失败不更新运行状态或冷读结果，并报告失败', () async {
     final store = FailingMaterialStore();
