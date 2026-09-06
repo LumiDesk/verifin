@@ -101,7 +101,7 @@ object WidgetData {
                     read(context, KEY_BUDGET_NEXT_LABEL, label)
             }
             if (nextExpiry.isNotEmpty()) {
-                return amount to read(
+                return "—" to read(
                     context,
                     KEY_BUDGET_STALE_LABEL,
                     context.getString(R.string.widget_refresh_required),
