@@ -15,4 +15,23 @@ void main() {
     expect(find.text('快速记账'), findsNothing);
     expect(find.byType(NumberPadSheet), findsOneWidget);
   });
+
+  testWidgets('隐藏快速记账标题仍保留数字区域的原始顶部间距', (tester) async {
+    Future<Rect> pumpPad(bool showTitle) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NumberPadSheet(title: '快速记账', showTitle: showTitle),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return tester.getRect(find.byKey(const Key('number_pad_display')));
+    }
+
+    final withTitle = await pumpPad(true);
+    final withoutTitle = await pumpPad(false);
+    expect(withoutTitle.top, closeTo(withTitle.top, 0.01));
+    expect(withoutTitle.height, closeTo(withTitle.height, 0.01));
+  });
 }
