@@ -53,7 +53,8 @@ class ReportRange {
   /// 含起止的天数。
   int get dayCount => calendarDaysBetween(start, end) + 1;
 
-  /// 展示用文案（月/年按当前语言格式化，自定义范围为数字、语言无关）。
+  /// 展示用文案（按当前语言格式化）。自定义范围同年用「月日」，跨年改用「年+月」，
+  /// 否则省略年份后无法区分起止年份。
   String label(AppLocalizations l10n) {
     switch (mode) {
       case ReportRangeMode.month:
@@ -61,17 +62,11 @@ class ReportRange {
       case ReportRangeMode.year:
         return l10n.yearLabel(start.year);
       case ReportRangeMode.custom:
-        final sameYear = start.year == end.year;
-        final startText =
-            '${start.year}.${_two(start.month)}.${_two(start.day)}';
-        final endText = sameYear
-            ? '${_two(end.month)}.${_two(end.day)}'
-            : '${end.year}.${_two(end.month)}.${_two(end.day)}';
-        return '$startText - $endText';
+        return start.year == end.year
+            ? '${l10n.dateMonthDay(start)} - ${l10n.dateMonthDay(end)}'
+            : '${l10n.yearMonth(start)} - ${l10n.yearMonth(end)}';
     }
   }
-
-  static String _two(int value) => value.toString().padLeft(2, '0');
 }
 
 /// 范围内的收支汇总（转账不计）。

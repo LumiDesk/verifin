@@ -1008,7 +1008,7 @@ class _CategoryStatTile extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '-${formatAmount(stat.amount)}',
+                      formatExpenseAmount(stat.amount),
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         color: veriExpense,
                         fontWeight: FontWeight.w800,
@@ -1073,7 +1073,7 @@ class _TagStatTile extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '-${formatAmount(stat.amount)}',
+                      formatExpenseAmount(stat.amount),
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         color: veriExpense,
                         fontWeight: FontWeight.w800,

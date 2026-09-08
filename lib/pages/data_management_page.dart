@@ -15,6 +15,7 @@ import '../app/common_widgets.dart';
 import '../app/currency_math.dart';
 import '../app/data_file_port.dart';
 import '../app/feedback.dart';
+import '../app/ledger_math.dart';
 import '../l10n/app_localizations.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
@@ -923,7 +924,10 @@ class _DataManagementPageState extends State<DataManagementPage> {
                 title: Text(file.name),
                 subtitle: file.modifiedAt == null
                     ? null
-                    : Text(file.modifiedAt!.toLocal().toString()),
+                    : Text(
+                        '${l10n.dateMonthDay(file.modifiedAt!.toLocal())} '
+                        '${formatTime(file.modifiedAt!.toLocal())}',
+                      ),
                 onTap: () => Navigator.of(context).pop(file),
               ),
           ],

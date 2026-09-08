@@ -312,7 +312,11 @@ class _AssetsPageState extends State<AssetsPage> {
                             AppLocalizations.of(
                               context,
                             ).assetValuationRateTrace(
-                              currencyDateKey(oldestValuationRateDate),
+                              // 用年月而不是「月日」：估值汇率可能跨年，年份是判断
+                              // 是否过期的关键信息。
+                              AppLocalizations.of(
+                                context,
+                              ).yearMonth(oldestValuationRateDate),
                               valuation.staleAccountIds.isEmpty
                                   ? ''
                                   : ' · ${AppLocalizations.of(context).exchangeRateStale}',

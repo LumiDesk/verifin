@@ -332,7 +332,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
                           subtitle: _selectionMode
                               ? null
                               : (_dateMode
-                                    ? '${_visibleDate.month}.${_visibleDate.day} · '
+                                    ? '${AppLocalizations.of(context).dateMonthDay(_visibleDate)} · '
                                           '${AppLocalizations.of(context).moneyUnitLabel(displayCurrencyUnit(controller.activeBook.baseCurrencyCode))}'
                                     : AppLocalizations.of(
                                         context,
@@ -1129,7 +1129,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
             : AppLocalizations.of(context).yearWeek(year, week);
       case TransactionTimeFilter.last12Months:
       case TransactionTimeFilter.last30Days:
-        return '${period.start.month}.${period.start.day}-${period.end.month}.${period.end.day}';
+        return '${AppLocalizations.of(context).dateMonthDay(period.start)}-${AppLocalizations.of(context).dateMonthDay(period.end)}';
       case TransactionTimeFilter.last6Weeks:
         return '${twoDigitYear(isoWeekYear(period.start))}.${isoWeekNumber(period.start).toString().padLeft(2, '0')}-${twoDigitYear(isoWeekYear(period.end))}.${isoWeekNumber(period.end).toString().padLeft(2, '0')}';
     }
@@ -1376,7 +1376,10 @@ class _DateFilterBar extends StatelessWidget {
           onPressed: onPrevious,
           icon: const Icon(Icons.chevron_left),
         ),
-        FilterPill(label: '${date.month}.${date.day}', onTap: onTap),
+        FilterPill(
+          label: AppLocalizations.of(context).dateMonthDay(date),
+          onTap: onTap,
+        ),
         IconButton(
           tooltip: AppLocalizations.of(context).nextDay,
           onPressed: onNext,
