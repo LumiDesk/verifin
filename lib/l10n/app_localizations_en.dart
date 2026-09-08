@@ -2927,7 +2927,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiNotConfigured => 'Not set';
 
   @override
-  String get aiChatTitle => 'AI Finance Assistant';
+  String get aiChatTitle => 'AI Assistant';
 
   @override
   String get aiChatClearHistory => 'Clear chat history';

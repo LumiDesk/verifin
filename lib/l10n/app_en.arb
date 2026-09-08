@@ -1034,7 +1034,7 @@
   "aiSettingsTitle": "AI settings",
   "aiConfigured": "Configured",
   "aiNotConfigured": "Not set",
-  "aiChatTitle": "AI Finance Assistant",
+  "aiChatTitle": "AI Assistant",
   "aiChatClearHistory": "Clear chat history",
   "aiChatHistoryLocalOnly": "Chats stay on this device and are not included in backups",
   "aiChatClearMessage": "This deletes the current conversation and cannot be undone.",
