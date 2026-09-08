@@ -27,7 +27,9 @@ Future<T?> _showVeriModalSheet<T>({
   ShapeBorder? shape,
 }) => showModalBottomSheet<T>(
   context: context,
-  showDragHandle: showDragHandle,
+  // 拖拽把手改为在玻璃表面内部渲染（见下方 Column），避免 showModalBottomSheet
+  // 自带的把手浮在透明 sheet 背景上、与玻璃内容脱节。
+  showDragHandle: false,
   isScrollControlled: isScrollControlled,
   backgroundColor: veriGlassDesignPreview
       ? Colors.transparent
@@ -38,9 +40,55 @@ Future<T?> _showVeriModalSheet<T>({
     radius: veriRadiusXl,
     // 底部弹窗只圆顶部两个角，左下/右下保持直角，避免方块机上观感怪异。
     borderRadius: BorderRadius.vertical(top: Radius.circular(veriRadiusXl)),
-    child: Material(color: Colors.transparent, child: builder(context)),
+    child: Material(
+      color: Colors.transparent,
+      child: Stack(
+        alignment: Alignment.topCenter,
+        children: <Widget>[
+          Padding(
+            padding: EdgeInsets.only(
+              top: showDragHandle == true ? _VeriSheetDragHandle.height : 0,
+            ),
+            child: builder(context),
+          ),
+          if (showDragHandle == true)
+            const Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: _VeriSheetDragHandle(),
+            ),
+        ],
+      ),
+    ),
   ),
 );
+
+/// 玻璃底部弹窗内嵌的拖拽把手：落在玻璃表面内部，与内容连成一体。
+class _VeriSheetDragHandle extends StatelessWidget {
+  const _VeriSheetDragHandle();
+
+  /// 把手占用的垂直高度（含上下留白），内容区据此在顶部让位。
+  static const double height = 24;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.onSurfaceVariant;
+    return SizedBox(
+      height: height,
+      child: Center(
+        child: Container(
+          width: 32,
+          height: 4,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.4),
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 /// 若 [url] 会以明文 http 把凭证发往公网主机，弹确认对话框让用户知情后再继续；
 /// 非风险地址（https / 本机 / 内网）直接返回 true。用户取消返回 false。
@@ -150,7 +198,7 @@ Future<T?> showOptionSheet<T>({
       }
       return SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 16),
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
           child: ConstrainedBox(
             constraints: BoxConstraints(maxHeight: maxHeight),
             child: Column(
@@ -267,7 +315,7 @@ class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           14,
-          10,
+          14,
           14,
           16 + MediaQuery.viewInsetsOf(context).bottom,
         ),
@@ -407,7 +455,7 @@ class _LedgerBookEditorSheetState extends State<_LedgerBookEditorSheet> {
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           14,
-          10,
+          14,
           14,
           16 + MediaQuery.viewInsetsOf(context).bottom,
         ),
@@ -825,7 +873,7 @@ Future<Account?> showAccountPickerSheet({
 
       return SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 16),
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
           child: ConstrainedBox(
             constraints: BoxConstraints(maxHeight: maxHeight),
             child: Column(
@@ -1241,7 +1289,7 @@ class _CategoryIconPickerBodyState extends State<_CategoryIconPickerBody> {
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           16,
-          10,
+          16,
           16,
           16 + MediaQuery.of(context).viewInsets.bottom,
         ),

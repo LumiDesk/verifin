@@ -127,7 +127,7 @@ class _AiEntrySheetState extends State<_AiEntrySheet> {
     return Padding(
       padding: EdgeInsets.fromLTRB(
         16,
-        10,
+        16,
         16,
         16 + MediaQuery.of(context).viewInsets.bottom,
       ),

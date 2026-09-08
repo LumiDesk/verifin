@@ -16,7 +16,7 @@ void main() {
     expect(find.byType(NumberPadSheet), findsOneWidget);
   });
 
-  testWidgets('隐藏快速记账标题仍保留数字区域的原始顶部间距', (tester) async {
+  testWidgets('无标题数字键盘顶部间距与左右一致', (tester) async {
     Future<Rect> pumpPad(bool showTitle) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -31,7 +31,12 @@ void main() {
 
     final withTitle = await pumpPad(true);
     final withoutTitle = await pumpPad(false);
-    expect(withoutTitle.top, closeTo(withTitle.top, 0.01));
+    // 无标题时不再保留标题占位，数字区域随内容上移；但外层容器顶部仍留 14 间距、不贴边。
+    expect(withoutTitle.top, lessThan(withTitle.top));
     expect(withoutTitle.height, closeTo(withTitle.height, 0.01));
+    expect(
+      tester.widgetList<Padding>(find.byType(Padding)).map((p) => p.padding),
+      contains(const EdgeInsets.fromLTRB(14, 14, 14, 14)),
+    );
   });
 }

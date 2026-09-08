@@ -62,10 +62,6 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final titleStyle = Theme.of(context).textTheme.titleMedium;
-    // 无标题模式仍保留标题行的原始高度，避免数字区域上移、贴住弹窗顶部。
-    final titleSlotHeight =
-        (titleStyle?.fontSize ?? 16) * (titleStyle?.height ?? 1.5) + 10;
     return SafeArea(
       top: false,
       child: Align(
@@ -76,7 +72,7 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
           child: Padding(
             padding: EdgeInsets.fromLTRB(
               14,
-              0,
+              14,
               14,
               14 + MediaQuery.of(context).viewInsets.bottom,
             ),
@@ -92,8 +88,7 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                ] else
-                  SizedBox(height: titleSlotHeight),
+                ],
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
@@ -560,7 +555,7 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
     // 「全部」「移到顶级」等非分类的元操作项用中性主题色（深浅色自适应），不用蓝色。
     final metaIconColor = Theme.of(context).colorScheme.onSurfaceVariant;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 18),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 18),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -782,7 +777,7 @@ class _TagSelectorSheetState extends State<TagSelectorSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
