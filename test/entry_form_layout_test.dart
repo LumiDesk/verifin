@@ -43,13 +43,15 @@ void main() {
     expect(saveButton.style?.foregroundColor, isNotNull);
     // 禁用态用淡蓝而非主题灰，且不得因 onPressed 为 null 而丢失。
     expect(
-      saveButton.style!.backgroundColor!
-          .resolve(<WidgetState>{WidgetState.disabled}),
+      saveButton.style!.backgroundColor!.resolve(<WidgetState>{
+        WidgetState.disabled,
+      }),
       veriRoyal.withValues(alpha: 0.38),
     );
     expect(
-      saveButton.style!.foregroundColor!
-          .resolve(<WidgetState>{WidgetState.disabled}),
+      saveButton.style!.foregroundColor!.resolve(<WidgetState>{
+        WidgetState.disabled,
+      }),
       Colors.white.withValues(alpha: 0.78),
     );
     expect(
