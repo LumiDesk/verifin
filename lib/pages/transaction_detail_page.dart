@@ -313,14 +313,15 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                               ? null
                               : () => _pickToAccount(accounts),
                         ),
-                        DetailInfoRow(
-                          label: AppLocalizations.of(context).feeLabel,
-                          value: _fee > 0
-                              ? formatUserMoney(_fee, _currencyCode)
-                              : AppLocalizations.of(context).commonNoneShort,
-                          placeholder: _fee <= 0,
-                          onTap: _editFee,
-                        ),
+                        if (_accountId.isNotEmpty)
+                          DetailInfoRow(
+                            label: AppLocalizations.of(context).feeLabel,
+                            value: _fee > 0
+                                ? formatUserMoney(_fee, _currencyCode)
+                                : AppLocalizations.of(context).commonNoneShort,
+                            placeholder: _fee <= 0,
+                            onTap: _editFee,
+                          ),
                       ] else
                         DetailInfoRow(
                           label: AppLocalizations.of(context).accountLabel,
@@ -462,6 +463,11 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
         _currencyCode = account.currencyCode;
         _amount = normalizeCurrencyAmount(_amount, _currencyCode);
         _accountAmount = _amount;
+      } else if (toAccount != null) {
+        // 无账户转账（代还）：无转出账户，金额口径跟随转入账户币种；
+        // 落库校验要求 accountId 为空时 currencyCode == toAccount.currencyCode。
+        _currencyCode = toAccount.currencyCode;
+        _amount = normalizeCurrencyAmount(_amount, _currencyCode);
       }
       _baseAmount = 0;
       if (toAccount == null) {
@@ -919,6 +925,8 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
         if (selected.id.isEmpty) {
           _noAccount = true;
           _accountId = '';
+          // 无账户转账（代还）没有转出账户，手续费无处承担，清空。
+          _fee = 0;
           if (!_currencyTouched) {
             _currencyCode = VeriFinScope.of(
               context,
@@ -1098,7 +1106,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       note: _noteController.text.trim(),
       occurredAt: _occurredAt,
       tagIds: List<String>.of(_tagIds),
-      fee: _type == EntryType.transfer
+      fee: _type == EntryType.transfer && !noAccount
           ? normalizeCurrencyAmount(_fee, _currencyCode)
           : 0,
       reimbursable: _type == EntryType.expense && _reimbursable,
