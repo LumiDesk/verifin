@@ -4,6 +4,7 @@ import 'package:verifin/app/app_lock.dart';
 import 'package:verifin/app/veri_fin_scope.dart';
 import 'package:verifin/pages/app_lock_gate.dart';
 import 'package:verifin/local_storage/local_storage.dart';
+import 'package:verifin/main.dart';
 import 'package:verifin/pages/app_lock_page.dart';
 
 import 'support/test_harness.dart';
@@ -41,6 +42,33 @@ void main() {
     expect(find.text('private-ledger-content'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
     controller.dispose();
+  });
+
+  testWidgets('锁屏「忘记密码」两步确认后清空数据并关闭应用锁', (tester) async {
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store);
+    await controller.setAppLock(kind: AppLockKind.pin, secret: '123456');
+    // 必须走真实 VeriFinApp 结构：AppLockGate 挂在 MaterialApp.builder，锁屏没有
+    // 根 Navigator 祖先；用 `home:` 直接挂 AppLockGate 会掩盖这个差异。
+    await tester.pumpWidget(VeriFinApp(controller: controller));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('app_lock_forgot')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('app_lock_forgot')));
+    await tester.pumpAndSettle();
+
+    // 第一步确认：说明会清空什么。
+    expect(find.text('初始化所有数据？'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, '继续'));
+    await tester.pumpAndSettle();
+
+    // 第二步确认：真正执行。
+    expect(find.text('再次确认初始化'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, '确认初始化'));
+    await tester.pumpAndSettle();
+
+    expect(controller.appLockEnabled, isFalse);
+    expect(find.byKey(const Key('app_lock_forgot')), findsNothing);
   });
 
   group('AppLockConfig', () {

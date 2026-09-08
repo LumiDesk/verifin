@@ -12,6 +12,7 @@ import '../app/feedback.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
+import 'sheets.dart';
 
 /// 6 位 PIN 输入视图：圆点指示 + 数字键盘。输满 [kAppLockPinLength] 位自动回调
 /// [onCompleted] 并清空输入，由上层判定成功/失败并通过 [errorText] 反馈。
@@ -508,6 +509,29 @@ class _AppLockScreenState extends State<AppLockScreen> {
     setState(() => _error = AppLocalizations.of(context).verifyFailedRetry);
   }
 
+  /// 忘记密钥时的唯一出路：密钥只存加盐哈希、无法找回，只能清空本地数据并关闭应用锁。
+  /// 用两步破坏性确认，避免误触清空账目。
+  Future<void> _forgotSecret() async {
+    final controller = VeriFinScope.of(context);
+    final l10n = AppLocalizations.of(context);
+    if (!await confirmResetAllData(context) || !mounted) {
+      return;
+    }
+    // 顺序不能反：先关锁会让本页在对话框还开着时就被移除。
+    controller.resetAllData();
+    if (!await controller.disableAppLock()) {
+      // 密钥没删掉就解锁，只会在下次回前台再次上锁，而用户仍然进不去。
+      if (mounted) {
+        setState(() => _error = l10n.appLockDisableFailed);
+      }
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    widget.onUnlocked();
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
@@ -553,6 +577,12 @@ class _AppLockScreenState extends State<AppLockScreen> {
                     label: Text(AppLocalizations.of(context).bioUnlock),
                   ),
                 ],
+                const SizedBox(height: 8),
+                TextButton(
+                  key: const Key('app_lock_forgot'),
+                  onPressed: _forgotSecret,
+                  child: Text(AppLocalizations.of(context).appLockForgot),
+                ),
               ],
             ),
           ),

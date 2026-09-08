@@ -40,6 +40,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   int _page = 0;
   String? _baseCurrencyCode;
+  // 「完成/跳过」会先 await 一次落库再建账户，期间按钮仍可点；没有这个标志，
+  // 快速双击会建出两个默认账户。
+  bool _finishing = false;
   static const int _lastPage = 3;
 
   @override
@@ -72,23 +75,32 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   Future<void> _finish() async {
-    final controller = VeriFinScope.of(context);
-    final desiredBase =
-        _baseCurrencyCode ?? controller.activeBook.baseCurrencyCode;
-    if (desiredBase != controller.activeBook.baseCurrencyCode) {
-      await controller.changeEmptyLedgerBookBaseCurrency(
-        controller.activeBook.id,
-        desiredBase,
-      );
+    if (_finishing) {
+      return;
     }
-    // 建首个账户（填了名称才建）。
-    final name = _accountName.text.trim();
-    if (name.isNotEmpty) {
+    setState(() => _finishing = true);
+    try {
+      final controller = VeriFinScope.of(context);
+      final l10n = AppLocalizations.of(context);
+      final desiredBase =
+          _baseCurrencyCode ?? controller.activeBook.baseCurrencyCode;
+      if (desiredBase != controller.activeBook.baseCurrencyCode) {
+        await controller.changeEmptyLedgerBookBaseCurrency(
+          controller.activeBook.id,
+          desiredBase,
+        );
+        if (!mounted) {
+          return;
+        }
+      }
+      // 建首个账户：名称为空（含「跳过」引导）时用「现金」，保证记账主路径始终
+      // 有可用账户。零账户会让记账页保存按钮永远禁用，是首启的死路。
+      final name = _accountName.text.trim();
       controller.addAccount(
         Account(
           id: DateTime.now().microsecondsSinceEpoch.toString(),
           bookId: controller.activeBook.id,
-          name: name,
+          name: name.isEmpty ? AccountType.cash.label(l10n) : name,
           type: AccountType.cash,
           groupId: null,
           initialBalance: double.tryParse(_accountBalance.text.trim()) ?? 0,
@@ -99,15 +111,20 @@ class _OnboardingPageState extends State<OnboardingPage> {
           currencyCode: controller.activeBook.baseCurrencyCode,
         ),
       );
-    }
-    // 设默认月预算（填了正数才设）：作为每月自动沿用的默认值，而非只设当月。
-    final budget = double.tryParse(_budget.text.trim());
-    if (budget != null && budget > 0) {
-      controller.setDefaultMonthlyBudget(budget);
-    }
-    controller.completeOnboarding();
-    if (mounted && Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
+      // 设默认月预算（填了正数才设）：作为每月自动沿用的默认值，而非只设当月。
+      final budget = double.tryParse(_budget.text.trim());
+      if (budget != null && budget > 0) {
+        controller.setDefaultMonthlyBudget(budget);
+      }
+      controller.completeOnboarding();
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+    } finally {
+      // 成功时页面已 pop（mounted 为 false）；失败时放开，允许用户重试。
+      if (mounted) {
+        setState(() => _finishing = false);
+      }
     }
   }
 

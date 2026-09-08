@@ -5,6 +5,16 @@ import 'package:verifin/local_storage/local_storage.dart';
 
 import 'support/test_harness.dart';
 
+/// 记账页是懒加载列表，账户为空时会在账户位置渲染带操作的空状态，备注框可能被挤到
+/// 视口外而尚未构建。先滚动到备注框，再读/写它。
+Future<void> _ensureNoteVisible(WidgetTester tester) async {
+  await tester.scrollUntilVisible(
+    find.byKey(const Key('entry_note_field')),
+    200,
+    scrollable: find.byType(Scrollable).first,
+  );
+}
+
 void main() {
   useTestDatabases();
 
@@ -35,6 +45,7 @@ void main() {
     await createQuickEntry(tester);
 
     // 输入含「打车」的备注 → 自动识别为交通并选中（无可见提示文本）。
+    await _ensureNoteVisible(tester);
     await tester.enterText(find.byKey(const Key('entry_note_field')), '打车上班');
     await tester.pump();
 
@@ -51,6 +62,7 @@ void main() {
     );
     await tester.tap(find.byKey(const Key('entry_category_dining')));
     await tester.pump();
+    await _ensureNoteVisible(tester);
     await tester.enterText(find.byKey(const Key('entry_note_field')), '打车回家');
     await tester.pump();
     expect(
@@ -101,6 +113,7 @@ void main() {
       findsOneWidget,
     );
 
+    await _ensureNoteVisible(tester);
     final note = tester.widget<TextField>(
       find.byKey(const Key('entry_note_field')),
     );
@@ -150,6 +163,7 @@ void main() {
       find.byKey(const Key('entry_type_selected_expense')),
       findsOneWidget,
     );
+    await _ensureNoteVisible(tester);
     final note = tester.widget<TextField>(
       find.byKey(const Key('entry_note_field')),
     );
@@ -213,6 +227,7 @@ void main() {
       findsOneWidget,
     );
     // 退款条目的备注也不该被带出。
+    await _ensureNoteVisible(tester);
     final noteField = tester.widget<TextField>(
       find.byKey(const Key('entry_note_field')),
     );

@@ -1595,30 +1595,11 @@ class _DataManagementPageState extends State<DataManagementPage> {
     BuildContext context,
     VeriFinController controller,
   ) async {
-    final firstConfirmed = await showConfirmDialog(
-      context,
-      title: AppLocalizations.of(context).resetAllTitle,
-      message: AppLocalizations.of(context).resetAllMessage,
-      confirmLabel: AppLocalizations.of(context).continueLabel,
-      destructive: true,
-    );
-    if (!firstConfirmed || !context.mounted) {
+    if (!await confirmResetAllData(context) || !context.mounted) {
       return;
     }
-
-    final secondConfirmed = await showConfirmDialog(
-      context,
-      title: AppLocalizations.of(context).resetConfirmTitle,
-      message: AppLocalizations.of(context).resetConfirmMessage,
-      confirmLabel: AppLocalizations.of(context).resetConfirmAction,
-      destructive: true,
-    );
-    if (secondConfirmed) {
-      controller.resetAllData();
-      if (context.mounted) {
-        _exitController.exit();
-      }
-    }
+    controller.resetAllData();
+    _exitController.exit();
   }
 }
 

@@ -1207,7 +1207,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noUsableAccountDesc =>
-      'Add or unhide an account on the Assets page first.';
+      'Add an account to start recording; if you already have hidden accounts, unhide one on the Assets page.';
 
   @override
   String get noteHint => 'Tap to add a note';
@@ -3666,7 +3666,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get appLockHelp =>
-      'Supports a 6-digit PIN or a 3×3 pattern. The secret is stored on this device only as a salted hash — never uploaded and unrecoverable; if forgotten, reset data in Settings and set it again. Biometric unlock uses the system biometrics (fingerprint / face, as supported by the device); this app stores no biometric data, and re-verification is required after system biometrics change.';
+      'Supports a 6-digit PIN or a 3×3 pattern. The secret is stored on this device only as a salted hash — never uploaded and unrecoverable; if forgotten, choose \"Forgot password\" on the lock screen to reset all local data and set it again. Biometric unlock uses the system biometrics (fingerprint / face, as supported by the device); this app stores no biometric data, and re-verification is required after system biometrics change.';
+
+  @override
+  String get appLockForgot => 'Forgot password?';
+
+  @override
+  String get appLockDisableFailed =>
+      'Could not turn off the app lock. Please try again.';
 
   @override
   String get bioEnableReason => 'Verify biometrics to enable biometric unlock';

@@ -1181,7 +1181,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get noUsableAccountTitle => '没有可用账户';
 
   @override
-  String get noUsableAccountDesc => '请先在资产页添加或取消隐藏一个账户。';
+  String get noUsableAccountDesc => '添加一个账户后即可记账；已有账户被隐藏时也可到资产页取消隐藏。';
 
   @override
   String get noteHint => '点击添加备注';
@@ -3577,7 +3577,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get appLockHelp =>
-      '支持 6 位数字密码或 3×3 图案。密钥仅以加盐哈希保存在本机，不会上传，也无法找回；忘记时可在设置页初始化数据后重新设置。生物解锁调用系统生物识别（指纹 / 人脸，以设备支持为准），本应用不保存任何生物特征数据；系统生物信息变化后需重新验证。';
+      '支持 6 位数字密码或 3×3 图案。密钥仅以加盐哈希保存在本机，不会上传，也无法找回；忘记时可在锁屏页选择「忘记密码」并重置所有本地数据后重新设置。生物解锁调用系统生物识别（指纹 / 人脸，以设备支持为准），本应用不保存任何生物特征数据；系统生物信息变化后需重新验证。';
+
+  @override
+  String get appLockForgot => '忘记密码？';
+
+  @override
+  String get appLockDisableFailed => '关闭应用锁失败，请重试。';
 
   @override
   String get bioEnableReason => '验证生物识别以开启生物解锁';

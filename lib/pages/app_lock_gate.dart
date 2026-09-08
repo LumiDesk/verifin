@@ -70,7 +70,21 @@ class _AppLockGateState extends State<AppLockGate> with WidgetsBindingObserver {
           child: Offstage(offstage: showLock, child: widget.child),
         ),
         if (showLock)
-          AppLockScreen(onUnlocked: () => setState(() => _locked = false)),
+          // 本门卫位于 `MaterialApp.builder`，即在根 Navigator 之上，自身没有
+          // Navigator/Overlay 祖先。锁屏里的确认框要走 Navigator，因此必须像
+          // PrivacyConsentGate / OnboardingGate 一样自带一个独立 Navigator；
+          // 这里根 Navigator 仍在树中，需用 `HeroControllerScope.none` 避免两个
+          // Navigator 共用同一个 HeroController。
+          HeroControllerScope.none(
+            child: Navigator(
+              key: const ValueKey('app_lock_gate'),
+              onGenerateRoute: (_) => MaterialPageRoute<void>(
+                builder: (_) => AppLockScreen(
+                  onUnlocked: () => setState(() => _locked = false),
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }

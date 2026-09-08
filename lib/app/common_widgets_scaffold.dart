@@ -405,11 +405,15 @@ class EmptyState extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.description,
+    this.action,
   });
 
   final IconData icon;
   final String title;
   final String description;
+
+  /// 可选的操作入口（如「添加账户」）。空状态只说原因不给出口时，用户会卡在死路上。
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -449,6 +453,10 @@ class EmptyState extends StatelessWidget {
                   ).colorScheme.onSurface.withValues(alpha: 0.54),
                 ),
               ),
+              if (action != null) ...<Widget>[
+                const SizedBox(height: 14),
+                action!,
+              ],
             ],
           ),
         ),

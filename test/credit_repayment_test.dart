@@ -170,4 +170,140 @@ void main() {
     expect(find.text('无账户'), findsOneWidget);
     expect(find.textContaining('花呗'), findsWidgets);
   });
+
+  testWidgets('还款页未改动时返回不弹未保存确认，也不写交易', (WidgetTester tester) async {
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store);
+    final card = Account(
+      id: 'credit-card-3',
+      bookId: controller.activeBook.id,
+      name: '测试信用卡',
+      type: AccountType.creditCard,
+      groupId: null,
+      initialBalance: -500,
+      iconCode: 'credit',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+    );
+    final bank = Account(
+      id: 'bank-3',
+      bookId: controller.activeBook.id,
+      name: '测试储蓄卡',
+      type: AccountType.debitCard,
+      groupId: null,
+      initialBalance: 1000,
+      iconCode: 'wallet',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+    );
+    controller
+      ..addAccount(card)
+      ..addAccount(bank)
+      ..setDefaultAccountId(bank.id);
+
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).push<void>(
+                    MaterialPageRoute<void>(
+                      builder: (_) => CreditRepaymentPage(account: card),
+                    ),
+                  ),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    // 只是打开看了看欠款就返回：预填内容不算「未保存修改」，不得弹确认框。
+    await tester.tap(find.byTooltip('返回'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CreditRepaymentPage), findsNothing);
+    expect(controller.entries, isEmpty);
+    expect(controller.accountBalance(card), -500);
+  });
+
+  testWidgets('重选同一天不算改动，返回不弹未保存确认', (WidgetTester tester) async {
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store);
+    final card = Account(
+      id: 'credit-card-4',
+      bookId: controller.activeBook.id,
+      name: '测试信用卡',
+      type: AccountType.creditCard,
+      groupId: null,
+      initialBalance: -500,
+      iconCode: 'credit',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+    );
+    final bank = Account(
+      id: 'bank-4',
+      bookId: controller.activeBook.id,
+      name: '测试储蓄卡',
+      type: AccountType.debitCard,
+      groupId: null,
+      initialBalance: 1000,
+      iconCode: 'wallet',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+    );
+    controller
+      ..addAccount(card)
+      ..addAccount(bank)
+      ..setDefaultAccountId(bank.id);
+
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).push<void>(
+                    MaterialPageRoute<void>(
+                      builder: (_) => CreditRepaymentPage(account: card),
+                    ),
+                  ),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    // 打开日期选择器，原样确认同一天：草稿指纹按分钟比较，不该被判成改动。
+    await tester.tap(find.byIcon(Icons.event_outlined));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('确定'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('返回'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CreditRepaymentPage), findsNothing);
+    expect(controller.entries, isEmpty);
+  });
 }

@@ -19,6 +19,7 @@ import '../app/models.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
+import 'assets_pages.dart';
 import 'attachments_editor.dart';
 import 'sheets.dart';
 
@@ -92,6 +93,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   bool _baseAmountTouched = false;
   bool _rememberRate = false;
   bool _moneyInitialized = false;
+  bool _accountFallbackResolved = false;
   Set<String> _missingRateCodes = <String>{};
   ConvertedCurrencyAmount? _accountConversion;
   ConvertedCurrencyAmount? _toAccountConversion;
@@ -196,12 +198,37 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     super.didChangeDependencies();
     if (!_moneyInitialized) {
       _initializeCurrencyAmounts();
+    } else {
+      _resolveNewlyAvailableAccount();
     }
     // 开屏（金额已确定、备注为空）先按金额习惯识别一次。
     if (_autoSuggestEnabled && !_didInitialSuggest) {
       _didInitialSuggest = true;
       _recomputeSuggestion();
     }
+  }
+
+  /// 账户从「无」变成「有」时补一次金额解析。用户在记账页空状态里新建账户后返回
+  /// 就会走到这里：不补这一次，`_accountAmount` 一直是 null，保存按钮会一直禁用。
+  void _resolveNewlyAvailableAccount() {
+    if (_accountFallbackResolved || _noAccount || _accountAmount != null) {
+      return;
+    }
+    final controller = VeriFinScope.of(context);
+    final accounts = _availableAccounts(controller);
+    if (accounts.isEmpty) {
+      return;
+    }
+    _accountFallbackResolved = true;
+    if (!accounts.any((account) => account.id == _accountId)) {
+      _accountId = accounts.first.id;
+    }
+    _refreshCurrencyAmounts(
+      controller,
+      accounts,
+      forceAccount: true,
+      forceBase: true,
+    );
   }
 
   @override
@@ -796,6 +823,17 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         description: AppLocalizations.of(
                           context,
                         ).noUsableAccountDesc,
+                        // 空状态只说原因不给出口，用户就会卡在「保存按钮永远灰」的死路上。
+                        action: FilledButton.tonalIcon(
+                          key: const Key('entry_add_account_action'),
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const AddAccountPage(),
+                            ),
+                          ),
+                          icon: const Icon(Icons.add, size: 18),
+                          label: Text(AppLocalizations.of(context).accountAdd),
+                        ),
                       ),
                     ..._buildCurrencyAmountFields(controller, accounts),
                     const SizedBox(height: 14),

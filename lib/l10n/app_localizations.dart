@@ -2297,7 +2297,7 @@ abstract class AppLocalizations {
   /// No description provided for @noUsableAccountDesc.
   ///
   /// In zh, this message translates to:
-  /// **'请先在资产页添加或取消隐藏一个账户。'**
+  /// **'添加一个账户后即可记账；已有账户被隐藏时也可到资产页取消隐藏。'**
   String get noUsableAccountDesc;
 
   /// No description provided for @noteHint.
@@ -6563,8 +6563,20 @@ abstract class AppLocalizations {
   /// No description provided for @appLockHelp.
   ///
   /// In zh, this message translates to:
-  /// **'支持 6 位数字密码或 3×3 图案。密钥仅以加盐哈希保存在本机，不会上传，也无法找回；忘记时可在设置页初始化数据后重新设置。生物解锁调用系统生物识别（指纹 / 人脸，以设备支持为准），本应用不保存任何生物特征数据；系统生物信息变化后需重新验证。'**
+  /// **'支持 6 位数字密码或 3×3 图案。密钥仅以加盐哈希保存在本机，不会上传，也无法找回；忘记时可在锁屏页选择「忘记密码」并重置所有本地数据后重新设置。生物解锁调用系统生物识别（指纹 / 人脸，以设备支持为准），本应用不保存任何生物特征数据；系统生物信息变化后需重新验证。'**
   String get appLockHelp;
+
+  /// No description provided for @appLockForgot.
+  ///
+  /// In zh, this message translates to:
+  /// **'忘记密码？'**
+  String get appLockForgot;
+
+  /// No description provided for @appLockDisableFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭应用锁失败，请重试。'**
+  String get appLockDisableFailed;
 
   /// No description provided for @bioEnableReason.
   ///
