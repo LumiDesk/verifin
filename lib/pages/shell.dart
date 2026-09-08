@@ -158,10 +158,14 @@ class _VeriFinShellState extends State<VeriFinShell> {
           key: const Key('main_shell_body_safe_area'),
           bottom: false,
           child: VeriRootNavigationBody(
-            child: PageView(
-              controller: _pageController,
-              onPageChanged: _handlePageChanged,
-              children: pages,
+            // 页面内容单独成层：底部导航拖动/吸附时只重绘导航自身，不再连带重绘
+            // 整页（含页面里的玻璃模糊）。
+            child: RepaintBoundary(
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: _handlePageChanged,
+                children: pages,
+              ),
             ),
           ),
         ),

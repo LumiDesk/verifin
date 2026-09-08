@@ -327,7 +327,9 @@ class _VeriRootNavigationState extends State<VeriRootNavigation>
                       curve: Curves.easeOutCubic,
                       width: maximumWidth,
                       height: 60,
-                      child: _buildGlassCapsule(isDark),
+                      // 导航每帧都在重绘（拖动/吸附），单独成层后不再让整屏与页面里的
+                      // 玻璃模糊跟着重绘。
+                      child: RepaintBoundary(child: _buildGlassCapsule(isDark)),
                     ),
                   ),
                   Positioned(
@@ -479,28 +481,38 @@ class _VeriRootNavigationState extends State<VeriRootNavigation>
                       children: <Widget>[
                         Positioned(
                           key: _key('nav_indicator_position'),
-                          left: _displayIndex * slotWidth + 3,
+                          left: 0,
                           top: 3,
                           bottom: 3,
                           width: slotWidth - 6,
-                          child: IgnorePointer(
-                            child: AnimatedScale(
-                              key: _key('nav_indicator_scale'),
-                              duration: const Duration(milliseconds: 160),
-                              curve: Curves.easeOutCubic,
-                              scale: _indicatorPressed || _dragging ? 0.94 : 1,
-                              child: DecoratedBox(
-                                key: _key('nav_indicator'),
-                                decoration: BoxDecoration(
-                                  color: (isDark ? Colors.white : Colors.black)
-                                      .withValues(alpha: isDark ? 0.12 : 0.065),
-                                  borderRadius: BorderRadius.circular(999),
-                                  border: Border.all(
+                          // 用 Transform 平移而不是改 Positioned.left：拖动时每帧只重绘、
+                          // 不重排，避免整条导航（含玻璃模糊）每帧走一次布局。
+                          child: Transform.translate(
+                            offset: Offset(_displayIndex * slotWidth + 3, 0),
+                            child: IgnorePointer(
+                              child: AnimatedScale(
+                                key: _key('nav_indicator_scale'),
+                                duration: const Duration(milliseconds: 160),
+                                curve: Curves.easeOutCubic,
+                                scale: _indicatorPressed || _dragging
+                                    ? 0.94
+                                    : 1,
+                                child: DecoratedBox(
+                                  key: _key('nav_indicator'),
+                                  decoration: BoxDecoration(
                                     color:
                                         (isDark ? Colors.white : Colors.black)
                                             .withValues(
-                                              alpha: isDark ? 0.16 : 0.08,
+                                              alpha: isDark ? 0.12 : 0.065,
                                             ),
+                                    borderRadius: BorderRadius.circular(999),
+                                    border: Border.all(
+                                      color:
+                                          (isDark ? Colors.white : Colors.black)
+                                              .withValues(
+                                                alpha: isDark ? 0.16 : 0.08,
+                                              ),
+                                    ),
                                   ),
                                 ),
                               ),
