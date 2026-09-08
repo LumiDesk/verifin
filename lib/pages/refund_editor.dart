@@ -645,7 +645,7 @@ class _RefundSheetState extends State<_RefundSheet> {
         child: Padding(
           padding: EdgeInsets.fromLTRB(
             16,
-            4,
+            10,
             16,
             MediaQuery.viewInsetsOf(context).bottom + 16,
           ),

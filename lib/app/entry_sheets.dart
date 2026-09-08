@@ -62,6 +62,10 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final titleStyle = Theme.of(context).textTheme.titleMedium;
+    // 无标题模式仍保留标题行的原始高度，避免数字区域上移、贴住弹窗顶部。
+    final titleSlotHeight =
+        (titleStyle?.fontSize ?? 16) * (titleStyle?.height ?? 1.5) + 10;
     return SafeArea(
       top: false,
       child: Align(
@@ -89,8 +93,7 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
                   ),
                   const SizedBox(height: 10),
                 ] else
-                  // 无标题模式保留底部 Sheet 自带的拖拽把手间距；不要再叠加一层空白。
-                  const SizedBox.shrink(),
+                  SizedBox(height: titleSlotHeight),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
