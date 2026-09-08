@@ -22,7 +22,12 @@ class _BudgetTrendCardState extends State<_BudgetTrendCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final months = widget.months;
+    // 近 6 期都没有预算也没有支出时，画出来的是一条贴底的空网格。
+    final hasData = months.any(
+      (item) => item.budget > 0 || !isZeroAmount(item.expense),
+    );
     final maxValue = months.fold<double>(
       0,
       (max, item) => math.max(max, math.max(item.expense, item.budget)),
@@ -42,72 +47,83 @@ class _BudgetTrendCardState extends State<_BudgetTrendCard> {
                   ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
                 ),
               ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  _ChartLegendDot(
-                    color: veriRoyal,
-                    label: AppLocalizations.of(context).budgetLegend,
-                  ),
-                  const SizedBox(width: 8),
-                  _ChartLegendDot(
-                    color: veriExpense,
-                    label: AppLocalizations.of(context).entryTypeExpense,
-                  ),
-                ],
-              ),
+              if (hasData)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    _ChartLegendDot(
+                      color: veriRoyal,
+                      label: AppLocalizations.of(context).budgetLegend,
+                    ),
+                    const SizedBox(width: 8),
+                    _ChartLegendDot(
+                      color: veriExpense,
+                      label: AppLocalizations.of(context).entryTypeExpense,
+                    ),
+                  ],
+                ),
             ],
           ),
           const SizedBox(height: 10),
-          SizedBox(
-            height: 132,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final size = Size(constraints.maxWidth, constraints.maxHeight);
-                Rect chartRect() =>
-                    trendChartRect(size, hasXLabels: true, hasYLabels: true);
-                return GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTapDown: (details) {
-                    final index = chartSlotIndex(
-                      details.localPosition,
-                      chartRect(),
-                      months.length,
-                    );
-                    setState(() {
-                      _selectedIndex = index == _selectedIndex ? null : index;
-                    });
-                  },
-                  onHorizontalDragUpdate: (details) {
-                    final index = chartSlotIndex(
-                      details.localPosition,
-                      chartRect(),
-                      months.length,
-                    );
-                    if (index != null && index != _selectedIndex) {
-                      setState(() => _selectedIndex = index);
-                    }
-                  },
-                  child: CustomPaint(
-                    painter: _BudgetTrendPainter(
-                      months: months,
-                      monthLabelOf: (month) =>
-                          AppLocalizations.of(context).monthNumber(month),
-                      labelColor: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.50),
-                      yLabels: reportAxisLabels(maxValue),
-                      selectedIndex: _selectedIndex,
-                      tooltip: _selectedIndex == null
-                          ? null
-                          : _tooltipFor(months[_selectedIndex!]),
+          if (!hasData)
+            EmptyState(
+              icon: Icons.stacked_line_chart,
+              title: l10n.noDimData(l10n.budgetLegend),
+              description: l10n.noDimDesc(l10n.budgetLegend),
+            )
+          else
+            SizedBox(
+              height: 132,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final size = Size(
+                    constraints.maxWidth,
+                    constraints.maxHeight,
+                  );
+                  Rect chartRect() =>
+                      trendChartRect(size, hasXLabels: true, hasYLabels: true);
+                  return GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTapDown: (details) {
+                      final index = chartSlotIndex(
+                        details.localPosition,
+                        chartRect(),
+                        months.length,
+                      );
+                      setState(() {
+                        _selectedIndex = index == _selectedIndex ? null : index;
+                      });
+                    },
+                    onHorizontalDragUpdate: (details) {
+                      final index = chartSlotIndex(
+                        details.localPosition,
+                        chartRect(),
+                        months.length,
+                      );
+                      if (index != null && index != _selectedIndex) {
+                        setState(() => _selectedIndex = index);
+                      }
+                    },
+                    child: CustomPaint(
+                      painter: _BudgetTrendPainter(
+                        months: months,
+                        monthLabelOf: (month) =>
+                            AppLocalizations.of(context).monthNumber(month),
+                        labelColor: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.50),
+                        yLabels: reportAxisLabels(maxValue),
+                        selectedIndex: _selectedIndex,
+                        tooltip: _selectedIndex == null
+                            ? null
+                            : _tooltipFor(months[_selectedIndex!]),
+                      ),
+                      child: const SizedBox.expand(),
                     ),
-                    child: const SizedBox.expand(),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
-          ),
         ],
       ),
     );

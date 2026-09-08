@@ -875,7 +875,7 @@ abstract class AppLocalizations {
   /// No description provided for @metricTotalLiabilities.
   ///
   /// In zh, this message translates to:
-  /// **'负资产'**
+  /// **'负债'**
   String get metricTotalLiabilities;
 
   /// No description provided for @metricNetAssets.
@@ -1445,7 +1445,7 @@ abstract class AppLocalizations {
   /// No description provided for @assetsAmount.
   ///
   /// In zh, this message translates to:
-  /// **'资产 {amount}'**
+  /// **'总资产 {amount}'**
   String assetsAmount(String amount);
 
   /// No description provided for @liabilitiesAmount.
@@ -2708,6 +2708,12 @@ abstract class AppLocalizations {
   /// **'标记待报销'**
   String get markReimbursable;
 
+  /// No description provided for @reimbursableHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'标记本身不产生资金变动；到账后由退款冲抵净额。'**
+  String get reimbursableHint;
+
   /// No description provided for @refundLabel.
   ///
   /// In zh, this message translates to:
@@ -3557,7 +3563,7 @@ abstract class AppLocalizations {
   /// No description provided for @reportsSubtitle.
   ///
   /// In zh, this message translates to:
-  /// **'数据看板'**
+  /// **'预算与统计'**
   String get reportsSubtitle;
 
   /// No description provided for @noCategoryData.
@@ -4832,6 +4838,12 @@ abstract class AppLocalizations {
   /// **'清除备份目录'**
   String get clearBackupDir;
 
+  /// No description provided for @clearBackupDirConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除后需要重新选择备份目录；已导出的备份文件不会被删除。'**
+  String get clearBackupDirConfirm;
+
   /// No description provided for @stopLocalBackup.
   ///
   /// In zh, this message translates to:
@@ -5293,6 +5305,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'清空聊天记录'**
   String get aiChatClearHistory;
+
+  /// No description provided for @aiChatHistoryLocalOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'对话只存本机，不含在备份内'**
+  String get aiChatHistoryLocalOnly;
 
   /// No description provided for @aiChatClearMessage.
   ///
@@ -6019,6 +6037,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'导入完成（成功 {count} 笔）'**
   String importDoneTitle(int count);
+
+  /// No description provided for @importNothingTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有导入任何交易'**
+  String get importNothingTitle;
 
   /// No description provided for @allImported.
   ///

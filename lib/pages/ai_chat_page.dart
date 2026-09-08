@@ -392,6 +392,8 @@ class _AiChatPageState extends State<AiChatPage> {
                 padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
                 child: VeriHeader(
                   title: l10n.aiChatTitle,
+                  // 聊天记录只存 KV、不进备份，用户需要知道换机会丢。
+                  subtitle: l10n.aiChatHistoryLocalOnly,
                   showBack: true,
                   actions: <Widget>[
                     if (_messages.isNotEmpty)

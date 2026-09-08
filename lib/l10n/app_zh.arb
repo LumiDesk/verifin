@@ -223,7 +223,7 @@
   "metricTotalIncome": "总收入",
   "metricTotalNet": "总结余",
   "metricTotalAssets": "总资产",
-  "metricTotalLiabilities": "负资产",
+  "metricTotalLiabilities": "负债",
   "metricNetAssets": "净资产",
   "metricReimbursablePending": "待报销",
   "metricReimbursed": "已报销",
@@ -431,7 +431,7 @@
   "netAssets": "净资产",
   "assetsActions": "资产操作",
   "assetsChangeCover": "更换资产卡片背景",
-  "assetsAmount": "资产 {amount}",
+  "assetsAmount": "总资产 {amount}",
   "@assetsAmount": {
     "placeholders": {
       "amount": {
@@ -835,6 +835,7 @@
   "dateLabel": "日期",
   "timeLabel": "时间",
   "markReimbursable": "标记待报销",
+  "reimbursableHint": "标记本身不产生资金变动；到账后由退款冲抵净额。",
   "refundLabel": "退款 / 报销回款",
   "refundedAmountLabel": "已冲抵 {amount}",
   "@refundedAmountLabel": {
@@ -1309,7 +1310,7 @@
       }
     }
   },
-  "reportsSubtitle": "数据看板",
+  "reportsSubtitle": "预算与统计",
   "noCategoryData": "暂无分类数据",
   "noCategoryDesc": "保存支出记录后会在这里显示分类排行。",
   "thisYearLabel": "今年",
@@ -1726,6 +1727,7 @@
   "notChosen": "未选择",
   "backupNow": "立即备份",
   "clearBackupDir": "清除备份目录",
+  "clearBackupDirConfirm": "清除后需要重新选择备份目录；已导出的备份文件不会被删除。",
   "stopLocalBackup": "停止本地备份",
   "autoBackup": "自动备份",
   "backupFrequencyLabel": "备份频率",
@@ -1859,6 +1861,7 @@
   "aiNotConfigured": "未配置",
   "aiChatTitle": "AI 财务助理",
   "aiChatClearHistory": "清空聊天记录",
+  "aiChatHistoryLocalOnly": "对话只存本机，不含在备份内",
   "aiChatClearMessage": "将删除当前所有对话，无法恢复。",
   "aiChatClearConfirm": "清空",
   "aiChatThinking": "思考中…",
@@ -2081,6 +2084,7 @@
     }
   },
   "importDoneTitle": "导入完成（成功 {count} 笔）",
+  "importNothingTitle": "没有导入任何交易",
   "@importDoneTitle": {
     "placeholders": {
       "count": {

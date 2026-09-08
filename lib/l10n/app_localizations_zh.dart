@@ -402,7 +402,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get metricTotalAssets => '总资产';
 
   @override
-  String get metricTotalLiabilities => '负资产';
+  String get metricTotalLiabilities => '负债';
 
   @override
   String get metricNetAssets => '净资产';
@@ -720,7 +720,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String assetsAmount(String amount) {
-    return '资产 $amount';
+    return '总资产 $amount';
   }
 
   @override
@@ -1407,6 +1407,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get markReimbursable => '标记待报销';
 
   @override
+  String get reimbursableHint => '标记本身不产生资金变动；到账后由退款冲抵净额。';
+
+  @override
   String get refundLabel => '退款 / 报销回款';
 
   @override
@@ -1922,7 +1925,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get reportsSubtitle => '数据看板';
+  String get reportsSubtitle => '预算与统计';
 
   @override
   String get noCategoryData => '暂无分类数据';
@@ -2626,6 +2629,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get clearBackupDir => '清除备份目录';
 
   @override
+  String get clearBackupDirConfirm => '清除后需要重新选择备份目录；已导出的备份文件不会被删除。';
+
+  @override
   String get stopLocalBackup => '停止本地备份';
 
   @override
@@ -2872,6 +2878,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get aiChatClearHistory => '清空聊天记录';
+
+  @override
+  String get aiChatHistoryLocalOnly => '对话只存本机，不含在备份内';
 
   @override
   String get aiChatClearMessage => '将删除当前所有对话，无法恢复。';
@@ -3269,6 +3278,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String importDoneTitle(int count) {
     return '导入完成（成功 $count 笔）';
   }
+
+  @override
+  String get importNothingTitle => '没有导入任何交易';
 
   @override
   String get allImported => '全部导入成功。';

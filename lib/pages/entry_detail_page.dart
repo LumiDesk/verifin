@@ -640,7 +640,8 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       // 退款不在此页手动选择，仅作穷尽兜底（正向流入用青绿）。
       EntryType.refund => veriIncome,
     };
-    final amountNumber = formatCurrencyNumber(
+    // 用带单位的格式化：单币种账本按偏好隐藏单位，多币种账本必须能看出币种。
+    final amountNumber = formatUserMoney(
       _amount,
       _currencyCode ?? controller.activeBook.baseCurrencyCode,
     );
@@ -996,6 +997,20 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         ),
                       ],
                     ),
+                    // 标记待报销本身不产生任何资金变动，用户容易以为已经「报了」。
+                    if (_type == EntryType.expense && _reimbursable)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          AppLocalizations.of(context).reimbursableHint,
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.62),
+                              ),
+                        ),
+                      ),
                     if (!_isDraft &&
                         _pendingAttachments.isNotEmpty) ...<Widget>[
                       const SizedBox(height: 10),

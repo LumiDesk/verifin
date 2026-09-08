@@ -737,7 +737,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String assetsAmount(String amount) {
-    return 'Assets $amount';
+    return 'Total assets $amount';
   }
 
   @override
@@ -1434,6 +1434,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get markReimbursable => 'Mark reimbursable';
 
   @override
+  String get reimbursableHint =>
+      'Marking moves no money; a refund offsets the net amount once it arrives.';
+
+  @override
   String get refundLabel => 'Refund / reimbursement';
 
   @override
@@ -1959,7 +1963,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get reportsSubtitle => 'Dashboard';
+  String get reportsSubtitle => 'Budget & stats';
 
   @override
   String get noCategoryData => 'No category data';
@@ -2675,6 +2679,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clearBackupDir => 'Clear backup folder';
 
   @override
+  String get clearBackupDirConfirm =>
+      'You will need to pick a backup folder again. Backup files already exported are not deleted.';
+
+  @override
   String get stopLocalBackup => 'Stops local backups';
 
   @override
@@ -2926,6 +2934,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiChatClearHistory => 'Clear chat history';
+
+  @override
+  String get aiChatHistoryLocalOnly =>
+      'Chats stay on this device and are not included in backups';
 
   @override
   String get aiChatClearMessage =>
@@ -3352,6 +3364,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String importDoneTitle(int count) {
     return 'Import finished ($count succeeded)';
   }
+
+  @override
+  String get importNothingTitle => 'No transactions were imported';
 
   @override
   String get allImported => 'All rows imported.';

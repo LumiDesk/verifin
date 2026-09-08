@@ -4,6 +4,7 @@ import 'package:verifin/app/app_version.dart';
 import 'package:verifin/app/common_widgets.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/local_storage/local_storage.dart';
+import 'package:verifin/pages/budget_pages.dart';
 import 'package:verifin/pages/home_page.dart';
 import 'package:verifin/pages/profile_pages.dart';
 
@@ -70,7 +71,7 @@ void main() {
     expect(find.text('净资产'), findsAtLeastNWidgets(1));
 
     await tapBottomTab(tester, 2);
-    expect(find.text('数据看板 · 单位：¥'), findsOneWidget);
+    expect(find.text('预算与统计 · 单位：¥'), findsOneWidget);
 
     await tapBottomTab(tester, 3);
     expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
@@ -177,7 +178,7 @@ void main() {
 
     await tester.fling(find.byType(PageView), const Offset(300, 0), 1000);
     await tester.pumpAndSettle();
-    expect(find.text('数据看板 · 单位：¥'), findsOneWidget);
+    expect(find.text('预算与统计 · 单位：¥'), findsOneWidget);
   });
 
   testWidgets('changes theme preference from the profile page', (
@@ -320,5 +321,25 @@ void main() {
 
     expect(find.text('再次确认初始化'), findsOneWidget);
     expect(find.text('确认初始化'), findsOneWidget);
+  });
+
+  testWidgets('我的宫格提供预算与 AI 助理入口', (WidgetTester tester) async {
+    await pumpApp(tester);
+    await tapBottomTab(tester, 3);
+
+    await tester.scrollUntilVisible(
+      find.text('AI 财务助理'),
+      200,
+      scrollable: firstVerticalScrollable(),
+    );
+    expect(find.text('AI 财务助理'), findsOneWidget);
+    expect(find.text('预算'), findsOneWidget);
+
+    // 首页预算面板被关掉后，这个入口是预算功能唯一的入口。
+    await tester.ensureVisible(find.text('预算'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('预算'));
+    await tester.pumpAndSettle();
+    expect(find.byType(BudgetOverviewPage), findsOneWidget);
   });
 }

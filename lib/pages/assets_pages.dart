@@ -22,6 +22,7 @@ import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
 import 'sheets.dart';
 import 'account_detail_page.dart';
+import 'currency_rates_page.dart';
 
 part 'account_group_pages.dart';
 part 'add_account_page.dart';
@@ -371,6 +372,12 @@ class _AssetsPageState extends State<AssetsPage> {
           const SizedBox(height: 12),
           if (!valuation.isComplete) ...<Widget>[
             VeriCard(
+              // 只告知「缺汇率」而不给入口，用户没有任何可操作的去处。
+              onTap: () => Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (_) => const CurrencyRatesPage(),
+                ),
+              ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
