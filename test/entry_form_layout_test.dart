@@ -41,6 +41,17 @@ void main() {
     );
     expect(saveButton.style?.backgroundColor, isNotNull);
     expect(saveButton.style?.foregroundColor, isNotNull);
+    // 禁用态用淡蓝而非主题灰，且不得因 onPressed 为 null 而丢失。
+    expect(
+      saveButton.style!.backgroundColor!
+          .resolve(<WidgetState>{WidgetState.disabled}),
+      veriRoyal.withValues(alpha: 0.38),
+    );
+    expect(
+      saveButton.style!.foregroundColor!
+          .resolve(<WidgetState>{WidgetState.disabled}),
+      Colors.white.withValues(alpha: 0.78),
+    );
     expect(
       tester
           .widget<Padding>(find.byKey(const Key('entry_bottom_save_padding')))
@@ -58,7 +69,9 @@ void main() {
       tester
           .widget<ColoredBox>(find.byKey(const Key('entry_bottom_save_bar')))
           .color,
-      Colors.transparent,
+      Theme.of(
+        tester.element(find.byKey(const Key('entry_bottom_save_bar'))),
+      ).colorScheme.surface,
     );
     expect(
       tester

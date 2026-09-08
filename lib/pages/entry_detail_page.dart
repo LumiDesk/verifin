@@ -1796,7 +1796,7 @@ class _EntryBottomSaveBar extends StatelessWidget {
       top: false,
       child: ColoredBox(
         key: const Key('entry_bottom_save_bar'),
-        color: Colors.transparent,
+        color: Theme.of(context).colorScheme.surface,
         child: Padding(
           key: const Key('entry_bottom_save_padding'),
           padding: const EdgeInsets.fromLTRB(22, 10, 22, 18),
@@ -1804,13 +1804,11 @@ class _EntryBottomSaveBar extends StatelessWidget {
             key: const Key('save_entry_button'),
             style: FilledButton.styleFrom(
               // 保存栏不继承 FilledButton 的暗色禁用填充，保持与应用主色一致；
-              // 不可保存时仅降低透明度表达禁用状态。
-              backgroundColor: enabled
-                  ? veriRoyal
-                  : veriRoyal.withValues(alpha: 0.38),
-              foregroundColor: Colors.white.withValues(
-                alpha: enabled ? 1 : 0.78,
-              ),
+              // 不可保存时用淡蓝（禁用态专属属性）表达，而非主题灰色。
+              backgroundColor: veriRoyal,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: veriRoyal.withValues(alpha: 0.38),
+              disabledForegroundColor: Colors.white.withValues(alpha: 0.78),
               minimumSize: const Size.fromHeight(50),
               shape: const StadiumBorder(),
               textStyle: Theme.of(
