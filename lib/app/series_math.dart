@@ -83,28 +83,66 @@ List<double> accountMonthlyBalanceSeries(
   Account account,
   List<LedgerEntry> entries,
 ) {
+  return accountMonthlyBalanceSeriesBatch(<Account>[
+    account,
+  ], entries)[account.id]!;
+}
+
+/// 今年逐月月末余额(全部账户一次遍历):每个账户的 12 期结果必须与逐个账户调用
+/// [accountMonthlyBalanceSeries] 完全一致——同样的往年基线、月份增量与输出口径。
+
+Map<String, List<double>> accountMonthlyBalanceSeriesBatch(
+  List<Account> accounts,
+  List<LedgerEntry> entries,
+) {
   final now = DateTime.now();
   final yearStart = DateTime(now.year);
-  var runningBalance = account.initialBalance;
-  final monthlyDeltas = List<double>.filled(12, 0);
+  final baselines = <String, double>{
+    for (final account in accounts) account.id: account.initialBalance,
+  };
+  final monthlyDeltas = <String, List<double>>{
+    for (final account in accounts) account.id: List<double>.filled(12, 0),
+  };
   for (final entry in entries) {
-    final delta = accountDeltaForEntry(entry, account.id);
-    if (delta == 0) {
+    final effectDate = accountEffectDate(entry);
+    final beforeYear = effectDate.isBefore(yearStart);
+    if (!beforeYear && effectDate.year != now.year) {
       continue;
     }
-    final effectDate = accountEffectDate(entry);
-    if (effectDate.isBefore(yearStart)) {
-      runningBalance += delta;
-    } else if (effectDate.year == now.year) {
-      monthlyDeltas[effectDate.month - 1] += delta;
+    final fromId = entry.accountId;
+    final toId = entry.toAccountId;
+    // 转出=转入只算一次:accountDeltaForEntry 已把两端净额合并,拆开会计重。
+    for (final accountId in <String>[
+      fromId,
+      if (toId != null && toId != fromId) toId,
+    ]) {
+      final deltas = monthlyDeltas[accountId];
+      if (deltas == null) {
+        continue;
+      }
+      final delta = accountDeltaForEntry(entry, accountId);
+      if (delta == 0) {
+        continue;
+      }
+      if (beforeYear) {
+        baselines[accountId] = baselines[accountId]! + delta;
+      } else {
+        deltas[effectDate.month - 1] += delta;
+      }
     }
   }
-  final values = List<double>.filled(12, 0);
-  for (var month = 0; month < 12; month += 1) {
-    runningBalance += monthlyDeltas[month];
-    values[month] = runningBalance;
+  final result = <String, List<double>>{};
+  for (final account in accounts) {
+    final deltas = monthlyDeltas[account.id]!;
+    var runningBalance = baselines[account.id]!;
+    final values = List<double>.filled(12, 0);
+    for (var month = 0; month < 12; month += 1) {
+      runningBalance += deltas[month];
+      values[month] = runningBalance;
+    }
+    result[account.id] = values;
   }
-  return values;
+  return result;
 }
 
 /// 今年逐月净资产:基线包含往年全部流水,净资产保留正负号。

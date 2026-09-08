@@ -124,6 +124,8 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   // 程序化写入备注时置真，令备注监听忽略这次（不误判为用户输入）。
   bool _applyingSuggestion = false;
   bool _didInitialSuggest = false;
+  // 备注逐字重算的防抖句柄：识别要扫一遍历史并整页重建，不能每次按键都同步跑。
+  Timer? _suggestDebounce;
   // 草稿编辑模式（导入预览）与 AI 草稿一样关闭自动识别，尊重传入数据。
   late final bool _draftFree =
       widget.initialDraft == null && widget.draftEntry == null;
@@ -233,6 +235,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
 
   @override
   void dispose() {
+    _suggestDebounce?.cancel();
     _noteController.removeListener(_onNoteChanged);
     _noteController.dispose();
     super.dispose();
@@ -483,13 +486,32 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       setState(() {});
       return;
     }
-    // 用户真的在输备注：标记已改（不再回填备注），并按新备注重算类型/分类/标签。
+    // 用户真的在输备注：标记已改（不再回填备注），并安排按新备注重算类型/分类/标签
+    // （防抖 300ms，见 [_scheduleSuggestion]）。
     _noteTouched = true;
-    _recomputeSuggestion();
+    _scheduleSuggestion();
+  }
+
+  /// 备注输入停顿后才重算：识别要扫一遍历史、命中后还要整页重建，逐字触发会让
+  /// 长备注输入卡顿。开屏与显式改类型/金额仍走 [_recomputeSuggestion] 立即执行。
+  void _scheduleSuggestion() {
+    _suggestDebounce?.cancel();
+    _suggestDebounce = Timer(
+      const Duration(milliseconds: 300),
+      _recomputeSuggestion,
+    );
+  }
+
+  /// 清掉挂起的防抖重算。识别只填「用户没改过」的字段，因此手动选择无需取消；
+  /// 这里只用于重算开始前作废重复计时器、以及保存前 flush。
+  void _cancelPendingSuggestion() {
+    _suggestDebounce?.cancel();
+    _suggestDebounce = null;
   }
 
   /// 按当前金额/备注/时段从历史识别，并填充「用户尚未改过」的字段。
   void _recomputeSuggestion() {
+    _cancelPendingSuggestion();
     if (!mounted || !_autoSuggestEnabled) {
       return;
     }
@@ -1691,6 +1713,12 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   Future<bool> _save() async {
     if (_saving) {
       return false;
+    }
+    // 备注识别有 300ms 防抖：保存前必须落定，否则输入停顿不足时会把还没识别的
+    // 默认类型/分类写进账目。
+    if (_suggestDebounce != null) {
+      _cancelPendingSuggestion();
+      _recomputeSuggestion();
     }
     final controller = VeriFinScope.of(context);
     final accounts =

@@ -575,10 +575,7 @@ List<double>? _baseCurrencyAssetTrend({
   required List<LedgerEntry> entries,
   required _AssetCurrencyConverter convert,
 }) {
-  final nativeSeries = <Account, List<double>>{
-    for (final account in accounts)
-      account: accountMonthlyBalanceSeries(account, entries),
-  };
+  final nativeSeries = accountMonthlyBalanceSeriesBatch(accounts, entries);
   final now = DateTime.now();
   final result = <double>[];
   for (var monthIndex = 0; monthIndex < 12; monthIndex += 1) {
@@ -586,7 +583,7 @@ List<double>? _baseCurrencyAssetTrend({
     var total = 0.0;
     for (final account in accounts) {
       final conversion = convert(
-        amount: nativeSeries[account]![monthIndex],
+        amount: nativeSeries[account.id]![monthIndex],
         currencyCode: account.currencyCode,
         date: monthEnd,
       );

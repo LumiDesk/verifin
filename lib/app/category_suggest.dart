@@ -65,6 +65,14 @@ const double _kCategoryShare = 0.5;
 /// 只回看最近这么多笔历史，兼顾性能与近期习惯。
 const int _kMaxHistory = 500;
 
+/// [_tokenize] 的清洗正则。提到顶层只编译一次：一次识别最多要对 [_kMaxHistory] 条
+/// 历史各清洗一遍，在循环内新建正则会重复付出编译开销。
+final RegExp _whitespacePattern = RegExp(r'\s+');
+final RegExp _punctuationOrSymbolPattern = RegExp(
+  r'[\p{P}\p{S}]',
+  unicode: true,
+);
+
 /// 允许**自行推断**出的交易类型（用户未手动选定类型时）。
 ///
 /// 刻意窄于 [EntryType.userSelectable]：
@@ -237,8 +245,8 @@ double _amountAffinity(double a, double b) {
 Set<String> _tokenize(String raw) {
   final cleaned = raw
       .toLowerCase()
-      .replaceAll(RegExp(r'\s+'), '')
-      .replaceAll(RegExp(r'[\p{P}\p{S}]', unicode: true), '');
+      .replaceAll(_whitespacePattern, '')
+      .replaceAll(_punctuationOrSymbolPattern, '');
   if (cleaned.isEmpty) {
     return <String>{};
   }

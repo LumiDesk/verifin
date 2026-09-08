@@ -151,6 +151,62 @@ void main() {
     expect(await noteOf('b'), 'SENT_B', reason: 'b 始终未被重写');
   });
 
+  test('saveEntryAggregate 在同一事务内走行级差分，未改动行不被重写', () async {
+    final repo = await openRepo();
+    final db = opened.last.db;
+    LedgerEntry entry(String id, String note) => LedgerEntry(
+      id: id,
+      bookId: defaultLedgerBookId,
+      type: EntryType.expense,
+      amount: 1,
+      categoryId: 'dining',
+      accountId: 'alipay',
+      note: note,
+      occurredAt: DateTime(2026, 4, 1),
+    );
+
+    Future<String?> noteOf(String id) async {
+      final rows = await db.query(
+        'entries',
+        columns: <String>['note'],
+        where: 'id = ?',
+        whereArgs: <Object>[id],
+      );
+      return rows.isEmpty ? null : rows.first['note'] as String?;
+    }
+
+    // 先建立基线快照，再把两行的物理存储改成哨兵值。
+    await repo.saveEntries(<LedgerEntry>[entry('a', 'a0'), entry('b', 'b0')]);
+    await db.update(
+      'entries',
+      <String, Object?>{'note': 'SENT_A'},
+      where: 'id = ?',
+      whereArgs: <Object>['a'],
+    );
+    await db.update(
+      'entries',
+      <String, Object?>{'note': 'SENT_B'},
+      where: 'id = ?',
+      whereArgs: <Object>['b'],
+    );
+
+    // 只改 a：b 不应被重写（整表覆盖会把它改回 b0）。
+    await repo.saveEntryAggregate(
+      entries: <LedgerEntry>[entry('a', 'a1'), entry('b', 'b0')],
+      attachments: const <Attachment>[],
+    );
+    expect(await noteOf('a'), 'a1', reason: 'a 有改动，应被写入（覆盖哨兵）');
+    expect(await noteOf('b'), 'SENT_B', reason: 'b 未改动，物理哨兵值幸存');
+
+    // 删除 a：只应删掉 a，b 物理行仍在、未被重写。
+    await repo.saveEntryAggregate(
+      entries: <LedgerEntry>[entry('b', 'b0')],
+      attachments: const <Attachment>[],
+    );
+    expect(await noteOf('a'), isNull, reason: 'a 被删除');
+    expect(await noteOf('b'), 'SENT_B', reason: 'b 始终未被重写');
+  });
+
   test('写队列中一次操作失败后，后续写入仍继续执行', () async {
     final repo = await openRepo();
     final db = opened.last.db;
