@@ -36,6 +36,8 @@ Future<T?> _showVeriModalSheet<T>({
   builder: (context) => VeriGlassSurface(
     grouped: false,
     radius: veriRadiusXl,
+    // 底部弹窗只圆顶部两个角，左下/右下保持直角，避免方块机上观感怪异。
+    borderRadius: BorderRadius.vertical(top: Radius.circular(veriRadiusXl)),
     child: Material(color: Colors.transparent, child: builder(context)),
   ),
 );

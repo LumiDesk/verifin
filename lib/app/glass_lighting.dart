@@ -17,12 +17,16 @@ double veriGlassEdgeLight(Offset point, Offset normal, {double motion = 0}) {
 class VeriGlassLightPainter extends CustomPainter {
   const VeriGlassLightPainter({
     required this.radius,
+    this.borderRadius,
     this.brightness = Brightness.light,
     this.activity = 0,
     this.motion = 0,
     this.opacity = 1,
   });
   final double radius;
+
+  /// 显式圆角；缺省时用 [radius] 生成四角等圆角。底部弹窗传入只圆顶部的圆角。
+  final BorderRadius? borderRadius;
   final Brightness brightness;
   double get peakOpacity => brightness == Brightness.dark ? 0.22 : 0.46;
   final double activity;
@@ -33,8 +37,16 @@ class VeriGlassLightPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (size.shortestSide < 2 || opacity <= 0) return;
     final rect = (Offset.zero & size).deflate(0.7);
-    final path = Path()
-      ..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
+    final rrect = borderRadius == null
+        ? RRect.fromRectAndRadius(rect, Radius.circular(radius))
+        : RRect.fromRectAndCorners(
+            rect,
+            topLeft: borderRadius!.topLeft,
+            topRight: borderRadius!.topRight,
+            bottomLeft: borderRadius!.bottomLeft,
+            bottomRight: borderRadius!.bottomRight,
+          );
+    final path = Path()..addRRect(rrect);
     final metric = path.computeMetrics().first;
     // 把整条轮廓组成连续的透明度网格，两次绘制完成柔光与细高光。
     // 不为每 2dp 小段建立 MaskFilter 离屏任务：一张普通卡片原本就会
@@ -107,6 +119,7 @@ class VeriGlassLightPainter extends CustomPainter {
       brightness != oldDelegate.brightness ||
       opacity != oldDelegate.opacity ||
       radius != oldDelegate.radius ||
+      borderRadius != oldDelegate.borderRadius ||
       activity != oldDelegate.activity ||
       motion != oldDelegate.motion;
 }

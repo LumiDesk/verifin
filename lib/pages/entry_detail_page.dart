@@ -1796,7 +1796,7 @@ class _EntryBottomSaveBar extends StatelessWidget {
       top: false,
       child: ColoredBox(
         key: const Key('entry_bottom_save_bar'),
-        color: Theme.of(context).colorScheme.surface,
+        color: Colors.transparent,
         child: Padding(
           key: const Key('entry_bottom_save_padding'),
           padding: const EdgeInsets.fromLTRB(22, 10, 22, 18),

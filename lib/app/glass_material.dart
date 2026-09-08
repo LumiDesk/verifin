@@ -40,6 +40,7 @@ class VeriGlassSurface extends StatelessWidget {
     super.key,
     required this.child,
     this.radius = veriCardRadius,
+    this.borderRadius,
     this.grouped = true,
     this.tint,
     this.enabled = true,
@@ -47,6 +48,10 @@ class VeriGlassSurface extends StatelessWidget {
   });
   final Widget child;
   final double radius;
+
+  /// 显式圆角；缺省时用 [radius] 生成四角等圆角。底部弹窗应传入只圆顶部的圆角，
+  /// 使左下/右下保持直角。
+  final BorderRadius? borderRadius;
   final bool grouped;
   final Color? tint;
   final bool enabled;
@@ -60,7 +65,7 @@ class VeriGlassSurface extends StatelessWidget {
     final brightness = Theme.of(context).brightness;
     final dark = brightness == Brightness.dark;
     final highContrast = MediaQuery.highContrastOf(context);
-    final borderRadius = BorderRadius.circular(radius);
+    final borderRadius = this.borderRadius ?? BorderRadius.circular(radius);
     final visibility = reveal.clamp(0.0, 1.0);
     final surface = highContrast
         ? veriContentSurfaceColor(brightness)
@@ -119,6 +124,7 @@ class VeriGlassSurface extends StatelessWidget {
             ? null
             : VeriGlassLightPainter(
                 radius: radius,
+                borderRadius: borderRadius,
                 brightness: brightness,
                 opacity: visibility,
               ),

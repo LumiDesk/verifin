@@ -71,9 +71,7 @@ void main() {
       tester
           .widget<ColoredBox>(find.byKey(const Key('entry_bottom_save_bar')))
           .color,
-      Theme.of(
-        tester.element(find.byKey(const Key('entry_bottom_save_bar'))),
-      ).colorScheme.surface,
+      Colors.transparent,
     );
     expect(
       tester
