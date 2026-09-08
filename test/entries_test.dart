@@ -313,6 +313,8 @@ void main() {
       find.byKey(const Key('transaction_search_field')),
       '晚餐',
     );
+    // 搜索有防抖，先让计时器到点再断言。
+    await tester.pump(const Duration(milliseconds: 300));
     await tester.pumpAndSettle();
 
     expect(find.text('餐饮'), findsOneWidget);

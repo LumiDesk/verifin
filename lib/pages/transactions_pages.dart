@@ -147,6 +147,10 @@ class _TransactionsPageState extends State<TransactionsPage> {
   late bool _dateMode = widget.initialDate != null;
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
+  // 搜索防抖：每敲一个字符都重跑「过滤 + 排序 + 分组」在几千笔账本上会明显卡顿，
+  // 等用户停下来再算一次。
+  static const Duration _searchDebounce = Duration(milliseconds: 220);
+  Timer? _queryDebounceTimer;
   String? _selectedAccountId;
   String? _selectedCategoryId;
   String? _selectedTagId;
@@ -241,8 +245,19 @@ class _TransactionsPageState extends State<TransactionsPage> {
 
   @override
   void dispose() {
+    _queryDebounceTimer?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    _queryDebounceTimer?.cancel();
+    _queryDebounceTimer = Timer(_searchDebounce, () {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _query = value.trim());
+    });
   }
 
   @override
@@ -403,8 +418,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
                           accountLabel: _accountFilterLabel(controller),
                           categoryLabel: _categoryFilterLabel(controller),
                           accountLocked: widget.accountId != null,
-                          onChanged: (value) =>
-                              setState(() => _query = value.trim()),
+                          onChanged: _onSearchChanged,
                           onPickAccount: widget.accountId == null
                               ? () => _pickAccountFilter(controller)
                               : null,
@@ -416,6 +430,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
                               : () => _pickTagFilter(controller),
                           onClear: _hasSecondaryFilters
                               ? () {
+                                  _queryDebounceTimer?.cancel();
                                   setState(() {
                                     _searchController.clear();
                                     _query = '';
@@ -588,8 +603,19 @@ class _TransactionsPageState extends State<TransactionsPage> {
 
     final controller = VeriFinScope.of(context);
     final normalizedQuery = _query.toLowerCase();
+    // 选中分类时把「分类 + 全部子孙」算一次；放在每条交易的谓词里会把分类树
+    // 重算 N 遍。
+    final selectedCategoryIds = _selectedCategoryId == null
+        ? null
+        : <String>{
+            _selectedCategoryId!,
+            ...descendantIds(controller.categories, _selectedCategoryId!),
+          };
     return filtered
-        .where((entry) => _matchesSecondaryFilters(entry, controller))
+        .where(
+          (entry) =>
+              _matchesSecondaryFilters(entry, controller, selectedCategoryIds),
+        )
         .where(
           (entry) => normalizedQuery.isEmpty
               ? true
@@ -608,6 +634,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
   bool _matchesSecondaryFilters(
     LedgerEntry entry,
     VeriFinController controller,
+    Set<String>? selectedCategoryIds,
   ) {
     if (_selectedAccountId != null &&
         !entryTouchesAccount(entry, _selectedAccountId!)) {
@@ -615,12 +642,8 @@ class _TransactionsPageState extends State<TransactionsPage> {
     }
     // 选中某分类时，连同它的所有子分类一起筛出（与看板统计「归总到顶级」口径
     // 一致：选大类=大类及其全部子类的交易）。
-    if (_selectedCategoryId != null) {
-      final ids = <String>{
-        _selectedCategoryId!,
-        ...descendantIds(controller.categories, _selectedCategoryId!),
-      };
-      if (!ids.contains(entry.categoryId)) {
+    if (selectedCategoryIds != null) {
+      if (!selectedCategoryIds.contains(entry.categoryId)) {
         return false;
       }
     }
