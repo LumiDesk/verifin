@@ -57,6 +57,7 @@ mixin _ControllerState on ChangeNotifier {
   List<AccountGroup>? _accountGroupsView;
   List<Category>? _categoriesView;
   List<ExchangeRate>? _exchangeRatesView;
+  Map<String, double>? _accountBalanceCache;
 
   void _invalidateDerivedViews() {
     _entriesView = null;
@@ -64,6 +65,7 @@ mixin _ControllerState on ChangeNotifier {
     _accountGroupsView = null;
     _categoriesView = null;
     _exchangeRatesView = null;
+    _accountBalanceCache = null;
   }
 
   @override

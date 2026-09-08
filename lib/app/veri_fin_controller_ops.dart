@@ -4374,16 +4374,59 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   }
 
   double accountBalance(Account account) {
+    final cached = _accountBalanceCache ??= _computeAccountBalances();
+    final value = cached[account.id];
+    if (value != null) {
+      return value;
+    }
+    // 不在当前账户集合里（如草稿账户）：退回逐条计算。
     var balance = account.initialBalance;
-    for (final entry in _entries.where(
-      (item) =>
-          item.bookId == account.bookId &&
-          entryTouchesAccount(item, account.id),
-    )) {
-      balance += accountDeltaForEntry(entry, account.id);
+    for (final entry in _entries) {
+      if (entry.bookId == account.bookId &&
+          entryTouchesAccount(entry, account.id)) {
+        balance += accountDeltaForEntry(entry, account.id);
+      }
     }
     // 按账户币种的 minor unit 消除连续加减产生的浮点残差。
     return normalizeCurrencyAmount(balance, account.currencyCode);
+  }
+
+  /// 一次遍历算出全部账户余额，供 [accountBalance] 复用。
+  ///
+  /// 逐账户调用是 O(账户数 × 交易数)，而首页、资产页、个人页和桌面小组件每次
+  /// 重建都要取一遍全部余额。结果按账户币种归一，缓存由 [_invalidateDerivedViews] 失效。
+  Map<String, double> _computeAccountBalances() {
+    final accountsById = <String, Account>{
+      for (final account in _accounts) account.id: account,
+    };
+    final balances = <String, double>{
+      for (final account in _accounts) account.id: account.initialBalance,
+    };
+    for (final entry in _entries) {
+      final fromId = entry.accountId;
+      if (fromId.isNotEmpty) {
+        final account = accountsById[fromId];
+        if (account != null && account.bookId == entry.bookId) {
+          balances[fromId] =
+              balances[fromId]! + accountDeltaForEntry(entry, fromId);
+        }
+      }
+      final toId = entry.toAccountId;
+      // 转出=转入时不重复计入：accountDeltaForEntry 已把两端的净额合并算好。
+      if (toId != null && toId.isNotEmpty && toId != fromId) {
+        final account = accountsById[toId];
+        if (account != null && account.bookId == entry.bookId) {
+          balances[toId] = balances[toId]! + accountDeltaForEntry(entry, toId);
+        }
+      }
+    }
+    return <String, double>{
+      for (final account in _accounts)
+        account.id: normalizeCurrencyAmount(
+          balances[account.id]!,
+          account.currencyCode,
+        ),
+    };
   }
 
   /// 载入偏好类小数据（KV）。账目类数据由 [_loadFromRepository] 从 SQLite 载入。

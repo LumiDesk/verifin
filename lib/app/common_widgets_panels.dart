@@ -344,6 +344,25 @@ class _CalendarPreviewState extends State<CalendarPreview> {
     );
     final leadingBlanks =
         DateTime(_visibleMonth.year, _visibleMonth.month).weekday - 1;
+    // 每格原本各自扫一遍全部交易（约 31 次全表遍历），先按天分桶一次。
+    final incomeByDay = <int, double>{};
+    final expenseByDay = <int, double>{};
+    for (final entry in widget.entries) {
+      final at = entry.occurredAt;
+      if (at.year != _visibleMonth.year || at.month != _visibleMonth.month) {
+        continue;
+      }
+      switch (entry.type) {
+        case EntryType.income:
+          incomeByDay[at.day] = (incomeByDay[at.day] ?? 0) + entry.baseAmount;
+        case EntryType.expense:
+          expenseByDay[at.day] =
+              (expenseByDay[at.day] ?? 0) + entry.netBaseAmount;
+        case EntryType.transfer:
+        case EntryType.refund:
+          break;
+      }
+    }
 
     return VeriCard(
       padding: const EdgeInsets.fromLTRB(13, 12, 13, 13),
@@ -432,16 +451,8 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                 return const SizedBox.shrink();
               }
               final day = index - leadingBlanks + 1;
-              final dayEntries = widget.entries
-                  .where(
-                    (entry) =>
-                        entry.occurredAt.year == _visibleMonth.year &&
-                        entry.occurredAt.month == _visibleMonth.month &&
-                        entry.occurredAt.day == day,
-                  )
-                  .toList();
-              final income = sumByType(dayEntries, EntryType.income);
-              final expense = sumByType(dayEntries, EntryType.expense);
+              final income = incomeByDay[day] ?? 0;
+              final expense = expenseByDay[day] ?? 0;
               final date = DateTime(
                 _visibleMonth.year,
                 _visibleMonth.month,
