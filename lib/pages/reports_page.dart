@@ -94,7 +94,9 @@ class ReportsPage extends StatelessWidget {
                       '${formatExpenseAmount(monthExpense)} · ${AppLocalizations.of(context).monthNumber(DateTime.now().month)} · ${AppLocalizations.of(context).entryTypeExpense}',
                 ),
                 const SizedBox(height: 12),
-                if (categoryStats.isEmpty)
+                // 与同页其它面板同口径：净额为 0（如支出被全额退款）也视为无数据，
+                // 否则只剩一个空轨道和「0」。
+                if (categoryStats.isEmpty || isZeroAmount(monthExpense))
                   EmptyState(
                     icon: Icons.donut_small_outlined,
                     title: AppLocalizations.of(context).noCategoryData,

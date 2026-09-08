@@ -242,7 +242,6 @@
   "panelTagStatsDesc": "本月各标签的支出金额与占比",
   "panelDailyTrendLabel": "日趋势",
   "panelDailyTrendDesc": "近 7 天每日支出趋势",
-  "panelMonthlyStructureLabel": "月度收支",
   "panelMonthlyStructureDesc": "今年每月支出结构柱状图",
   "panelCountLabel": "{count}个{page}面板",
   "@panelCountLabel": {
@@ -2236,7 +2235,6 @@
   "importLocalTitle": "导入本地备份？",
   "importLocalMessage": "导入会替换当前本地交易、账户、账本、预算、个人信息和设置。建议先导出当前数据。",
   "importedLocal": "已导入本地数据",
-  "importFailedFormat": "导入失败：备份文件格式不正确",
   "resetAllTitle": "初始化所有数据？",
   "resetAllMessage": "这会删除本地交易、账户、账本、预算、个人信息和主题偏好，操作无法恢复。",
   "continueLabel": "继续",

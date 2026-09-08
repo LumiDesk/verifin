@@ -986,12 +986,6 @@ abstract class AppLocalizations {
   /// **'近 7 天每日支出趋势'**
   String get panelDailyTrendDesc;
 
-  /// No description provided for @panelMonthlyStructureLabel.
-  ///
-  /// In zh, this message translates to:
-  /// **'月度收支'**
-  String get panelMonthlyStructureLabel;
-
   /// No description provided for @panelMonthlyStructureDesc.
   ///
   /// In zh, this message translates to:
@@ -6283,12 +6277,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'已导入本地数据'**
   String get importedLocal;
-
-  /// No description provided for @importFailedFormat.
-  ///
-  /// In zh, this message translates to:
-  /// **'导入失败：备份文件格式不正确'**
-  String get importFailedFormat;
 
   /// No description provided for @resetAllTitle.
   ///

@@ -473,9 +473,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get panelDailyTrendDesc => 'Daily spending trend for the last 7 days';
 
   @override
-  String get panelMonthlyStructureLabel => 'Monthly overview';
-
-  @override
   String get panelMonthlyStructureDesc =>
       'Bar chart of monthly spending this year';
 
@@ -3517,9 +3514,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get importedLocal => 'Local data imported';
-
-  @override
-  String get importFailedFormat => 'Import failed: invalid backup format';
 
   @override
   String get resetAllTitle => 'Reset all data?';

@@ -3942,7 +3942,13 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   /// ——调用方先经 `BackupService.decodeBackupBytes`（必要时 `decryptEnvelope`）
   /// 还原成明文 JSON 再传入，controller 只认 JSON。
   void importDataJson(String rawJson) {
-    final decoded = jsonDecode(rawJson);
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(rawJson);
+    } on FormatException {
+      // jsonDecode 的原始报错是英文（Unexpected character…），不能直接展示给用户。
+      throw const FormatException('备份文件格式不正确');
+    }
     if (decoded is! Map) {
       throw const FormatException('备份文件格式不正确');
     }

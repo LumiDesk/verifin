@@ -650,7 +650,8 @@ class _TransactionsPageState extends State<TransactionsPage> {
       _selectedCategoryId != null ||
       _selectedTagId != null ||
       _reimbursementFilter != ReimbursementFilter.all ||
-      _dateMode ||
+      // 只算时间筛选，不算「按天进入」：日历里点开一个空日期仍应显示「暂无交易」，
+      // 而不是「没有匹配交易」。
       _timeFilter != TransactionTimeFilter.all;
 
   bool _matchesSecondaryFilters(

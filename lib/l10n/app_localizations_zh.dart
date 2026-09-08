@@ -459,9 +459,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get panelDailyTrendDesc => '近 7 天每日支出趋势';
 
   @override
-  String get panelMonthlyStructureLabel => '月度收支';
-
-  @override
   String get panelMonthlyStructureDesc => '今年每月支出结构柱状图';
 
   @override
@@ -3429,9 +3426,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get importedLocal => '已导入本地数据';
-
-  @override
-  String get importFailedFormat => '导入失败：备份文件格式不正确';
 
   @override
   String get resetAllTitle => '初始化所有数据？';
