@@ -139,7 +139,21 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
     final feedback = VeriFeedbackHost.of(context);
     final l10n = AppLocalizations.of(context);
     // 先确保有通知/精确闹钟权限（首次可能未申请过），再立即发一条测试通知。
-    await _scheduler.requestPermission();
+    final granted = await _scheduler.requestPermission();
+    if (!mounted) {
+      return;
+    }
+    // 权限被拒时不能报「已发送」：用户会以为提醒正常，实际一条都收不到。
+    if (!granted) {
+      unawaited(
+        feedback.showMessage(
+          message: l10n.reminderPermissionDenied,
+          tone: VeriFeedbackTone.warning,
+          duration: VeriFeedbackDuration.long,
+        ),
+      );
+      return;
+    }
     await _scheduler.showTest(l10n: l10n);
     if (!mounted) {
       return;

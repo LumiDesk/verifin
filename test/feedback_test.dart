@@ -66,6 +66,39 @@ void main() {
     controller.dispose();
   });
 
+  testWidgets('错误提示默认停留 8 秒并作为 liveRegion 播报', (tester) async {
+    final controller = VeriFeedbackController();
+    await _pumpHost(tester, controller: controller);
+
+    unawaited(
+      controller.showMessage(message: '保存失败', tone: VeriFeedbackTone.error),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 240));
+    expect(find.text('保存失败'), findsOneWidget);
+
+    // 4 秒是普通提示的默认时长；错误提示这时必须还在。
+    await tester.pump(const Duration(seconds: 4));
+    expect(find.text('保存失败'), findsOneWidget);
+
+    // 提示卡所在的语义节点是 liveRegion，屏幕阅读器才会主动播报。
+    final semanticsNodes = tester.widgetList<Semantics>(
+      find.ancestor(
+        of: find.byKey(const Key('veri_feedback_card_0')),
+        matching: find.byType(Semantics),
+      ),
+    );
+    expect(
+      semanticsNodes.any((node) => node.properties.liveRegion == true),
+      isTrue,
+    );
+
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+    expect(find.text('保存失败'), findsNothing);
+    controller.dispose();
+  });
+
   testWidgets('操作按钮返回 action 结果', (tester) async {
     final controller = VeriFeedbackController();
     await _pumpHost(tester, controller: controller);

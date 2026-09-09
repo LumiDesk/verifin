@@ -86,7 +86,7 @@ class VeriFeedbackController {
   Future<VeriFeedbackResult> showMessage({
     required String message,
     VeriFeedbackTone tone = VeriFeedbackTone.info,
-    VeriFeedbackDuration duration = VeriFeedbackDuration.standard,
+    VeriFeedbackDuration? duration,
     VeriFeedbackPriority priority = VeriFeedbackPriority.normal,
     String? actionLabel,
     String? dedupeKey,
@@ -95,13 +95,19 @@ class VeriFeedbackController {
       VeriFeedbackRequest(
         message: message,
         tone: tone,
-        duration: duration,
+        // 错误信息需要更多阅读时间：默认 4 秒常常读不完就消失了。
+        duration: duration ?? _defaultDurationFor(tone),
         priority: priority,
         actionLabel: actionLabel,
         dedupeKey: dedupeKey,
       ),
     );
   }
+
+  static VeriFeedbackDuration _defaultDurationFor(VeriFeedbackTone tone) =>
+      tone == VeriFeedbackTone.error
+      ? VeriFeedbackDuration.long
+      : VeriFeedbackDuration.standard;
 
   void dismissAll() {
     _host?._clearAll(VeriFeedbackResult.cleared);
@@ -569,164 +575,181 @@ class _VeriFeedbackCardState extends State<_VeriFeedbackCard>
     );
     final track = foreground.withValues(alpha: isDark ? 0.13 : 0.09);
 
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOutCubic,
-      alignment: Alignment.bottomCenter,
-      child: SizedBox(
-        width: width,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(veriRadiusMd),
-            boxShadow: <BoxShadow>[
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.26 : 0.10),
-                blurRadius: 10,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Material(
-            key: Key('veri_feedback_card_${widget.id}'),
-            color: surface,
-            shape: RoundedRectangleBorder(
+    // 屏幕阅读器需要在提示出现时主动播报（liveRegion），否则视障用户完全感知不到。
+    return Semantics(
+      liveRegion: true,
+      container: true,
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        alignment: Alignment.bottomCenter,
+        child: SizedBox(
+          width: width,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(veriRadiusMd),
-              side: BorderSide(color: outline),
+              boxShadow: <BoxShadow>[
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.26 : 0.10),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: hasProgress ? 44 : 48),
-                  child: Padding(
-                    padding: hasProgress
-                        ? const EdgeInsets.fromLTRB(10, 8, 6, 6)
-                        : const EdgeInsets.fromLTRB(10, 8, 6, 8),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: <Widget>[
-                        Container(
-                          key: Key('veri_feedback_icon_${widget.id}'),
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: toneColor.withValues(
-                              alpha: isDark ? 0.22 : 0.12,
+            child: Material(
+              key: Key('veri_feedback_card_${widget.id}'),
+              color: surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(veriRadiusMd),
+                side: BorderSide(color: outline),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: hasProgress ? 44 : 48,
+                    ),
+                    child: Padding(
+                      padding: hasProgress
+                          ? const EdgeInsets.fromLTRB(10, 8, 6, 6)
+                          : const EdgeInsets.fromLTRB(10, 8, 6, 8),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: <Widget>[
+                          Container(
+                            key: Key('veri_feedback_icon_${widget.id}'),
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: toneColor.withValues(
+                                alpha: isDark ? 0.22 : 0.12,
+                              ),
+                              borderRadius: BorderRadius.circular(veriRadiusSm),
                             ),
-                            borderRadius: BorderRadius.circular(veriRadiusSm),
+                            alignment: Alignment.center,
+                            child: Icon(
+                              _toneIcon(request.tone),
+                              color: toneColor,
+                              size: 16,
+                            ),
                           ),
-                          alignment: Alignment.center,
-                          child: Icon(
-                            _toneIcon(request.tone),
-                            color: toneColor,
-                            size: 16,
+                          const SizedBox(width: 8),
+                          Flexible(
+                            fit: FlexFit.loose,
+                            child: Text.rich(
+                              TextSpan(
+                                text: request.message,
+                                children: <InlineSpan>[
+                                  if (widget.count > 1)
+                                    TextSpan(
+                                      text: '  ×${widget.count}',
+                                      style: countStyle,
+                                    ),
+                                ],
+                              ),
+                              key: Key('veri_feedback_message_${widget.id}'),
+                              // 错误正文可能包含具体原因，截到 3 行会把关键信息藏掉。
+                              maxLines: request.tone == VeriFeedbackTone.error
+                                  ? 6
+                                  : 3,
+                              overflow: TextOverflow.ellipsis,
+                              softWrap: true,
+                              style: messageStyle,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          fit: FlexFit.loose,
-                          child: Text.rich(
-                            TextSpan(
-                              text: request.message,
-                              children: <InlineSpan>[
-                                if (widget.count > 1)
-                                  TextSpan(
-                                    text: '  ×${widget.count}',
-                                    style: countStyle,
+                          if (hasAction) ...<Widget>[
+                            const SizedBox(width: 4),
+                            SizedBox(
+                              height: 32,
+                              child: InkWell(
+                                key: Key('veri_feedback_action_${widget.id}'),
+                                borderRadius: BorderRadius.circular(
+                                  veriRadiusSm,
+                                ),
+                                onTap: () =>
+                                    _dismiss(VeriFeedbackResult.action),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
                                   ),
-                              ],
+                                  child: Center(
+                                    child: Text(
+                                      request.actionLabel!,
+                                      key: Key(
+                                        'veri_feedback_action_label_${widget.id}',
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: actionStyle,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
-                            key: Key('veri_feedback_message_${widget.id}'),
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                            softWrap: true,
-                            style: messageStyle,
-                          ),
-                        ),
-                        if (hasAction) ...<Widget>[
-                          const SizedBox(width: 4),
+                          ],
                           SizedBox(
+                            width: 32,
                             height: 32,
                             child: InkWell(
-                              key: Key('veri_feedback_action_${widget.id}'),
-                              borderRadius: BorderRadius.circular(veriRadiusSm),
-                              onTap: () => _dismiss(VeriFeedbackResult.action),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    request.actionLabel!,
-                                    key: Key(
-                                      'veri_feedback_action_label_${widget.id}',
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: actionStyle,
+                              key: Key('veri_feedback_close_${widget.id}'),
+                              customBorder: const CircleBorder(),
+                              onTap: () =>
+                                  _dismiss(VeriFeedbackResult.dismissed),
+                              child: Center(
+                                child: Icon(
+                                  Icons.close_rounded,
+                                  key: Key(
+                                    'veri_feedback_close_icon_${widget.id}',
                                   ),
+                                  size: 14,
+                                  color: foreground.withValues(alpha: 0.46),
                                 ),
                               ),
                             ),
                           ),
                         ],
-                        SizedBox(
-                          width: 32,
-                          height: 32,
-                          child: InkWell(
-                            key: Key('veri_feedback_close_${widget.id}'),
-                            customBorder: const CircleBorder(),
-                            onTap: () => _dismiss(VeriFeedbackResult.dismissed),
-                            child: Center(
-                              child: Icon(
-                                Icons.close_rounded,
-                                key: Key(
-                                  'veri_feedback_close_icon_${widget.id}',
-                                ),
-                                size: 14,
-                                color: foreground.withValues(alpha: 0.46),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                ),
-                if (hasProgress)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(10, 0, 10, 6),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(veriRadiusSm),
-                      child: ColoredBox(
-                        color: track,
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 2,
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: AnimatedBuilder(
-                              animation: _lifetimeController!,
-                              builder: (context, _) {
-                                return FractionallySizedBox(
-                                  key: Key(
-                                    'veri_feedback_progress_${widget.id}',
-                                  ),
-                                  widthFactor: (1 - _lifetimeController!.value)
-                                      .clamp(0, 1),
-                                  heightFactor: 1,
-                                  child: ColoredBox(color: toneColor),
-                                );
-                              },
+                  if (hasProgress)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 0, 10, 6),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(veriRadiusSm),
+                        child: ColoredBox(
+                          color: track,
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: 2,
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: AnimatedBuilder(
+                                animation: _lifetimeController!,
+                                builder: (context, _) {
+                                  return FractionallySizedBox(
+                                    key: Key(
+                                      'veri_feedback_progress_${widget.id}',
+                                    ),
+                                    widthFactor:
+                                        (1 - _lifetimeController!.value).clamp(
+                                          0,
+                                          1,
+                                        ),
+                                    heightFactor: 1,
+                                    child: ColoredBox(color: toneColor),
+                                  );
+                                },
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

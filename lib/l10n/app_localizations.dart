@@ -7706,6 +7706,12 @@ abstract class AppLocalizations {
   /// **'已补记 {count} 笔交易'**
   String recurringGeneratedCount(int count);
 
+  /// No description provided for @recurringGenerateFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'补记失败，请重试'**
+  String get recurringGenerateFailed;
+
   /// No description provided for @assetValuationMissing.
   ///
   /// In zh, this message translates to:

@@ -197,7 +197,7 @@ class _RecurringRulesPageState extends State<RecurringRulesPage> {
     unawaited(
       VeriFeedbackHost.of(context).showMessage(
         message: generated < 0
-            ? AppLocalizations.of(context).saveFailed
+            ? AppLocalizations.of(context).recurringGenerateFailed
             : AppLocalizations.of(context).recurringGeneratedCount(generated),
         tone: generated < 0 ? VeriFeedbackTone.error : VeriFeedbackTone.success,
         duration: generated < 0

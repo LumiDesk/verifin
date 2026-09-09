@@ -283,26 +283,36 @@ class _AssetsPageState extends State<AssetsPage> {
                         ),
                         const SizedBox(height: 18),
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: <Widget>[
-                            Text(
-                              AppLocalizations.of(context).assetsAmount(
-                                assets == null
-                                    ? '—'
-                                    : formatUserMoney(assets, baseCurrencyCode),
+                            Expanded(
+                              child: Text(
+                                AppLocalizations.of(context).assetsAmount(
+                                  assets == null
+                                      ? '—'
+                                      : formatUserMoney(
+                                          assets,
+                                          baseCurrencyCode,
+                                        ),
+                                ),
+                                style: TextStyle(color: assetCardTextColor),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              style: TextStyle(color: assetCardTextColor),
                             ),
-                            Text(
-                              AppLocalizations.of(context).liabilitiesAmount(
-                                liabilities == null
-                                    ? '—'
-                                    : formatUserMoney(
-                                        liabilities.abs(),
-                                        baseCurrencyCode,
-                                      ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                AppLocalizations.of(context).liabilitiesAmount(
+                                  liabilities == null
+                                      ? '—'
+                                      : formatUserMoney(
+                                          liabilities.abs(),
+                                          baseCurrencyCode,
+                                        ),
+                                ),
+                                style: TextStyle(color: assetCardTextColor),
+                                textAlign: TextAlign.end,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              style: TextStyle(color: assetCardTextColor),
                             ),
                           ],
                         ),

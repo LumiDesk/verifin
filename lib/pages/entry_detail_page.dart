@@ -2245,24 +2245,31 @@ class _EntryCategoryTile extends StatelessWidget {
         ),
         if (onOpenBranch != null)
           Positioned(
-            right: -1,
-            bottom: 0,
-            child: Material(
-              color: accent,
-              elevation: 1,
-              shape: const CircleBorder(),
-              clipBehavior: Clip.antiAlias,
-              child: InkWell(
-                key: Key('entry_category_more_${category.id}'),
-                customBorder: const CircleBorder(),
-                onTap: onOpenBranch,
-                child: const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: Icon(
-                    Icons.more_horiz_rounded,
-                    size: 13,
-                    color: Colors.white,
+            // 视觉仍是 18dp 圆点，但把点击区扩到 32dp：18dp 低于可点目标下限，容易点不中。
+            right: -7,
+            bottom: -7,
+            child: SizedBox(
+              width: 32,
+              height: 32,
+              child: Center(
+                child: Material(
+                  color: accent,
+                  elevation: 1,
+                  shape: const CircleBorder(),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    key: Key('entry_category_more_${category.id}'),
+                    customBorder: const CircleBorder(),
+                    onTap: onOpenBranch,
+                    child: const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: Icon(
+                        Icons.more_horiz_rounded,
+                        size: 13,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
               ),

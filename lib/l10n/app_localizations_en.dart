@@ -4356,6 +4356,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get recurringGenerateFailed => 'Catch-up failed, please retry';
+
+  @override
   String assetValuationMissing(int count) {
     return '$count accounts need an exchange rate';
   }

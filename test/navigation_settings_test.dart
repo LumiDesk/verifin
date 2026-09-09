@@ -184,6 +184,29 @@ void main() {
     expect(find.text('预算与统计 · 单位：¥'), findsOneWidget);
   });
 
+  testWidgets('点击开关行的标题也能切换开关', (WidgetTester tester) async {
+    await pumpApp(tester);
+    await tapBottomTab(tester, 3);
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('触感反馈'), 120);
+    await tester.pumpAndSettle();
+
+    final row = find.ancestor(
+      of: find.text('触感反馈'),
+      matching: find.byType(CompactSwitchRow),
+    );
+    expect(row, findsOneWidget);
+    final before = tester.widget<CompactSwitchRow>(row).value;
+
+    // 点标题文字而不是右侧被缩小过的开关：整行都应可点。
+    await tester.tap(find.text('触感反馈'));
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<CompactSwitchRow>(row).value, !before);
+  });
+
   testWidgets('changes theme preference from the profile page', (
     WidgetTester tester,
   ) async {

@@ -2676,6 +2676,7 @@
   "@recurringGeneratedCount": {
     "placeholders": {"count": {"type": "int"}}
   },
+  "recurringGenerateFailed": "补记失败，请重试",
   "assetValuationMissing": "有 {count} 个账户待设置汇率",
   "@assetValuationMissing": {
     "placeholders": {"count": {"type": "int"}}

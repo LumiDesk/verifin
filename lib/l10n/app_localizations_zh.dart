@@ -4226,6 +4226,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get recurringGenerateFailed => '补记失败，请重试';
+
+  @override
   String assetValuationMissing(int count) {
     return '有 $count 个账户待设置汇率';
   }

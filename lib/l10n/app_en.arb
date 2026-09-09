@@ -1723,6 +1723,7 @@
   "@recurringGeneratedCount": {
     "placeholders": {"count": {"type": "int"}}
   },
+  "recurringGenerateFailed": "Catch-up failed, please retry",
   "assetValuationMissing": "{count} accounts need an exchange rate",
   "@assetValuationMissing": {
     "placeholders": {"count": {"type": "int"}}
