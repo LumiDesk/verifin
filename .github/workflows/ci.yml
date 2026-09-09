@@ -95,6 +95,12 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      # 先把 APK 构建好再启动模拟器：Gradle 构建与模拟器同时跑会抢内存，
+      # 实测模拟器会在构建期间被拖死（device offline）。构建产物带同样的参数，
+      # 后面 flutter test 的 assemble 会直接复用。
+      - name: Prebuild the debug APK
+        run: flutter build apk --debug --flavor github --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
+
       - name: Run integration tests on an Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -104,7 +110,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           emulator-boot-timeout: 900
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 2048
           disable-animations: true
           script: |
             flutter test integration_test/glass_navigation_test.dart integration_test/menu_animation_test.dart -d emulator-5554 --flavor github --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
