@@ -339,7 +339,7 @@ String _trendSeriesValueText(HomeTrendSeries series, double value) {
     case HomeTrendSeries.expense:
       return formatExpenseAmount(value);
     case HomeTrendSeries.income:
-      return isZeroAmount(value) ? '0' : '+${formatIncomeAmount(value)}';
+      return formatSignedAmount(value);
     case HomeTrendSeries.net:
       return formatSignedAmount(value);
   }
@@ -900,9 +900,9 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
 
     String amountTextOf(double value) => switch (_type) {
       EntryType.expense => formatExpenseAmount(value),
-      EntryType.income => '+${formatIncomeAmount(value)}',
+      EntryType.income => formatSignedAmount(value),
       EntryType.transfer => formatAmount(value),
-      EntryType.refund => '+${formatIncomeAmount(value)}',
+      EntryType.refund => formatSignedAmount(value),
     };
 
     return Scaffold(
@@ -1210,9 +1210,9 @@ class _DailyStatTile extends StatelessWidget {
     final amountColor = colorForType(type);
     final amountText = switch (type) {
       EntryType.expense => formatExpenseAmount(row.amount),
-      EntryType.income => '+${formatIncomeAmount(row.amount)}',
+      EntryType.income => formatSignedAmount(row.amount),
       EntryType.transfer => formatAmount(row.amount),
-      EntryType.refund => '+${formatIncomeAmount(row.amount)}',
+      EntryType.refund => formatSignedAmount(row.amount),
     };
     return InkWell(
       onTap: onTap,
@@ -1236,7 +1236,7 @@ class _DailyStatTile extends StatelessWidget {
                         ? AppLocalizations.of(
                             context,
                           ).monthNumber(row.date.month)
-                        : '${row.date.month.toString().padLeft(2, '0')}.${row.date.day.toString().padLeft(2, '0')}',
+                        : AppLocalizations.of(context).dateMonthDay(row.date),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:verifin/app/models.dart';
 import 'package:verifin/app/veri_fin_scope.dart';
 import 'package:verifin/l10n/app_localizations.dart';
 import 'package:verifin/local_storage/local_storage.dart';
@@ -96,18 +97,19 @@ void main() {
     controller.dispose();
   });
 
-  testWidgets('跳过引导只标记完成不建数据', (WidgetTester tester) async {
+  testWidgets('跳过引导仍会建一个默认账户，避免首笔记账无法保存', (WidgetTester tester) async {
     final store = LocalKeyValueStore();
     final controller = await makeController(store, false);
 
     await _pumpOnboarding(tester, controller);
 
-    final accountsBefore = controller.accounts.length;
     await tester.tap(find.byKey(const Key('onboarding_skip')));
     await tester.pumpAndSettle();
 
     expect(controller.onboardingCompleted, isTrue);
-    expect(controller.accounts.length, accountsBefore);
+    // 零账户会让记账页保存按钮永远禁用，所以跳过也必须留下一个可用账户。
+    expect(controller.accounts.length, 1);
+    expect(controller.accounts.single.type, AccountType.cash);
 
     controller.dispose();
   });

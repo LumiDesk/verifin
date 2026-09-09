@@ -268,6 +268,9 @@ class SqliteLedgerRepository implements LedgerRepository {
     );
   }
 
+  /// 交易与附件在同一事务内提交，保留跨表原子性：交易走行级差分（只写变化行），
+  /// 附件含大 blob 仍整表覆盖。差分基线必须在事务提交成功后写入，否则回滚会留下
+  /// 与 DB 不符的快照。
   @override
   Future<void> saveEntryAggregate({
     required List<LedgerEntry> entries,
@@ -280,24 +283,26 @@ class SqliteLedgerRepository implements LedgerRepository {
         ? null
         : List<ExchangeRate>.of(exchangeRates);
     return _enqueueWrite(() async {
+      // entries 行映射昂贵且随行数增长：同一份行映射同时供差分与事务后的基线快照复用。
+      final entryRows = entrySnapshot.map(_entryToRow).toList(growable: false);
+      final rateRows = rateSnapshot
+          ?.map(_exchangeRateToRow)
+          .toList(growable: false);
+      final entryDiff = _diffRows(_rowSnapshots['entries'], _byId(entryRows));
       await _db.transaction((txn) async {
-        await _replaceInTxn(txn, 'entries', entrySnapshot.map(_entryToRow));
+        await _applyRowDiffInTxn(txn, 'entries', entryDiff);
         await _replaceInTxn(
           txn,
           'attachments',
           _indexed(attachmentSnapshot, _attachmentToRow),
         );
-        if (rateSnapshot != null) {
-          await _replaceInTxn(
-            txn,
-            'exchange_rates',
-            rateSnapshot.map(_exchangeRateToRow),
-          );
+        if (rateRows != null) {
+          await _replaceInTxn(txn, 'exchange_rates', rateRows);
         }
       });
-      _seedSnapshot('entries', entrySnapshot.map(_entryToRow));
-      if (rateSnapshot != null) {
-        _seedSnapshot('exchange_rates', rateSnapshot.map(_exchangeRateToRow));
+      _seedSnapshot('entries', entryRows);
+      if (rateRows != null) {
+        _seedSnapshot('exchange_rates', rateRows);
       }
     });
   }
@@ -541,10 +546,15 @@ class SqliteLedgerRepository implements LedgerRepository {
   /// 记录某表当前 DB 内容为基线快照（键为行的 id 列）。loadX 载入后、
   /// replaceAllLedgerData 整替后调用，使后续差分有正确基线。
   void _seedSnapshot(String table, Iterable<Map<String, Object?>> rows) {
-    _rowSnapshots[table] = <Object, Map<String, Object?>>{
-      for (final row in rows) row['id'] as Object: row,
-    };
+    _rowSnapshots[table] = _byId(rows);
   }
+
+  /// 以行的 id 列为键建立索引；差分与基线快照共用同一份键规则。
+  static Map<Object, Map<String, Object?>> _byId(
+    Iterable<Map<String, Object?>> rows,
+  ) => <Object, Map<String, Object?>>{
+    for (final row in rows) row['id'] as Object: row,
+  };
 
   /// 以 [rows] 差分更新 [table]：只写与基线快照不同的行。无基线（未 load 过）时
   /// 退化为一次整表覆盖并建立基线；无任何变化则不发生写入。
@@ -552,40 +562,64 @@ class SqliteLedgerRepository implements LedgerRepository {
     String table,
     Iterable<Map<String, Object?>> rows,
   ) async {
-    final next = <Object, Map<String, Object?>>{
-      for (final row in rows) row['id'] as Object: row,
-    };
-    final prev = _rowSnapshots[table];
-    if (prev == null) {
-      await _replaceAll(table, next.values);
-      _rowSnapshots[table] = next;
+    final diff = _diffRows(_rowSnapshots[table], _byId(rows));
+    if (diff.isEmpty) {
       return;
     }
-    final toUpsert = <Map<String, Object?>>[];
+    await _db.transaction((txn) => _applyRowDiffInTxn(txn, table, diff));
+    _rowSnapshots[table] = diff.baseline;
+  }
+
+  /// 相对基线 [prev] 计算 [next] 的行级差分。基线缺失时只能整表覆盖：仅靠 upsert
+  /// 无法删掉库里存在、传入列表里没有的行。
+  static _RowDiff _diffRows(
+    Map<Object, Map<String, Object?>>? prev,
+    Map<Object, Map<String, Object?>> next,
+  ) {
+    if (prev == null) {
+      return _RowDiff(
+        upsert: next.values.toList(growable: false),
+        deleteIds: const <Object>[],
+        baseline: next,
+        fullReplace: true,
+      );
+    }
+    final upsert = <Map<String, Object?>>[];
     next.forEach((id, row) {
       final old = prev[id];
       if (old == null || !_sameRow(old, row)) {
-        toUpsert.add(row);
+        upsert.add(row);
       }
     });
-    final toDelete = <Object>[
-      for (final id in prev.keys)
-        if (!next.containsKey(id)) id,
-    ];
-    if (toUpsert.isEmpty && toDelete.isEmpty) {
-      return;
+    return _RowDiff(
+      upsert: upsert,
+      deleteIds: <Object>[
+        for (final id in prev.keys)
+          if (!next.containsKey(id)) id,
+      ],
+      baseline: next,
+      fullReplace: false,
+    );
+  }
+
+  /// 在调用方给定的事务内应用差分。供 [_incrementalReplace]（单表自建事务）与
+  /// [saveEntryAggregate]（多表共享事务）复用；原子性由该事务保证。
+  static Future<void> _applyRowDiffInTxn(
+    Transaction txn,
+    String table,
+    _RowDiff diff,
+  ) async {
+    if (diff.fullReplace) {
+      await txn.delete(table);
     }
-    await _db.transaction((txn) async {
-      final batch = txn.batch();
-      for (final row in toUpsert) {
-        batch.insert(table, row, conflictAlgorithm: ConflictAlgorithm.replace);
-      }
-      for (final id in toDelete) {
-        batch.delete(table, where: 'id = ?', whereArgs: <Object>[id]);
-      }
-      await batch.commit(noResult: true);
-    });
-    _rowSnapshots[table] = next;
+    final batch = txn.batch();
+    for (final row in diff.upsert) {
+      batch.insert(table, row, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    for (final id in diff.deleteIds) {
+      batch.delete(table, where: 'id = ?', whereArgs: <Object>[id]);
+    }
+    await batch.commit(noResult: true);
   }
 
   /// 行相等：列数与每列值都相等（列值均为 String/int/double/null，`!=` 即可）。
@@ -917,4 +951,24 @@ class SqliteLedgerRepository implements LedgerRepository {
       parentId: Category.normalizeParentId(row['parent_id'] as String?),
     );
   }
+}
+
+/// 一张增量表的行级差分计划：相对基线快照需要写入/删除的行，以及应用后应记录的
+/// 新基线。[fullReplace] 为 true 表示没有基线可用，必须先清空整表再写入 [upsert]，
+/// 否则库里可能残留传入列表之外的行。
+class _RowDiff {
+  const _RowDiff({
+    required this.upsert,
+    required this.deleteIds,
+    required this.baseline,
+    required this.fullReplace,
+  });
+
+  final List<Map<String, Object?>> upsert;
+  final List<Object> deleteIds;
+  final Map<Object, Map<String, Object?>> baseline;
+  final bool fullReplace;
+
+  /// 无增删改且无需清空整表——调用方可据此跳过事务。
+  bool get isEmpty => !fullReplace && upsert.isEmpty && deleteIds.isEmpty;
 }

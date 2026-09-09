@@ -106,7 +106,13 @@ class BackupService {
     if (looksLikeZipBytes(bytes)) {
       return PlainBackupJson(unpackBackupArchive(bytes));
     }
-    final text = utf8.decode(bytes);
+    final String text;
+    try {
+      text = utf8.decode(bytes);
+    } on FormatException {
+      // utf8.decode 的原始报错是英文（Unexpected extension byte…），不能直接给用户看。
+      throw const FormatException('备份文件格式不正确');
+    }
     if (text.trim().isEmpty) {
       throw const FormatException('空备份文件');
     }

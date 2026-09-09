@@ -15,6 +15,7 @@ import '../app/common_widgets.dart';
 import '../app/currency_math.dart';
 import '../app/data_file_port.dart';
 import '../app/feedback.dart';
+import '../app/ledger_math.dart';
 import '../l10n/app_localizations.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
@@ -139,7 +140,8 @@ class _DataManagementPageState extends State<DataManagementPage> {
                           ).stopLocalBackup,
                           trailingIcon: Icons.chevron_right,
                           contentColor: veriExpense,
-                          onTap: () => _clearBackupDirectory(controller),
+                          onTap: () =>
+                              _clearBackupDirectory(context, controller),
                         ),
                       ],
                     ],
@@ -764,7 +766,20 @@ class _DataManagementPageState extends State<DataManagementPage> {
     }
   }
 
-  void _clearBackupDirectory(VeriFinController controller) {
+  Future<void> _clearBackupDirectory(
+    BuildContext context,
+    VeriFinController controller,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showConfirmDialog(
+      context,
+      title: l10n.clearBackupDir,
+      message: l10n.clearBackupDirConfirm,
+      destructive: true,
+    );
+    if (!confirmed || !context.mounted) {
+      return;
+    }
     controller.clearBackupDirectory();
     setState(() {
       _initialFrequency = _draftFrequency = BackupFrequency.manual;
@@ -909,7 +924,10 @@ class _DataManagementPageState extends State<DataManagementPage> {
                 title: Text(file.name),
                 subtitle: file.modifiedAt == null
                     ? null
-                    : Text(file.modifiedAt!.toLocal().toString()),
+                    : Text(
+                        '${l10n.dateMonthDay(file.modifiedAt!.toLocal())} '
+                        '${formatTime(file.modifiedAt!.toLocal())}',
+                      ),
                 onTap: () => Navigator.of(context).pop(file),
               ),
           ],
@@ -1514,7 +1532,11 @@ class _DataManagementPageState extends State<DataManagementPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
-          AppLocalizations.of(context).importDoneTitle(plan.importedCount),
+          plan.importedCount == 0
+              ? AppLocalizations.of(context).importNothingTitle
+              : AppLocalizations.of(
+                  context,
+                ).importDoneTitle(plan.importedCount),
         ),
         content: SingleChildScrollView(
           child: Text(
@@ -1569,7 +1591,11 @@ class _DataManagementPageState extends State<DataManagementPage> {
       if (context.mounted) {
         _notify(
           context,
-          message: AppLocalizations.of(context).importFailedFormat,
+          // 用异常自带的原因（如「不支持的备份版本：3」），比统一的「格式不正确」
+          // 更能让用户知道下一步该做什么。
+          message: AppLocalizations.of(
+            context,
+          ).importFailedWithMessage(error.message),
           tone: VeriFeedbackTone.error,
           duration: VeriFeedbackDuration.long,
           priority: VeriFeedbackPriority.high,
@@ -1595,30 +1621,11 @@ class _DataManagementPageState extends State<DataManagementPage> {
     BuildContext context,
     VeriFinController controller,
   ) async {
-    final firstConfirmed = await showConfirmDialog(
-      context,
-      title: AppLocalizations.of(context).resetAllTitle,
-      message: AppLocalizations.of(context).resetAllMessage,
-      confirmLabel: AppLocalizations.of(context).continueLabel,
-      destructive: true,
-    );
-    if (!firstConfirmed || !context.mounted) {
+    if (!await confirmResetAllData(context) || !context.mounted) {
       return;
     }
-
-    final secondConfirmed = await showConfirmDialog(
-      context,
-      title: AppLocalizations.of(context).resetConfirmTitle,
-      message: AppLocalizations.of(context).resetConfirmMessage,
-      confirmLabel: AppLocalizations.of(context).resetConfirmAction,
-      destructive: true,
-    );
-    if (secondConfirmed) {
-      controller.resetAllData();
-      if (context.mounted) {
-        _exitController.exit();
-      }
-    }
+    controller.resetAllData();
+    _exitController.exit();
   }
 }
 

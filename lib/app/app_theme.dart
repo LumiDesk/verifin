@@ -119,8 +119,10 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         visualDensity: VisualDensity.compact,
-        minimumSize: const Size(36, 34),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        // 对话框的「取消 / 不保存 / 删除」都走这个主题：必须保留至少 48×44 的
+        // 可点区域，否则单手操作容易误触。
+        minimumSize: const Size(48, 44),
+        tapTargetSize: MaterialTapTargetSize.padded,
       ),
     ),
     floatingActionButtonTheme: const FloatingActionButtonThemeData(

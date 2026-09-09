@@ -186,7 +186,8 @@ class PagePanelSpec {
       case 'daily_trend':
         return l10n.panelDailyTrendLabel;
       case 'monthly_structure':
-        return l10n.panelMonthlyStructureLabel;
+        // 该面板只有支出序列，标题与看板卡片保持一致，不写成「月度收支」。
+        return l10n.monthlyTrendTitle;
     }
     return id;
   }

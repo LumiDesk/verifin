@@ -201,6 +201,37 @@ void main() {
       expect(controller.backupSettings.frequency, BackupFrequency.onOpen);
     });
 
+    testWidgets('清除备份目录需要先确认', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(460, 1800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final controller = await makeController();
+      addTearDown(controller.dispose);
+      controller.setBackupDirectory('content://tree/backups', '备份目录');
+
+      await tester.pumpWidget(
+        VeriFinScope(
+          controller: controller,
+          child: zhMaterialApp(home: const DataManagementPage()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 取消时目录授权保留。
+      await tester.tap(find.text('清除备份目录'));
+      await tester.pumpAndSettle();
+      expect(find.text('清除后需要重新选择备份目录；已导出的备份文件不会被删除。'), findsOneWidget);
+      await tester.tap(find.text('取消'));
+      await tester.pumpAndSettle();
+      expect(controller.backupSettings.hasDirectory, isTrue);
+
+      // 确认后才真正清除。
+      await tester.tap(find.text('清除备份目录'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, '确认'));
+      await tester.pumpAndSettle();
+      expect(controller.backupSettings.hasDirectory, isFalse);
+    });
+
     testWidgets('修改偏好后初始化数据会直接退出，不再触发未保存提示', (tester) async {
       await tester.binding.setSurfaceSize(const Size(460, 1800));
       addTearDown(() => tester.binding.setSurfaceSize(null));

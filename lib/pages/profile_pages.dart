@@ -10,6 +10,8 @@ import '../app/models.dart';
 import '../app/root_navigation.dart';
 import '../app/series_math.dart';
 import '../app/veri_fin_scope.dart';
+import 'ai_chat_page.dart';
+import 'budget_pages.dart';
 import 'category_management_page.dart';
 import 'currency_rates_page.dart';
 import 'data_management_page.dart';
@@ -40,6 +42,9 @@ class ProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
     final profile = controller.profile;
+    // 首页预算面板可被用户在面板管理里关掉，宫格入口按当前账本的预算周期
+    // （含自定义起始日）打开总览，不能固定传自然月。
+    final budgetKeyMonth = controller.budgetKeyMonthFor(DateTime.now());
     final profileTags = _profileSummaryTags(
       profile,
       AppLocalizations.of(context),
@@ -271,6 +276,34 @@ class ProfilePage extends StatelessWidget {
                 onTap: () => Navigator.of(context).push<void>(
                   MaterialPageRoute<void>(
                     builder: (context) => const CurrencyRatesPage(),
+                  ),
+                ),
+              ),
+              // 新增入口一律追加在组末：已有入口的位置不变，避免用户改掉肌肉记忆。
+              _FeatureTileData(
+                icon: Icons.savings_outlined,
+                color: veriIncome,
+                label: AppLocalizations.of(context).budgetTitle,
+                subtitle: AppLocalizations.of(
+                  context,
+                ).yearMonth(budgetKeyMonth),
+                onTap: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (context) =>
+                        BudgetOverviewPage(initialMonth: budgetKeyMonth),
+                  ),
+                ),
+              ),
+              _FeatureTileData(
+                icon: Icons.smart_toy_outlined,
+                color: veriIndigo,
+                label: AppLocalizations.of(context).aiChatTitle,
+                subtitle: controller.aiSettings.isConfigured
+                    ? AppLocalizations.of(context).aiConfigured
+                    : AppLocalizations.of(context).aiNotConfigured,
+                onTap: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (context) => const AiChatPage(),
                   ),
                 ),
               ),

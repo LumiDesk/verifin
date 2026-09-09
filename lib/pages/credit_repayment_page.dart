@@ -39,6 +39,10 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
   late final String _entryId = DateTime.now().microsecondsSinceEpoch.toString();
   final EditorExitController _exitController = EditorExitController();
   bool _initialized = false;
+  // 进页面时的草稿指纹。用它而不是 `_saved` 判断脏状态：页面一进来就预填了欠款，
+  // 若把「预填」当成用户改动，点返回就会弹出以「保存」为主按钮的确认框，
+  // 顺手一点就会真的写一笔还款。
+  String? _initialSignature;
 
   @override
   void didChangeDependencies() {
@@ -85,17 +89,33 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
     }
   }
 
+  /// 草稿指纹：用户实际可改的字段。金额用定点字符串，避免浮点尾差把「没动」判成「动过」。
+  String _draftSignature() {
+    final date = _occurredAt;
+    return <String>[
+      _amount.toStringAsFixed(6),
+      _noAccount ? 'none' : (_fromAccountId ?? ''),
+      // 只精确到分钟：页面只编辑日期，重选同一天不该被判成「有改动」。
+      '${date.year}-${date.month}-${date.day} ${date.hour}:${date.minute}',
+      // 跨币种时用户可手改「转出金额」，漏掉它会让改动被静默丢弃。
+      _fromAmountTouched ? (_fromAmount?.toStringAsFixed(6) ?? '') : '',
+      _noteController.text.trim(),
+    ].join('|');
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
     final l10n = AppLocalizations.of(context);
     _ensureDefaultFrom(controller);
     _resolveFromAmount(controller);
+    // 预填与默认扣款账户解析完成后取一次基准；之后只有用户改动才会让它变化。
+    _initialSignature ??= _draftSignature();
     final sourceAccount = _fromAccount(controller);
     final canConfirm = _amount > 0 && (_noAccount || (_fromAmount ?? 0) > 0);
 
     return UnsavedChangesGuard(
-      isDirty: !_saved,
+      isDirty: !_saved && _draftSignature() != _initialSignature,
       onSave: _save,
       exitController: _exitController,
       child: Scaffold(

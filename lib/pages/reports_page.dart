@@ -25,12 +25,15 @@ class ReportsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
+    final l10n = AppLocalizations.of(context);
     final entries = controller.entries;
     final now = DateTime.now();
     final monthEntries = entries
         .where((entry) => isInMonth(entry, now))
         .toList(growable: false);
     final monthExpense = sumByType(monthEntries, EntryType.expense);
+    final monthIncome = sumByType(monthEntries, EntryType.income);
+    final monthNet = monthIncome - monthExpense;
     // 预算执行卡按预算周期取数（键月 + 周期窗口）；看板其余统计仍按自然月。
     final budgetKeyMonth = controller.budgetKeyMonthFor(now);
     final budgetEntries = entriesInWindow(
@@ -91,16 +94,25 @@ class ReportsPage extends StatelessWidget {
                       '${formatExpenseAmount(monthExpense)} · ${AppLocalizations.of(context).monthNumber(DateTime.now().month)} · ${AppLocalizations.of(context).entryTypeExpense}',
                 ),
                 const SizedBox(height: 12),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final compact = constraints.maxWidth < 360;
-                    return _CategoryRingChart(
-                      stats: categoryStats,
-                      total: monthExpense,
-                      ringSize: compact ? 126 : 156,
-                    );
-                  },
-                ),
+                // 与同页其它面板同口径：净额为 0（如支出被全额退款）也视为无数据，
+                // 否则只剩一个空轨道和「0」。
+                if (categoryStats.isEmpty || isZeroAmount(monthExpense))
+                  EmptyState(
+                    icon: Icons.donut_small_outlined,
+                    title: AppLocalizations.of(context).noCategoryData,
+                    description: AppLocalizations.of(context).noCategoryDesc,
+                  )
+                else
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final compact = constraints.maxWidth < 360;
+                      return _CategoryRingChart(
+                        stats: categoryStats,
+                        total: monthExpense,
+                        ringSize: compact ? 126 : 156,
+                      );
+                    },
+                  ),
               ],
             ),
           );
@@ -137,36 +149,39 @@ class ReportsPage extends StatelessWidget {
                   trailing: formatExpenseAmount(trendExpense),
                 ),
                 const SizedBox(height: 12),
-                SizedBox(
-                  height: 138,
-                  child: InteractiveTrendChart(
-                    color: isZeroAmount(trendExpense)
-                        ? Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.42)
-                        : veriExpense,
-                    values: trendValues,
-                    xLabels: sparseLabelsForWindow(trendWindow),
-                    yLabels: reportAxisLabels(trendMax),
-                    labelColor: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.50),
-                    tooltipOf: (index) {
-                      final day = trendWindow.days[index];
-                      return ChartTooltip(
-                        title: AppLocalizations.of(context).dateMonthDay(day),
-                        lines: <ChartTooltipLine>[
-                          ChartTooltipLine(
-                            text: AppLocalizations.of(context)
-                                .expenseAmountLabel(
-                                  formatExpenseAmount(trendValues[index]),
-                                ),
-                          ),
-                        ],
-                      );
-                    },
+                if (isZeroAmount(trendExpense))
+                  EmptyState(
+                    icon: Icons.show_chart,
+                    title: l10n.noDimData(l10n.entryTypeExpense),
+                    description: l10n.noDimDesc(l10n.entryTypeExpense),
+                  )
+                else
+                  SizedBox(
+                    height: 138,
+                    child: InteractiveTrendChart(
+                      color: veriExpense,
+                      values: trendValues,
+                      xLabels: sparseLabelsForWindow(trendWindow),
+                      yLabels: reportAxisLabels(trendMax),
+                      labelColor: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.50),
+                      tooltipOf: (index) {
+                        final day = trendWindow.days[index];
+                        return ChartTooltip(
+                          title: AppLocalizations.of(context).dateMonthDay(day),
+                          lines: <ChartTooltipLine>[
+                            ChartTooltipLine(
+                              text: AppLocalizations.of(context)
+                                  .expenseAmountLabel(
+                                    formatExpenseAmount(trendValues[index]),
+                                  ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
                   ),
-                ),
               ],
             ),
           );
@@ -176,48 +191,56 @@ class ReportsPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 SectionTitle(
-                  title: AppLocalizations.of(
-                    context,
-                  ).panelMonthlyStructureLabel,
+                  // 面板只有支出序列（monthlyExpenseValues），不能沿用面板管理页
+                  // 里的「月度收支」名称；标题口径与描述「今年每月支出结构柱状图」一致。
+                  title: AppLocalizations.of(context).monthlyTrendTitle,
                   trailing: AppLocalizations.of(context).thisYearLabel,
                 ),
                 const SizedBox(height: 12),
-                SizedBox(
-                  height: 146,
-                  child: InteractiveBarChart(
-                    values: monthlyValues,
-                    xLabels: const <String>[
-                      '1',
-                      '2',
-                      '3',
-                      '4',
-                      '5',
-                      '6',
-                      '7',
-                      '8',
-                      '9',
-                      '10',
-                      '11',
-                      '12',
-                    ],
-                    yLabels: reportAxisLabels(monthlyMax),
-                    labelColor: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.50),
-                    tooltipOf: (index) => ChartTooltip(
-                      title: AppLocalizations.of(
-                        context,
-                      ).monthNumber(index + 1),
-                      lines: <ChartTooltipLine>[
-                        ChartTooltipLine(
-                          text: AppLocalizations.of(context).expenseAmountLabel(
-                            formatExpenseAmount(monthlyValues[index]),
-                          ),
-                        ),
+                if (monthlyMax <= 0)
+                  EmptyState(
+                    icon: Icons.bar_chart_outlined,
+                    title: l10n.noDimData(l10n.entryTypeExpense),
+                    description: l10n.noDimDesc(l10n.entryTypeExpense),
+                  )
+                else
+                  SizedBox(
+                    height: 146,
+                    child: InteractiveBarChart(
+                      values: monthlyValues,
+                      xLabels: const <String>[
+                        '1',
+                        '2',
+                        '3',
+                        '4',
+                        '5',
+                        '6',
+                        '7',
+                        '8',
+                        '9',
+                        '10',
+                        '11',
+                        '12',
                       ],
+                      yLabels: reportAxisLabels(monthlyMax),
+                      labelColor: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.50),
+                      tooltipOf: (index) => ChartTooltip(
+                        title: AppLocalizations.of(
+                          context,
+                        ).monthNumber(index + 1),
+                        lines: <ChartTooltipLine>[
+                          ChartTooltipLine(
+                            text: AppLocalizations.of(context)
+                                .expenseAmountLabel(
+                                  formatExpenseAmount(monthlyValues[index]),
+                                ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           );
@@ -278,12 +301,62 @@ class ReportsPage extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: 10),
+          _MonthSummaryCard(
+            income: monthIncome,
+            expense: monthExpense,
+            net: monthNet,
+          ),
           for (final id in panelIds) ...<Widget>[
             const SizedBox(height: 10),
             panelFor(id),
           ],
           const SizedBox(height: 8),
           const PanelSettingsEntry(kind: PanelPageKind.reports),
+        ],
+      ),
+    );
+  }
+}
+
+/// 看板各面板只统计支出（分类/标签/趋势均按支出取数），页首补一条本月
+/// 收入/支出/结余摘要，避免整个看板看起来「只有支出」。
+class _MonthSummaryCard extends StatelessWidget {
+  const _MonthSummaryCard({
+    required this.income,
+    required this.expense,
+    required this.net,
+  });
+
+  final double income;
+  final double expense;
+  final double net;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final zeroColor = Theme.of(
+      context,
+    ).colorScheme.onSurface.withValues(alpha: 0.48);
+    return VeriCard(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 16),
+      child: Row(
+        children: <Widget>[
+          SummaryMetric(
+            label: l10n.metricMonthIncome,
+            value: formatAmount(income),
+            color: isZeroAmount(income) ? zeroColor : veriIncome,
+          ),
+          SummaryMetric(
+            label: l10n.metricMonthExpense,
+            value: formatExpenseAmount(expense),
+            color: isZeroAmount(expense) ? zeroColor : veriExpense,
+          ),
+          SummaryMetric(
+            label: l10n.metricMonthNet,
+            value: formatSignedAmount(net),
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
         ],
       ),
     );
@@ -334,6 +407,13 @@ class _BudgetExecutionCard extends StatelessWidget {
 
     return VeriCard(
       padding: const EdgeInsets.fromLTRB(13, 12, 13, 13),
+      // 首页预算面板可被用户在面板管理里关闭，此卡是关掉后进入预算总览的唯一入口。
+      onTap: () => Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          builder: (context) => BudgetOverviewPage(initialMonth: keyMonth),
+        ),
+      ),
+      quietTap: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -448,12 +528,20 @@ class _BudgetExecutionCard extends StatelessWidget {
                 child: _BudgetExecutionMetric(
                   label: AppLocalizations.of(context).categoryBudgetTitle,
                   value: AppLocalizations.of(context).countItems(budgetedCount),
+                  // 未设分类预算时没有「执行情况」可判断，绿色「正常」会被误读为
+                  // 已设预算且执行良好。
                   accent: overBudgetCount > 0
                       ? AppLocalizations.of(
                           context,
                         ).overCountLabel(overBudgetCount)
+                      : budgetedCount == 0
+                      ? AppLocalizations.of(context).notSet
                       : AppLocalizations.of(context).normalLabel,
-                  accentColor: overBudgetCount > 0 ? veriExpense : veriIncome,
+                  accentColor: overBudgetCount > 0
+                      ? veriExpense
+                      : budgetedCount == 0
+                      ? null
+                      : veriIncome,
                 ),
               ),
             ],
@@ -920,7 +1008,7 @@ class _CategoryStatTile extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '-${formatAmount(stat.amount)}',
+                      formatExpenseAmount(stat.amount),
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         color: veriExpense,
                         fontWeight: FontWeight.w800,
@@ -985,7 +1073,7 @@ class _TagStatTile extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '-${formatAmount(stat.amount)}',
+                      formatExpenseAmount(stat.amount),
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         color: veriExpense,
                         fontWeight: FontWeight.w800,

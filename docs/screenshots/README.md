@@ -4,6 +4,6 @@
 
 - `home.jpg` — 首页
 - `assets.jpg` — 资产
-- `reports.jpg` — 数据看板
+- `reports.jpg` — 看板
 
 更新界面后记得同步替换。

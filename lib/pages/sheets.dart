@@ -1489,6 +1489,30 @@ Future<({String number, String last4, bool follows})?> showCardNumberDialog({
   return (number: number, last4: last4, follows: follows);
 }
 
+/// 「初始化所有数据」的两步破坏性确认：两步都确认才返回 true，任一步取消返回 false。
+/// 只负责确认；清空数据与收尾由调用方处理（设置页与锁屏页的后续动作不同）。
+Future<bool> confirmResetAllData(BuildContext context) async {
+  final l10n = AppLocalizations.of(context);
+  final firstConfirmed = await showConfirmDialog(
+    context,
+    title: l10n.resetAllTitle,
+    message: l10n.resetAllMessage,
+    confirmLabel: l10n.continueLabel,
+    destructive: true,
+  );
+  if (!firstConfirmed || !context.mounted) {
+    return false;
+  }
+  final secondConfirmed = await showConfirmDialog(
+    context,
+    title: l10n.resetConfirmTitle,
+    message: l10n.resetConfirmMessage,
+    confirmLabel: l10n.resetConfirmAction,
+    destructive: true,
+  );
+  return secondConfirmed;
+}
+
 /// Executes the explicit hide/delete command and returns whether the account
 /// detail editor should exit. The caller owns page navigation so an unsaved
 /// changes guard cannot reinterpret this completed command as a back action.

@@ -313,6 +313,8 @@ void main() {
       find.byKey(const Key('transaction_search_field')),
       '晚餐',
     );
+    // 搜索有防抖，先让计时器到点再断言。
+    await tester.pump(const Duration(milliseconds: 300));
     await tester.pumpAndSettle();
 
     expect(find.text('餐饮'), findsOneWidget);
@@ -756,5 +758,55 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.textContaining('note-39'), findsOneWidget);
+  });
+
+  testWidgets('交易列表提供记账入口', (WidgetTester tester) async {
+    final store = LocalKeyValueStore();
+    await pumpApp(tester, store);
+    await tester.tap(find.text('最近交易'));
+    await tester.pumpAndSettle();
+
+    final fab = find.byKey(const Key('transactions_quick_entry_fab'));
+    expect(fab, findsOneWidget);
+    await tester.tap(fab);
+    await tester.pumpAndSettle();
+
+    // 与首页快捷记账一致：先弹数字键盘。
+    expect(find.byKey(const Key('number_pad_ok')), findsOneWidget);
+  });
+
+  testWidgets('只按时间筛选时显示「没有匹配交易」，清空后复位', (WidgetTester tester) async {
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store);
+    final now = DateTime.now();
+    controller.addEntry(
+      LedgerEntry(
+        id: 'last-year-entry',
+        bookId: controller.activeBook.id,
+        type: EntryType.expense,
+        amount: 10,
+        categoryId: 'dining',
+        accountId: '',
+        note: '去年的一笔',
+        occurredAt: DateTime(now.year - 1, 3, 1),
+      ),
+    );
+
+    await pumpApp(tester, store);
+    await tester.tap(find.text('最近交易'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('去年的一笔'), findsOneWidget);
+
+    // 只切换时间筛选：应视为「有筛选」，显示无匹配而不是「暂无交易」。
+    await tester.tap(find.text('全部时间'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('本月').last);
+    await tester.pumpAndSettle();
+    expect(find.text('没有匹配交易'), findsOneWidget);
+
+    // 清空筛选把时间维度一并复位。
+    await tester.tap(find.byTooltip('清空筛选'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('去年的一笔'), findsOneWidget);
   });
 }

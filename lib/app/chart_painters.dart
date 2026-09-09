@@ -85,24 +85,27 @@ int? chartSlotIndex(Offset position, Rect chartRect, int count) {
 
 /// 在 [anchor] 附近绘制数据气泡,自动上下翻转并夹紧在画布内。
 /// 气泡固定使用深色底和浅色文字,保证在浅色、深色和图片背景上都可读。
+/// [textScaler] 是系统字号缩放:画布文字不经过 Theme,必须由调用方显式传入。
 void drawChartTooltip(
   Canvas canvas,
   Size size,
   Offset anchor,
-  ChartTooltip tooltip,
-) {
+  ChartTooltip tooltip, {
+  TextScaler textScaler = TextScaler.noScaling,
+}) {
   const padding = 8.0;
   const dotSize = 6.0;
   final titlePainter = TextPainter(
     text: TextSpan(
       text: tooltip.title,
-      style: const TextStyle(
-        color: Color(0xB3FFFFFF),
+      style: TextStyle(
+        color: Colors.white.withValues(alpha: 0.70),
         fontSize: 10,
         fontWeight: FontWeight.w700,
       ),
     ),
     textDirection: TextDirection.ltr,
+    textScaler: textScaler,
   )..layout();
   final linePainters = <(ChartTooltipLine, TextPainter)>[
     for (final line in tooltip.lines)
@@ -118,6 +121,7 @@ void drawChartTooltip(
             ),
           ),
           textDirection: TextDirection.ltr,
+          textScaler: textScaler,
         )..layout(),
       ),
   ];
@@ -132,18 +136,30 @@ void drawChartTooltip(
   final bubbleWidth = contentWidth + padding * 2;
   final bubbleHeight = contentHeight + padding * 2;
 
+  // 气泡整体夹紧在画布矩形内:先按锚点摆位,再分别夹紧左右与上下。
+  // 上方的夹紧必须取 max(边界),否则气泡高于画布时 top 会变成负值、画出画布。
+  final canvasRect = Offset.zero & size;
+  const edge = 2.0;
   var left = anchor.dx - bubbleWidth / 2;
-  left = left.clamp(2.0, math.max(2.0, size.width - bubbleWidth - 2));
+  left = left.clamp(
+    canvasRect.left + edge,
+    math.max(canvasRect.left + edge, canvasRect.right - bubbleWidth - edge),
+  );
   var top = anchor.dy - bubbleHeight - 10;
-  if (top < 2) {
-    top = math.min(anchor.dy + 12, size.height - bubbleHeight - 2);
+  if (top < canvasRect.top + edge) {
+    top = anchor.dy + 12;
   }
+  top = top.clamp(
+    canvasRect.top + edge,
+    math.max(canvasRect.top + edge, canvasRect.bottom - bubbleHeight - edge),
+  );
 
   final bubble = RRect.fromRectAndRadius(
     Rect.fromLTWH(left, top, bubbleWidth, bubbleHeight),
     const Radius.circular(7),
   );
-  canvas.drawRRect(bubble, Paint()..color = const Color(0xEB1C2430));
+  // 固定深色底:浅色、深色与图片背景上都要可读,不随主题切换。
+  canvas.drawRRect(bubble, Paint()..color = veriInk.withValues(alpha: 0.92));
   canvas.drawRRect(
     bubble,
     Paint()
@@ -180,6 +196,7 @@ class TrendLinePainter extends CustomPainter {
     this.glow = false,
     this.selectedIndex,
     this.tooltip,
+    this.textScaler = TextScaler.noScaling,
   });
 
   final Color color;
@@ -190,6 +207,9 @@ class TrendLinePainter extends CustomPainter {
   final bool glow;
   final int? selectedIndex;
   final ChartTooltip? tooltip;
+
+  /// 画布文字不经过 Theme 的 textTheme,系统字号缩放必须显式传入。
+  final TextScaler textScaler;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -227,49 +247,40 @@ class TrendLinePainter extends CustomPainter {
         end: Alignment.bottomCenter,
       ).createShader(Offset.zero & size);
 
-    for (var i = 0; i < 4; i += 1) {
-      final y = chartRect.bottom - chartRect.height * chartValueScale * i / 3;
-      canvas.drawLine(
-        Offset(chartRect.left, y),
-        Offset(chartRect.right, y),
-        gridPaint,
-      );
-    }
-    for (var i = 0; i < 6; i += 1) {
-      final x = chartRect.left + chartRect.width * i / 5;
-      canvas.drawLine(
-        Offset(x, chartRect.top),
-        Offset(x, chartRect.bottom),
-        gridPaint..color = axisColor.withValues(alpha: 0.06),
-      );
+    // 空数据不画曲线,也不再用 [0,0,0,0] 补一条假的平线:调用方在无数据时渲染 EmptyState。
+    if (values.isEmpty) {
+      _drawGrid(canvas, chartRect, yLabels.length, gridPaint, axisColor);
+      _drawLabels(canvas, chartRect, xLabels, yLabels, axisColor, textScaler);
+      return;
     }
 
-    final normalized = values.isEmpty ? <double>[0, 0, 0, 0] : values;
     // 序列可能包含负值(如负债账户余额),按 [min, max] 区间归一化;
     // 全为非负时与按最大值归一化完全一致。
-    final maxValue = math.max(normalized.reduce(math.max), 0.0);
-    final minValue = math.min(normalized.reduce(math.min), 0.0);
+    final maxValue = math.max(values.reduce(math.max), 0.0);
+    final minValue = math.min(values.reduce(math.min), 0.0);
     final range = math.max(maxValue - minValue, 1.0);
     double yFor(double value) =>
         chartRect.bottom -
         ((value - minValue) / range * chartRect.height * chartValueScale);
+    // 网格线与纵轴刻度共用同一组高度分数(见 _drawLabels):分数 0 与 1 就是本序列的
+    // min 与 max,中间的刻度按同一区间线性取值,读数因此始终落在对应网格线上。
+    _drawGrid(canvas, chartRect, yLabels.length, gridPaint, axisColor);
     final path = Path();
     final fillPath = Path();
 
-    for (var i = 0; i < normalized.length; i += 1) {
-      final x = normalized.length == 1
+    for (var i = 0; i < values.length; i += 1) {
+      final x = values.length == 1
           ? chartRect.left
-          : chartRect.left + chartRect.width * i / (normalized.length - 1);
-      final y = yFor(normalized[i]);
+          : chartRect.left + chartRect.width * i / (values.length - 1);
+      final y = yFor(values[i]);
       if (i == 0) {
         path.moveTo(x, y);
         fillPath.moveTo(x, chartRect.bottom);
         fillPath.lineTo(x, y);
       } else {
         final previousX =
-            chartRect.left +
-            chartRect.width * (i - 1) / (normalized.length - 1);
-        final previousY = yFor(normalized[i - 1]);
+            chartRect.left + chartRect.width * (i - 1) / (values.length - 1);
+        final previousY = yFor(values[i - 1]);
         final dx = (x - previousX) / 2;
         path.cubicTo(previousX + dx, previousY, x - dx, y, x, y);
         fillPath.lineTo(x, y);
@@ -284,28 +295,24 @@ class TrendLinePainter extends CustomPainter {
       canvas.drawPath(path, glowPaint);
     }
     canvas.drawPath(path, linePaint);
-    for (var i = 0; i < normalized.length; i += 1) {
-      if (minValue >= 0 && normalized[i] <= 0) {
+    for (var i = 0; i < values.length; i += 1) {
+      if (minValue >= 0 && values[i] <= 0) {
         continue;
       }
-      final x = normalized.length == 1
+      final x = values.length == 1
           ? chartRect.left
-          : chartRect.left + chartRect.width * i / (normalized.length - 1);
-      canvas.drawCircle(Offset(x, yFor(normalized[i])), 2.2, pointPaint);
+          : chartRect.left + chartRect.width * i / (values.length - 1);
+      canvas.drawCircle(Offset(x, yFor(values[i])), 2.2, pointPaint);
     }
 
-    _drawLabels(canvas, chartRect, xLabels, yLabels, axisColor);
+    _drawLabels(canvas, chartRect, xLabels, yLabels, axisColor, textScaler);
 
     final selected = selectedIndex;
-    if (values.isNotEmpty &&
-        selected != null &&
-        selected >= 0 &&
-        selected < normalized.length) {
-      final x = normalized.length == 1
+    if (selected != null && selected >= 0 && selected < values.length) {
+      final x = values.length == 1
           ? chartRect.left
-          : chartRect.left +
-                chartRect.width * selected / (normalized.length - 1);
-      final y = yFor(normalized[selected]);
+          : chartRect.left + chartRect.width * selected / (values.length - 1);
+      final y = yFor(values[selected]);
       canvas.drawLine(
         Offset(x, chartRect.top),
         Offset(x, chartRect.bottom),
@@ -316,7 +323,13 @@ class TrendLinePainter extends CustomPainter {
       canvas.drawCircle(Offset(x, y), 5, Paint()..color = color);
       canvas.drawCircle(Offset(x, y), 2.3, Paint()..color = Colors.white);
       if (tooltip != null) {
-        drawChartTooltip(canvas, size, Offset(x, y), tooltip!);
+        drawChartTooltip(
+          canvas,
+          size,
+          Offset(x, y),
+          tooltip!,
+          textScaler: textScaler,
+        );
       }
     }
   }
@@ -332,7 +345,8 @@ class TrendLinePainter extends CustomPainter {
         oldDelegate.labelColor != labelColor ||
         oldDelegate.glow != glow ||
         oldDelegate.selectedIndex != selectedIndex ||
-        oldDelegate.tooltip != tooltip;
+        oldDelegate.tooltip != tooltip ||
+        oldDelegate.textScaler != textScaler;
   }
 }
 
@@ -344,6 +358,7 @@ class BarChartPainter extends CustomPainter {
     this.labelColor,
     this.selectedIndex,
     this.tooltip,
+    this.textScaler = TextScaler.noScaling,
   });
 
   final List<double> values;
@@ -352,6 +367,9 @@ class BarChartPainter extends CustomPainter {
   final Color? labelColor;
   final int? selectedIndex;
   final ChartTooltip? tooltip;
+
+  /// 画布文字不经过 Theme 的 textTheme,系统字号缩放必须显式传入。
+  final TextScaler textScaler;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -379,8 +397,11 @@ class BarChartPainter extends CustomPainter {
       Offset(chartRect.right, chartRect.bottom),
       axisPaint,
     );
-    for (var i = 1; i < 4; i += 1) {
-      final y = chartRect.bottom - chartRect.height * chartValueScale * i / 3;
+    // 网格线与纵轴刻度共用同一组高度分数(见 _drawLabels),刻度读数落在对应网格线上;
+    // 底边已有轴线,故从 i=1 起画。
+    final gridCount = yLabels.length >= 2 ? yLabels.length : 4;
+    for (var i = 1; i < gridCount; i += 1) {
+      final y = _yAtFraction(chartRect, _axisFraction(i, gridCount));
       canvas.drawLine(
         Offset(chartRect.left, y),
         Offset(chartRect.right, y),
@@ -391,7 +412,7 @@ class BarChartPainter extends CustomPainter {
     // 空数据只画坐标轴与标签、不画柱子（reduce/除以 length 对空列表会抛异常），
     // 与折线图对空数据的处理对齐。
     if (values.isEmpty) {
-      _drawLabels(canvas, chartRect, xLabels, yLabels, axisColor);
+      _drawLabels(canvas, chartRect, xLabels, yLabels, axisColor, textScaler);
       return;
     }
 
@@ -414,7 +435,7 @@ class BarChartPainter extends CustomPainter {
         selectedIndex == null || selectedIndex == i ? barPaint : dimmedBarPaint,
       );
     }
-    _drawLabels(canvas, chartRect, xLabels, yLabels, axisColor);
+    _drawLabels(canvas, chartRect, xLabels, yLabels, axisColor, textScaler);
 
     final selected = selectedIndex;
     if (selected != null &&
@@ -427,7 +448,7 @@ class BarChartPainter extends CustomPainter {
         chartRect.left + selected * gap + gap / 2,
         chartRect.bottom - barHeight,
       );
-      drawChartTooltip(canvas, size, anchor, tooltip!);
+      drawChartTooltip(canvas, size, anchor, tooltip!, textScaler: textScaler);
     }
   }
 
@@ -439,7 +460,8 @@ class BarChartPainter extends CustomPainter {
         !listEquals(oldDelegate.yLabels, yLabels) ||
         oldDelegate.labelColor != labelColor ||
         oldDelegate.selectedIndex != selectedIndex ||
-        oldDelegate.tooltip != tooltip;
+        oldDelegate.tooltip != tooltip ||
+        oldDelegate.textScaler != textScaler;
   }
 }
 
@@ -539,6 +561,8 @@ class _InteractiveTrendChartState extends State<InteractiveTrendChart> {
 
   @override
   Widget build(BuildContext context) {
+    // 画布文字不经过 Theme,系统字号缩放必须显式读取 MediaQuery。
+    final textScaler = MediaQuery.textScalerOf(context);
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
@@ -547,7 +571,10 @@ class _InteractiveTrendChartState extends State<InteractiveTrendChart> {
           hasXLabels: widget.xLabels.isNotEmpty,
           hasYLabels: widget.yLabels.isNotEmpty,
         );
-        return GestureDetector(
+        final tooltip = _selectedIndex == null
+            ? null
+            : widget.tooltipOf(_selectedIndex!);
+        final chart = GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTapDown: (details) {
             final index = chartNearestIndex(
@@ -578,12 +605,20 @@ class _InteractiveTrendChartState extends State<InteractiveTrendChart> {
               labelColor: widget.labelColor,
               glow: widget.glow,
               selectedIndex: _selectedIndex,
-              tooltip: _selectedIndex == null
-                  ? null
-                  : widget.tooltipOf(_selectedIndex!),
+              tooltip: tooltip,
+              textScaler: textScaler,
             ),
             child: const SizedBox.expand(),
           ),
+        );
+        // 选中点用气泡里已本地化的文字作为无障碍摘要。
+        if (tooltip == null) {
+          return chart;
+        }
+        return Semantics(
+          container: true,
+          label: _tooltipSemanticsLabel(tooltip),
+          child: chart,
         );
       },
     );
@@ -624,6 +659,8 @@ class _InteractiveBarChartState extends State<InteractiveBarChart> {
 
   @override
   Widget build(BuildContext context) {
+    // 画布文字不经过 Theme,系统字号缩放必须显式读取 MediaQuery。
+    final textScaler = MediaQuery.textScalerOf(context);
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
@@ -632,7 +669,10 @@ class _InteractiveBarChartState extends State<InteractiveBarChart> {
           hasXLabels: widget.xLabels.isNotEmpty,
           hasYLabels: widget.yLabels.isNotEmpty,
         );
-        return GestureDetector(
+        final tooltip = _selectedIndex == null
+            ? null
+            : widget.tooltipOf(_selectedIndex!);
+        final chart = GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTapDown: (details) {
             final index = chartSlotIndex(
@@ -661,17 +701,68 @@ class _InteractiveBarChartState extends State<InteractiveBarChart> {
               yLabels: widget.yLabels,
               labelColor: widget.labelColor,
               selectedIndex: _selectedIndex,
-              tooltip: _selectedIndex == null
-                  ? null
-                  : widget.tooltipOf(_selectedIndex!),
+              tooltip: tooltip,
+              textScaler: textScaler,
             ),
             child: const SizedBox.expand(),
           ),
+        );
+        // 选中柱子用气泡里已本地化的文字作为无障碍摘要。
+        if (tooltip == null) {
+          return chart;
+        }
+        return Semantics(
+          container: true,
+          label: _tooltipSemanticsLabel(tooltip),
+          child: chart,
         );
       },
     );
   }
 }
+
+/// 纵轴网格线与刻度共用的高度分数:第 [index] 条位于 index/(count-1);
+/// 只有一条(或没有刻度)时贴在底边。
+double _axisFraction(int index, int count) =>
+    count <= 1 ? 0.0 : index / (count - 1);
+
+/// 按高度分数求纵坐标,分数 1 是数值区顶部。
+double _yAtFraction(Rect chartRect, double fraction) =>
+    chartRect.bottom - chartRect.height * chartValueScale * fraction;
+
+/// 水平网格线与竖向参考网格:水平线数量与纵轴刻度一致,
+/// 保证刻度读数落在对应的网格线上。
+void _drawGrid(
+  Canvas canvas,
+  Rect chartRect,
+  int labelCount,
+  Paint gridPaint,
+  Color axisColor,
+) {
+  final horizontalCount = labelCount >= 2 ? labelCount : 4;
+  for (var i = 0; i < horizontalCount; i += 1) {
+    final y = _yAtFraction(chartRect, _axisFraction(i, horizontalCount));
+    canvas.drawLine(
+      Offset(chartRect.left, y),
+      Offset(chartRect.right, y),
+      gridPaint,
+    );
+  }
+  for (var i = 0; i < 6; i += 1) {
+    final x = chartRect.left + chartRect.width * i / 5;
+    canvas.drawLine(
+      Offset(x, chartRect.top),
+      Offset(x, chartRect.bottom),
+      gridPaint..color = axisColor.withValues(alpha: 0.06),
+    );
+  }
+}
+
+/// 选中数据点的无障碍摘要:直接复用气泡里已本地化的标题与数值文本。
+String _tooltipSemanticsLabel(ChartTooltip tooltip) => <String>[
+  tooltip.title,
+  ...tooltip.lines.map((line) => line.text),
+].join(', ');
 
 void _drawLabels(
   Canvas canvas,
@@ -679,27 +770,26 @@ void _drawLabels(
   List<String> xLabels,
   List<String> yLabels,
   Color labelColor,
+  TextScaler textScaler,
 ) {
   final textStyle = TextStyle(color: labelColor, fontSize: 10);
   for (var i = 0; i < xLabels.length; i += 1) {
-    final x = xLabels.length == 1
-        ? chartRect.left
-        : chartRect.left + chartRect.width * i / (xLabels.length - 1);
+    final x =
+        chartRect.left + chartRect.width * _axisFraction(i, xLabels.length);
     final painter = TextPainter(
       text: TextSpan(text: xLabels[i], style: textStyle),
       textDirection: TextDirection.ltr,
+      textScaler: textScaler,
     )..layout();
     painter.paint(canvas, Offset(x - painter.width / 2, chartRect.bottom + 6));
   }
 
   for (var i = 0; i < yLabels.length; i += 1) {
-    final y = yLabels.length == 1
-        ? chartRect.bottom
-        : chartRect.bottom -
-              chartRect.height * chartValueScale * i / (yLabels.length - 1);
+    final y = _yAtFraction(chartRect, _axisFraction(i, yLabels.length));
     final painter = TextPainter(
       text: TextSpan(text: yLabels[i], style: textStyle),
       textDirection: TextDirection.ltr,
+      textScaler: textScaler,
     )..layout();
     painter.paint(
       canvas,

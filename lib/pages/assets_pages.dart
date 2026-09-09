@@ -22,6 +22,7 @@ import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
 import 'sheets.dart';
 import 'account_detail_page.dart';
+import 'currency_rates_page.dart';
 
 part 'account_group_pages.dart';
 part 'add_account_page.dart';
@@ -311,7 +312,11 @@ class _AssetsPageState extends State<AssetsPage> {
                             AppLocalizations.of(
                               context,
                             ).assetValuationRateTrace(
-                              currencyDateKey(oldestValuationRateDate),
+                              // 用年月而不是「月日」：估值汇率可能跨年，年份是判断
+                              // 是否过期的关键信息。
+                              AppLocalizations.of(
+                                context,
+                              ).yearMonth(oldestValuationRateDate),
                               valuation.staleAccountIds.isEmpty
                                   ? ''
                                   : ' · ${AppLocalizations.of(context).exchangeRateStale}',
@@ -371,6 +376,12 @@ class _AssetsPageState extends State<AssetsPage> {
           const SizedBox(height: 12),
           if (!valuation.isComplete) ...<Widget>[
             VeriCard(
+              // 只告知「缺汇率」而不给入口，用户没有任何可操作的去处。
+              onTap: () => Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (_) => const CurrencyRatesPage(),
+                ),
+              ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
@@ -575,10 +586,7 @@ List<double>? _baseCurrencyAssetTrend({
   required List<LedgerEntry> entries,
   required _AssetCurrencyConverter convert,
 }) {
-  final nativeSeries = <Account, List<double>>{
-    for (final account in accounts)
-      account: accountMonthlyBalanceSeries(account, entries),
-  };
+  final nativeSeries = accountMonthlyBalanceSeriesBatch(accounts, entries);
   final now = DateTime.now();
   final result = <double>[];
   for (var monthIndex = 0; monthIndex < 12; monthIndex += 1) {
@@ -586,7 +594,7 @@ List<double>? _baseCurrencyAssetTrend({
     var total = 0.0;
     for (final account in accounts) {
       final conversion = convert(
-        amount: nativeSeries[account]![monthIndex],
+        amount: nativeSeries[account.id]![monthIndex],
         currencyCode: account.currencyCode,
         date: monthEnd,
       );

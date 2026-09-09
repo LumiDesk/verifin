@@ -248,6 +248,157 @@ void main() {
     expect(values.last, -200);
   });
 
+  test('批量月度余额序列与逐账户计算逐元素一致', () async {
+    final now = DateTime.now();
+    Account account(String id, double initial) => Account(
+      id: id,
+      bookId: 'default',
+      name: id,
+      type: AccountType.cash,
+      groupId: null,
+      initialBalance: initial,
+      iconCode: 'wallet',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+    );
+    final a = account('acc-batch-a', 100);
+    final b = account('acc-batch-b', -50);
+    final entries = <LedgerEntry>[
+      // 往年流水进基线。
+      LedgerEntry(
+        id: 'prior-year',
+        bookId: 'default',
+        type: EntryType.expense,
+        amount: 300,
+        categoryId: 'dining',
+        accountId: a.id,
+        note: '',
+        occurredAt: DateTime(now.year - 1, 6, 1),
+      ),
+      // 今年某月的增量。
+      LedgerEntry(
+        id: 'this-year',
+        bookId: 'default',
+        type: EntryType.expense,
+        amount: 40,
+        categoryId: 'dining',
+        accountId: a.id,
+        note: '',
+        occurredAt: DateTime(now.year, 1, 15),
+      ),
+      // 两端都受影响的转账。
+      LedgerEntry(
+        id: 'transfer',
+        bookId: 'default',
+        type: EntryType.transfer,
+        amount: 25,
+        categoryId: 'transfer',
+        accountId: a.id,
+        toAccountId: b.id,
+        accountAmount: 25,
+        toAccountAmount: 25,
+        note: '',
+        occurredAt: DateTime(now.year, 2, 3),
+      ),
+      // 待到账退款不影响余额。
+      LedgerEntry(
+        id: 'pending-refund',
+        bookId: 'default',
+        type: EntryType.refund,
+        amount: 10,
+        categoryId: 'dining',
+        accountId: a.id,
+        accountAmount: 10,
+        note: '',
+        occurredAt: DateTime(now.year, 3, 1),
+      ),
+    ];
+
+    final batch = accountMonthlyBalanceSeriesBatch(<Account>[a, b], entries);
+
+    expect(batch.keys, <String>[a.id, b.id]);
+    // 字面期望：a 基线 100-300=-200，1 月 -40 → -240，2 月转出 -25 → -265，
+    // 3 月待到账退款不计入；b 基线 -50，2 月转入 +25 → -25。
+    expect(batch[a.id], <double>[
+      -240,
+      -265,
+      -265,
+      -265,
+      -265,
+      -265,
+      -265,
+      -265,
+      -265,
+      -265,
+      -265,
+      -265,
+    ]);
+    expect(batch[b.id], <double>[
+      -50,
+      -25,
+      -25,
+      -25,
+      -25,
+      -25,
+      -25,
+      -25,
+      -25,
+      -25,
+      -25,
+      -25,
+    ]);
+    for (final account in <Account>[a, b]) {
+      expect(
+        batch[account.id],
+        accountMonthlyBalanceSeries(account, entries),
+        reason: '${account.id} 的批量结果必须与逐账户结果一致',
+      );
+    }
+  });
+
+  test('转出=转入的同账户转账按净额计入（手续费由该账户承担）', () async {
+    final now = DateTime.now();
+    final account = Account(
+      id: 'acc-self-transfer',
+      bookId: 'default',
+      name: '同账户',
+      type: AccountType.cash,
+      groupId: null,
+      initialBalance: 0,
+      iconCode: 'wallet',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+    );
+    final entries = <LedgerEntry>[
+      LedgerEntry(
+        id: 'self-transfer',
+        bookId: 'default',
+        type: EntryType.transfer,
+        amount: 100,
+        categoryId: 'transfer',
+        accountId: account.id,
+        toAccountId: account.id,
+        accountAmount: 100,
+        toAccountAmount: 100,
+        fee: 2,
+        note: '',
+        occurredAt: DateTime(now.year, 1, 5),
+      ),
+    ];
+
+    final batch = accountMonthlyBalanceSeriesBatch(<Account>[account], entries);
+
+    // -100（转出）- 2（手续费）+ 100（转入）= -2，两端不能被重复计入两次。
+    expect(batch[account.id]!.first, -2);
+    expect(
+      batch[account.id],
+      accountMonthlyBalanceSeries(account, entries),
+      reason: '同一账户的转账去重后必须与逐账户结果一致',
+    );
+  });
+
   test('bookkeeping duration switches to years after one year', () async {
     final l10n = AppLocalizationsZh();
     expect(bookkeepingDurationStat(l10n, 20), ('20', '记账天数'));

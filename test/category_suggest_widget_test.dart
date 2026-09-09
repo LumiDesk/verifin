@@ -5,6 +5,16 @@ import 'package:verifin/local_storage/local_storage.dart';
 
 import 'support/test_harness.dart';
 
+/// 记账页是懒加载列表，账户为空时会在账户位置渲染带操作的空状态，备注框可能被挤到
+/// 视口外而尚未构建。先滚动到备注框，再读/写它。
+Future<void> _ensureNoteVisible(WidgetTester tester) async {
+  await tester.scrollUntilVisible(
+    find.byKey(const Key('entry_note_field')),
+    200,
+    scrollable: find.byType(Scrollable).first,
+  );
+}
+
 void main() {
   useTestDatabases();
 
@@ -35,8 +45,11 @@ void main() {
     await createQuickEntry(tester);
 
     // 输入含「打车」的备注 → 自动识别为交通并选中（无可见提示文本）。
+    await _ensureNoteVisible(tester);
     await tester.enterText(find.byKey(const Key('entry_note_field')), '打车上班');
-    await tester.pump();
+    // 备注识别有防抖，先让计时器到点。
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
 
     expect(
       find.byKey(const Key('entry_category_selected_transport')),
@@ -51,8 +64,10 @@ void main() {
     );
     await tester.tap(find.byKey(const Key('entry_category_dining')));
     await tester.pump();
+    await _ensureNoteVisible(tester);
     await tester.enterText(find.byKey(const Key('entry_note_field')), '打车回家');
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
     expect(
       find.byKey(const Key('entry_category_selected_dining')),
       findsOneWidget,
@@ -101,6 +116,7 @@ void main() {
       findsOneWidget,
     );
 
+    await _ensureNoteVisible(tester);
     final note = tester.widget<TextField>(
       find.byKey(const Key('entry_note_field')),
     );
@@ -150,6 +166,7 @@ void main() {
       find.byKey(const Key('entry_type_selected_expense')),
       findsOneWidget,
     );
+    await _ensureNoteVisible(tester);
     final note = tester.widget<TextField>(
       find.byKey(const Key('entry_note_field')),
     );
@@ -213,9 +230,63 @@ void main() {
       findsOneWidget,
     );
     // 退款条目的备注也不该被带出。
+    await _ensureNoteVisible(tester);
     final noteField = tester.widget<TextField>(
       find.byKey(const Key('entry_note_field')),
     );
     expect(noteField.controller?.text, isEmpty);
+  });
+
+  testWidgets('备注识别还没到防抖时间就保存时，仍按识别结果落账', (WidgetTester tester) async {
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store);
+    final bookId = controller.activeBook.id;
+    controller.addAccount(
+      Account(
+        id: 'acc-flush',
+        bookId: bookId,
+        name: '现金',
+        type: AccountType.cash,
+        groupId: null,
+        initialBalance: 0,
+        iconCode: 'wallet',
+        note: '',
+        includeInAssets: true,
+        hidden: false,
+      ),
+    );
+    for (var i = 0; i < 4; i++) {
+      controller.addEntry(
+        LedgerEntry(
+          id: 'hist-flush-$i',
+          bookId: bookId,
+          type: EntryType.expense,
+          amount: 20,
+          categoryId: 'transport',
+          accountId: '',
+          note: '打车',
+          occurredAt: DateTime(2026, 7, i + 1, 9),
+        ),
+      );
+    }
+
+    final appController = await pumpApp(tester, store);
+    await tapBottomTab(tester, 0);
+    await createQuickEntry(tester);
+    await _ensureNoteVisible(tester);
+
+    await tester.enterText(find.byKey(const Key('entry_note_field')), '打车上班');
+    // 不等 300ms 防抖，立刻保存：保存前必须把识别 flush 掉。
+    await tester.tap(find.byKey(const Key('save_entry_button')));
+    await tester.pumpAndSettle();
+
+    final saved = appController.entries.firstWhere(
+      (entry) => entry.note == '打车上班',
+    );
+    expect(
+      saved.categoryId,
+      'transport',
+      reason: '保存前 flush 防抖，否则会按未识别的默认分类落账',
+    );
   });
 }

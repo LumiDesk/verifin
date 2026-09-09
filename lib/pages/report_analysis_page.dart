@@ -403,7 +403,7 @@ class _SummaryCard extends StatelessWidget {
               Expanded(
                 child: _SummaryMetric(
                   label: AppLocalizations.of(context).entryTypeExpense,
-                  value: '-${formatAmount(summary.expense)}',
+                  value: formatExpenseAmount(summary.expense),
                   color: veriExpense,
                   count: summary.expenseCount,
                 ),

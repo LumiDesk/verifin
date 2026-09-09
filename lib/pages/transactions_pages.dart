@@ -17,6 +17,8 @@ import '../app/series_math.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
+import 'ai_entry_sheet.dart';
+import 'entry_detail_page.dart';
 import 'pending_refunds_page.dart';
 import 'sheets.dart';
 import 'transaction_detail_page.dart';
@@ -147,6 +149,10 @@ class _TransactionsPageState extends State<TransactionsPage> {
   late bool _dateMode = widget.initialDate != null;
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
+  // 搜索防抖：每敲一个字符都重跑「过滤 + 排序 + 分组」在几千笔账本上会明显卡顿，
+  // 等用户停下来再算一次。
+  static const Duration _searchDebounce = Duration(milliseconds: 220);
+  Timer? _queryDebounceTimer;
   String? _selectedAccountId;
   String? _selectedCategoryId;
   String? _selectedTagId;
@@ -241,8 +247,19 @@ class _TransactionsPageState extends State<TransactionsPage> {
 
   @override
   void dispose() {
+    _queryDebounceTimer?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    _queryDebounceTimer?.cancel();
+    _queryDebounceTimer = Timer(_searchDebounce, () {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _query = value.trim());
+    });
   }
 
   @override
@@ -256,8 +273,20 @@ class _TransactionsPageState extends State<TransactionsPage> {
     final income = _derivedIncome;
     final visibleGroups = _visibleGroups();
     final hasMore = visibleGroups.length < _derivedGroups.length;
+    // 悬浮记账按钮（56 + 下边距 16）会压住列表末行金额，底部按需额外避让；多选时
+    // 按钮让位给底部批量栏，只保留原来的内容留白。
+    final double listBottomPadding = _selectionMode ? 28 : 100;
 
     return Scaffold(
+      // 记账入口沿用首页快捷记账的 fabActionMode 语义；多选时让位给底部批量栏。
+      floatingActionButton: _selectionMode
+          ? null
+          : FloatingActionButton(
+              key: const Key('transactions_quick_entry_fab'),
+              tooltip: AppLocalizations.of(context).quickEntry,
+              onPressed: () => _startQuickEntry(controller),
+              child: const Icon(Icons.add_rounded),
+            ),
       bottomNavigationBar: _selectionMode
           ? _BatchActionBar(
               count: _selectedIds.length,
@@ -303,7 +332,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
                           subtitle: _selectionMode
                               ? null
                               : (_dateMode
-                                    ? '${_visibleDate.month}.${_visibleDate.day} · '
+                                    ? '${AppLocalizations.of(context).dateMonthDay(_visibleDate)} · '
                                           '${AppLocalizations.of(context).moneyUnitLabel(displayCurrencyUnit(controller.activeBook.baseCurrencyCode))}'
                                     : AppLocalizations.of(
                                         context,
@@ -328,20 +357,20 @@ class _TransactionsPageState extends State<TransactionsPage> {
                                 }),
                               )
                             else ...<Widget>[
-                              if (controller.pendingRefunds.isNotEmpty)
-                                HeaderAction(
-                                  icon: Icons.schedule,
-                                  tooltip: AppLocalizations.of(
-                                    context,
-                                  ).pendingRefundsTitle,
-                                  onPressed: () =>
-                                      Navigator.of(context).push<void>(
-                                        MaterialPageRoute<void>(
-                                          builder: (_) =>
-                                              const PendingRefundsPage(),
-                                        ),
+                              // 常驻入口：待退款为零时也必须在，否则该功能全应用无路可进。
+                              HeaderAction(
+                                icon: Icons.schedule,
+                                tooltip: AppLocalizations.of(
+                                  context,
+                                ).pendingRefundsTitle,
+                                onPressed: () =>
+                                    Navigator.of(context).push<void>(
+                                      MaterialPageRoute<void>(
+                                        builder: (_) =>
+                                            const PendingRefundsPage(),
                                       ),
-                                ),
+                                    ),
+                              ),
                               if (entries.isNotEmpty)
                                 HeaderAction(
                                   icon: Icons.checklist,
@@ -403,8 +432,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
                           accountLabel: _accountFilterLabel(controller),
                           categoryLabel: _categoryFilterLabel(controller),
                           accountLocked: widget.accountId != null,
-                          onChanged: (value) =>
-                              setState(() => _query = value.trim()),
+                          onChanged: _onSearchChanged,
                           onPickAccount: widget.accountId == null
                               ? () => _pickAccountFilter(controller)
                               : null,
@@ -416,6 +444,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
                               : () => _pickTagFilter(controller),
                           onClear: _hasSecondaryFilters
                               ? () {
+                                  _queryDebounceTimer?.cancel();
                                   setState(() {
                                     _searchController.clear();
                                     _query = '';
@@ -426,6 +455,10 @@ class _TransactionsPageState extends State<TransactionsPage> {
                                     _selectedTagId = null;
                                     _reimbursementFilter =
                                         ReimbursementFilter.all;
+                                    // 按天视图与时间档同属时间维度，清空必须一起复位。
+                                    _dateMode = false;
+                                    _timeFilter = TransactionTimeFilter.all;
+                                    _periodAnchor = DateTime.now();
                                   });
                                 }
                               : null,
@@ -489,7 +522,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
                 ),
                 if (entries.isEmpty)
                   SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 28),
+                    padding: EdgeInsets.fromLTRB(14, 0, 14, listBottomPadding),
                     sliver: SliverToBoxAdapter(
                       child: VeriCard(
                         child: EmptyState(
@@ -506,7 +539,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
                   )
                 else
                   SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 28),
+                    padding: EdgeInsets.fromLTRB(14, 0, 14, listBottomPadding),
                     sliver: SliverList.builder(
                       itemCount: visibleGroups.length,
                       itemBuilder: (context, index) {
@@ -588,8 +621,19 @@ class _TransactionsPageState extends State<TransactionsPage> {
 
     final controller = VeriFinScope.of(context);
     final normalizedQuery = _query.toLowerCase();
+    // 选中分类时把「分类 + 全部子孙」算一次；放在每条交易的谓词里会把分类树
+    // 重算 N 遍。
+    final selectedCategoryIds = _selectedCategoryId == null
+        ? null
+        : <String>{
+            _selectedCategoryId!,
+            ...descendantIds(controller.categories, _selectedCategoryId!),
+          };
     return filtered
-        .where((entry) => _matchesSecondaryFilters(entry, controller))
+        .where(
+          (entry) =>
+              _matchesSecondaryFilters(entry, controller, selectedCategoryIds),
+        )
         .where(
           (entry) => normalizedQuery.isEmpty
               ? true
@@ -598,16 +642,22 @@ class _TransactionsPageState extends State<TransactionsPage> {
         .toList();
   }
 
+  // 时间维度（按天进入 / 选了时间档）也是筛选：列表为空要显示「没有匹配交易」，
+  // 「清空筛选」也必须能清掉它。
   bool get _hasSecondaryFilters =>
       _query.isNotEmpty ||
       (widget.accountId == null && _selectedAccountId != null) ||
       _selectedCategoryId != null ||
       _selectedTagId != null ||
-      _reimbursementFilter != ReimbursementFilter.all;
+      _reimbursementFilter != ReimbursementFilter.all ||
+      // 只算时间筛选，不算「按天进入」：日历里点开一个空日期仍应显示「暂无交易」，
+      // 而不是「没有匹配交易」。
+      _timeFilter != TransactionTimeFilter.all;
 
   bool _matchesSecondaryFilters(
     LedgerEntry entry,
     VeriFinController controller,
+    Set<String>? selectedCategoryIds,
   ) {
     if (_selectedAccountId != null &&
         !entryTouchesAccount(entry, _selectedAccountId!)) {
@@ -615,12 +665,8 @@ class _TransactionsPageState extends State<TransactionsPage> {
     }
     // 选中某分类时，连同它的所有子分类一起筛出（与看板统计「归总到顶级」口径
     // 一致：选大类=大类及其全部子类的交易）。
-    if (_selectedCategoryId != null) {
-      final ids = <String>{
-        _selectedCategoryId!,
-        ...descendantIds(controller.categories, _selectedCategoryId!),
-      };
-      if (!ids.contains(entry.categoryId)) {
+    if (selectedCategoryIds != null) {
+      if (!selectedCategoryIds.contains(entry.categoryId)) {
         return false;
       }
     }
@@ -878,6 +924,39 @@ class _TransactionsPageState extends State<TransactionsPage> {
     });
   }
 
+  /// 快捷记账：Shell 的 `_startQuickEntry` 是 `_VeriFinShellState` 私有方法，本页
+  /// 无法直接复用，这里用同一批公开件拼出同一条流程（设置里选「AI」走 AI 记账，
+  /// 否则先输金额再进记账页）。shell.dart 改动该流程时必须同步这里。
+  Future<void> _startQuickEntry(VeriFinController controller) async {
+    if (controller.fabActionMode == FabActionMode.ai) {
+      await startAiEntry(context);
+      return;
+    }
+    final defaultAccount = controller.accounts
+        .where((account) => account.id == controller.defaultAccountId)
+        .firstOrNull;
+    final amount = await showNumberPadSheet(
+      context,
+      title: AppLocalizations.of(context).quickEntry,
+      showTitle: false,
+      currencyCode:
+          defaultAccount?.currencyCode ??
+          controller.activeBook.baseCurrencyCode,
+    );
+    if (!mounted || amount == null || amount <= 0) {
+      return;
+    }
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => EntryDetailPage(
+          initialAmount: amount,
+          // 未设默认账户时为 null，记账页回落到首个账户（沿用原行为）。
+          initialAccountId: controller.defaultAccountId,
+        ),
+      ),
+    );
+  }
+
   Future<void> _batchDelete() async {
     final count = _selectedIds.length;
     final confirmed = await showConfirmDialog(
@@ -1050,7 +1129,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
             : AppLocalizations.of(context).yearWeek(year, week);
       case TransactionTimeFilter.last12Months:
       case TransactionTimeFilter.last30Days:
-        return '${period.start.month}.${period.start.day}-${period.end.month}.${period.end.day}';
+        return '${AppLocalizations.of(context).dateMonthDay(period.start)}-${AppLocalizations.of(context).dateMonthDay(period.end)}';
       case TransactionTimeFilter.last6Weeks:
         return '${twoDigitYear(isoWeekYear(period.start))}.${isoWeekNumber(period.start).toString().padLeft(2, '0')}-${twoDigitYear(isoWeekYear(period.end))}.${isoWeekNumber(period.end).toString().padLeft(2, '0')}';
     }
@@ -1297,7 +1376,10 @@ class _DateFilterBar extends StatelessWidget {
           onPressed: onPrevious,
           icon: const Icon(Icons.chevron_left),
         ),
-        FilterPill(label: '${date.month}.${date.day}', onTap: onTap),
+        FilterPill(
+          label: AppLocalizations.of(context).dateMonthDay(date),
+          onTap: onTap,
+        ),
         IconButton(
           tooltip: AppLocalizations.of(context).nextDay,
           onPressed: onNext,

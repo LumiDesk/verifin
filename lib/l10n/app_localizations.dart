@@ -875,7 +875,7 @@ abstract class AppLocalizations {
   /// No description provided for @metricTotalLiabilities.
   ///
   /// In zh, this message translates to:
-  /// **'负资产'**
+  /// **'负债'**
   String get metricTotalLiabilities;
 
   /// No description provided for @metricNetAssets.
@@ -985,12 +985,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'近 7 天每日支出趋势'**
   String get panelDailyTrendDesc;
-
-  /// No description provided for @panelMonthlyStructureLabel.
-  ///
-  /// In zh, this message translates to:
-  /// **'月度收支'**
-  String get panelMonthlyStructureLabel;
 
   /// No description provided for @panelMonthlyStructureDesc.
   ///
@@ -1445,7 +1439,7 @@ abstract class AppLocalizations {
   /// No description provided for @assetsAmount.
   ///
   /// In zh, this message translates to:
-  /// **'资产 {amount}'**
+  /// **'总资产 {amount}'**
   String assetsAmount(String amount);
 
   /// No description provided for @liabilitiesAmount.
@@ -2297,7 +2291,7 @@ abstract class AppLocalizations {
   /// No description provided for @noUsableAccountDesc.
   ///
   /// In zh, this message translates to:
-  /// **'请先在资产页添加或取消隐藏一个账户。'**
+  /// **'添加一个账户后即可记账；已有账户被隐藏时也可到资产页取消隐藏。'**
   String get noUsableAccountDesc;
 
   /// No description provided for @noteHint.
@@ -2707,6 +2701,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'标记待报销'**
   String get markReimbursable;
+
+  /// No description provided for @reimbursableHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'标记本身不产生资金变动；到账后由退款冲抵净额。'**
+  String get reimbursableHint;
 
   /// No description provided for @refundLabel.
   ///
@@ -3557,7 +3557,7 @@ abstract class AppLocalizations {
   /// No description provided for @reportsSubtitle.
   ///
   /// In zh, this message translates to:
-  /// **'数据看板'**
+  /// **'预算与统计'**
   String get reportsSubtitle;
 
   /// No description provided for @noCategoryData.
@@ -4832,6 +4832,12 @@ abstract class AppLocalizations {
   /// **'清除备份目录'**
   String get clearBackupDir;
 
+  /// No description provided for @clearBackupDirConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除后需要重新选择备份目录；已导出的备份文件不会被删除。'**
+  String get clearBackupDirConfirm;
+
   /// No description provided for @stopLocalBackup.
   ///
   /// In zh, this message translates to:
@@ -5293,6 +5299,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'清空聊天记录'**
   String get aiChatClearHistory;
+
+  /// No description provided for @aiChatHistoryLocalOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'对话只存本机，不含在备份内'**
+  String get aiChatHistoryLocalOnly;
 
   /// No description provided for @aiChatClearMessage.
   ///
@@ -6020,6 +6032,12 @@ abstract class AppLocalizations {
   /// **'导入完成（成功 {count} 笔）'**
   String importDoneTitle(int count);
 
+  /// No description provided for @importNothingTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有导入任何交易'**
+  String get importNothingTitle;
+
   /// No description provided for @allImported.
   ///
   /// In zh, this message translates to:
@@ -6259,12 +6277,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'已导入本地数据'**
   String get importedLocal;
-
-  /// No description provided for @importFailedFormat.
-  ///
-  /// In zh, this message translates to:
-  /// **'导入失败：备份文件格式不正确'**
-  String get importFailedFormat;
 
   /// No description provided for @resetAllTitle.
   ///
@@ -6563,8 +6575,20 @@ abstract class AppLocalizations {
   /// No description provided for @appLockHelp.
   ///
   /// In zh, this message translates to:
-  /// **'支持 6 位数字密码或 3×3 图案。密钥仅以加盐哈希保存在本机，不会上传，也无法找回；忘记时可在设置页初始化数据后重新设置。生物解锁调用系统生物识别（指纹 / 人脸，以设备支持为准），本应用不保存任何生物特征数据；系统生物信息变化后需重新验证。'**
+  /// **'支持 6 位数字密码或 3×3 图案。密钥仅以加盐哈希保存在本机，不会上传，也无法找回；忘记时可在锁屏页选择「忘记密码」并重置所有本地数据后重新设置。生物解锁调用系统生物识别（指纹 / 人脸，以设备支持为准），本应用不保存任何生物特征数据；系统生物信息变化后需重新验证。'**
   String get appLockHelp;
+
+  /// No description provided for @appLockForgot.
+  ///
+  /// In zh, this message translates to:
+  /// **'忘记密码？'**
+  String get appLockForgot;
+
+  /// No description provided for @appLockDisableFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭应用锁失败，请重试。'**
+  String get appLockDisableFailed;
 
   /// No description provided for @bioEnableReason.
   ///

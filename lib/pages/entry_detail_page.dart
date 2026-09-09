@@ -19,6 +19,7 @@ import '../app/models.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
+import 'assets_pages.dart';
 import 'attachments_editor.dart';
 import 'sheets.dart';
 
@@ -92,6 +93,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   bool _baseAmountTouched = false;
   bool _rememberRate = false;
   bool _moneyInitialized = false;
+  bool _accountFallbackResolved = false;
   Set<String> _missingRateCodes = <String>{};
   ConvertedCurrencyAmount? _accountConversion;
   ConvertedCurrencyAmount? _toAccountConversion;
@@ -122,6 +124,8 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   // 程序化写入备注时置真，令备注监听忽略这次（不误判为用户输入）。
   bool _applyingSuggestion = false;
   bool _didInitialSuggest = false;
+  // 备注逐字重算的防抖句柄：识别要扫一遍历史并整页重建，不能每次按键都同步跑。
+  Timer? _suggestDebounce;
   // 草稿编辑模式（导入预览）与 AI 草稿一样关闭自动识别，尊重传入数据。
   late final bool _draftFree =
       widget.initialDraft == null && widget.draftEntry == null;
@@ -196,6 +200,8 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     super.didChangeDependencies();
     if (!_moneyInitialized) {
       _initializeCurrencyAmounts();
+    } else {
+      _resolveNewlyAvailableAccount();
     }
     // 开屏（金额已确定、备注为空）先按金额习惯识别一次。
     if (_autoSuggestEnabled && !_didInitialSuggest) {
@@ -204,8 +210,32 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     }
   }
 
+  /// 账户从「无」变成「有」时补一次金额解析。用户在记账页空状态里新建账户后返回
+  /// 就会走到这里：不补这一次，`_accountAmount` 一直是 null，保存按钮会一直禁用。
+  void _resolveNewlyAvailableAccount() {
+    if (_accountFallbackResolved || _noAccount || _accountAmount != null) {
+      return;
+    }
+    final controller = VeriFinScope.of(context);
+    final accounts = _availableAccounts(controller);
+    if (accounts.isEmpty) {
+      return;
+    }
+    _accountFallbackResolved = true;
+    if (!accounts.any((account) => account.id == _accountId)) {
+      _accountId = accounts.first.id;
+    }
+    _refreshCurrencyAmounts(
+      controller,
+      accounts,
+      forceAccount: true,
+      forceBase: true,
+    );
+  }
+
   @override
   void dispose() {
+    _suggestDebounce?.cancel();
     _noteController.removeListener(_onNoteChanged);
     _noteController.dispose();
     super.dispose();
@@ -456,13 +486,32 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       setState(() {});
       return;
     }
-    // 用户真的在输备注：标记已改（不再回填备注），并按新备注重算类型/分类/标签。
+    // 用户真的在输备注：标记已改（不再回填备注），并安排按新备注重算类型/分类/标签
+    // （防抖 300ms，见 [_scheduleSuggestion]）。
     _noteTouched = true;
-    _recomputeSuggestion();
+    _scheduleSuggestion();
+  }
+
+  /// 备注输入停顿后才重算：识别要扫一遍历史、命中后还要整页重建，逐字触发会让
+  /// 长备注输入卡顿。开屏与显式改类型/金额仍走 [_recomputeSuggestion] 立即执行。
+  void _scheduleSuggestion() {
+    _suggestDebounce?.cancel();
+    _suggestDebounce = Timer(
+      const Duration(milliseconds: 300),
+      _recomputeSuggestion,
+    );
+  }
+
+  /// 清掉挂起的防抖重算。识别只填「用户没改过」的字段，因此手动选择无需取消；
+  /// 这里只用于重算开始前作废重复计时器、以及保存前 flush。
+  void _cancelPendingSuggestion() {
+    _suggestDebounce?.cancel();
+    _suggestDebounce = null;
   }
 
   /// 按当前金额/备注/时段从历史识别，并填充「用户尚未改过」的字段。
   void _recomputeSuggestion() {
+    _cancelPendingSuggestion();
     if (!mounted || !_autoSuggestEnabled) {
       return;
     }
@@ -591,7 +640,8 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       // 退款不在此页手动选择，仅作穷尽兜底（正向流入用青绿）。
       EntryType.refund => veriIncome,
     };
-    final amountNumber = formatCurrencyNumber(
+    // 用带单位的格式化：单币种账本按偏好隐藏单位，多币种账本必须能看出币种。
+    final amountNumber = formatUserMoney(
       _amount,
       _currencyCode ?? controller.activeBook.baseCurrencyCode,
     );
@@ -796,6 +846,17 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         description: AppLocalizations.of(
                           context,
                         ).noUsableAccountDesc,
+                        // 空状态只说原因不给出口，用户就会卡在「保存按钮永远灰」的死路上。
+                        action: FilledButton.tonalIcon(
+                          key: const Key('entry_add_account_action'),
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const AddAccountPage(),
+                            ),
+                          ),
+                          icon: const Icon(Icons.add, size: 18),
+                          label: Text(AppLocalizations.of(context).accountAdd),
+                        ),
                       ),
                     ..._buildCurrencyAmountFields(controller, accounts),
                     const SizedBox(height: 14),
@@ -936,6 +997,20 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         ),
                       ],
                     ),
+                    // 标记待报销本身不产生任何资金变动，用户容易以为已经「报了」。
+                    if (_type == EntryType.expense && _reimbursable)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          AppLocalizations.of(context).reimbursableHint,
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.62),
+                              ),
+                        ),
+                      ),
                     if (!_isDraft &&
                         _pendingAttachments.isNotEmpty) ...<Widget>[
                       const SizedBox(height: 10),
@@ -1653,6 +1728,12 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   Future<bool> _save() async {
     if (_saving) {
       return false;
+    }
+    // 备注识别有 300ms 防抖：保存前必须落定，否则输入停顿不足时会把还没识别的
+    // 默认类型/分类写进账目。
+    if (_suggestDebounce != null) {
+      _cancelPendingSuggestion();
+      _recomputeSuggestion();
     }
     final controller = VeriFinScope.of(context);
     final accounts =

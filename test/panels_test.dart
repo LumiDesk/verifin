@@ -92,6 +92,11 @@ void main() {
       200,
       scrollable: firstVerticalScrollable(),
     );
+    // 看板顶部新增本月摘要卡后入口更靠下，先确保完全进入视口再点击。
+    await tester.ensureVisible(
+      find.byKey(const Key('panel_settings_entry_reports')),
+    );
+    await tester.pumpAndSettle();
     expect(find.text('6个看板面板'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('panel_settings_entry_reports')));

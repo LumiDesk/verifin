@@ -402,7 +402,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get metricTotalAssets => '总资产';
 
   @override
-  String get metricTotalLiabilities => '负资产';
+  String get metricTotalLiabilities => '负债';
 
   @override
   String get metricNetAssets => '净资产';
@@ -457,9 +457,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get panelDailyTrendDesc => '近 7 天每日支出趋势';
-
-  @override
-  String get panelMonthlyStructureLabel => '月度收支';
 
   @override
   String get panelMonthlyStructureDesc => '今年每月支出结构柱状图';
@@ -720,7 +717,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String assetsAmount(String amount) {
-    return '资产 $amount';
+    return '总资产 $amount';
   }
 
   @override
@@ -1181,7 +1178,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get noUsableAccountTitle => '没有可用账户';
 
   @override
-  String get noUsableAccountDesc => '请先在资产页添加或取消隐藏一个账户。';
+  String get noUsableAccountDesc => '添加一个账户后即可记账；已有账户被隐藏时也可到资产页取消隐藏。';
 
   @override
   String get noteHint => '点击添加备注';
@@ -1405,6 +1402,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get markReimbursable => '标记待报销';
+
+  @override
+  String get reimbursableHint => '标记本身不产生资金变动；到账后由退款冲抵净额。';
 
   @override
   String get refundLabel => '退款 / 报销回款';
@@ -1922,7 +1922,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get reportsSubtitle => '数据看板';
+  String get reportsSubtitle => '预算与统计';
 
   @override
   String get noCategoryData => '暂无分类数据';
@@ -2626,6 +2626,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get clearBackupDir => '清除备份目录';
 
   @override
+  String get clearBackupDirConfirm => '清除后需要重新选择备份目录；已导出的备份文件不会被删除。';
+
+  @override
   String get stopLocalBackup => '停止本地备份';
 
   @override
@@ -2872,6 +2875,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get aiChatClearHistory => '清空聊天记录';
+
+  @override
+  String get aiChatHistoryLocalOnly => '对话只存本机，不含在备份内';
 
   @override
   String get aiChatClearMessage => '将删除当前所有对话，无法恢复。';
@@ -3271,6 +3277,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get importNothingTitle => '没有导入任何交易';
+
+  @override
   String get allImported => '全部导入成功。';
 
   @override
@@ -3417,9 +3426,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get importedLocal => '已导入本地数据';
-
-  @override
-  String get importFailedFormat => '导入失败：备份文件格式不正确';
 
   @override
   String get resetAllTitle => '初始化所有数据？';
@@ -3577,7 +3583,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get appLockHelp =>
-      '支持 6 位数字密码或 3×3 图案。密钥仅以加盐哈希保存在本机，不会上传，也无法找回；忘记时可在设置页初始化数据后重新设置。生物解锁调用系统生物识别（指纹 / 人脸，以设备支持为准），本应用不保存任何生物特征数据；系统生物信息变化后需重新验证。';
+      '支持 6 位数字密码或 3×3 图案。密钥仅以加盐哈希保存在本机，不会上传，也无法找回；忘记时可在锁屏页选择「忘记密码」并重置所有本地数据后重新设置。生物解锁调用系统生物识别（指纹 / 人脸，以设备支持为准），本应用不保存任何生物特征数据；系统生物信息变化后需重新验证。';
+
+  @override
+  String get appLockForgot => '忘记密码？';
+
+  @override
+  String get appLockDisableFailed => '关闭应用锁失败，请重试。';
 
   @override
   String get bioEnableReason => '验证生物识别以开启生物解锁';

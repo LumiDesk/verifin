@@ -473,9 +473,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get panelDailyTrendDesc => 'Daily spending trend for the last 7 days';
 
   @override
-  String get panelMonthlyStructureLabel => 'Monthly overview';
-
-  @override
   String get panelMonthlyStructureDesc =>
       'Bar chart of monthly spending this year';
 
@@ -737,7 +734,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String assetsAmount(String amount) {
-    return 'Assets $amount';
+    return 'Total assets $amount';
   }
 
   @override
@@ -1207,7 +1204,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noUsableAccountDesc =>
-      'Add or unhide an account on the Assets page first.';
+      'Add an account to start recording; if you already have hidden accounts, unhide one on the Assets page.';
 
   @override
   String get noteHint => 'Tap to add a note';
@@ -1432,6 +1429,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get markReimbursable => 'Mark reimbursable';
+
+  @override
+  String get reimbursableHint =>
+      'Marking moves no money; a refund offsets the net amount once it arrives.';
 
   @override
   String get refundLabel => 'Refund / reimbursement';
@@ -1959,7 +1960,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get reportsSubtitle => 'Dashboard';
+  String get reportsSubtitle => 'Budget & stats';
 
   @override
   String get noCategoryData => 'No category data';
@@ -2675,6 +2676,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clearBackupDir => 'Clear backup folder';
 
   @override
+  String get clearBackupDirConfirm =>
+      'You will need to pick a backup folder again. Backup files already exported are not deleted.';
+
+  @override
   String get stopLocalBackup => 'Stops local backups';
 
   @override
@@ -2922,10 +2927,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiNotConfigured => 'Not set';
 
   @override
-  String get aiChatTitle => 'AI Finance Assistant';
+  String get aiChatTitle => 'AI Assistant';
 
   @override
   String get aiChatClearHistory => 'Clear chat history';
+
+  @override
+  String get aiChatHistoryLocalOnly =>
+      'Chats stay on this device and are not included in backups';
 
   @override
   String get aiChatClearMessage =>
@@ -3354,6 +3363,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get importNothingTitle => 'No transactions were imported';
+
+  @override
   String get allImported => 'All rows imported.';
 
   @override
@@ -3502,9 +3514,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get importedLocal => 'Local data imported';
-
-  @override
-  String get importFailedFormat => 'Import failed: invalid backup format';
 
   @override
   String get resetAllTitle => 'Reset all data?';
@@ -3666,7 +3675,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get appLockHelp =>
-      'Supports a 6-digit PIN or a 3×3 pattern. The secret is stored on this device only as a salted hash — never uploaded and unrecoverable; if forgotten, reset data in Settings and set it again. Biometric unlock uses the system biometrics (fingerprint / face, as supported by the device); this app stores no biometric data, and re-verification is required after system biometrics change.';
+      'Supports a 6-digit PIN or a 3×3 pattern. The secret is stored on this device only as a salted hash — never uploaded and unrecoverable; if forgotten, choose \"Forgot password\" on the lock screen to reset all local data and set it again. Biometric unlock uses the system biometrics (fingerprint / face, as supported by the device); this app stores no biometric data, and re-verification is required after system biometrics change.';
+
+  @override
+  String get appLockForgot => 'Forgot password?';
+
+  @override
+  String get appLockDisableFailed =>
+      'Could not turn off the app lock. Please try again.';
 
   @override
   String get bioEnableReason => 'Verify biometrics to enable biometric unlock';
