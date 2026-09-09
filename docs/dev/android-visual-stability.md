@@ -53,7 +53,9 @@ v1.16.2 真机反馈：滚动变黑、进入页面闪烁、预测性返回半途
 - 闪烁的直接路径是 selectedIndex 跨中点改变 revision，旧快照失效后临时退出折射，再在读回完成后恢复。
   异步等待只解决纹理就绪，不能解决这种模式切换。正式导航现在完全移除 toImage 和 revision 机制，
   使用 [ImageFilter.shader / ImageFiltered](https://docs.flutter.dev/ui/design/graphics/fragment-shaders)
-  对当前帧导航进行过滤；前两个尺寸 uniform 与第一个 sampler 由引擎设置，并处理 GLES 的 Y 翻转。
+  对当前帧导航进行过滤；前两个尺寸 uniform 与第一个 sampler 由引擎设置，输入已是正立方向。
+  此前按 GLES 习惯加的 `uv.y = 1.0 - uv.y` 会把按压中的图标和文字上下颠倒（2026-09-09 在
+  Impeller/OpenGLES 模拟器上复现并移除），GLES 与 Vulkan 后端都不需要额外翻转 UV。
   不支持该 API 的后端不调用它，保留实时内容与形变。静止关闭过滤，高亮变化不重建过滤子树。
 - 过滤输入固定完整透明边界，避免包围盒随字形变化；透镜边缘位移平滑回到原坐标，避免字形切痕。
 - 输入默认无边框，聚焦蓝边、错误红边；菜单遮罩降为 12%，提亮中性灰基色后使用 72% 染色，取消整块菜单的 Opacity。

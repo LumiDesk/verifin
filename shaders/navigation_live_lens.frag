@@ -16,9 +16,6 @@ float capsule(vec2 p, vec2 size) {
 }
 vec4 sampleSource(vec2 uv) {
   uv = clamp(uv, vec2(0.001), vec2(0.999));
-#ifdef IMPELLER_TARGET_OPENGLES
-  uv.y = 1.0 - uv.y;
-#endif
   return texture(uSource, uv);
 }
 void main() {
