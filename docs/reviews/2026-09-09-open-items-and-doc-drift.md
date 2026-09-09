@@ -107,7 +107,7 @@
 
 | 条目 | 现状 | 证据 |
 | --- | --- | --- |
-| `integration_test/` 2 个用例不在任何 CI | 未做 | `ci.yml` / `flutter.yml` 全文无 `integration_test` 引用；只能人工跑 |
+| `integration_test/` 2 个用例不在任何 CI | 已修：`ci.yml` 新增 `integration` 任务（Android 模拟器，首次为非阻断） | `—` |
 | `dart format` 门禁只在 `ci.yml` | 未做 | `flutter.yml` 无格式步骤，打 tag 发版不校验格式 |
 | 版本号三方一致性无自动校验 | 未做 | 无测试/脚本校验 pubspec ↔ `appVersionLabel` ↔ CHANGELOG；`publish.sh:41` 的版本正则比 `publish.ps1:134` 松 |
 | 样例备份缺 2 个字段 | 未做 | `docs/dev/verifin-sample-backup.json` 缺 `moneyUnitStyle`、`hideUnitInSingleCurrency` |

@@ -55,3 +55,45 @@ jobs:
       # 只在打发布标签后才发现 Kotlin 无法编译。
       - name: Build Android debug APK
         run: flutter build apk --debug --flavor github --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
+
+  # 真实引擎集成测试：导航透镜 Shader 的加载与采样、玻璃菜单连续进出这类行为，
+  # 只有在本机引擎上才验证得到，桌面 widget 测试替代不了。
+  # 模拟器仍不等于真机——GPU 驱动差异与特定机型崩溃（见
+  # docs/dev/android-glass-investigation.md）依旧只能人工真机验收。
+  integration:
+    name: Android integration tests
+    runs-on: ubuntu-latest
+    # 首次加入时设为非阻断：模拟器任务在本仓尚未跑通过之前，不应挡住正常 PR。
+    # 连续几次全绿后请删掉这一行，让它成为真正的门禁。
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.47.2'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run integration tests on an Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: |
+            flutter test integration_test/glass_navigation_test.dart integration_test/menu_animation_test.dart -d emulator-5554 --flavor github --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
