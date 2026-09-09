@@ -1115,6 +1115,7 @@
   "aiTypeTransfer": "Transfer",
   "aiRetryAnswer": "Answer again",
   "aiPrivacyNotice": "AI features send your text and the read-only financial summaries needed to answer your questions to your configured third-party service. The configuration and full ledger remain on this device.",
+  "aiOptionalNotice": "AI is optional — recording, reports and backups all work without it.",
   "aiEntryTitle": "AI entry",
   "aiEntryInputHint": "Describe it in one sentence, e.g. \"taxi 32 yesterday\"",
   "aiEntryParse": "Parse",

@@ -448,7 +448,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          l10n.aiPrivacyNotice,
+                          '${l10n.aiOptionalNotice}\n\n${l10n.aiPrivacyNotice}',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: muted,
                             height: 1.5,

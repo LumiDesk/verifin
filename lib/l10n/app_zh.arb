@@ -1967,6 +1967,7 @@
   "aiTypeTransfer": "转账",
   "aiRetryAnswer": "重新回答",
   "aiPrivacyNotice": "AI 功能会把你输入的文字，以及回答问题所需的只读账目查询摘要发送到你配置的第三方服务；配置和完整账目仍只存本机。",
+  "aiOptionalNotice": "AI 是可选功能：不配置也能正常记账、看报表和备份。",
   "aiEntryTitle": "AI 记账",
   "aiEntryInputHint": "用一句话描述，例如「昨天打车 32」",
   "aiEntryParse": "解析",

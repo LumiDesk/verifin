@@ -3124,6 +3124,9 @@ class AppLocalizationsZh extends AppLocalizations {
       'AI 功能会把你输入的文字，以及回答问题所需的只读账目查询摘要发送到你配置的第三方服务；配置和完整账目仍只存本机。';
 
   @override
+  String get aiOptionalNotice => 'AI 是可选功能：不配置也能正常记账、看报表和备份。';
+
+  @override
   String get aiEntryTitle => 'AI 记账';
 
   @override

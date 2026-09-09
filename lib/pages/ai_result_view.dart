@@ -360,37 +360,45 @@ class _TableCard extends StatelessWidget {
                 border: Border.all(color: divider),
                 borderRadius: BorderRadius.circular(veriRadiusMd),
               ),
-              child: Table(
-                border: TableBorder(
-                  horizontalInside: BorderSide(color: divider),
-                ),
-                defaultColumnWidth: const IntrinsicColumnWidth(),
-                columnWidths: const <int, TableColumnWidth>{
-                  0: FlexColumnWidth(),
-                },
-                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                children: <TableRow>[
-                  TableRow(
-                    decoration: BoxDecoration(color: headerBg),
-                    children: <Widget>[
-                      for (var i = 0; i < display.headers.length; i += 1)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          child: Text(
-                            display.headers[i],
-                            textAlign: i == 0
-                                ? TextAlign.left
-                                : TextAlign.right,
-                            style: headerStyle,
-                          ),
+              // 列宽按内容取，整表在卡片内横向滚动：列多或文字长时不再撑破卡片。
+              child: LayoutBuilder(
+                builder: (context, constraints) => SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                    child: Table(
+                      border: TableBorder(
+                        horizontalInside: BorderSide(color: divider),
+                      ),
+                      defaultColumnWidth: const IntrinsicColumnWidth(),
+                      defaultVerticalAlignment:
+                          TableCellVerticalAlignment.middle,
+                      children: <TableRow>[
+                        TableRow(
+                          decoration: BoxDecoration(color: headerBg),
+                          children: <Widget>[
+                            for (var i = 0; i < display.headers.length; i += 1)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                child: Text(
+                                  display.headers[i],
+                                  textAlign: i == 0
+                                      ? TextAlign.left
+                                      : TextAlign.right,
+                                  style: headerStyle,
+                                ),
+                              ),
+                          ],
                         ),
-                    ],
+                        for (final row in display.rows)
+                          rowFor(row, header: false),
+                      ],
+                    ),
                   ),
-                  for (final row in display.rows) rowFor(row, header: false),
-                ],
+                ),
               ),
             ),
           ),

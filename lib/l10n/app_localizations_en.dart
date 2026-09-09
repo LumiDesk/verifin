@@ -3200,6 +3200,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'AI features send your text and the read-only financial summaries needed to answer your questions to your configured third-party service. The configuration and full ledger remain on this device.';
 
   @override
+  String get aiOptionalNotice =>
+      'AI is optional — recording, reports and backups all work without it.';
+
+  @override
   String get aiEntryTitle => 'AI entry';
 
   @override
