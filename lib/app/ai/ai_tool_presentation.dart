@@ -33,6 +33,7 @@ AiToolStepPresentation presentAiAgentStep(
     'accountsOverview' => l10n.aiToolAccountsOverview,
     'netWorth' => l10n.aiToolNetWorth,
     'creditCardBill' => l10n.aiToolCreditCardBill,
+    'budgetStatus' => l10n.aiToolBudgetStatus,
     _ => l10n.aiToolUnknown,
   };
   final details = <String>[

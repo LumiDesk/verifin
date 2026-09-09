@@ -9,12 +9,36 @@
 // 说明：[AiResultDisplay] 里的 `title` 目前用中文默认文案；国际化（zh/en）随聊天页 UI 的
 // i18n 一并处理（见落地顺序第 5 步），此处先留中文默认。
 import '../models.dart';
+import '../budget_status.dart';
 import '../credit_card.dart';
 import '../currency_math.dart';
 import '../ledger_math.dart';
 import '../report_analysis.dart';
 import 'ai_tool_schema.dart';
 import 'ledger_query.dart';
+
+/// 预算查询的只读回调集合。预算键月、单期覆盖等口径留在 controller，
+/// 工具只消费结果，避免两处各写一套 key 规则。
+class AiBudgetContext {
+  const AiBudgetContext({
+    required this.keyMonthOf,
+    required this.windowOf,
+    required this.monthlyBudgetOf,
+    required this.categoryBudgetOf,
+  });
+
+  /// 某日期所属预算期的键月。
+  final DateTime Function(DateTime date) keyMonthOf;
+
+  /// 某键月对应的预算窗口。
+  final DateWindow Function(DateTime keyMonth) windowOf;
+
+  /// 某键月的账本总预算。
+  final double Function(DateTime keyMonth) monthlyBudgetOf;
+
+  /// 某键月某分类的预算（单期覆盖优先，否则默认值）。
+  final double Function(DateTime keyMonth, String categoryId) categoryBudgetOf;
+}
 
 /// 工具执行的只读数据快照。均为「当前活动账本」范围（分类 / 标签为全局），由上层从
 /// controller 组装后传入，工具内不再触达 controller，保持纯粹可测。
@@ -29,6 +53,7 @@ class AiToolContext {
     required this.now,
     this.exchangeRates = const <ExchangeRate>[],
     this.bookId = '',
+    this.budget,
   });
 
   /// 当前账本交易（时间倒序或任意序均可，工具自行排序）。
@@ -54,6 +79,9 @@ class AiToolContext {
 
   /// 当前账本 id：汇率按账本隔离，折算账户余额时需要它定位汇率记录。
   final String bookId;
+
+  /// 预算查询回调；未注入时 `budgetStatus` 工具会说明「没有预算数据」。
+  final AiBudgetContext? budget;
 
   /// 当前时间（相对时间窗如「本月」的基准）。
   final DateTime now;
@@ -325,6 +353,7 @@ List<AiQueryTool> buildAiQueryTools() => <AiQueryTool>[
   const AccountsOverviewTool(),
   const NetWorthTool(),
   const CreditCardBillTool(),
+  const BudgetStatusTool(),
 ];
 
 // ─────────────────────────── 参数解析助手 ───────────────────────────
@@ -1125,6 +1154,82 @@ class CreditCardBillTool extends AiQueryTool {
         title: '信用卡 / 信用账户',
         headers: const <String>['账户', '当前欠款', '可用额度', '本期账单'],
         rows: rows,
+      ),
+    );
+  }
+}
+
+/// 预算执行：当前预算期的预算、已花、剩余、剩余日均与需要关注的分类。
+class BudgetStatusTool extends AiQueryTool {
+  const BudgetStatusTool();
+
+  @override
+  String get name => 'budgetStatus';
+
+  @override
+  String get description => '当前预算期的预算金额、已花、剩余、剩余日均，以及超支或接近上限的分类。';
+
+  @override
+  AiToolSchema get schema => const AiToolSchema(
+    properties: <String, AiToolParameter>{
+      'month': AiToolParameter(
+        type: AiToolParameterType.string,
+        description: '预算期所在月份，格式 YYYY-MM；缺省为当前期。',
+      ),
+    },
+  );
+
+  @override
+  AiToolResult run(AiToolContext ctx, Map<String, Object?> args) {
+    final budget = ctx.budget;
+    if (budget == null) {
+      return const AiToolResult(summary: '当前账本没有预算数据。');
+    }
+    final raw = _str(args, 'month');
+    final parsed = raw == null ? null : DateTime.tryParse('$raw-01');
+    final keyMonth = budget.keyMonthOf(parsed ?? ctx.now);
+    final window = budget.windowOf(keyMonth);
+    final previousWindow = budget.windowOf(
+      DateTime(keyMonth.year, keyMonth.month - 1),
+    );
+    final today = dateOnly(ctx.now);
+    final status = computeBudgetStatus(
+      windowEntries: _inWindow(ctx.entries, window),
+      previousWindowEntries: _inWindow(ctx.entries, previousWindow),
+      categories: ctx.categories,
+      budget: budget.monthlyBudgetOf(keyMonth),
+      budgetOf: (category) => budget.categoryBudgetOf(keyMonth, category.id),
+      remainingDays: window.days.where((day) => !day.isBefore(today)).length,
+    );
+    final periodLabel = '${keyMonth.year} 年 ${keyMonth.month} 月预算期';
+    if (status.budget <= 0) {
+      return AiToolResult(
+        summary:
+            '$periodLabel 还没有设置预算；本期已支出 ${_baseMoney(ctx, status.expense)}。',
+      );
+    }
+    final attention = status.attention;
+    final attentionText = attention.isEmpty
+        ? '没有超支或接近上限的分类。'
+        : '需要关注：'
+              '${attention.map((row) => '${row.label} '
+                  '${_baseMoney(ctx, row.spent)}/${_baseMoney(ctx, row.budget)}'
+                  '（${row.overBudget ? '已超支' : '已用 ${(row.ratio * 100).round()}%'}）').join('；')}。';
+    final daily = status.remainingDays > 0 && status.remaining > 0
+        ? '，剩余日均 ${_baseMoney(ctx, status.remaining / status.remainingDays)}'
+        : '';
+    return AiToolResult(
+      summary:
+          '$periodLabel 预算 ${_baseMoney(ctx, status.budget)}，'
+          '已花 ${_baseMoney(ctx, status.expense)}，'
+          '剩余 ${_baseMoney(ctx, status.remaining)}$daily。$attentionText',
+      display: AiStatDisplay(
+        title: '$periodLabel · 预算执行',
+        items: <AiStatItem>[
+          AiStatItem(label: '预算', value: status.budget),
+          AiStatItem(label: '已花', value: status.expense),
+          AiStatItem(label: '剩余', value: status.remaining, emphasize: true),
+        ],
       ),
     );
   }

@@ -62,18 +62,13 @@
 | `accountsOverview` | 各账户名称、币种与余额一览（不含隐藏账户） | — | `ctx.balanceOf` + `convertAccountBalancesToBase` | Table |
 | `netWorth` | 总资产 / 总负债 / 净资产（本位币口径） | — | `convertAccountBalancesToBase` | Stat |
 | `creditCardBill` | 信用类账户的欠款、可用额度、本期账单与还款日 | — | `credit_card.dart` | Table |
+| `budgetStatus` | 某预算期的预算、已花、剩余、剩余日均与需要关注的分类 | `month` | `budget_status.dart` | Stat |
 
 **时间窗参数 `range` 预设**：`thisMonth` / `lastMonth` / `thisYear` / `lastYear` / `last7Days` / `last30Days` / `last3Months` / `last6Months` / `last12Months` / `all`；或用 `start`+`end`（`YYYY-MM-DD`）指定显式区间。
 
 ## 待实现工具（下一批）
 
-按需补齐，各自复用现成纯函数，实现后移入上表：
-
-| 计划工具 | 作用 | 底层 |
-|---------|------|------|
-| `budgetStatus` | 预算执行情况 | 预算逻辑 |
-
-> `budgetStatus` 尚未实现：预算快照与执行判定目前只在 `lib/pages/budget_snapshots.dart`（`part of budget_pages.dart`），工具层拿不到纯函数。实现前需要先把「按月/期聚合 + 默认预算与单期覆盖」抽成 `lib/app/` 下的纯函数，再复用。
+当前批次已全部落地，暂无计划中的工具。新增按上面的「三步」流程走。
 
 ## 变更记录
 
@@ -82,3 +77,4 @@
 - UI 打磨 + 结果卡片可持久化：`AiResultDisplay` 增加 `toJson`/`aiResultDisplayFromJson`，聊天历史每条可带 `displays`（序列化的结果卡片），**重开时连同图表一并还原**（交易列表仍只存 id、按当前数据实时解析）；聊天页改用通用 `VeriHeader`、输入栏/发送按钮/间距/字号/图表纵轴/表格样式全面优化；AI 设置页加「清空配置」。
 - 多币种：`AiToolContext` 增加账本本位币；统计与金额筛选明确采用冻结本位币口径，工具回馈模型的摘要保留 ISO 代码，用户可见结果卡片则遵循货币单位偏好并在卡片标题标注本位币；AI 记账草稿可解析 ISO 4217 原币并在保存前继续由用户复核。
 - 工具扩展：新增 `trend` / `compare` / `accountsOverview` / `netWorth` / `creditCardBill`；`AiToolContext` 增加 `bookId`（折算账户余额需要按账本定位汇率）。`netWorth` 与 `accountsOverview` 在缺汇率时明确说明缺哪种币、不给部分和。工具步骤标题同步登记在 `ai_tool_presentation.dart`。
+- `budgetStatus`：预算聚合与「超支 / 接近上限」判定抽到 `lib/app/budget_status.dart` 的纯函数 `computeBudgetStatus`；预算键月、单期覆盖等口径仍留在 controller，通过 `AiToolContext.budget`（`AiBudgetContext`）以回调注入，避免两处各写一套 key 规则。

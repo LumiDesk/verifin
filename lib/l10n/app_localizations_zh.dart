@@ -3064,6 +3064,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiToolCreditCardBill => '查询信用卡账单';
 
   @override
+  String get aiToolBudgetStatus => '查询预算执行';
+
+  @override
   String get aiToolUnknown => '调用只读工具';
 
   @override

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/ai/ai_query_tool.dart';
+import 'package:verifin/app/ledger_math.dart';
 import 'package:verifin/app/models.dart';
 
 LedgerEntry _e({
@@ -325,6 +326,34 @@ void main() {
     final display = result.display! as AiTableDisplay;
     expect(display.rows.single.first, '信用卡');
     expect(result.summary, contains('300'));
+  });
+
+  test('budgetStatus 汇总预算执行并列出需要关注的分类', () {
+    final ctx = AiToolContext(
+      entries: <LedgerEntry>[
+        _e(id: 'a', amount: 900, at: DateTime(2026, 6, 3)),
+      ],
+      accounts: const <Account>[],
+      categories: <Category>[_cat('food', '餐饮')],
+      tags: const <Tag>[],
+      balanceOf: (_) => 0,
+      baseCurrencyCode: 'CNY',
+      now: DateTime(2026, 6, 20),
+      budget: AiBudgetContext(
+        keyMonthOf: (date) => DateTime(date.year, date.month),
+        windowOf: (keyMonth) => DateWindow(
+          start: DateTime(keyMonth.year, keyMonth.month, 1),
+          end: DateTime(keyMonth.year, keyMonth.month + 1, 0),
+        ),
+        monthlyBudgetOf: (_) => 1000,
+        categoryBudgetOf: (_, _) => 500,
+      ),
+    );
+    final result = _tool('budgetStatus').run(ctx, const <String, Object?>{});
+    final display = result.display! as AiStatDisplay;
+    expect(display.items.firstWhere((i) => i.label == '预算').value, 1000);
+    expect(display.items.firstWhere((i) => i.label == '已花').value, 900);
+    expect(result.summary, contains('需要关注'));
   });
 
   test('缺省 / 非法参数优雅降级不抛异常', () {

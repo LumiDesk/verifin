@@ -1098,6 +1098,7 @@
   "aiToolAccountsOverview": "Query account balances",
   "aiToolNetWorth": "Query net worth",
   "aiToolCreditCardBill": "Query credit card bill",
+  "aiToolBudgetStatus": "Query budget status",
   "aiToolUnknown": "Call read-only tool",
   "aiAgentRetryTitle": "Reconnecting",
   "aiAgentRetryNetwork": "The connection was interrupted; retrying safely",

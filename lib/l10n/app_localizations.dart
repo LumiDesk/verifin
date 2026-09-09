@@ -5672,6 +5672,12 @@ abstract class AppLocalizations {
   /// **'查询信用卡账单'**
   String get aiToolCreditCardBill;
 
+  /// No description provided for @aiToolBudgetStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'查询预算执行'**
+  String get aiToolBudgetStatus;
+
   /// No description provided for @aiToolUnknown.
   ///
   /// In zh, this message translates to:

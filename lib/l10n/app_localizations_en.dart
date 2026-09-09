@@ -3137,6 +3137,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiToolCreditCardBill => 'Query credit card bill';
 
   @override
+  String get aiToolBudgetStatus => 'Query budget status';
+
+  @override
   String get aiToolUnknown => 'Call read-only tool';
 
   @override
