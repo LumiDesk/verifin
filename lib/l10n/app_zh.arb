@@ -670,10 +670,6 @@
   "attachDeleteTooltip": "删除这张",
   "entryDetailSubtitle": "记账详情",
   "entryMoreInfo": "更多信息",
-  "entryAutoFilledTag": "自动识别",
-  "@entryAutoFilledTag": {
-    "description": "字段旁的小标记:该值是按历史自动识别填入的"
-  },
   "entrySaveReasonAmount": "请先输入金额",
   "entrySaveReasonAccount": "请先添加账户，或选择「无账户」",
   "entrySaveReasonTransferAccount": "请选择转入账户（不能与转出账户相同）",

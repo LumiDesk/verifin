@@ -1154,9 +1154,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get entryMoreInfo => 'More details';
 
   @override
-  String get entryAutoFilledTag => 'Auto-detected';
-
-  @override
   String get entrySaveReasonAmount => 'Enter an amount first';
 
   @override

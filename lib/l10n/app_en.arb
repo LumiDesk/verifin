@@ -379,7 +379,6 @@
   "attachDeleteTooltip": "Remove this image",
   "entryDetailSubtitle": "Entry detail",
   "entryMoreInfo": "More details",
-  "entryAutoFilledTag": "Auto-detected",
   "entrySaveReasonAmount": "Enter an amount first",
   "entrySaveReasonAccount": "Add an account first, or choose \"No account\"",
   "entrySaveReasonTransferAccount": "Choose a destination account (must differ from the source)",

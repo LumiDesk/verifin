@@ -114,11 +114,6 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   bool _noteTouched = false;
   // 用户是否手动选过账户：选过就不再被「该分类上次用过的账户」覆盖。
   bool _accountTouched = false;
-  // 当前值是否由自动识别填进来的（用户一旦改动即作废）。用于在字段旁显示淡淡的
-  // 「自动识别」标记，让用户看得出哪些不是自己填的。
-  bool _typeAutoFilled = false;
-  bool _categoryAutoFilled = false;
-  bool _noteAutoFilled = false;
   // 防重复提交：极快双击「保存」可能在 pop 生效前触发两次、落两条交易。
   bool _saving = false;
   bool _saved = false;
@@ -496,7 +491,6 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     // 用户真的在输备注：标记已改（不再回填备注），并安排按新备注重算类型/分类/标签
     // （防抖 300ms，见 [_scheduleSuggestion]）。
     _noteTouched = true;
-    _noteAutoFilled = false;
     _scheduleSuggestion();
   }
 
@@ -546,18 +540,11 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     );
     if (!suggestion.isEmpty) {
       setState(() {
-        // 只有识别结果与当前值不同才算「替你填了」：与默认值相同不值得标记。
-        if (!_typeTouched &&
-            suggestion.type != null &&
-            suggestion.type != _type) {
+        if (!_typeTouched && suggestion.type != null) {
           _type = suggestion.type!;
-          _typeAutoFilled = true;
         }
-        if (!_categoryTouched &&
-            suggestion.categoryId != null &&
-            suggestion.categoryId != _categoryId) {
+        if (!_categoryTouched && suggestion.categoryId != null) {
           _categoryId = suggestion.categoryId!;
-          _categoryAutoFilled = true;
         }
         if (!_tagsTouched && _tagIds.isEmpty && suggestion.tagIds != null) {
           _tagIds = List<String>.of(suggestion.tagIds!);
@@ -568,7 +555,6 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
           _applyingSuggestion = true;
           _noteController.text = suggestion.note!;
           _applyingSuggestion = false;
-          _noteAutoFilled = true;
         }
       });
     }
@@ -755,9 +741,6 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         setState(() {
                           _type = type;
                           _typeTouched = true;
-                          _typeAutoFilled = false;
-                          // 分类被重置为新类型的第一个分类，不再是识别结果。
-                          _categoryAutoFilled = false;
                           // 同上：空列表时留空，不取 `.first` 以免抛异常白屏。
                           final next = _categoriesForType(controller, _type);
                           _categoryId = next.isEmpty ? '' : next.first.id;
@@ -777,15 +760,6 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         _recomputeSuggestion();
                       },
                     ),
-                    if (_typeAutoFilled && !_typeTouched) ...<Widget>[
-                      const SizedBox(height: 6),
-                      const Align(
-                        alignment: Alignment.centerLeft,
-                        child: _AutoDetectedTag(
-                          key: Key('entry_type_auto_tag'),
-                        ),
-                      ),
-                    ],
                     const SizedBox(height: 16),
                     InkWell(
                       key: const Key('detail_amount_button'),
@@ -804,21 +778,11 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: <Widget>[
-                        Text(
-                          AppLocalizations.of(context).commonCategory,
-                          style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                        if (_categoryAutoFilled &&
-                            !_categoryTouched) ...<Widget>[
-                          const SizedBox(width: 8),
-                          const _AutoDetectedTag(
-                            key: Key('entry_category_auto_tag'),
-                          ),
-                        ],
-                      ],
+                    Text(
+                      AppLocalizations.of(context).commonCategory,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     _EntryCategoryGrid(
@@ -843,7 +807,6 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         setState(() {
                           _categoryId = category.id;
                           _categoryTouched = true;
-                          _categoryAutoFilled = false;
                         });
                         // 换了分类，按该分类的历史习惯重新预选账户。
                         _applyCategoryAccountSuggestion(controller);
@@ -953,16 +916,6 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         labelText: AppLocalizations.of(context).commonNote,
                         hintText: AppLocalizations.of(context).noteHint,
                         prefixIcon: const Icon(Icons.notes),
-                        // 备注也是识别填的：用后缀小字说明，不额外占一行高度。
-                        suffixText: _noteAutoFilled && !_noteTouched
-                            ? AppLocalizations.of(context).entryAutoFilledTag
-                            : null,
-                        suffixStyle: Theme.of(context).textTheme.labelSmall
-                            ?.copyWith(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withValues(alpha: 0.55),
-                            ),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -1525,7 +1478,6 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     setState(() {
       _categoryId = selected;
       _categoryTouched = true;
-      _categoryAutoFilled = false;
     });
     _applyCategoryAccountSuggestion(VeriFinScope.of(context));
   }
@@ -1547,7 +1499,6 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     setState(() {
       _categoryId = selected;
       _categoryTouched = true;
-      _categoryAutoFilled = false;
     });
     _applyCategoryAccountSuggestion(VeriFinScope.of(context));
   }
@@ -2054,31 +2005,6 @@ class _EntryBottomSaveBar extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 自动识别填入的字段旁的淡标记：让用户知道这个值不是自己填的；一旦手动改动，
-/// 标记随之消失。
-class _AutoDetectedTag extends StatelessWidget {
-  const _AutoDetectedTag({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.onSurface.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        AppLocalizations.of(context).entryAutoFilledTag,
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-          fontWeight: FontWeight.w600,
         ),
       ),
     );

@@ -2204,12 +2204,6 @@ abstract class AppLocalizations {
   /// **'更多信息'**
   String get entryMoreInfo;
 
-  /// 字段旁的小标记:该值是按历史自动识别填入的
-  ///
-  /// In zh, this message translates to:
-  /// **'自动识别'**
-  String get entryAutoFilledTag;
-
   /// No description provided for @entrySaveReasonAmount.
   ///
   /// In zh, this message translates to:

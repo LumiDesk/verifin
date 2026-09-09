@@ -1130,9 +1130,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get entryMoreInfo => '更多信息';
 
   @override
-  String get entryAutoFilledTag => '自动识别';
-
-  @override
   String get entrySaveReasonAmount => '请先输入金额';
 
   @override
