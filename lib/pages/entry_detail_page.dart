@@ -690,11 +690,13 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       _amount,
       _currencyCode ?? controller.activeBook.baseCurrencyCode,
     );
+    // 符号与 formatSignedAmount 保持同一套写法（ASCII 正负号、无空格），
+    // 否则这里会成为全应用唯一使用 U+2212 加空格的位置。
     final amountText = switch (_type) {
-      EntryType.expense => '− $amountNumber',
-      EntryType.income => '+ $amountNumber',
+      EntryType.expense => '-$amountNumber',
+      EntryType.income => '+$amountNumber',
       EntryType.transfer => amountNumber,
-      EntryType.refund => '+ $amountNumber',
+      EntryType.refund => '+$amountNumber',
     };
     _captureInitialSnapshot();
 

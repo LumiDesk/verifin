@@ -129,4 +129,57 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('0 张'), findsOneWidget);
   });
+
+  testWidgets('长按缩略图也能删除图片附件', (WidgetTester tester) async {
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store);
+    controller
+      ..addAccount(
+        Account(
+          id: 'cash-att-longpress',
+          bookId: controller.activeBook.id,
+          name: '现金',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 0,
+          iconCode: 'cash',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+        ),
+      )
+      ..addEntry(
+        LedgerEntry(
+          id: 'att-entry-longpress',
+          bookId: controller.activeBook.id,
+          type: EntryType.expense,
+          amount: 20,
+          categoryId: 'dining',
+          accountId: 'cash-att-longpress',
+          note: '票据',
+          occurredAt: DateTime.now(),
+        ),
+      )
+      ..addAttachment('att-entry-longpress', _png)
+      ..dispose();
+
+    await pumpApp(tester, store);
+    await tester.tap(find.text('最近交易'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('餐饮').first);
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('图片附件'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('1 张'), findsOneWidget);
+
+    // 长按缩略图本体删除，不必去点右上角的小叉。
+    await tester.longPress(find.byType(Image).first);
+    await tester.pumpAndSettle();
+    expect(find.text('0 张'), findsOneWidget);
+  });
 }

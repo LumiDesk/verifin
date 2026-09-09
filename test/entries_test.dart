@@ -120,7 +120,7 @@ void main() {
     await createQuickEntry(tester);
 
     expect(find.byKey(const Key('save_entry_button')), findsOneWidget);
-    expect(find.text('− 45'), findsOneWidget);
+    expect(find.text('-45'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('save_entry_button')));
     await tester.pumpAndSettle();
@@ -329,6 +329,70 @@ void main() {
 
     expect(find.text('交通'), findsOneWidget);
     expect(find.text('餐饮'), findsNothing);
+  });
+
+  testWidgets('searches reimbursement entries by the word 退款', (
+    WidgetTester tester,
+  ) async {
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store);
+    final now = DateTime.now();
+    controller
+      ..addAccount(
+        Account(
+          id: 'cash-refund-search',
+          bookId: controller.activeBook.id,
+          name: '现金账户',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 0,
+          iconCode: 'cash',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+        ),
+      )
+      ..addEntry(
+        LedgerEntry(
+          id: 'reimbursable-search-test',
+          bookId: controller.activeBook.id,
+          type: EntryType.expense,
+          amount: 60,
+          categoryId: 'dining',
+          accountId: 'cash-refund-search',
+          note: '垫付',
+          occurredAt: now,
+          reimbursable: true,
+        ),
+      )
+      ..addEntry(
+        LedgerEntry(
+          id: 'plain-search-test',
+          bookId: controller.activeBook.id,
+          type: EntryType.expense,
+          amount: 20,
+          categoryId: 'transport',
+          accountId: 'cash-refund-search',
+          note: '公交',
+          occurredAt: now,
+        ),
+      )
+      ..dispose();
+
+    await pumpApp(tester, store);
+    await tester.tap(find.text('最近交易'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('transaction_search_field')),
+      '退款',
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+
+    // 「退款」只应命中确实关联了报销/退款的交易，而不是每一条。
+    expect(find.text('餐饮'), findsOneWidget);
+    expect(find.text('交通'), findsNothing);
   });
 
   testWidgets(

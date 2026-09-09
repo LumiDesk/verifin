@@ -649,127 +649,130 @@ class _RefundSheetState extends State<_RefundSheet> {
             16,
             MediaQuery.viewInsetsOf(context).bottom + 16,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      widget.existing == null
-                          ? l10n.refundAdd
-                          : l10n.refundEditTitle,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  if (widget.existing != null)
-                    IconButton(
-                      onPressed: _delete,
-                      icon: const Icon(Icons.delete_outline),
-                      color: veriExpense,
-                      tooltip: l10n.commonDelete,
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              InkWell(
-                onTap: _editAmount,
-                borderRadius: BorderRadius.circular(veriRadiusSm),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        '+${formatUserMoney(_amount, widget.expense.currencyCode)}',
-                        style: theme.textTheme.headlineMedium?.copyWith(
+          // 内容超过可用高度时可滚动：多币种字段与两个日期行加起来在小屏上会超出一屏。
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        widget.existing == null
+                            ? l10n.refundAdd
+                            : l10n.refundEditTitle,
+                        style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w800,
-                          color: veriIncome,
                         ),
                       ),
-                      Text(
-                        l10n.refundRemainingLabel(
-                          formatUserMoney(
-                            _maxRefund,
-                            widget.expense.currencyCode,
-                          ),
-                        ),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.6,
-                          ),
-                        ),
+                    ),
+                    if (widget.existing != null)
+                      IconButton(
+                        onPressed: _delete,
+                        icon: const Icon(Icons.delete_outline),
+                        color: veriExpense,
+                        tooltip: l10n.commonDelete,
                       ),
-                    ],
+                  ],
+                ),
+                const SizedBox(height: 12),
+                InkWell(
+                  onTap: _editAmount,
+                  borderRadius: BorderRadius.circular(veriRadiusSm),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          '+${formatUserMoney(_amount, widget.expense.currencyCode)}',
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: veriIncome,
+                          ),
+                        ),
+                        Text(
+                          l10n.refundRemainingLabel(
+                            formatUserMoney(
+                              _maxRefund,
+                              widget.expense.currencyCode,
+                            ),
+                          ),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.6,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                l10n.refundCurrencyLockedHint,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+                const SizedBox(height: 6),
+                Text(
+                  l10n.refundCurrencyLockedHint,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+                  ),
                 ),
-              ),
-              DetailInfoRow(
-                label: l10n.refundToAccountLabel,
-                value: accountName,
-                onTap: _pickAccount,
-              ),
-              if (account != null)
-                CurrencyAmountField(
-                  key: const Key('refund_account_amount'),
-                  label: l10n.refundAccountAmountLabel,
-                  currencyCode: account.currencyCode,
-                  amount: _accountAmount,
-                  missingText: l10n.exchangeRateNotSet,
-                  onTap: () => _editAccountAmount(account.currencyCode),
-                ),
-              CurrencyAmountField(
-                key: const Key('refund_base_amount'),
-                label: l10n.refundBaseAmountLabel,
-                currencyCode: baseCode,
-                amount: _baseAmount > 0 ? _baseAmount : null,
-                missingText: l10n.exchangeRateNotSet,
-                onTap: () => _editBaseAmount(baseCode),
-              ),
-              CompactSwitchRow(
-                icon: Icons.check_circle_outline,
-                title: Text(l10n.refundIsSettledLabel),
-                value: _settled,
-                onChanged: (value) => setState(() => _settled = value),
-              ),
-              if (_settled)
                 DetailInfoRow(
-                  label: l10n.refundArrivalDateLabel,
+                  label: l10n.refundToAccountLabel,
+                  value: accountName,
+                  onTap: _pickAccount,
+                ),
+                if (account != null)
+                  CurrencyAmountField(
+                    key: const Key('refund_account_amount'),
+                    label: l10n.refundAccountAmountLabel,
+                    currencyCode: account.currencyCode,
+                    amount: _accountAmount,
+                    missingText: l10n.exchangeRateNotSet,
+                    onTap: () => _editAccountAmount(account.currencyCode),
+                  ),
+                CurrencyAmountField(
+                  key: const Key('refund_base_amount'),
+                  label: l10n.refundBaseAmountLabel,
+                  currencyCode: baseCode,
+                  amount: _baseAmount > 0 ? _baseAmount : null,
+                  missingText: l10n.exchangeRateNotSet,
+                  onTap: () => _editBaseAmount(baseCode),
+                ),
+                CompactSwitchRow(
+                  icon: Icons.check_circle_outline,
+                  title: Text(l10n.refundIsSettledLabel),
+                  value: _settled,
+                  onChanged: (value) => setState(() => _settled = value),
+                ),
+                if (_settled)
+                  DetailInfoRow(
+                    label: l10n.refundArrivalDateLabel,
+                    value:
+                        '${l10n.dateMonthDay(_settledAt)}  ${relativeDay(l10n, _settledAt)}',
+                    onTap: () => _pickDate(arrival: true),
+                  ),
+                DetailInfoRow(
+                  label: l10n.refundInitiatedDateLabel,
                   value:
-                      '${l10n.dateMonthDay(_settledAt)}  ${relativeDay(l10n, _settledAt)}',
-                  onTap: () => _pickDate(arrival: true),
+                      '${l10n.dateMonthDay(_initiatedAt)}  ${relativeDay(l10n, _initiatedAt)}',
+                  onTap: () => _pickDate(arrival: false),
                 ),
-              DetailInfoRow(
-                label: l10n.refundInitiatedDateLabel,
-                value:
-                    '${l10n.dateMonthDay(_initiatedAt)}  ${relativeDay(l10n, _initiatedAt)}',
-                onTap: () => _pickDate(arrival: false),
-              ),
-              DetailInfoRow(
-                label: l10n.commonNote,
-                value: _note.isEmpty ? l10n.noteHint : _note,
-                placeholder: _note.isEmpty,
-                onTap: _editNote,
-              ),
-              const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: canSave ? _saveAndExit : null,
-                  child: Text(l10n.commonSave),
+                DetailInfoRow(
+                  label: l10n.commonNote,
+                  value: _note.isEmpty ? l10n.noteHint : _note,
+                  placeholder: _note.isEmpty,
+                  onTap: _editNote,
                 ),
-              ),
-            ],
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: canSave ? _saveAndExit : null,
+                    child: Text(l10n.commonSave),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

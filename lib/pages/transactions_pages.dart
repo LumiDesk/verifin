@@ -729,12 +729,17 @@ class _TransactionsPageState extends State<TransactionsPage> {
       formatSignedAmount(signedAmount(entry)),
       for (final id in entry.tagIds)
         if (controller.tagById(id) case final Tag tag) tag.label,
-      // 报销状态也纳入搜索：可用「待报销」「已退」「已报销」关键词检索。
+      // 报销状态也纳入搜索：可用「待报销」「已退」「已报销」关键词检索；
+      // 「退款」是这类交易在应用里的叫法，只有确实关联退款的交易才加进去，
+      // 否则每条交易都会命中。
       if (entry.refundedAmount > 0) ...<String>[
         AppLocalizations.of(context).badgeRefunded,
         AppLocalizations.of(context).reimbursementReimbursed,
-      ] else if (entry.reimbursable)
+        AppLocalizations.of(context).entryTypeRefund,
+      ] else if (entry.reimbursable) ...<String>[
         AppLocalizations.of(context).badgeReimbursable,
+        AppLocalizations.of(context).entryTypeRefund,
+      ],
     ].join(' ').toLowerCase();
     return searchable.contains(query);
   }
