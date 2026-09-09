@@ -254,6 +254,9 @@ void main() {
     expect(find.text('语言'), findsOneWidget);
     expect(find.text('简体中文'), findsOneWidget);
 
+    // 设置页比一屏长，先滚到「语言」再点，否则点击会落在屏幕外。
+    await tester.scrollUntilVisible(find.text('语言'), 120);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('语言'));
     await tester.pumpAndSettle();
     expect(
@@ -272,6 +275,9 @@ void main() {
     expect(controller.localePreference, LocalePreference.zh);
     expect(store.read('verifin.locale.v1'), 'zh');
 
+    // 保存按钮在页头，滚回顶部才能点到。
+    await tester.fling(firstVerticalScrollable(), const Offset(0, 1200), 1000);
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('保存'));
     await tester.pumpAndSettle();
     expect(controller.localePreference, LocalePreference.en);
