@@ -200,17 +200,23 @@ class TransactionTile extends StatelessWidget {
                                 ),
                           ),
                         ),
-                        if (entry.refundedAmount > 0)
-                          _EntryBadge(
-                            text: AppLocalizations.of(context).badgeRefunded,
-                            color: veriIncome,
-                          )
-                        else if (entry.reimbursable)
+                        // 与交易列表的报销筛选同一口径、互斥：还等着钱回来的显示
+                        // 「待报销」，钱已经到账的显示「已到账」。
+                        if (entry.reimbursable &&
+                            !isZeroCurrencyAmount(
+                              entry.netBaseAmount,
+                              baseCurrencyCode ?? entry.currencyCode,
+                            ))
                           _EntryBadge(
                             text: AppLocalizations.of(
                               context,
                             ).badgeReimbursable,
                             color: veriRoyal,
+                          )
+                        else if (entry.refundedAmount > 0)
+                          _EntryBadge(
+                            text: AppLocalizations.of(context).badgeRefunded,
+                            color: veriIncome,
                           ),
                       ],
                     ),

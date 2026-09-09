@@ -388,6 +388,22 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                 // 退款与交易本体共用同一份草稿，只在页头保存时一起落库。
                 if (_type == EntryType.expense) ...<Widget>[
                   const SizedBox(height: 12),
+                  // 退款总额超过原金额时保存会被拦下：这里说明原因，否则用户只
+                  // 看到一个点不动的保存按钮（把金额改小到低于已退款时最常见）。
+                  if (_refundTotal >
+                      _amount + currencyAmountTolerance(_currencyCode))
+                    Padding(
+                      key: const Key('refund_over_cap_reason'),
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Text(
+                        AppLocalizations.of(context).refundSaveReasonOverCap,
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              color: Theme.of(context).colorScheme.error,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ),
                   RefundSection(
                     expense: _buildEntry(),
                     refunds: _refunds,

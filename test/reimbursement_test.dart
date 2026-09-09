@@ -188,7 +188,8 @@ void main() {
       );
     });
 
-    test('reimbursed 匹配已有回款冲抵（含部分）', () {
+    test('reimbursed 只匹配钱已到账的（与 pending 互斥）', () {
+      // 未标记、已收到部分退款：钱已经到账，命中。
       expect(
         ReimbursementFilter.reimbursed.matches(
           _expense(amount: 100, refunded: 30),
@@ -196,12 +197,25 @@ void main() {
         ),
         isTrue,
       );
+      // 已标记、钱还没到：不命中。
       expect(
         ReimbursementFilter.reimbursed.matches(
           _expense(amount: 100, refunded: 0, reimbursable: true),
           'CNY',
         ),
         isFalse,
+      );
+      // 已标记、只到账一部分：仍算「待报销」，不再同时出现在「已到账」里。
+      final partial = _expense(amount: 100, refunded: 30, reimbursable: true);
+      expect(ReimbursementFilter.pending.matches(partial, 'CNY'), isTrue);
+      expect(ReimbursementFilter.reimbursed.matches(partial, 'CNY'), isFalse);
+      // 已标记、全部到账：命中「已到账」。
+      expect(
+        ReimbursementFilter.reimbursed.matches(
+          _expense(amount: 100, refunded: 100, reimbursable: true),
+          'CNY',
+        ),
+        isTrue,
       );
     });
 
@@ -232,15 +246,17 @@ void main() {
       );
     });
 
-    test('外币待报销状态只比较本位币金额', () {
+    test('外币待报销状态只比较本位币金额，且与已到账互斥', () {
       final entry = _expense(
         amount: 100,
         reimbursable: true,
         refunded: 360,
       ).copyWith(baseAmount: 720);
 
+      // 本位币净额 720 − 360 = 360 ≠ 0：还欠着，属于「待报销」。
       expect(ReimbursementFilter.pending.matches(entry, 'CNY'), isTrue);
-      expect(ReimbursementFilter.reimbursed.matches(entry, 'CNY'), isTrue);
+      // 互斥：同一笔不会同时出现在「已到账」里。
+      expect(ReimbursementFilter.reimbursed.matches(entry, 'CNY'), isFalse);
     });
   });
 

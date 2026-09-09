@@ -81,7 +81,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonProcessing => '正在处理…';
 
   @override
-  String get badgeRefunded => '已退';
+  String get badgeRefunded => '已到账';
 
   @override
   String get badgeReimbursable => '待报销';
@@ -99,7 +99,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reimbursementNotReimbursable => '无需报销';
 
   @override
-  String get reimbursementReimbursed => '已报销';
+  String get reimbursementReimbursed => '已到账';
 
   @override
   String get calendarTitle => '日历';
@@ -411,7 +411,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get metricReimbursablePending => '待报销';
 
   @override
-  String get metricReimbursed => '已报销';
+  String get metricReimbursed => '已到账';
 
   @override
   String get panelRecentLabel => '最近交易';
@@ -1130,6 +1130,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get entryMoreInfo => '更多信息';
 
   @override
+  String get entryAutoFilledTag => '自动识别';
+
+  @override
+  String get entrySaveReasonAmount => '请先输入金额';
+
+  @override
+  String get entrySaveReasonAccount => '请先添加账户，或选择「无账户」';
+
+  @override
+  String get entrySaveReasonTransferAccount => '请选择转入账户（不能与转出账户相同）';
+
+  @override
+  String get entrySaveReasonTransferAmount => '请填写转出和转入金额';
+
+  @override
+  String get refundSaveReasonOverCap => '退款金额不能超过剩余可退';
+
+  @override
   String entryTagCount(int count) {
     return '标签 $count';
   }
@@ -1404,14 +1422,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get markReimbursable => '标记待报销';
 
   @override
-  String get reimbursableHint => '标记本身不产生资金变动；到账后由退款冲抵净额。';
+  String get reimbursableHint => '标记本身不产生资金变动；收到退款后净额才会相应减少。';
 
   @override
   String get refundLabel => '退款 / 报销回款';
 
   @override
   String refundedAmountLabel(String amount) {
-    return '已冲抵 $amount';
+    return '已退款 $amount';
   }
 
   @override
@@ -1482,10 +1500,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get pendingRefundsTitle => '待退款';
+  String get pendingRefundsTitle => '待到账退款';
 
   @override
-  String get pendingRefundsSubtitle => '已申请、还没到账的退款';
+  String get pendingRefundsSubtitle => '已登记、还没到账的退款';
 
   @override
   String get pendingRefundsEmpty => '没有待到账的退款';

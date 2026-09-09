@@ -172,7 +172,7 @@ Material 全局 surface 不透明；玻璃表面使用 srcOver 混合以保留�
 | 首页指标 | `home_metrics.dart` | `computeHomeMetric` `homeMetricLabel` `homeMetricGroups` `formatHomeMetric` `homeMetricColor`；`HomeMetric` `HomeMetricContext` `HomeTrendConfig` |
 | 周期记账 | `recurring.dart` | `advanceRecurring` `dueDatesFor` |
 | 信用类账户 | `credit_card.dart` | `nextDueDate` `daysUntilDue` `nextStatementDate` `currentBillingCycle` `usedCredit` `availableCredit` `billingCycleExpense`；卡号 `cardLast4Of`（在 `models.dart`） |
-| 记账自动识别 | `category_suggest.dart` | `suggestEntry`（推断类型/分类/标签/备注）；`EntrySuggestion` |
+| 记账自动识别 | `category_suggest.dart` | `suggestEntry`（推断类型/分类/标签/备注）；`EntrySuggestion`；`lastUsedAccountIdForCategory`（该分类上次用过的账户，记账页在自动识别开启时用它预选账户） |
 | 多币种草稿缩放 | `entry_currency_draft.dart` | `scaleDependentCurrencyAmount`——手工/导入/旧数据或固定周期规则改原币金额时保持既有结算比例，并按目标币种规整 |
 | 账目数据校验 | `ledger_data_validation.dart` | `validateLedgerEntries` `LedgerDataValidationIssue`——交易聚合、账单导入和备份恢复共用的三层金额/退款/引用校验 |
 | AI 对话查询工具 | `ai/ledger_query.dart`、`ai/ai_query_tool.dart`、`ai/ai_tool_schema.dart` | 通用交易筛选 `queryLedgerEntries`（`LedgerQuery`）；只读工具协议 `AiQueryTool` + `AiToolContext` + `AiToolResult` + `AiResultDisplay`（sealed）+ typed Schema + 注册表 `buildAiQueryTools`（**新增分析工具在此登记，并更新 `ai-tools.md`**） |

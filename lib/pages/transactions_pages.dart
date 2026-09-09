@@ -98,6 +98,11 @@ enum ReimbursementFilter {
   }
 
   bool matches(LedgerEntry entry, String baseCurrencyCode) {
+    // 两个筛选互斥：一笔交易只会出现在其中一个结果里。部分到账的支出仍算「待报销」
+    // （还有钱没回来），不会同时出现在「已到账」里——这正是此前用户看不懂的地方。
+    final awaiting =
+        entry.reimbursable &&
+        !isZeroCurrencyAmount(entry.netBaseAmount, baseCurrencyCode);
     switch (this) {
       case ReimbursementFilter.all:
         return true;
@@ -105,15 +110,12 @@ enum ReimbursementFilter {
         // 从未标记待报销的交易：把囤券等标了待报销的排除掉，只看真实花销。
         return !entry.reimbursable;
       case ReimbursementFilter.pending:
-        // 已标记待报销、且尚未完全冲抵的支出（还有钱没报回来）。
-        return entry.reimbursable &&
-            !isZeroCurrencyAmount(entry.netBaseAmount, baseCurrencyCode);
+        // 已标记待报销、且还有钱没回来（含只报回来一部分的）。
+        return awaiting;
       case ReimbursementFilter.reimbursed:
-        // 已有退款/报销回款冲抵（含部分冲抵）。
-        return !isZeroCurrencyAmount(
-          entry.refundedBaseAmount,
-          baseCurrencyCode,
-        );
+        // 钱已经到账：标记后已全部冲抵的，或没标记但已经收到退款的。
+        return !awaiting &&
+            !isZeroCurrencyAmount(entry.refundedBaseAmount, baseCurrencyCode);
     }
   }
 }
@@ -173,6 +175,9 @@ class _TransactionsPageState extends State<TransactionsPage> {
   // notifyListeners 触发整条 O(n log n) 重算。签名覆盖全部输入——三个模型列表
   // 引用（经派生缓存后变化即换实例）、金额格式开关、locale、以及所有筛选字段。
   List<Object?>? _deriveSignature;
+  // 上一轮派生用的筛选条件。只有它变化才把分页打回第一批；后台数据变化（周期
+  // 补记、改设置等引发的 notify）只重算，保留用户已经翻到的位置。
+  List<Object?>? _deriveFilterSignature;
   List<LedgerEntry> _derivedEntries = const <LedgerEntry>[];
   List<DateEntryGroup> _derivedGroups = const <DateEntryGroup>[];
   double _derivedExpense = 0;
@@ -185,30 +190,40 @@ class _TransactionsPageState extends State<TransactionsPage> {
     _selectedCategoryId = widget.initialCategoryId;
   }
 
-  /// 按签名判断派生结果是否失效；失效才重跑过滤/排序/分组/汇总并重置分页。
+  /// 筛选条件：用户改了「看什么」，就视为重新浏览。
+  List<Object?> _filterSignature() => <Object?>[
+    widget.accountId,
+    _dateMode,
+    _visibleDate,
+    _timeFilter,
+    _periodAnchor,
+    _query,
+    _selectedAccountId,
+    _selectedCategoryId,
+    _selectedTagId,
+    _reimbursementFilter,
+    _sortOrder,
+  ];
+
+  /// 按签名判断派生结果是否失效；失效才重跑过滤/排序/分组/汇总。
   void _ensureDerived(VeriFinController controller, BuildContext context) {
+    final filterSignature = _filterSignature();
     final signature = <Object?>[
       controller.entries,
       controller.accounts,
       controller.categories,
       amount_format.amountForceTwoDecimals,
       Localizations.localeOf(context),
-      widget.accountId,
-      _dateMode,
-      _visibleDate,
-      _timeFilter,
-      _periodAnchor,
-      _query,
-      _selectedAccountId,
-      _selectedCategoryId,
-      _selectedTagId,
-      _reimbursementFilter,
-      _sortOrder,
+      ...filterSignature,
     ];
     if (_deriveSignature != null && listEquals(_deriveSignature, signature)) {
       return;
     }
+    final filterChanged =
+        _deriveFilterSignature == null ||
+        !listEquals(_deriveFilterSignature, filterSignature);
     _deriveSignature = signature;
+    _deriveFilterSignature = filterSignature;
     final entries = _sortedEntries(
       _filteredEntries(controller.entries),
       controller,
@@ -217,8 +232,12 @@ class _TransactionsPageState extends State<TransactionsPage> {
     _derivedExpense = sumByType(entries, EntryType.expense);
     _derivedIncome = sumByType(entries, EntryType.income);
     _derivedGroups = groupEntriesByDate(entries);
-    // 输入变化视为「重新浏览」：分页回到第一批，避免停留在上一次的深度。
-    _visibleCount = _pageBatchSize;
+    // 只有筛选条件变化才回到第一批（输入变化视为「重新浏览」）；账目数据在后台
+    // 变化（周期补记、汇率或偏好更新引发的通知）时保留当前深度，不把用户正在
+    // 看的位置顶回顶部。
+    if (filterChanged) {
+      _visibleCount = _pageBatchSize;
+    }
   }
 
   /// 当前应展示的日期分组：累计交易数达到 _visibleCount 即截断（含跨越该阈值的

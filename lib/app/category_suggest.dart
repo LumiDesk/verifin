@@ -228,6 +228,35 @@ EntrySuggestion suggestEntry({
   );
 }
 
+/// 该分类最近一次记账用过的账户 id；没有历史则返回 null。
+///
+/// 用于记账页在「自动识别」开启时预选账户：用户往往为某个分类固定用一个账户
+/// （买菜用微信、发工资用工资卡），不必每次手动改。取 [LedgerEntry.occurredAt]
+/// 最近的一笔；accountId 为空的「无账户」交易不参与（它不表达付款账户习惯）。
+String? lastUsedAccountIdForCategory({
+  required List<LedgerEntry> history,
+  required String categoryId,
+  required EntryType type,
+}) {
+  if (categoryId.isEmpty) {
+    return null;
+  }
+  String? accountId;
+  DateTime? latest;
+  for (final entry in history) {
+    if (entry.type != type ||
+        entry.categoryId != categoryId ||
+        entry.accountId.isEmpty) {
+      continue;
+    }
+    if (latest == null || entry.occurredAt.isAfter(latest)) {
+      latest = entry.occurredAt;
+      accountId = entry.accountId;
+    }
+  }
+  return accountId;
+}
+
 /// 金额接近度（0–1）：相对差在 [_kAmountBand] 内线性衰减，精确相同为 1，超出为 0。
 double _amountAffinity(double a, double b) {
   if (a <= 0 || b <= 0) {

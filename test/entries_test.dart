@@ -760,6 +760,48 @@ void main() {
     expect(find.textContaining('note-39'), findsOneWidget);
   });
 
+  testWidgets('交易列表：后台通知不会把翻到深处的列表打回前 30 条', (WidgetTester tester) async {
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store);
+    final bookId = controller.activeBook.id;
+    final now = DateTime(2026, 7, 12, 12);
+    // 40 笔、各自不同日期（40 个分组），超过单批 30 条，触发分页。
+    for (var i = 0; i < 40; i++) {
+      controller.addEntry(
+        LedgerEntry(
+          id: 'keep-$i',
+          bookId: bookId,
+          type: EntryType.expense,
+          amount: (10 + i).toDouble(),
+          categoryId: 'dining',
+          accountId: 'cash',
+          note: 'keep-$i',
+          occurredAt: now.subtract(Duration(days: i)),
+        ),
+      );
+    }
+    controller.dispose();
+
+    final app = await pumpApp(tester, store);
+    await tester.tap(find.text('最近交易'));
+    await tester.pumpAndSettle();
+
+    // 翻到最旧的一笔，分页已加载到第二批。
+    await tester.scrollUntilVisible(
+      find.textContaining('keep-39'),
+      400.0,
+      scrollable: firstVerticalScrollable(),
+    );
+    expect(find.textContaining('keep-39'), findsOneWidget);
+
+    // 一个与列表无关的通知（例如在别处改了个偏好）：此前会重置派生签名、把分页
+    // 打回第一批，用户正在看的内容被顶掉。
+    app.setDefaultAccountId(null);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('keep-39'), findsOneWidget);
+  });
+
   testWidgets('交易列表提供记账入口', (WidgetTester tester) async {
     final store = LocalKeyValueStore();
     await pumpApp(tester, store);

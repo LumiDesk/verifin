@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/models.dart';
+import 'package:verifin/app/veri_fin_controller.dart';
+import 'package:verifin/app/veri_fin_scope.dart';
 import 'package:verifin/local_storage/local_storage.dart';
+import 'package:verifin/pages/entry_detail_page.dart';
 
 import 'support/test_harness.dart';
 
@@ -13,6 +16,41 @@ Future<void> _ensureNoteVisible(WidgetTester tester) async {
     200,
     scrollable: find.byType(Scrollable).first,
   );
+}
+
+Account _account(String id, String bookId, String name) => Account(
+  id: id,
+  bookId: bookId,
+  name: name,
+  type: AccountType.cash,
+  groupId: null,
+  initialBalance: 0,
+  iconCode: 'cash',
+  note: '',
+  includeInAssets: true,
+  hidden: false,
+);
+
+/// 交通分类历史：都用 [accountId] 付、金额 20、备注「打车」。
+void _seedTransportHistory(
+  VeriFinController controller,
+  String bookId, {
+  required String accountId,
+}) {
+  for (var i = 0; i < 4; i++) {
+    controller.addEntry(
+      LedgerEntry(
+        id: 'hist-$i',
+        bookId: bookId,
+        type: EntryType.expense,
+        amount: 20,
+        categoryId: 'transport',
+        accountId: accountId,
+        note: '打车',
+        occurredAt: DateTime(2026, 7, i + 1, 9),
+      ),
+    );
+  }
 }
 
 void main() {
@@ -288,5 +326,118 @@ void main() {
       'transport',
       reason: '保存前 flush 防抖，否则会按未识别的默认分类落账',
     );
+  });
+
+  testWidgets('自动识别开启时，账户跟随该分类上次用过的账户', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 1600);
+    addTearDown(tester.view.reset);
+
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store);
+    final bookId = controller.activeBook.id;
+    controller
+      ..addAccount(_account('cash', bookId, '现金'))
+      ..addAccount(_account('wechat', bookId, '微信'))
+      // 账本默认账户是现金，但交通分类的历史习惯是微信。
+      ..setDefaultAccountId('cash');
+    _seedTransportHistory(controller, bookId, accountId: 'wechat');
+
+    await pumpApp(tester, store);
+    await tapBottomTab(tester, 0);
+    await createQuickEntry(tester);
+
+    // 新账默认用账本默认账户。
+    expect(find.textContaining('现金'), findsWidgets);
+
+    await tester.tap(find.byKey(const Key('entry_category_transport')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('微信'),
+      findsWidgets,
+      reason: '该分类上次用微信付，应预选微信而不是账本默认的现金',
+    );
+  });
+
+  testWidgets('关闭自动识别时，账户仍只用账本默认账户', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 1600);
+    addTearDown(tester.view.reset);
+
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store);
+    final bookId = controller.activeBook.id;
+    controller
+      ..addAccount(_account('cash', bookId, '现金'))
+      ..addAccount(_account('wechat', bookId, '微信'))
+      ..setDefaultAccountId('cash')
+      ..setAutoSuggestEnabled(false);
+    _seedTransportHistory(controller, bookId, accountId: 'wechat');
+
+    await pumpApp(tester, store);
+    await tapBottomTab(tester, 0);
+    await createQuickEntry(tester);
+
+    await tester.tap(find.byKey(const Key('entry_category_transport')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('现金'), findsWidgets);
+    expect(
+      find.textContaining('微信'),
+      findsNothing,
+      reason: '关掉自动识别后不该再从历史推断账户',
+    );
+  });
+
+  testWidgets('自动识别填入的字段带淡标记，手动改动后消失', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 1600);
+    addTearDown(tester.view.reset);
+
+    final controller = await makeController();
+    final bookId = controller.activeBook.id;
+    _seedTransportHistory(controller, bookId, accountId: '');
+
+    // 金额 20 与历史精确相同：识别出分类与备注。
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(home: const EntryDetailPage(initialAmount: 20)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 分类被改写 → 分类旁出现「自动识别」标记；备注是识别填入的 → 后缀标记。
+    expect(find.byKey(const Key('entry_category_auto_tag')), findsOneWidget);
+    expect(find.text('自动识别'), findsWidgets);
+
+    // 手动改选餐饮：分类的标记作废，不再显示。
+    await tester.tap(find.byKey(const Key('entry_category_dining')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('entry_category_auto_tag')), findsNothing);
+  });
+
+  testWidgets('切换类型会把分类重置为默认值，识别标记随之消失', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 1600);
+    addTearDown(tester.view.reset);
+
+    final controller = await makeController();
+    _seedTransportHistory(controller, controller.activeBook.id, accountId: '');
+
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(home: const EntryDetailPage(initialAmount: 20)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('entry_category_auto_tag')), findsOneWidget);
+
+    // 切成「收入」：分类被换成收入类型的第一个分类，标记不能跟着留下。
+    await tester.tap(find.byKey(const Key('entry_type_income')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('entry_category_auto_tag')), findsNothing);
   });
 }

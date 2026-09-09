@@ -84,7 +84,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonProcessing => 'Processing…';
 
   @override
-  String get badgeRefunded => 'Refunded';
+  String get badgeRefunded => 'Received';
 
   @override
   String get badgeReimbursable => 'Reimbursable';
@@ -102,7 +102,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reimbursementNotReimbursable => 'Not reimbursable';
 
   @override
-  String get reimbursementReimbursed => 'Reimbursed';
+  String get reimbursementReimbursed => 'Received';
 
   @override
   String get calendarTitle => 'Calendar';
@@ -419,7 +419,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get metricReimbursablePending => 'Reimbursable';
 
   @override
-  String get metricReimbursed => 'Reimbursed';
+  String get metricReimbursed => 'Received';
 
   @override
   String get panelRecentLabel => 'Recent transactions';
@@ -1154,6 +1154,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get entryMoreInfo => 'More details';
 
   @override
+  String get entryAutoFilledTag => 'Auto-detected';
+
+  @override
+  String get entrySaveReasonAmount => 'Enter an amount first';
+
+  @override
+  String get entrySaveReasonAccount =>
+      'Add an account first, or choose \"No account\"';
+
+  @override
+  String get entrySaveReasonTransferAccount =>
+      'Choose a destination account (must differ from the source)';
+
+  @override
+  String get entrySaveReasonTransferAmount =>
+      'Enter both the source and destination amounts';
+
+  @override
+  String get refundSaveReasonOverCap =>
+      'Refund can\'t exceed the refundable amount';
+
+  @override
   String entryTagCount(int count) {
     return 'Tags $count';
   }
@@ -1439,7 +1461,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String refundedAmountLabel(String amount) {
-    return 'Offset $amount';
+    return 'Refunded $amount';
   }
 
   @override

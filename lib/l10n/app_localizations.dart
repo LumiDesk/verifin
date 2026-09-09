@@ -242,10 +242,10 @@ abstract class AppLocalizations {
   /// **'正在处理…'**
   String get commonProcessing;
 
-  /// 交易行徽标:已被退款/报销冲抵
+  /// 交易行徽标:退款/报销的钱已经到账
   ///
   /// In zh, this message translates to:
-  /// **'已退'**
+  /// **'已到账'**
   String get badgeRefunded;
 
   /// 交易行徽标:标记待报销
@@ -281,7 +281,7 @@ abstract class AppLocalizations {
   /// No description provided for @reimbursementReimbursed.
   ///
   /// In zh, this message translates to:
-  /// **'已报销'**
+  /// **'已到账'**
   String get reimbursementReimbursed;
 
   /// No description provided for @calendarTitle.
@@ -893,7 +893,7 @@ abstract class AppLocalizations {
   /// No description provided for @metricReimbursed.
   ///
   /// In zh, this message translates to:
-  /// **'已报销'**
+  /// **'已到账'**
   String get metricReimbursed;
 
   /// No description provided for @panelRecentLabel.
@@ -2204,6 +2204,42 @@ abstract class AppLocalizations {
   /// **'更多信息'**
   String get entryMoreInfo;
 
+  /// 字段旁的小标记:该值是按历史自动识别填入的
+  ///
+  /// In zh, this message translates to:
+  /// **'自动识别'**
+  String get entryAutoFilledTag;
+
+  /// No description provided for @entrySaveReasonAmount.
+  ///
+  /// In zh, this message translates to:
+  /// **'请先输入金额'**
+  String get entrySaveReasonAmount;
+
+  /// No description provided for @entrySaveReasonAccount.
+  ///
+  /// In zh, this message translates to:
+  /// **'请先添加账户，或选择「无账户」'**
+  String get entrySaveReasonAccount;
+
+  /// No description provided for @entrySaveReasonTransferAccount.
+  ///
+  /// In zh, this message translates to:
+  /// **'请选择转入账户（不能与转出账户相同）'**
+  String get entrySaveReasonTransferAccount;
+
+  /// No description provided for @entrySaveReasonTransferAmount.
+  ///
+  /// In zh, this message translates to:
+  /// **'请填写转出和转入金额'**
+  String get entrySaveReasonTransferAmount;
+
+  /// No description provided for @refundSaveReasonOverCap.
+  ///
+  /// In zh, this message translates to:
+  /// **'退款金额不能超过剩余可退'**
+  String get refundSaveReasonOverCap;
+
   /// No description provided for @entryTagCount.
   ///
   /// In zh, this message translates to:
@@ -2705,7 +2741,7 @@ abstract class AppLocalizations {
   /// No description provided for @reimbursableHint.
   ///
   /// In zh, this message translates to:
-  /// **'标记本身不产生资金变动；到账后由退款冲抵净额。'**
+  /// **'标记本身不产生资金变动；收到退款后净额才会相应减少。'**
   String get reimbursableHint;
 
   /// No description provided for @refundLabel.
@@ -2717,7 +2753,7 @@ abstract class AppLocalizations {
   /// No description provided for @refundedAmountLabel.
   ///
   /// In zh, this message translates to:
-  /// **'已冲抵 {amount}'**
+  /// **'已退款 {amount}'**
   String refundedAmountLabel(String amount);
 
   /// No description provided for @refundAmountTitle.
@@ -2837,13 +2873,13 @@ abstract class AppLocalizations {
   /// No description provided for @pendingRefundsTitle.
   ///
   /// In zh, this message translates to:
-  /// **'待退款'**
+  /// **'待到账退款'**
   String get pendingRefundsTitle;
 
   /// No description provided for @pendingRefundsSubtitle.
   ///
   /// In zh, this message translates to:
-  /// **'已申请、还没到账的退款'**
+  /// **'已登记、还没到账的退款'**
   String get pendingRefundsSubtitle;
 
   /// No description provided for @pendingRefundsEmpty.

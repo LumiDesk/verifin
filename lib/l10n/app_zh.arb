@@ -78,9 +78,9 @@
   "@commonProcessing": {
     "description": "耗时任务加载对话框默认文案"
   },
-  "badgeRefunded": "已退",
+  "badgeRefunded": "已到账",
   "@badgeRefunded": {
-    "description": "交易行徽标:已被退款/报销冲抵"
+    "description": "交易行徽标:退款/报销的钱已经到账"
   },
   "badgeReimbursable": "待报销",
   "@badgeReimbursable": {
@@ -90,7 +90,7 @@
   "reimbursementFilterTitle": "报销状态",
   "reimbursementStatusAll": "全部",
   "reimbursementNotReimbursable": "无需报销",
-  "reimbursementReimbursed": "已报销",
+  "reimbursementReimbursed": "已到账",
   "calendarTitle": "日历",
   "calendarPrevMonth": "上个月",
   "calendarNextMonth": "下个月",
@@ -226,7 +226,7 @@
   "metricTotalLiabilities": "负债",
   "metricNetAssets": "净资产",
   "metricReimbursablePending": "待报销",
-  "metricReimbursed": "已报销",
+  "metricReimbursed": "已到账",
   "panelRecentLabel": "最近交易",
   "panelRecentDesc": "展示最近 5 条交易记录",
   "panelBudgetLabel": "月度预算",
@@ -670,6 +670,15 @@
   "attachDeleteTooltip": "删除这张",
   "entryDetailSubtitle": "记账详情",
   "entryMoreInfo": "更多信息",
+  "entryAutoFilledTag": "自动识别",
+  "@entryAutoFilledTag": {
+    "description": "字段旁的小标记:该值是按历史自动识别填入的"
+  },
+  "entrySaveReasonAmount": "请先输入金额",
+  "entrySaveReasonAccount": "请先添加账户，或选择「无账户」",
+  "entrySaveReasonTransferAccount": "请选择转入账户（不能与转出账户相同）",
+  "entrySaveReasonTransferAmount": "请填写转出和转入金额",
+  "refundSaveReasonOverCap": "退款金额不能超过剩余可退",
   "entryTagCount": "标签 {count}",
   "@entryTagCount": {
     "placeholders": {
@@ -834,9 +843,9 @@
   "dateLabel": "日期",
   "timeLabel": "时间",
   "markReimbursable": "标记待报销",
-  "reimbursableHint": "标记本身不产生资金变动；到账后由退款冲抵净额。",
+  "reimbursableHint": "标记本身不产生资金变动；收到退款后净额才会相应减少。",
   "refundLabel": "退款 / 报销回款",
-  "refundedAmountLabel": "已冲抵 {amount}",
+  "refundedAmountLabel": "已退款 {amount}",
   "@refundedAmountLabel": {
     "placeholders": {
       "amount": {
@@ -901,8 +910,8 @@
       }
     }
   },
-  "pendingRefundsTitle": "待退款",
-  "pendingRefundsSubtitle": "已申请、还没到账的退款",
+  "pendingRefundsTitle": "待到账退款",
+  "pendingRefundsSubtitle": "已登记、还没到账的退款",
   "pendingRefundsEmpty": "没有待到账的退款",
   "pendingRefundsCount": "{count} 笔在路上",
   "@pendingRefundsCount": {

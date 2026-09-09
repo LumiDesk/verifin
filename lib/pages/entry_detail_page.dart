@@ -112,6 +112,13 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   bool _categoryTouched = false;
   bool _tagsTouched = false;
   bool _noteTouched = false;
+  // 用户是否手动选过账户：选过就不再被「该分类上次用过的账户」覆盖。
+  bool _accountTouched = false;
+  // 当前值是否由自动识别填进来的（用户一旦改动即作废）。用于在字段旁显示淡淡的
+  // 「自动识别」标记，让用户看得出哪些不是自己填的。
+  bool _typeAutoFilled = false;
+  bool _categoryAutoFilled = false;
+  bool _noteAutoFilled = false;
   // 防重复提交：极快双击「保存」可能在 pop 生效前触发两次、落两条交易。
   bool _saving = false;
   bool _saved = false;
@@ -489,6 +496,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     // 用户真的在输备注：标记已改（不再回填备注），并安排按新备注重算类型/分类/标签
     // （防抖 300ms，见 [_scheduleSuggestion]）。
     _noteTouched = true;
+    _noteAutoFilled = false;
     _scheduleSuggestion();
   }
 
@@ -510,7 +518,10 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   }
 
   /// 按当前金额/备注/时段从历史识别，并填充「用户尚未改过」的字段。
-  void _recomputeSuggestion() {
+  ///
+  /// [suggestAccount] 为 false 时不动账户：保存前 flush 挂起的识别时，页面上显示的
+  /// 账户已经是用户看到的样子，不能在落账瞬间再换一个。
+  void _recomputeSuggestion({bool suggestAccount = true}) {
     _cancelPendingSuggestion();
     if (!mounted || !_autoSuggestEnabled) {
       return;
@@ -533,26 +544,74 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       // 用户已手动选过类型：不再翻转类型，只在该类型内识别分类/标签/备注。
       forcedType: _typeTouched ? _type : null,
     );
-    if (suggestion.isEmpty) {
+    if (!suggestion.isEmpty) {
+      setState(() {
+        // 只有识别结果与当前值不同才算「替你填了」：与默认值相同不值得标记。
+        if (!_typeTouched &&
+            suggestion.type != null &&
+            suggestion.type != _type) {
+          _type = suggestion.type!;
+          _typeAutoFilled = true;
+        }
+        if (!_categoryTouched &&
+            suggestion.categoryId != null &&
+            suggestion.categoryId != _categoryId) {
+          _categoryId = suggestion.categoryId!;
+          _categoryAutoFilled = true;
+        }
+        if (!_tagsTouched && _tagIds.isEmpty && suggestion.tagIds != null) {
+          _tagIds = List<String>.of(suggestion.tagIds!);
+        }
+        if (!_noteTouched &&
+            _noteController.text.isEmpty &&
+            suggestion.note != null) {
+          _applyingSuggestion = true;
+          _noteController.text = suggestion.note!;
+          _applyingSuggestion = false;
+          _noteAutoFilled = true;
+        }
+      });
+    }
+    // 分类定下来之后（无论是识别出来的还是用户选的）再预选账户。
+    if (suggestAccount) {
+      _applyCategoryAccountSuggestion(controller);
+    }
+  }
+
+  /// 自动识别开启时，按分类预选「这个分类上次用过的账户」；用户手动改过账户、
+  /// 选了「无账户」或当前是转账（两端账户都是显式选择）时都不覆盖。
+  /// 关闭自动识别时保持原行为——只用账本默认账户。
+  void _applyCategoryAccountSuggestion(VeriFinController controller) {
+    if (!_autoSuggestEnabled || _accountTouched || _noAccount) {
+      return;
+    }
+    if (_type == EntryType.transfer) {
+      return;
+    }
+    final suggested = lastUsedAccountIdForCategory(
+      history: controller.entries,
+      categoryId: _categoryId,
+      type: _type,
+    );
+    if (suggested == null || suggested == _accountId) {
+      return;
+    }
+    final accounts = _availableAccounts(controller);
+    final account = accounts.where((item) => item.id == suggested).firstOrNull;
+    if (account == null) {
       return;
     }
     setState(() {
-      if (!_typeTouched && suggestion.type != null) {
-        _type = suggestion.type!;
+      _accountId = suggested;
+      if (!_currencyTouched) {
+        _currencyCode = account.currencyCode;
       }
-      if (!_categoryTouched && suggestion.categoryId != null) {
-        _categoryId = suggestion.categoryId!;
-      }
-      if (!_tagsTouched && _tagIds.isEmpty && suggestion.tagIds != null) {
-        _tagIds = List<String>.of(suggestion.tagIds!);
-      }
-      if (!_noteTouched &&
-          _noteController.text.isEmpty &&
-          suggestion.note != null) {
-        _applyingSuggestion = true;
-        _noteController.text = suggestion.note!;
-        _applyingSuggestion = false;
-      }
+      _refreshCurrencyAmounts(
+        controller,
+        accounts,
+        forceAccount: true,
+        forceBase: true,
+      );
     });
   }
 
@@ -661,6 +720,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       child: Scaffold(
         bottomNavigationBar: _EntryBottomSaveBar(
           enabled: _isDirty && _canSave(accounts),
+          reason: _canSave(accounts) ? null : _saveBlockReason(accounts),
           onPressed: _saveAndExit,
         ),
         body: SafeArea(
@@ -695,6 +755,9 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         setState(() {
                           _type = type;
                           _typeTouched = true;
+                          _typeAutoFilled = false;
+                          // 分类被重置为新类型的第一个分类，不再是识别结果。
+                          _categoryAutoFilled = false;
                           // 同上：空列表时留空，不取 `.first` 以免抛异常白屏。
                           final next = _categoriesForType(controller, _type);
                           _categoryId = next.isEmpty ? '' : next.first.id;
@@ -714,6 +777,15 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         _recomputeSuggestion();
                       },
                     ),
+                    if (_typeAutoFilled && !_typeTouched) ...<Widget>[
+                      const SizedBox(height: 6),
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: _AutoDetectedTag(
+                          key: Key('entry_type_auto_tag'),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     InkWell(
                       key: const Key('detail_amount_button'),
@@ -732,11 +804,21 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Text(
-                      AppLocalizations.of(context).commonCategory,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                    Row(
+                      children: <Widget>[
+                        Text(
+                          AppLocalizations.of(context).commonCategory,
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        if (_categoryAutoFilled &&
+                            !_categoryTouched) ...<Widget>[
+                          const SizedBox(width: 8),
+                          const _AutoDetectedTag(
+                            key: Key('entry_category_auto_tag'),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 10),
                     _EntryCategoryGrid(
@@ -761,7 +843,10 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         setState(() {
                           _categoryId = category.id;
                           _categoryTouched = true;
+                          _categoryAutoFilled = false;
                         });
+                        // 换了分类，按该分类的历史习惯重新预选账户。
+                        _applyCategoryAccountSuggestion(controller);
                       },
                       onOpenBranch: (category) =>
                           unawaited(_showCategoryBranch(category, categories)),
@@ -868,6 +953,16 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         labelText: AppLocalizations.of(context).commonNote,
                         hintText: AppLocalizations.of(context).noteHint,
                         prefixIcon: const Icon(Icons.notes),
+                        // 备注也是识别填的：用后缀小字说明，不额外占一行高度。
+                        suffixText: _noteAutoFilled && !_noteTouched
+                            ? AppLocalizations.of(context).entryAutoFilledTag
+                            : null,
+                        suffixStyle: Theme.of(context).textTheme.labelSmall
+                            ?.copyWith(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.55),
+                            ),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -1430,7 +1525,9 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     setState(() {
       _categoryId = selected;
       _categoryTouched = true;
+      _categoryAutoFilled = false;
     });
+    _applyCategoryAccountSuggestion(VeriFinScope.of(context));
   }
 
   Future<void> _showCategoryBranch(
@@ -1450,7 +1547,9 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     setState(() {
       _categoryId = selected;
       _categoryTouched = true;
+      _categoryAutoFilled = false;
     });
+    _applyCategoryAccountSuggestion(VeriFinScope.of(context));
   }
 
   Future<void> _pickAccount(List<Account> accounts) async {
@@ -1473,6 +1572,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       return;
     }
     setState(() {
+      _accountTouched = true;
       if (selected.id.isEmpty) {
         _noAccount = true;
         if (!_currencyTouched) {
@@ -1564,6 +1664,36 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
         _accountAmount! > 0 &&
         _toAccountAmount != null &&
         _toAccountAmount! > 0;
+  }
+
+  /// 保存按钮禁用时缺什么。与 [_canSave] 同一判据，避免「按钮灰着却不说原因」。
+  /// 返回 null 表示没有可解释的缺失（例如只是还没有任何改动）。
+  String? _saveBlockReason(List<Account> accounts) {
+    final l10n = AppLocalizations.of(context);
+    if (_type == EntryType.transfer) {
+      if (accounts.length < 2 ||
+          _toAccountId == null ||
+          _toAccountId == _accountId) {
+        return l10n.entrySaveReasonTransferAccount;
+      }
+      if (_accountAmount == null ||
+          _accountAmount! <= 0 ||
+          _toAccountAmount == null ||
+          _toAccountAmount! <= 0) {
+        return l10n.entrySaveReasonTransferAmount;
+      }
+      return null;
+    }
+    if (!_noAccount && accounts.isEmpty) {
+      return l10n.entrySaveReasonAccount;
+    }
+    if (!_noAccount && (_accountAmount == null || _accountAmount! <= 0)) {
+      return l10n.entrySaveReasonAmount;
+    }
+    if (_baseAmount == null || _baseAmount! <= 0) {
+      return l10n.entrySaveReasonAmount;
+    }
+    return null;
   }
 
   Future<void> _pickDate() async {
@@ -1733,7 +1863,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     // 默认类型/分类写进账目。
     if (_suggestDebounce != null) {
       _cancelPendingSuggestion();
-      _recomputeSuggestion();
+      _recomputeSuggestion(suggestAccount: false);
     }
     final controller = VeriFinScope.of(context);
     final accounts =
@@ -1866,13 +1996,21 @@ String aiDraftWarningLabel(AppLocalizations l10n, AiDraftWarning warning) {
 }
 
 class _EntryBottomSaveBar extends StatelessWidget {
-  const _EntryBottomSaveBar({required this.enabled, required this.onPressed});
+  const _EntryBottomSaveBar({
+    required this.enabled,
+    required this.onPressed,
+    this.reason,
+  });
 
   final bool enabled;
   final VoidCallback onPressed;
 
+  /// 保存按钮不可用时缺什么；为 null 表示没有可解释的缺失（例如只是没有改动）。
+  final String? reason;
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return SafeArea(
       top: false,
       child: ColoredBox(
@@ -1881,24 +2019,66 @@ class _EntryBottomSaveBar extends StatelessWidget {
         child: Padding(
           key: const Key('entry_bottom_save_padding'),
           padding: const EdgeInsets.fromLTRB(22, 10, 22, 18),
-          child: FilledButton(
-            key: const Key('save_entry_button'),
-            style: FilledButton.styleFrom(
-              // 保存栏不继承 FilledButton 的暗色禁用填充，保持与应用主色一致；
-              // 不可保存时用淡蓝（禁用态专属属性）表达，而非主题灰色。
-              backgroundColor: veriRoyal,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: veriRoyal.withValues(alpha: 0.38),
-              disabledForegroundColor: Colors.white.withValues(alpha: 0.78),
-              minimumSize: const Size.fromHeight(50),
-              shape: const StadiumBorder(),
-              textStyle: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            onPressed: enabled ? onPressed : null,
-            child: Text(AppLocalizations.of(context).commonSave),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              if (!enabled && reason != null) ...<Widget>[
+                Text(
+                  reason!,
+                  key: const Key('entry_save_block_reason'),
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+              FilledButton(
+                key: const Key('save_entry_button'),
+                style: FilledButton.styleFrom(
+                  // 保存栏不继承 FilledButton 的暗色禁用填充，保持与应用主色一致；
+                  // 不可保存时用淡蓝（禁用态专属属性）表达，而非主题灰色。
+                  backgroundColor: veriRoyal,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: veriRoyal.withValues(alpha: 0.38),
+                  disabledForegroundColor: Colors.white.withValues(alpha: 0.78),
+                  minimumSize: const Size.fromHeight(50),
+                  shape: const StadiumBorder(),
+                  textStyle: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                onPressed: enabled ? onPressed : null,
+                child: Text(AppLocalizations.of(context).commonSave),
+              ),
+            ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 自动识别填入的字段旁的淡标记：让用户知道这个值不是自己填的；一旦手动改动，
+/// 标记随之消失。
+class _AutoDetectedTag extends StatelessWidget {
+  const _AutoDetectedTag({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        AppLocalizations.of(context).entryAutoFilledTag,
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+          fontWeight: FontWeight.w600,
         ),
       ),
     );

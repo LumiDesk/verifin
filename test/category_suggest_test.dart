@@ -233,4 +233,104 @@ void main() {
       expect(s.tagIds, <String>['tag-card']);
     });
   });
+
+  group('lastUsedAccountIdForCategory', () {
+    LedgerEntry entry({
+      required String id,
+      required String categoryId,
+      required String accountId,
+      required DateTime at,
+      EntryType type = EntryType.expense,
+    }) => LedgerEntry(
+      id: id,
+      bookId: 'default',
+      type: type,
+      amount: 10,
+      categoryId: categoryId,
+      accountId: accountId,
+      note: '',
+      occurredAt: at,
+    );
+
+    test('取该分类最近一笔用过的账户', () {
+      final history = <LedgerEntry>[
+        entry(
+          id: 'a',
+          categoryId: 'transport',
+          accountId: 'wechat',
+          at: DateTime(2026, 7, 1),
+        ),
+        entry(
+          id: 'b',
+          categoryId: 'transport',
+          accountId: 'cash',
+          at: DateTime(2026, 7, 9),
+        ),
+        entry(
+          id: 'c',
+          categoryId: 'dining',
+          accountId: 'alipay',
+          at: DateTime(2026, 7, 20),
+        ),
+      ];
+      expect(
+        lastUsedAccountIdForCategory(
+          history: history,
+          categoryId: 'transport',
+          type: EntryType.expense,
+        ),
+        'cash',
+      );
+    });
+
+    test('类型不同、分类为空、无账户或没有历史都不猜', () {
+      final history = <LedgerEntry>[
+        entry(
+          id: 'a',
+          categoryId: 'transport',
+          accountId: 'wechat',
+          at: DateTime(2026, 7, 1),
+        ),
+        // 收入同分类不算支出习惯。
+        entry(
+          id: 'b',
+          categoryId: 'transport',
+          accountId: 'cash',
+          at: DateTime(2026, 7, 9),
+          type: EntryType.income,
+        ),
+        // 「无账户」不表达付款账户习惯。
+        entry(
+          id: 'c',
+          categoryId: 'transport',
+          accountId: '',
+          at: DateTime(2026, 7, 10),
+        ),
+      ];
+      expect(
+        lastUsedAccountIdForCategory(
+          history: history,
+          categoryId: 'transport',
+          type: EntryType.expense,
+        ),
+        'wechat',
+      );
+      expect(
+        lastUsedAccountIdForCategory(
+          history: history,
+          categoryId: '',
+          type: EntryType.expense,
+        ),
+        isNull,
+      );
+      expect(
+        lastUsedAccountIdForCategory(
+          history: history,
+          categoryId: 'grocery',
+          type: EntryType.expense,
+        ),
+        isNull,
+      );
+    });
+  });
 }
