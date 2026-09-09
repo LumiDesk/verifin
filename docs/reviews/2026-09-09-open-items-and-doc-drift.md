@@ -23,6 +23,7 @@
 > | 工程版本号三方一致性无校验 | 已修（新增 `test/version_consistency_test.dart`） | `dc1ba5a` |
 > | 工程样例备份缺 2 个字段 | 已修 | `dc1ba5a` |
 > | 工程 `test_harness.dart` 注释指向不存在的目录 | 已修 | `dc1ba5a` |
+> | 产品 P1-7 对比度不达 AA | 已修：新增四个浅色底变体 + `veriSemantic`/`veriSemanticFor` 解析，迁移 132 处调用点 | `72e93aa` |
 > | 其余 §2 条目 | 未修 | — |
 >
 > 注：§2.2 里「搜索框 ✕ 清掉全部筛选」经核实是**有意行为**（tooltip 为「清空筛选」，`entries_test.dart` 依赖它复位筛选），不作为缺陷整改。

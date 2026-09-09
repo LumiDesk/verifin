@@ -22,7 +22,7 @@
 | 我的 | 工具入口保持四列宫格，长文案和大字号不得溢出；不改成列表 |
 | 信息密度 | 通过间距和排版优化，不能删除业务指标、原有方块或改变预算结构 |
 
-页面继续使用 `Scaffold > SafeArea > VeriPage` 与 `VeriHeader` / `PageHeader`。默认页面和固定页脚的头部对齐规则见 [页面骨架](ui-guidelines.md)。颜色、字号和圆角使用主题令牌，不在各页复制样式。
+页面继续使用 `Scaffold > SafeArea > VeriPage` 与 `VeriHeader` / `PageHeader`。默认页面和固定页脚的头部对齐规则见 [页面骨架](ui-guidelines.md)。颜色、字号和圆角使用主题令牌，不在各页复制样式。语义色（收入 / 支出 / 转账 / 提醒）必须经 `veriSemantic(context, veriX)` 取用，无 `BuildContext` 的纯取色函数用 `veriSemanticFor(brightness, veriX)`：浅色底取加深变体（`veri*OnLight`，对比度 ≥ 4.5:1），深色底取原亮色；不要直接使用 `veriIncome` / `veriExpense` / `veriBlue` / `veriWarning` 渲染。
 
 ## 字体层级
 
