@@ -4305,4 +4305,301 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get importSaveExchangeRatesHint => '默认关闭；开启后只保存最终纳入交易使用的当日汇率。';
+
+  @override
+  String aiTitleSummary(String range) {
+    return '$range · 收支汇总';
+  }
+
+  @override
+  String aiTitleCategoryRanking(String range, String type) {
+    return '$range · $type分类排行';
+  }
+
+  @override
+  String aiTitleTagRanking(String range, String type) {
+    return '$range · $type标签排行';
+  }
+
+  @override
+  String aiTitleTransactions(int count) {
+    return '交易明细（$count 笔）';
+  }
+
+  @override
+  String aiTitleLargestTransactions(
+    String range,
+    String extreme,
+    String type,
+    int count,
+  ) {
+    return '$range · $extreme$type Top $count';
+  }
+
+  @override
+  String aiTitleTrend(String range, String type) {
+    return '$range · $type趋势';
+  }
+
+  @override
+  String aiTitleCompare(String label) {
+    return '$label · 环比与同比';
+  }
+
+  @override
+  String get aiTitleCreditCards => '信用卡 / 信用账户';
+
+  @override
+  String aiTitleBudgetExecution(String period) {
+    return '$period · 预算执行';
+  }
+
+  @override
+  String get aiStatNet => '净额';
+
+  @override
+  String get aiStatSpent => '已花';
+
+  @override
+  String get aiStatTotalLiabilities => '总负债';
+
+  @override
+  String get aiStatLastYearMonthExpense => '去年同月支出';
+
+  @override
+  String get aiStatLastMonthIncome => '上月收入';
+
+  @override
+  String get aiStatLastYearMonthIncome => '去年同月收入';
+
+  @override
+  String get aiHeaderCurrency => '币种';
+
+  @override
+  String get aiHeaderBalance => '余额';
+
+  @override
+  String get aiHeaderCurrentDebt => '当前欠款';
+
+  @override
+  String get aiExtremeMax => '最大';
+
+  @override
+  String get aiExtremeMin => '最小';
+
+  @override
+  String get aiGranularityMonthly => '按月';
+
+  @override
+  String get aiGranularityDaily => '按天';
+
+  @override
+  String get aiOverBudget => '已超支';
+
+  @override
+  String get aiNoBudgetAttention => '没有超支或接近上限的分类。';
+
+  @override
+  String get aiNoAccounts => '当前账本还没有账户。';
+
+  @override
+  String get aiNoCreditAccounts => '当前账本没有信用类账户。';
+
+  @override
+  String get aiNoBudgetData => '当前账本没有预算数据。';
+
+  @override
+  String get aiNoMatchingTransactions => '没有符合条件的交易。';
+
+  @override
+  String get aiNoBaseline => '基期为 0，无法计算比例';
+
+  @override
+  String aiMonthYearLabel(int year, int month) {
+    return '$year 年 $month 月';
+  }
+
+  @override
+  String aiBudgetPeriodLabel(int year, int month) {
+    return '$year 年 $month 月预算期';
+  }
+
+  @override
+  String get aiSepSemicolon => '；';
+
+  @override
+  String get aiSepComma => '，';
+
+  @override
+  String get aiSepEnum => '、';
+
+  @override
+  String aiSummaryLine(
+    String range,
+    String income,
+    int incomeCount,
+    String expense,
+    int expenseCount,
+    String net,
+  ) {
+    return '$range 收入 $income（$incomeCount 笔），支出 $expense（$expenseCount 笔），净额 $net。';
+  }
+
+  @override
+  String aiRankingRowLine(
+    String label,
+    String amount,
+    String percent,
+    int count,
+  ) {
+    return '$label $amount（$percent%，$count 笔）';
+  }
+
+  @override
+  String aiNoRecords(String range, String type) {
+    return '$range 没有$type记录。';
+  }
+
+  @override
+  String aiNoTagRecords(String range, String type) {
+    return '$range 没有带标签的$type记录。';
+  }
+
+  @override
+  String aiCategoryRankingSummary(String range, String type, String detail) {
+    return '$range $type分类排行：$detail';
+  }
+
+  @override
+  String aiTagRankingSummary(String range, String type, String detail) {
+    return '$range $type标签排行：$detail';
+  }
+
+  @override
+  String aiFoundTransactions(int count, String detail) {
+    return '找到 $count 笔交易：$detail';
+  }
+
+  @override
+  String aiEntryNote(String note) {
+    return '（$note）';
+  }
+
+  @override
+  String aiLargestSummary(
+    String range,
+    String extreme,
+    int count,
+    String type,
+    String detail,
+  ) {
+    return '$range $extreme的 $count 笔$type：$detail';
+  }
+
+  @override
+  String aiTrendSummary(
+    String range,
+    String type,
+    String granularity,
+    int count,
+    String total,
+    String points,
+  ) {
+    return '$range $type趋势（$granularity，$count 个点，合计 $total）：$points';
+  }
+
+  @override
+  String aiCompareSummary(
+    String label,
+    String expense,
+    String expenseMom,
+    String expenseYoy,
+    String income,
+    String incomeMom,
+    String incomeYoy,
+  ) {
+    return '$label 支出 $expense（环比 $expenseMom，同比 $expenseYoy）；收入 $income（环比 $incomeMom，同比 $incomeYoy）。';
+  }
+
+  @override
+  String aiAccountsSummary(int count, String accounts, String total) {
+    return '共 $count 个账户：$accounts。$total。';
+  }
+
+  @override
+  String aiAssetsTotalLine(String amount) {
+    return '计入资产的账户合计 $amount';
+  }
+
+  @override
+  String aiTotalMissingRateLine(String codes) {
+    return '合计因缺汇率无法给出（缺 $codes）';
+  }
+
+  @override
+  String aiMissingRatesNetWorth(String codes, String page) {
+    return '有账户缺少汇率（$codes），无法给出总资产与净资产；请先在「$page」补齐。';
+  }
+
+  @override
+  String aiNetWorthSummary(String assets, String liabilities, String net) {
+    return '总资产 $assets，总负债 $liabilities，净资产 $net。';
+  }
+
+  @override
+  String aiCardDebtLine(String name, String amount, String currency) {
+    return '$name 当前欠款 $amount $currency';
+  }
+
+  @override
+  String aiCardAvailableLine(String amount) {
+    return '，可用额度 $amount';
+  }
+
+  @override
+  String aiCardBillLine(String amount) {
+    return '，本期账单 $amount';
+  }
+
+  @override
+  String aiCardDueLine(int day, String due) {
+    return '，$day 号还款（$due）';
+  }
+
+  @override
+  String aiBudgetNotSet(String period, String amount) {
+    return '$period 还没有设置预算；本期已支出 $amount。';
+  }
+
+  @override
+  String aiBudgetAttention(String items) {
+    return '需要关注：$items。';
+  }
+
+  @override
+  String aiBudgetAttentionRow(
+    String label,
+    String spent,
+    String budget,
+    String status,
+  ) {
+    return '$label $spent/$budget（$status）';
+  }
+
+  @override
+  String aiDailyRemainingLine(String amount) {
+    return '，剩余日均 $amount';
+  }
+
+  @override
+  String aiBudgetSummary(
+    String period,
+    String budget,
+    String spent,
+    String remaining,
+    String daily,
+    String attention,
+  ) {
+    return '$period 预算 $budget，已花 $spent，剩余 $remaining$daily。$attention';
+  }
 }

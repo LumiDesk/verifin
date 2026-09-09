@@ -203,6 +203,7 @@ class _AiChatPageState extends State<AiChatPage> {
       balanceOf: scope.accountBalance,
       baseCurrencyCode: scope.activeBook.baseCurrencyCode,
       now: DateTime.now(),
+      l10n: l10n,
       exchangeRates: scope.exchangeRates,
       bookId: scope.activeBook.id,
       budget: AiBudgetContext(

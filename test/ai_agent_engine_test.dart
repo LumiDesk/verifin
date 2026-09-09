@@ -1,3 +1,5 @@
+import 'dart:ui' show Locale;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/ai/ai_agent_engine.dart';
 import 'package:verifin/app/ai/ai_agent_event.dart';
@@ -7,6 +9,7 @@ import 'package:verifin/app/ai/ai_error.dart';
 import 'package:verifin/app/ai/ai_query_tool.dart';
 import 'package:verifin/app/ai/ai_settings.dart';
 import 'package:verifin/app/models.dart';
+import 'package:verifin/l10n/app_localizations.dart';
 
 AiToolContext _context() {
   return AiToolContext(
@@ -28,6 +31,7 @@ AiToolContext _context() {
     balanceOf: (_) => 0,
     baseCurrencyCode: 'CNY',
     now: DateTime(2026, 6, 20),
+    l10n: lookupAppLocalizations(const Locale('zh')),
   );
 }
 

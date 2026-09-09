@@ -1,7 +1,10 @@
+import 'dart:ui' show Locale;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/ai/ai_query_tool.dart';
 import 'package:verifin/app/ledger_math.dart';
 import 'package:verifin/app/models.dart';
+import 'package:verifin/l10n/app_localizations.dart';
 
 LedgerEntry _e({
   required String id,
@@ -42,6 +45,7 @@ AiToolContext _ctx(
     baseCurrencyCode: 'CNY',
     exchangeRates: exchangeRates,
     now: now ?? DateTime(2026, 6, 20),
+    l10n: lookupAppLocalizations(const Locale('zh')),
   );
 }
 
@@ -268,6 +272,7 @@ void main() {
       balanceOf: (_) => 123.5,
       baseCurrencyCode: 'CNY',
       now: DateTime(2026, 6, 20),
+      l10n: lookupAppLocalizations(const Locale('zh')),
     );
     final result = _tool(
       'accountsOverview',
@@ -289,6 +294,7 @@ void main() {
       balanceOf: (_) => 100,
       baseCurrencyCode: 'CNY',
       now: DateTime(2026, 6, 20),
+      l10n: lookupAppLocalizations(const Locale('zh')),
     );
     final result = _tool('netWorth').run(ctx, const <String, Object?>{});
     expect(result.display, isNull);
@@ -321,6 +327,7 @@ void main() {
       balanceOf: (_) => -300,
       baseCurrencyCode: 'CNY',
       now: DateTime(2026, 6, 20),
+      l10n: lookupAppLocalizations(const Locale('zh')),
     );
     final result = _tool('creditCardBill').run(ctx, const <String, Object?>{});
     final display = result.display! as AiTableDisplay;
@@ -339,6 +346,7 @@ void main() {
       balanceOf: (_) => 0,
       baseCurrencyCode: 'CNY',
       now: DateTime(2026, 6, 20),
+      l10n: lookupAppLocalizations(const Locale('zh')),
       budget: AiBudgetContext(
         keyMonthOf: (date) => DateTime(date.year, date.month),
         windowOf: (keyMonth) => DateWindow(

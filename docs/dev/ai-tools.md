@@ -46,7 +46,7 @@
 | `AiTransactionsDisplay` | 一组具体交易（`entryIds`） | **可点击**交易列表 `TransactionListCard`，点击进详情页 |
 | `AiTableDisplay` | 模型自定义多列数据 | 表格 |
 
-> `display` 里的 `title` 目前仍是纯函数产生的中文默认文案；这是当前已知的 i18n 缺口，后续本地化时需保持工具层无 `BuildContext`。
+> `display` 里的 `title`、统计项 `label` 与表头，以及回喂模型的 `summary`，都经 `AiToolContext.l10n`（`AppLocalizations`）按当前语言解析；工具层仍无 `BuildContext`，语言由上层（聊天页）传入。`description` 与参数 schema 保持中文——它们只给模型看，不随界面语言变化。
 
 ## 工具清单（当前已实现）
 
@@ -78,3 +78,4 @@
 - 多币种：`AiToolContext` 增加账本本位币；统计与金额筛选明确采用冻结本位币口径，工具回馈模型的摘要保留 ISO 代码，用户可见结果卡片则遵循货币单位偏好并在卡片标题标注本位币；AI 记账草稿可解析 ISO 4217 原币并在保存前继续由用户复核。
 - 工具扩展：新增 `trend` / `compare` / `accountsOverview` / `netWorth` / `creditCardBill`；`AiToolContext` 增加 `bookId`（折算账户余额需要按账本定位汇率）。`netWorth` 与 `accountsOverview` 在缺汇率时明确说明缺哪种币、不给部分和。工具步骤标题同步登记在 `ai_tool_presentation.dart`。
 - `budgetStatus`：预算聚合与「超支 / 接近上限」判定抽到 `lib/app/budget_status.dart` 的纯函数 `computeBudgetStatus`；预算键月、单期覆盖等口径仍留在 controller，通过 `AiToolContext.budget`（`AiBudgetContext`）以回调注入，避免两处各写一套 key 规则。
+- i18n：`AiToolContext` 新增 `required AppLocalizations l10n`（聊天页传 `AppLocalizations.of(context)`，单测传 `lookupAppLocalizations(const Locale('zh'))`）。工具产出的卡片标题、统计项标签、表头与回喂模型的 summary 全部改为按当前语言解析，新增键统一加 `ai` 前缀并同步写入 `app_zh.arb` / `app_en.arb`。工具 `description` 与参数 schema 仍为中文（给模型看，不随界面语言变化）。
