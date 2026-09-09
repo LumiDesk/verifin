@@ -1935,6 +1935,16 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String chartTrendSemantics(int count) {
+    return '折线图，共 $count 个数据点；点按或横向滑动可查看每个数据点的数值。';
+  }
+
+  @override
+  String chartBarSemantics(int count) {
+    return '柱状图，共 $count 个数据项；点按或横向滑动可查看每项数值。';
+  }
+
+  @override
   String noDimDesc(String dim) {
     return '该时间范围内没有$dim记录。';
   }

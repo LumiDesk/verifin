@@ -3584,6 +3584,18 @@ abstract class AppLocalizations {
   /// **'暂无{dim}数据'**
   String noDimData(String dim);
 
+  /// No description provided for @chartTrendSemantics.
+  ///
+  /// In zh, this message translates to:
+  /// **'折线图，共 {count} 个数据点；点按或横向滑动可查看每个数据点的数值。'**
+  String chartTrendSemantics(int count);
+
+  /// No description provided for @chartBarSemantics.
+  ///
+  /// In zh, this message translates to:
+  /// **'柱状图，共 {count} 个数据项；点按或横向滑动可查看每项数值。'**
+  String chartBarSemantics(int count);
+
   /// No description provided for @noDimDesc.
   ///
   /// In zh, this message translates to:

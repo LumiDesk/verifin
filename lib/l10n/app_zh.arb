@@ -1307,6 +1307,14 @@
       }
     }
   },
+  "chartTrendSemantics": "折线图，共 {count} 个数据点；点按或横向滑动可查看每个数据点的数值。",
+  "@chartTrendSemantics": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "chartBarSemantics": "柱状图，共 {count} 个数据项；点按或横向滑动可查看每项数值。",
+  "@chartBarSemantics": {
+    "placeholders": {"count": {"type": "int"}}
+  },
   "noDimDesc": "该时间范围内没有{dim}记录。",
   "@noDimDesc": {
     "placeholders": {

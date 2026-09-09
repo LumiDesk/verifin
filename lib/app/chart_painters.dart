@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import 'app_theme.dart';
 
 /// 数值只画到图表高度的这个比例,顶部留白;网格线和纵轴刻度按同一比例
@@ -538,6 +539,7 @@ class InteractiveTrendChart extends StatefulWidget {
     this.labelColor,
     this.glow = false,
     required this.tooltipOf,
+    this.semanticsLabel,
   });
 
   final Color color;
@@ -549,6 +551,9 @@ class InteractiveTrendChart extends StatefulWidget {
 
   /// 为选中的数据点构建气泡内容。
   final ChartTooltip Function(int index) tooltipOf;
+
+  /// 整图的无障碍摘要；缺省时按数据点数量生成通用说明。
+  final String? semanticsLabel;
 
   @override
   State<InteractiveTrendChart> createState() => _InteractiveTrendChartState();
@@ -617,15 +622,14 @@ class _InteractiveTrendChartState extends State<InteractiveTrendChart> {
             child: const SizedBox.expand(),
           ),
         );
-        // 选中点用气泡里已本地化的文字作为无障碍摘要。
-        if (tooltip == null) {
-          return chart;
-        }
-        return Semantics(
-          container: true,
-          label: _tooltipSemanticsLabel(tooltip),
-          child: chart,
-        );
+        // 无障碍摘要：选中数据点时用气泡里已本地化的文字，否则给出整图概览。
+        final label = tooltip == null
+            ? widget.semanticsLabel ??
+                  AppLocalizations.of(
+                    context,
+                  ).chartTrendSemantics(widget.values.length)
+            : _tooltipSemanticsLabel(tooltip);
+        return Semantics(container: true, label: label, child: chart);
       },
     );
   }
@@ -640,6 +644,7 @@ class InteractiveBarChart extends StatefulWidget {
     this.yLabels = const <String>[],
     this.labelColor,
     required this.tooltipOf,
+    this.semanticsLabel,
   });
 
   final List<double> values;
@@ -647,6 +652,9 @@ class InteractiveBarChart extends StatefulWidget {
   final List<String> yLabels;
   final Color? labelColor;
   final ChartTooltip Function(int index) tooltipOf;
+
+  /// 整图的无障碍摘要；缺省时按数据项数量生成通用说明。
+  final String? semanticsLabel;
 
   @override
   State<InteractiveBarChart> createState() => _InteractiveBarChartState();
@@ -714,15 +722,14 @@ class _InteractiveBarChartState extends State<InteractiveBarChart> {
             child: const SizedBox.expand(),
           ),
         );
-        // 选中柱子用气泡里已本地化的文字作为无障碍摘要。
-        if (tooltip == null) {
-          return chart;
-        }
-        return Semantics(
-          container: true,
-          label: _tooltipSemanticsLabel(tooltip),
-          child: chart,
-        );
+        // 无障碍摘要：选中柱子时用气泡里已本地化的文字，否则给出整图概览。
+        final label = tooltip == null
+            ? widget.semanticsLabel ??
+                  AppLocalizations.of(
+                    context,
+                  ).chartBarSemantics(widget.values.length)
+            : _tooltipSemanticsLabel(tooltip);
+        return Semantics(container: true, label: label, child: chart);
       },
     );
   }

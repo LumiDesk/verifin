@@ -699,6 +699,14 @@
   },
   "noDimData": "No {dim} data",
   "noDimDesc": "No {dim} records in this time range.",
+  "chartTrendSemantics": "Line chart with {count} data points; tap or swipe to read each value.",
+  "@chartTrendSemantics": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "chartBarSemantics": "Bar chart with {count} items; tap or swipe to read each value.",
+  "@chartBarSemantics": {
+    "placeholders": {"count": {"type": "int"}}
+  },
   "reportsSubtitle": "Budget & stats",
   "noCategoryData": "No category data",
   "noCategoryDesc": "Expense records will show a category ranking here.",

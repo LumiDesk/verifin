@@ -1977,6 +1977,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String chartTrendSemantics(int count) {
+    return 'Line chart with $count data points; tap or swipe to read each value.';
+  }
+
+  @override
+  String chartBarSemantics(int count) {
+    return 'Bar chart with $count items; tap or swipe to read each value.';
+  }
+
+  @override
   String noDimDesc(String dim) {
     return 'No $dim records in this time range.';
   }
