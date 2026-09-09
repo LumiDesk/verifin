@@ -359,6 +359,7 @@ class BarChartPainter extends CustomPainter {
     this.selectedIndex,
     this.tooltip,
     this.textScaler = TextScaler.noScaling,
+    required this.brightness,
   });
 
   final List<double> values;
@@ -370,6 +371,9 @@ class BarChartPainter extends CustomPainter {
 
   /// 画布文字不经过 Theme 的 textTheme,系统字号缩放必须显式传入。
   final TextScaler textScaler;
+
+  /// 画布不经过 Theme,语义色需按当前明暗取实际值,必须由调用方显式传入。
+  final Brightness brightness;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -384,13 +388,14 @@ class BarChartPainter extends CustomPainter {
       ..color = axisColor.withValues(alpha: 0.18)
       ..strokeWidth = 1;
     final barPaint = Paint()
-      ..shader = const LinearGradient(
-        colors: <Color>[veriRoyal, veriBlue],
+      ..shader = LinearGradient(
+        colors: <Color>[veriRoyal, veriSemanticFor(brightness, veriBlue)],
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
       ).createShader(Offset.zero & size);
     // 有选中柱子时,其余柱子弱化,突出当前数据。
-    final dimmedBarPaint = Paint()..color = veriBlue.withValues(alpha: 0.30);
+    final dimmedBarPaint = Paint()
+      ..color = veriSemanticFor(brightness, veriBlue).withValues(alpha: 0.30);
 
     canvas.drawLine(
       Offset(chartRect.left, chartRect.bottom),
@@ -461,7 +466,8 @@ class BarChartPainter extends CustomPainter {
         oldDelegate.labelColor != labelColor ||
         oldDelegate.selectedIndex != selectedIndex ||
         oldDelegate.tooltip != tooltip ||
-        oldDelegate.textScaler != textScaler;
+        oldDelegate.textScaler != textScaler ||
+        oldDelegate.brightness != brightness;
   }
 }
 
@@ -703,6 +709,7 @@ class _InteractiveBarChartState extends State<InteractiveBarChart> {
               selectedIndex: _selectedIndex,
               tooltip: tooltip,
               textScaler: textScaler,
+              brightness: Theme.of(context).brightness,
             ),
             child: const SizedBox.expand(),
           ),

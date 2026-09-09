@@ -201,9 +201,9 @@ class HomePage extends StatelessWidget {
               ),
               child: Row(
                 children: <Widget>[
-                  const VeriIconBox(
+                  VeriIconBox(
                     icon: Icons.event_repeat_rounded,
-                    color: veriWarning,
+                    color: veriSemantic(context, veriWarning),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -322,14 +322,14 @@ List<double> trendSeriesValues(
   }
 }
 
-Color _trendSeriesColor(HomeTrendSeries series) {
+Color _trendSeriesColor(HomeTrendSeries series, Brightness brightness) {
   switch (series) {
     case HomeTrendSeries.expense:
-      return veriExpense;
+      return veriSemanticFor(brightness, veriExpense);
     case HomeTrendSeries.income:
-      return veriIncome;
+      return veriSemanticFor(brightness, veriIncome);
     case HomeTrendSeries.net:
-      return veriBlue;
+      return veriSemanticFor(brightness, veriBlue);
   }
 }
 
@@ -377,14 +377,24 @@ class HomeTrendPanel extends StatelessWidget {
     );
 
     final bigValue = computeHomeMetric(config.big, metricContext);
-    final bigColor = homeMetricColor(config.big, bigValue, mutedColor);
+    final bigColor = homeMetricColor(
+      config.big,
+      bigValue,
+      mutedColor,
+      Theme.of(context).brightness,
+    );
     final pillValue = computeHomeMetric(config.pill, metricContext);
-    final pillColor = homeMetricColor(config.pill, pillValue, mutedColor);
+    final pillColor = homeMetricColor(
+      config.pill,
+      pillValue,
+      mutedColor,
+      Theme.of(context).brightness,
+    );
 
     final title = config.title.isEmpty ? l10n.trendDefaultTitle : config.title;
     final seriesColor = isZeroAmount(chartValues.fold<double>(0, math.max))
         ? mutedColor
-        : _trendSeriesColor(config.series);
+        : _trendSeriesColor(config.series, Theme.of(context).brightness);
     final seriesLabel = homeTrendSeriesLabel(l10n, config.series);
 
     return VeriCard(
@@ -592,7 +602,12 @@ class _MetricTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final value = computeHomeMetric(metric, metricContext);
-    final color = homeMetricColor(metric, value, mutedColor);
+    final color = homeMetricColor(
+      metric,
+      value,
+      mutedColor,
+      Theme.of(context).brightness,
+    );
     return _TrendMetric(
       label: homeMetricLabel(AppLocalizations.of(context), metric),
       value: formatHomeMetric(metric, value),
@@ -754,6 +769,7 @@ class BudgetPanel extends StatelessWidget {
                             budget,
                             budget - expense,
                             ratio,
+                            Theme.of(context).brightness,
                           ),
                         ),
                       ),
@@ -777,7 +793,9 @@ class BudgetPanel extends StatelessWidget {
                           style: Theme.of(context).textTheme.titleLarge
                               ?.copyWith(
                                 fontWeight: FontWeight.w800,
-                                color: overspent ? veriExpense : null,
+                                color: overspent
+                                    ? veriSemantic(context, veriExpense)
+                                    : null,
                               ),
                         ),
                         Text(
@@ -901,7 +919,9 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
     final mutedColor = Theme.of(
       context,
     ).colorScheme.onSurface.withValues(alpha: 0.52);
-    final totalColor = isZeroAmount(total) ? mutedColor : colorForType(_type);
+    final totalColor = isZeroAmount(total)
+        ? mutedColor
+        : colorForType(context, _type);
     final totalText = switch (_type) {
       EntryType.expense => formatExpenseAmount(total),
       EntryType.income => formatIncomeAmount(total),
@@ -1145,7 +1165,9 @@ class _HomeBudgetRiskBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = snapshot.overBudget ? veriExpense : veriWarning;
+    final color = snapshot.overBudget
+        ? veriSemantic(context, veriExpense)
+        : veriSemantic(context, veriWarning);
     final l10n = AppLocalizations.of(context);
     final text = snapshot.overBudget
         ? l10n.budgetCatOver(
@@ -1218,7 +1240,7 @@ class _DailyStatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final amountColor = colorForType(type);
+    final amountColor = colorForType(context, type);
     final amountText = switch (type) {
       EntryType.expense => formatExpenseAmount(row.amount),
       EntryType.income => formatSignedAmount(row.amount),

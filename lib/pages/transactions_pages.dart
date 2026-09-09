@@ -514,7 +514,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
                                 color: isZeroAmount(expense)
                                     ? Theme.of(context).colorScheme.onSurface
                                           .withValues(alpha: 0.48)
-                                    : veriExpense,
+                                    : veriSemantic(context, veriExpense),
                               ),
                               SummaryMetric(
                                 label: AppLocalizations.of(
@@ -524,7 +524,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
                                 color: isZeroAmount(income)
                                     ? Theme.of(context).colorScheme.onSurface
                                           .withValues(alpha: 0.48)
-                                    : veriIncome,
+                                    : veriSemantic(context, veriIncome),
                               ),
                               SummaryMetric(
                                 label: AppLocalizations.of(context).netLabel,
@@ -1493,7 +1493,7 @@ class _BatchAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = onTap != null;
     final base = destructive
-        ? veriExpense
+        ? veriSemantic(context, veriExpense)
         : Theme.of(context).colorScheme.onSurface;
     final color = enabled ? base : base.withValues(alpha: 0.3);
     return InkWell(

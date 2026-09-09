@@ -59,7 +59,12 @@ class _DailyBudgetCard extends StatelessWidget {
     final ratio = hasBudget
         ? (todayExpense / dailyBudget).clamp(0, 1).toDouble()
         : 0.0;
-    final progressColor = budgetProgressColor(dailyBudget, remaining, ratio);
+    final progressColor = budgetProgressColor(
+      dailyBudget,
+      remaining,
+      ratio,
+      Theme.of(context).brightness,
+    );
     return VeriCard(
       padding: const EdgeInsets.fromLTRB(13, 12, 13, 14),
       child: Column(
@@ -120,7 +125,7 @@ class _DailyBudgetCard extends StatelessWidget {
                 _DailyBudgetStat(
                   label: l10n.dailyBudgetTodaySpent,
                   value: formatExpenseAmount(todayExpense),
-                  color: veriExpense,
+                  color: veriSemantic(context, veriExpense),
                 ),
                 const SizedBox(width: 16),
                 _DailyBudgetStat(
@@ -130,7 +135,9 @@ class _DailyBudgetCard extends StatelessWidget {
                   value: remaining < 0
                       ? formatExpenseAmount(remaining.abs())
                       : formatAmount(remaining),
-                  color: remaining < 0 ? veriExpense : veriIncome,
+                  color: remaining < 0
+                      ? veriSemantic(context, veriExpense)
+                      : veriSemantic(context, veriIncome),
                 ),
               ],
             ),
@@ -272,8 +279,8 @@ class _BudgetHistoryCard extends StatelessWidget {
     final deltaColor = isZeroAmount(expenseDelta)
         ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54)
         : expenseDelta > 0
-        ? veriExpense
-        : veriIncome;
+        ? veriSemantic(context, veriExpense)
+        : veriSemantic(context, veriIncome);
 
     return VeriCard(
       padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
@@ -349,9 +356,9 @@ class _BudgetHistoryCard extends StatelessWidget {
               ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.55),
               valueColor: AlwaysStoppedAnimation<Color>(
                 currentUsage >= 1
-                    ? veriExpense
+                    ? veriSemantic(context, veriExpense)
                     : currentUsage >= 0.85
-                    ? veriWarning
+                    ? veriSemantic(context, veriWarning)
                     : veriRoyal,
               ),
             ),
@@ -393,8 +400,8 @@ class _BudgetMonthRow extends StatelessWidget {
     final color = snapshot.budget <= 0
         ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.58)
         : snapshot.overBudget
-        ? veriExpense
-        : veriIncome;
+        ? veriSemantic(context, veriExpense)
+        : veriSemantic(context, veriIncome);
     final status = snapshot.budget <= 0
         ? AppLocalizations.of(context).notSetBudget
         : snapshot.overBudget
@@ -558,10 +565,10 @@ class _CategoryBudgetAlertCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final current = snapshot;
     final color = current == null
-        ? veriIncome
+        ? veriSemantic(context, veriIncome)
         : current.overBudget
-        ? veriExpense
-        : veriWarning;
+        ? veriSemantic(context, veriExpense)
+        : veriSemantic(context, veriWarning);
     final icon = current == null
         ? Icons.check_circle_outline
         : current.overBudget
@@ -652,9 +659,9 @@ class _CategoryBudgetRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = snapshot.budget <= 0
-        ? veriBlue
+        ? veriSemantic(context, veriBlue)
         : snapshot.spent > snapshot.budget
-        ? veriExpense
+        ? veriSemantic(context, veriExpense)
         : veriRoyal;
     final l10n = AppLocalizations.of(context);
     final subtitle = snapshot.budget <= 0
@@ -822,7 +829,12 @@ class _BudgetInsightCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = budgetProgressColor(budget, remaining, ratio);
+    final color = budgetProgressColor(
+      budget,
+      remaining,
+      ratio,
+      Theme.of(context).brightness,
+    );
     final (title, description, icon) = _budgetInsight(
       l10n: AppLocalizations.of(context),
       budget: budget,
@@ -937,15 +949,20 @@ class _MonthBudgetStatusChip extends StatelessWidget {
   }
 }
 
-Color budgetProgressColor(double budget, double remaining, double ratio) {
+Color budgetProgressColor(
+  double budget,
+  double remaining,
+  double ratio,
+  Brightness brightness,
+) {
   if (budget <= 0) {
     return veriLine;
   }
   if (remaining < 0 || ratio >= 1) {
-    return veriExpense;
+    return veriSemanticFor(brightness, veriExpense);
   }
   if (ratio >= 0.85) {
-    return veriWarning;
+    return veriSemanticFor(brightness, veriWarning);
   }
   return veriRoyal;
 }

@@ -380,7 +380,9 @@ Future<bool> showConfirmDialog(
         FilledButton(
           onPressed: () => Navigator.of(dialogContext).pop(true),
           style: destructive
-              ? FilledButton.styleFrom(backgroundColor: veriExpense)
+              ? FilledButton.styleFrom(
+                  backgroundColor: veriSemantic(context, veriExpense),
+                )
               : null,
           child: Text(confirmLabel ?? l10n.commonConfirm),
         ),
@@ -424,7 +426,9 @@ Future<EditorExitDecision> showUnsavedChangesDialog({
         TextButton(
           onPressed: () =>
               Navigator.of(dialogContext).pop(EditorExitDecision.discard),
-          style: TextButton.styleFrom(foregroundColor: veriExpense),
+          style: TextButton.styleFrom(
+            foregroundColor: veriSemantic(context, veriExpense),
+          ),
           child: Text(l10n.discardChanges),
         ),
         FilledButton(

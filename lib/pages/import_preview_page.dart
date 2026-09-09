@@ -830,7 +830,11 @@ class _SummaryCard extends StatelessWidget {
           ),
           if (skipped > 0)
             ActionChip(
-              avatar: Icon(Icons.error_outline, size: 16, color: veriExpense),
+              avatar: Icon(
+                Icons.error_outline,
+                size: 16,
+                color: veriSemantic(context, veriExpense),
+              ),
               label: Text(l10n.importPreviewSkipped(skipped)),
               onPressed: onViewSkipped,
             ),

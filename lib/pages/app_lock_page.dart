@@ -88,7 +88,7 @@ class _PinInputViewState extends State<PinInputView> {
               : Text(
                   error,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: veriExpense,
+                    color: veriSemantic(context, veriExpense),
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -334,7 +334,7 @@ class _PatternInputViewState extends State<PatternInputView> {
               : Text(
                   error,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: veriExpense,
+                    color: veriSemantic(context, veriExpense),
                     fontWeight: FontWeight.w700,
                   ),
                 ),

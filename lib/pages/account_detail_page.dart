@@ -139,7 +139,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                               ),
                               style: Theme.of(context).textTheme.displaySmall
                                   ?.copyWith(
-                                    color: veriBlue,
+                                    color: veriSemantic(context, veriBlue),
                                     fontWeight: FontWeight.w800,
                                   ),
                             ),
@@ -200,7 +200,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                       SizedBox(
                         height: 148,
                         child: InteractiveTrendChart(
-                          color: veriBlue,
+                          color: veriSemantic(context, veriBlue),
                           values: balanceTrendValues,
                           xLabels: _monthlyTrend
                               ? evenMonthAxisLabels()
@@ -547,7 +547,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                   child: SettingsRow(
                     icon: Icons.delete_outline,
                     title: AppLocalizations.of(context).accountDelete,
-                    contentColor: veriExpense,
+                    contentColor: veriSemantic(context, veriExpense),
                     trailing: entries.isEmpty
                         ? AppLocalizations.of(context).deletableLabel
                         : AppLocalizations.of(context).hasEntriesLabel,
@@ -1052,7 +1052,9 @@ class AccountReportPage extends StatelessWidget {
                         balance,
                         currentAccount.currencyCode,
                       ),
-                      color: balance < 0 ? veriExpense : veriRoyal,
+                      color: balance < 0
+                          ? veriSemantic(context, veriExpense)
+                          : veriRoyal,
                     ),
                     SummaryMetric(
                       label: AppLocalizations.of(context).entryTypeIncome,
@@ -1060,7 +1062,7 @@ class AccountReportPage extends StatelessWidget {
                         income,
                         controller.activeBook.baseCurrencyCode,
                       ),
-                      color: veriIncome,
+                      color: veriSemantic(context, veriIncome),
                     ),
                     SummaryMetric(
                       label: AppLocalizations.of(context).entryTypeExpense,
@@ -1072,7 +1074,7 @@ class AccountReportPage extends StatelessWidget {
                           ? Theme.of(
                               context,
                             ).colorScheme.onSurface.withValues(alpha: 0.48)
-                          : veriExpense,
+                          : veriSemantic(context, veriExpense),
                     ),
                   ],
                 ),
@@ -1181,7 +1183,7 @@ class _CreditCardDueBanner extends StatelessWidget {
     final due = nextDueDate(dueDay, now);
     final days = daysUntilDue(dueDay, now);
     final urgent = days <= 3;
-    final color = urgent ? veriExpense : veriRoyal;
+    final color = urgent ? veriSemantic(context, veriExpense) : veriRoyal;
     final l10n = AppLocalizations.of(context);
     final daysText = days == 0 ? l10n.dueToday : l10n.dueInDays(days);
     return Container(
@@ -1274,7 +1276,7 @@ class _CreditSummaryCard extends StatelessWidget {
                 value: limit > 0 ? (used / limit).clamp(0.0, 1.0) : 0.0,
                 minHeight: 8,
                 backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                color: veriBlue,
+                color: veriSemantic(context, veriBlue),
               ),
             ),
             const SizedBox(height: 10),
@@ -1360,7 +1362,7 @@ class _CreditStat extends StatelessWidget {
         Text(
           value,
           style: theme.textTheme.titleMedium?.copyWith(
-            color: highlight ? veriBlue : null,
+            color: highlight ? veriSemantic(context, veriBlue) : null,
             fontWeight: FontWeight.w800,
           ),
         ),

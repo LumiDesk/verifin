@@ -673,7 +673,7 @@ class _CategoryManageRow extends StatelessWidget {
               const SizedBox(width: 4),
               CategoryIconBox(
                 iconCode: category.iconCode,
-                color: colorForType(category.type),
+                color: colorForType(context, category.type),
                 size: 30,
               ),
               const SizedBox(width: 10),

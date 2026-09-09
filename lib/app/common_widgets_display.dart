@@ -382,7 +382,10 @@ class VeriSectionAction extends StatelessWidget {
         fixedSize: const Size(32, 32),
         minimumSize: const Size(32, 32),
         padding: EdgeInsets.zero,
-        backgroundColor: veriBlue.withValues(alpha: 0.10),
+        backgroundColor: veriSemantic(
+          context,
+          veriBlue,
+        ).withValues(alpha: 0.10),
         foregroundColor: veriRoyal,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(veriRadiusSm),

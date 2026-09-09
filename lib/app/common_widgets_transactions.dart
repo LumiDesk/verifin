@@ -61,7 +61,7 @@ class TransactionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final category = categoryById(entry.categoryId, categories);
     final noneLabel = AppLocalizations.of(context).noAccountLabel;
-    final amountColor = colorForType(entry.type);
+    final amountColor = colorForType(context, entry.type);
     final amountText = switch (entry.type) {
       EntryType.expense => formatSignedUserMoney(
         -entry.amount,
@@ -216,7 +216,7 @@ class TransactionTile extends StatelessWidget {
                         else if (entry.refundedAmount > 0)
                           _EntryBadge(
                             text: AppLocalizations.of(context).badgeRefunded,
-                            color: veriIncome,
+                            color: veriSemantic(context, veriIncome),
                           ),
                       ],
                     ),

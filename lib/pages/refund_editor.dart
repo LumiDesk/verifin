@@ -125,9 +125,9 @@ class RefundSection extends StatelessWidget {
                 l10n.refundPendingTotal(
                   formatUserMoney(pendingTotal, expense.currencyCode),
                 ),
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: veriBlue),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: veriSemantic(context, veriBlue),
+                ),
               ),
             ),
           const SizedBox(height: 4),
@@ -197,7 +197,9 @@ class _RefundRow extends StatelessWidget {
             Icon(
               settled ? Icons.check_circle : Icons.schedule,
               size: 20,
-              color: settled ? veriIncome : veriBlue,
+              color: settled
+                  ? veriSemantic(context, veriIncome)
+                  : veriSemantic(context, veriBlue),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -671,7 +673,7 @@ class _RefundSheetState extends State<_RefundSheet> {
                       IconButton(
                         onPressed: _delete,
                         icon: const Icon(Icons.delete_outline),
-                        color: veriExpense,
+                        color: veriSemantic(context, veriExpense),
                         tooltip: l10n.commonDelete,
                       ),
                   ],
@@ -689,7 +691,7 @@ class _RefundSheetState extends State<_RefundSheet> {
                           '+${formatUserMoney(_amount, widget.expense.currencyCode)}',
                           style: theme.textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.w800,
-                            color: veriIncome,
+                            color: veriSemantic(context, veriIncome),
                           ),
                         ),
                         Text(

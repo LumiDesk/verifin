@@ -179,7 +179,7 @@ class ProfilePage extends StatelessWidget {
               ),
               _FeatureTileData(
                 icon: Icons.category_outlined,
-                color: veriBlue,
+                color: veriSemantic(context, veriBlue),
                 label: AppLocalizations.of(context).categoryMgmt,
                 subtitle: AppLocalizations.of(
                   context,
@@ -235,7 +235,7 @@ class ProfilePage extends StatelessWidget {
               ),
               _FeatureTileData(
                 icon: Icons.notifications_active_outlined,
-                color: veriWarning,
+                color: veriSemantic(context, veriWarning),
                 label: AppLocalizations.of(context).reminderTitle,
                 subtitle: controller.reminderSettings.enabled
                     ? controller.reminderSettings.timeLabel
@@ -248,7 +248,7 @@ class ProfilePage extends StatelessWidget {
               ),
               _FeatureTileData(
                 icon: Icons.storage_outlined,
-                color: veriBlue,
+                color: veriSemantic(context, veriBlue),
                 label: AppLocalizations.of(context).dataManagement,
                 subtitle: AppLocalizations.of(context).backupRestoreShort,
                 onTap: () => Navigator.of(context).push<void>(
@@ -282,7 +282,7 @@ class ProfilePage extends StatelessWidget {
               // 新增入口一律追加在组末：已有入口的位置不变，避免用户改掉肌肉记忆。
               _FeatureTileData(
                 icon: Icons.savings_outlined,
-                color: veriIncome,
+                color: veriSemantic(context, veriIncome),
                 label: AppLocalizations.of(context).budgetTitle,
                 subtitle: AppLocalizations.of(
                   context,

@@ -708,17 +708,17 @@ class _UpdateCheckDialogState extends State<_UpdateCheckDialog> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Icon(
+                    Icon(
                       Icons.warning_amber_rounded,
                       size: 16,
-                      color: veriExpense,
+                      color: veriSemantic(context, veriExpense),
                     ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         AppLocalizations.of(context).prereleaseNoticeInline,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: veriExpense,
+                          color: veriSemantic(context, veriExpense),
                           fontWeight: FontWeight.w600,
                         ),
                       ),

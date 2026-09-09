@@ -385,7 +385,10 @@ class _AssetsPageState extends State<AssetsPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const Icon(Icons.currency_exchange, color: veriWarning),
+                  Icon(
+                    Icons.currency_exchange,
+                    color: veriSemantic(context, veriWarning),
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(

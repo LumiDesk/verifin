@@ -150,8 +150,9 @@ void main() {
       return text.style?.color;
     }
 
-    // 支出红色;账户选择框前置图标为账户图标;日期/时间旁没有多余账户 Chip。
-    expect(amountColor(), veriExpense);
+    // 支出红色（浅色主题用加深变体）；账户选择框前置图标为账户图标；
+    // 日期/时间旁没有多余账户 Chip。
+    expect(amountColor(), veriSemanticFor(Brightness.light, veriExpense));
     expect(
       find.descendant(
         of: find.byKey(const Key('account_dropdown')),
@@ -163,11 +164,11 @@ void main() {
 
     await tester.tap(find.text('收入'));
     await tester.pumpAndSettle();
-    expect(amountColor(), veriIncome);
+    expect(amountColor(), veriSemanticFor(Brightness.light, veriIncome));
 
     await tester.tap(find.text('转账'));
     await tester.pumpAndSettle();
-    expect(amountColor(), veriBlue);
+    expect(amountColor(), veriSemanticFor(Brightness.light, veriBlue));
 
     // 账户选择弹窗展示账户图标与余额。
     await tester.tap(find.byKey(const Key('account_dropdown')));

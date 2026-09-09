@@ -679,11 +679,11 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
         .firstOrNull;
     // 大金额颜色跟随类型:支出红、收入青绿、转账保持蓝色。
     final amountColor = switch (_type) {
-      EntryType.expense => veriExpense,
-      EntryType.income => veriIncome,
-      EntryType.transfer => veriBlue,
+      EntryType.expense => veriSemantic(context, veriExpense),
+      EntryType.income => veriSemantic(context, veriIncome),
+      EntryType.transfer => veriSemantic(context, veriBlue),
       // 退款不在此页手动选择，仅作穷尽兜底（正向流入用青绿）。
-      EntryType.refund => veriIncome,
+      EntryType.refund => veriSemantic(context, veriIncome),
     };
     // 用带单位的格式化：单币种账本按偏好隐藏单位，多币种账本必须能看出币种。
     final amountNumber = formatUserMoney(
@@ -1200,7 +1200,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
               (_missingRateCodes.toList()..sort()).join(', '),
             ),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: veriWarning,
+              color: veriSemantic(context, veriWarning),
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -2066,10 +2066,10 @@ class _EntryTypeButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final accent = switch (type) {
-      EntryType.expense => veriExpense,
-      EntryType.income => veriIncome,
+      EntryType.expense => veriSemantic(context, veriExpense),
+      EntryType.income => veriSemantic(context, veriIncome),
       EntryType.transfer => veriRoyal,
-      EntryType.refund => veriIncome,
+      EntryType.refund => veriSemantic(context, veriIncome),
     };
     return Material(
       key: selected ? Key('entry_type_selected_${type.name}') : null,

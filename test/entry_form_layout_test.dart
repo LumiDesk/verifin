@@ -82,7 +82,7 @@ void main() {
             ),
           )
           .color,
-      veriExpense,
+      veriSemanticFor(Brightness.light, veriExpense),
     );
 
     await tester.tap(find.byKey(const Key('entry_type_income')));
@@ -97,7 +97,7 @@ void main() {
             ),
           )
           .color,
-      veriIncome,
+      veriSemanticFor(Brightness.light, veriIncome),
     );
 
     await tester.tap(find.byKey(const Key('entry_type_transfer')));
@@ -111,7 +111,7 @@ void main() {
             ),
           )
           .color,
-      veriBlue,
+      veriSemanticFor(Brightness.light, veriBlue),
     );
   });
 

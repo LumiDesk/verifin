@@ -168,7 +168,7 @@ class _LogTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (record.level) {
-      AppLogLevel.error => veriExpense,
+      AppLogLevel.error => veriSemantic(context, veriExpense),
       AppLogLevel.warning => const Color(0xFFE8A33D),
       AppLogLevel.info => Theme.of(context).hintColor,
     };

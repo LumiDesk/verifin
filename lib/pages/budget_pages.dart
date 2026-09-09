@@ -177,6 +177,7 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
                                       budget,
                                       remaining,
                                       ratio,
+                                      Theme.of(context).brightness,
                                     ),
                                   ),
                                 ),
@@ -208,6 +209,7 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
                                             budget,
                                             remaining,
                                             ratio,
+                                            Theme.of(context).brightness,
                                           ),
                                         ),
                                   ),
@@ -242,7 +244,7 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
                                 style: Theme.of(context).textTheme.displaySmall
                                     ?.copyWith(
                                       color: remaining < 0
-                                          ? veriExpense
+                                          ? veriSemantic(context, veriExpense)
                                           : Theme.of(
                                               context,
                                             ).colorScheme.onSurface,
@@ -304,7 +306,7 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
                                   : l10n.budgetMonthExpense,
                               value: formatExpenseAmount(monthExpense),
                               icon: Icons.payments_outlined,
-                              color: veriExpense,
+                              color: veriSemantic(context, veriExpense),
                             ),
                             _BudgetMetricTile(
                               label: remaining < 0
@@ -320,7 +322,9 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
                               icon: remaining < 0
                                   ? Icons.warning_amber_rounded
                                   : Icons.account_balance_wallet_outlined,
-                              color: remaining < 0 ? veriExpense : veriIncome,
+                              color: remaining < 0
+                                  ? veriSemantic(context, veriExpense)
+                                  : veriSemantic(context, veriIncome),
                             ),
                             _BudgetMetricTile(
                               label: AppLocalizations.of(
@@ -336,7 +340,7 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
                               ).budgetAmountLabel,
                               value: formatAmount(budget),
                               icon: Icons.flag_outlined,
-                              color: veriBlue,
+                              color: veriSemantic(context, veriBlue),
                             ),
                           ],
                         );

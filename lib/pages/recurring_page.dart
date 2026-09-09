@@ -74,7 +74,10 @@ class _RecurringRulesPageState extends State<RecurringRulesPage> {
                   VeriCard(
                     child: Row(
                       children: <Widget>[
-                        const Icon(Icons.currency_exchange, color: veriWarning),
+                        Icon(
+                          Icons.currency_exchange,
+                          color: veriSemantic(context, veriWarning),
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
@@ -241,7 +244,7 @@ class _RecurringRow extends StatelessWidget {
           children: <Widget>[
             CategoryIconBox(
               iconCode: category.iconCode,
-              color: colorForType(rule.type),
+              color: colorForType(context, rule.type),
               size: 32,
             ),
             const SizedBox(width: 10),
@@ -271,7 +274,7 @@ class _RecurringRow extends StatelessWidget {
                     Text(
                       '${AppLocalizations.of(context).recurringMissingRate}: ${(missingCodes.toList()..sort()).join(', ')}',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: veriWarning,
+                        color: veriSemantic(context, veriWarning),
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -771,7 +774,7 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
               (_missingRateCodes.toList()..sort()).join(', '),
             ),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: veriWarning,
+              color: veriSemantic(context, veriWarning),
               fontWeight: FontWeight.w700,
             ),
           ),
