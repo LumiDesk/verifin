@@ -32,6 +32,10 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Check formatting
+        # 与 ci.yml 保持一致：打标签的发布提交同样必须通过格式门禁。
+        run: dart format --output=none --set-exit-if-changed .
+
       - name: Analyze
         run: flutter analyze
 
