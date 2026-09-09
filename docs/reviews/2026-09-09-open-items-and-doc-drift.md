@@ -158,6 +158,8 @@
 
 ## 7. 文档漂移清单（按文件）
 
+> **整理状态（2026-09-09）**：本节列出的事实性漂移**已全部订正**（提交 `9d5a3d8`，22 个文件）；同时给四份历史记录稿加了统一抬头，并在 `architecture.md` 补了「文档权威顺序」一节。下面保留原始清单作为订正依据。
+
 ### 7.1 准确（13 份，无需改动）
 
 `docs/dev/` 下：architecture.md、ai-tools.md、category-budget-override-design.md、save-interaction-consistency-design.md、anchored-menu-rollout.md、anchored-choice-rollout.md、liquid-glass-navigation.md、glass-material-preview.md、android-development.md、android-visual-stability.md、account-icon-assets.md、auto-capture-plan.md、feedback-system.md。
