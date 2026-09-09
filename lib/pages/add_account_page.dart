@@ -21,6 +21,10 @@ class _AddAccountPageState extends State<AddAccountPage> {
   bool _iconManuallySelected = false;
   // 「后四位跟随完整卡号」开关，新账户默认打开。
   bool _cardLast4Follows = true;
+  // 信用类账户的额度 / 账单日 / 还款日：新建时就能填，省去建完再去详情页补一次。
+  double? _creditLimit;
+  int? _statementDay;
+  int? _dueDay;
   bool _saved = false;
   final EditorExitController _exitController = EditorExitController();
 
@@ -127,6 +131,45 @@ class _AddAccountPageState extends State<AddAccountPage> {
                       follows: _cardLast4Follows,
                       onFollowsChanged: (value) =>
                           setState(() => _cardLast4Follows = value),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  if (_type.supportsCredit) ...<Widget>[
+                    SelectField(
+                      key: const Key('add_account_credit_limit'),
+                      label: AppLocalizations.of(context).creditLimitLabel,
+                      value: _creditLimit == null
+                          ? AppLocalizations.of(context).notSet
+                          : formatUserMoney(
+                              _creditLimit!,
+                              _currencyCode ?? defaultCurrencyCode,
+                            ),
+                      icon: Icons.speed_outlined,
+                      onTap: _pickCreditLimit,
+                    ),
+                    const SizedBox(height: 10),
+                    SelectField(
+                      key: const Key('add_account_statement_day'),
+                      label: AppLocalizations.of(context).statementDay,
+                      value: _statementDay == null
+                          ? AppLocalizations.of(context).notSet
+                          : AppLocalizations.of(
+                              context,
+                            ).monthlyDayLabel(_statementDay!),
+                      icon: Icons.event_repeat_outlined,
+                      onTap: () => _pickBillingDay(isDue: false),
+                    ),
+                    const SizedBox(height: 10),
+                    SelectField(
+                      key: const Key('add_account_due_day'),
+                      label: AppLocalizations.of(context).dueDay,
+                      value: _dueDay == null
+                          ? AppLocalizations.of(context).notSet
+                          : AppLocalizations.of(
+                              context,
+                            ).monthlyDayLabel(_dueDay!),
+                      icon: Icons.event_available_outlined,
+                      onTap: () => _pickBillingDay(isDue: true),
                     ),
                     const SizedBox(height: 10),
                   ],
@@ -304,7 +347,54 @@ class _AddAccountPageState extends State<AddAccountPage> {
             (_type.supportsCardLast4 &&
                 (_cardNumberController.text.trim().isNotEmpty ||
                     cardLast4Of(_cardLast4Controller.text).isNotEmpty ||
-                    !_cardLast4Follows)));
+                    !_cardLast4Follows)) ||
+            (_type.supportsCredit &&
+                (_creditLimit != null ||
+                    _statementDay != null ||
+                    _dueDay != null)));
+  }
+
+  Future<void> _pickCreditLimit() async {
+    final code = _currencyCode ?? defaultCurrencyCode;
+    final value = await showNumberPadSheet(
+      context,
+      title: AppLocalizations.of(context).creditLimitEditTitle,
+      initialAmount: _creditLimit,
+      allowZero: true,
+      currencyCode: code,
+      maxFractionDigits: CurrencyCatalog.require(code).minorUnit,
+    );
+    if (value == null || !mounted) {
+      return;
+    }
+    setState(() => _creditLimit = value <= 0 ? null : value);
+  }
+
+  /// 选择账单日 / 还款日（1–28 或不设置）。
+  Future<void> _pickBillingDay({required bool isDue}) async {
+    const clearValue = 0;
+    final current = (isDue ? _dueDay : _statementDay) ?? clearValue;
+    final selected = await showOptionSheet<int>(
+      context: context,
+      title: isDue
+          ? AppLocalizations.of(context).pickDueDay
+          : AppLocalizations.of(context).pickStatementDay,
+      values: <int>[clearValue, for (var day = 1; day <= 28; day++) day],
+      selected: current,
+      labelOf: (value) => value == clearValue
+          ? AppLocalizations.of(context).clearOption
+          : AppLocalizations.of(context).monthlyDayLabel(value),
+    );
+    if (selected == null || !mounted) {
+      return;
+    }
+    setState(() {
+      if (isDue) {
+        _dueDay = selected == clearValue ? null : selected;
+      } else {
+        _statementDay = selected == clearValue ? null : selected;
+      }
+    });
   }
 
   Future<void> _saveAndExit() async {
@@ -339,6 +429,9 @@ class _AddAccountPageState extends State<AddAccountPage> {
             ? _cardNumberController.text.trim()
             : '',
         cardLast4Follows: _type.supportsCardLast4 ? _cardLast4Follows : true,
+        creditLimit: _type.supportsCredit ? _creditLimit : null,
+        statementDay: _type.supportsCredit ? _statementDay : null,
+        dueDay: _type.supportsCredit ? _dueDay : null,
       ),
     );
   }
