@@ -3477,6 +3477,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get importPreviewNothingSelected => 'Nothing selected to import';
+
+  @override
   String get importPreviewNothingToImport => 'No data to import';
 
   @override

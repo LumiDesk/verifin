@@ -728,7 +728,10 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
                         ? null
                         : _confirm,
                     child: Text(
-                      includedCount == 0
+                      // 全部排除时按钮是禁用的；此时说清原因，而不是显示「只导入 0 个账户」。
+                      includedCount == 0 && _accountsToCreateCount == 0
+                          ? l10n.importPreviewNothingSelected
+                          : includedCount == 0
                           ? l10n.importPreviewConfirmAccountsOnly(
                               _accountsToCreateCount,
                             )

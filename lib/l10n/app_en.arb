@@ -1232,6 +1232,7 @@
     }
   },
   "importPreviewConfirmAccountsOnly": "Import ({count} accounts)",
+  "importPreviewNothingSelected": "Nothing selected to import",
   "@importPreviewConfirmAccountsOnly": {
     "placeholders": {
       "count": {

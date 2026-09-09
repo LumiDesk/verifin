@@ -2171,6 +2171,7 @@
     }
   },
   "importPreviewConfirmAccountsOnly": "确认导入（{count} 个账户）",
+  "importPreviewNothingSelected": "没有勾选任何可导入的内容",
   "@importPreviewConfirmAccountsOnly": {
     "placeholders": {
       "count": {

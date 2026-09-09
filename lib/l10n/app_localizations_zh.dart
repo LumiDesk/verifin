@@ -3385,6 +3385,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get importPreviewNothingSelected => '没有勾选任何可导入的内容';
+
+  @override
   String get importPreviewNothingToImport => '没有可导入的数据';
 
   @override

@@ -6212,6 +6212,12 @@ abstract class AppLocalizations {
   /// **'确认导入（{count} 个账户）'**
   String importPreviewConfirmAccountsOnly(int count);
 
+  /// No description provided for @importPreviewNothingSelected.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有勾选任何可导入的内容'**
+  String get importPreviewNothingSelected;
+
   /// No description provided for @importPreviewNothingToImport.
   ///
   /// In zh, this message translates to:
