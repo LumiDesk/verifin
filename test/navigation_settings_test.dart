@@ -125,7 +125,10 @@ void main() {
             firstDelegate.crossAxisSpacing *
                 (firstDelegate.crossAxisCount - 1)) /
         firstDelegate.crossAxisCount;
-    final rowHeight = cellWidth / firstDelegate.childAspectRatio;
+    // 宫格显式给了 mainAxisExtent（随系统字号放大），此时 childAspectRatio 不生效。
+    final rowHeight =
+        firstDelegate.mainAxisExtent ??
+        cellWidth / firstDelegate.childAspectRatio;
     expect(tester.getSize(firstGrid).height, closeTo(rowHeight, 0.1));
     expect(
       tester.getSize(secondGrid).height,

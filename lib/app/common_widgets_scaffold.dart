@@ -192,8 +192,11 @@ class VeriHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final actionWidgets = actions ?? const <Widget>[];
-    return SizedBox(
-      height: compact ? veriCompactHeaderHeight : veriHeaderHeight,
+    // 最小高度而非固定高度：系统字号放大时标题/副标题两行不能被裁掉。
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        minHeight: compact ? veriCompactHeaderHeight : veriHeaderHeight,
+      ),
       child: Row(
         children: <Widget>[
           if (showBack) ...<Widget>[
@@ -386,12 +389,17 @@ class SectionTitle extends StatelessWidget {
           ),
         ),
         if (trailing != null)
-          Text(
-            trailing!,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.62),
+          Flexible(
+            child: Text(
+              trailing!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.end,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.62),
+              ),
             ),
           ),
       ],

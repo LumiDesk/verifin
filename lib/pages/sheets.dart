@@ -1291,7 +1291,7 @@ class _CategoryIconPickerBodyState extends State<_CategoryIconPickerBody> {
           16,
           16,
           16,
-          16 + MediaQuery.of(context).viewInsets.bottom,
+          16 + MediaQuery.viewInsetsOf(context).bottom,
         ),
         child: ConstrainedBox(
           constraints: BoxConstraints(maxHeight: maxHeight),

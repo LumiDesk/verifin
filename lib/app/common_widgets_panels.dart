@@ -439,11 +439,12 @@ class _CalendarPreviewState extends State<CalendarPreview> {
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
               mainAxisSpacing: 5,
               crossAxisSpacing: 4,
-              mainAxisExtent: 50,
+              // 日期格的三行文案高度都写死过，字号放大时必须一起放大，否则裁切。
+              mainAxisExtent: MediaQuery.textScalerOf(context).scale(50),
             ),
             itemCount: leadingBlanks + days,
             itemBuilder: (context, index) {
@@ -487,7 +488,7 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                   child: Column(
                     children: <Widget>[
                       SizedBox(
-                        height: 16,
+                        height: MediaQuery.textScalerOf(context).scale(16),
                         child: Text(
                           '$day',
                           style: Theme.of(context).textTheme.titleSmall
@@ -503,7 +504,7 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                         ),
                       ),
                       SizedBox(
-                        height: 12,
+                        height: MediaQuery.textScalerOf(context).scale(12),
                         child: expense <= 0
                             ? const SizedBox.shrink()
                             : Text(
@@ -513,7 +514,7 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                               ),
                       ),
                       SizedBox(
-                        height: 12,
+                        height: MediaQuery.textScalerOf(context).scale(12),
                         child: income <= 0
                             ? const SizedBox.shrink()
                             : Text(

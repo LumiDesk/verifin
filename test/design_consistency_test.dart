@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/app_theme.dart';
 import 'package:verifin/app/common_widgets.dart';
@@ -70,4 +71,38 @@ void main() {
       }, skip: !veriUnifiedDesignPreview);
     }
   }
+
+  // 大字号 + 英文是最容易撞上裁切的组合：四列宫格宽度固定，英文标签又长。
+  testWidgets('大字号下「我的」宫格标签不被裁切', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(360, 852);
+    tester.platformDispatcher.textScaleFactorTestValue = 1.5;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    final controller = await pumpApp(tester);
+    controller.setLocalePreference(LocalePreference.en);
+    await tester.pumpAndSettle();
+    await tapBottomTab(tester, 3);
+
+    final grid = find
+        .descendant(
+          of: find.byType(ProfilePage),
+          matching: find.byType(GridView),
+        )
+        .first;
+    for (final element
+        in find.descendant(of: grid, matching: find.byType(Text)).evaluate()) {
+      final paragraph = element.renderObject;
+      if (paragraph is! RenderParagraph) {
+        continue;
+      }
+      expect(
+        paragraph.didExceedMaxLines,
+        isFalse,
+        reason: '宫格文案被裁切：${(element.widget as Text).data}',
+      );
+    }
+    expect(tester.takeException(), isNull);
+  });
 }

@@ -74,7 +74,7 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
               14,
               14,
               14,
-              14 + MediaQuery.of(context).viewInsets.bottom,
+              14 + MediaQuery.viewInsetsOf(context).bottom,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -89,46 +89,49 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
                   ),
                   const SizedBox(height: 10),
                 ],
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(veriRadiusMd),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      Text(
-                        key: const Key('number_pad_display'),
-                        _input.isEmpty ? '0' : _input,
-                        textAlign: TextAlign.end,
-                        style: Theme.of(context).textTheme.displaySmall
-                            ?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                      // 算式模式在右下角展示浅色结果预览；不完整则提示。
-                      if (_hasOperator) ...<Widget>[
-                        const SizedBox(height: 2),
+                // 数字显示行单独成层：按键只重绘这一行，不带动整块毛玻璃背景
+                // 重算模糊（弹层越大越贵）。
+                RepaintBoundary(
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(veriRadiusMd),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
                         Text(
-                          _result == null
-                              ? AppLocalizations.of(context).calcIncomplete
-                              : '= ${_formatResult(_result!)}',
+                          key: const Key('number_pad_display'),
+                          _input.isEmpty ? '0' : _input,
                           textAlign: TextAlign.end,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurface.withValues(alpha: 0.45),
-                                fontWeight: FontWeight.w600,
-                              ),
+                          style: Theme.of(context).textTheme.displaySmall
+                              ?.copyWith(fontWeight: FontWeight.w800),
                         ),
+                        // 算式模式在右下角展示浅色结果预览；不完整则提示。
+                        if (_hasOperator) ...<Widget>[
+                          const SizedBox(height: 2),
+                          Text(
+                            _result == null
+                                ? AppLocalizations.of(context).calcIncomplete
+                                : '= ${_formatResult(_result!)}',
+                            textAlign: TextAlign.end,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.45),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
                 if (widget.maxAmount != null)
@@ -191,25 +194,28 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
                       height: cellH * 2 + spacing,
                       child: _buildKey(context, 'OK'),
                     );
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        keyRow(<String>['C', '⌫', '÷', '×']),
-                        const SizedBox(height: spacing),
-                        keyRow(<String>['7', '8', '9', '-']),
-                        const SizedBox(height: spacing),
-                        keyRow(<String>['4', '5', '6', '+']),
-                        const SizedBox(height: spacing),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            leftBottom,
-                            const SizedBox(width: spacing),
-                            rightBottom,
-                          ],
-                        ),
-                      ],
+                    // 按键区单独成层：按键只重绘按键，不触发外层毛玻璃重算模糊。
+                    return RepaintBoundary(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          keyRow(<String>['C', '⌫', '÷', '×']),
+                          const SizedBox(height: spacing),
+                          keyRow(<String>['7', '8', '9', '-']),
+                          const SizedBox(height: spacing),
+                          keyRow(<String>['4', '5', '6', '+']),
+                          const SizedBox(height: spacing),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              leftBottom,
+                              const SizedBox(width: spacing),
+                              rightBottom,
+                            ],
+                          ),
+                        ],
+                      ),
                     );
                   },
                 ),

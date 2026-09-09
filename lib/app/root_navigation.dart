@@ -704,6 +704,9 @@ class _DestinationButtonState extends State<_DestinationButton> {
                   const SizedBox(height: 2),
                   Text(
                     widget.destination.label,
+                    // 大字号下英文标签会换行把图标挤出胶囊：限一行，宁可省略。
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       fontSize: veriUnifiedDesignPreview ? 12 : 10,
                       color: color,

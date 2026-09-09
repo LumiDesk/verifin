@@ -471,22 +471,33 @@ class HomeTrendPanel extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Container(
-                  key: const Key('home_summary_pill'),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: pillColor.withValues(alpha: isDark ? 0.16 : 0.10),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    '${homeMetricLabel(l10n, config.pill)} '
-                    '${formatHomeMetric(config.pill, pillValue)}',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: pillColor,
-                      fontWeight: FontWeight.w800,
+                // 摘要胶囊可收缩：大字号下英文标签比整行还宽，不能让整行溢出；
+                // 收缩后仍靠右对齐，常规字号下观感与原来一致。
+                Flexible(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Container(
+                      key: const Key('home_summary_pill'),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: pillColor.withValues(
+                          alpha: isDark ? 0.16 : 0.10,
+                        ),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '${homeMetricLabel(l10n, config.pill)} '
+                        '${formatHomeMetric(config.pill, pillValue)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: pillColor,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ),
                   ),
                 ),

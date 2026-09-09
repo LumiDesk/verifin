@@ -281,53 +281,65 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      mainAxisSpacing: 8,
-                      crossAxisSpacing: 8,
-                      childAspectRatio: 2.45,
-                      children: <Widget>[
-                        _BudgetMetricTile(
-                          label: cyclic
-                              ? l10n.budgetPeriodExpense
-                              : l10n.budgetMonthExpense,
-                          value: formatExpenseAmount(monthExpense),
-                          icon: Icons.payments_outlined,
-                          color: veriExpense,
-                        ),
-                        _BudgetMetricTile(
-                          label: remaining < 0
-                              ? AppLocalizations.of(
-                                  context,
-                                ).budgetOverAmountLabel
-                              : AppLocalizations.of(
-                                  context,
-                                ).budgetRemainingQuota,
-                          value: remaining < 0
-                              ? formatExpenseAmount(remaining.abs())
-                              : formatAmount(remaining),
-                          icon: remaining < 0
-                              ? Icons.warning_amber_rounded
-                              : Icons.account_balance_wallet_outlined,
-                          color: remaining < 0 ? veriExpense : veriIncome,
-                        ),
-                        _BudgetMetricTile(
-                          label: AppLocalizations.of(
-                            context,
-                          ).budgetDailyRemaining,
-                          value: formatAmount(dailyAvailable),
-                          icon: Icons.today_outlined,
-                          color: veriRoyal,
-                        ),
-                        _BudgetMetricTile(
-                          label: AppLocalizations.of(context).budgetAmountLabel,
-                          value: formatAmount(budget),
-                          icon: Icons.flag_outlined,
-                          color: veriBlue,
-                        ),
-                      ],
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final cellWidth = (constraints.maxWidth - 8) / 2;
+                        return GridView.count(
+                          crossAxisCount: 2,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          mainAxisSpacing: 8,
+                          crossAxisSpacing: 8,
+                          // 固定宽高比在字号放大时会把标签和数值挤出格子，按内容
+                          // 高度兜底；常规字号下高度与原设计一致。
+                          mainAxisExtent: math.max(
+                            cellWidth / 2.45,
+                            16 + MediaQuery.textScalerOf(context).scale(38),
+                          ),
+                          children: <Widget>[
+                            _BudgetMetricTile(
+                              label: cyclic
+                                  ? l10n.budgetPeriodExpense
+                                  : l10n.budgetMonthExpense,
+                              value: formatExpenseAmount(monthExpense),
+                              icon: Icons.payments_outlined,
+                              color: veriExpense,
+                            ),
+                            _BudgetMetricTile(
+                              label: remaining < 0
+                                  ? AppLocalizations.of(
+                                      context,
+                                    ).budgetOverAmountLabel
+                                  : AppLocalizations.of(
+                                      context,
+                                    ).budgetRemainingQuota,
+                              value: remaining < 0
+                                  ? formatExpenseAmount(remaining.abs())
+                                  : formatAmount(remaining),
+                              icon: remaining < 0
+                                  ? Icons.warning_amber_rounded
+                                  : Icons.account_balance_wallet_outlined,
+                              color: remaining < 0 ? veriExpense : veriIncome,
+                            ),
+                            _BudgetMetricTile(
+                              label: AppLocalizations.of(
+                                context,
+                              ).budgetDailyRemaining,
+                              value: formatAmount(dailyAvailable),
+                              icon: Icons.today_outlined,
+                              color: veriRoyal,
+                            ),
+                            _BudgetMetricTile(
+                              label: AppLocalizations.of(
+                                context,
+                              ).budgetAmountLabel,
+                              value: formatAmount(budget),
+                              icon: Icons.flag_outlined,
+                              color: veriBlue,
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),

@@ -331,22 +331,50 @@ class _FeatureGridCard extends StatelessWidget {
           SectionTitle(title: title),
           const SizedBox(height: 6),
           LayoutBuilder(
-            builder: (context, constraints) => GridView.count(
-              crossAxisCount: 4,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              childAspectRatio: 0.82,
-              // 宫格含固定图标和两行文案，不能随窄屏按比例压低到内容高度以下。
-              mainAxisExtent: math.max(
-                (constraints.maxWidth - 12) / 4 / 0.82,
-                100 * MediaQuery.textScalerOf(context).scale(12) / 12,
-              ),
-              mainAxisSpacing: 4,
-              crossAxisSpacing: 4,
-              children: tiles
-                  .map((data) => _FeatureTile(data: data))
-                  .toList(growable: false),
-            ),
+            builder: (context, constraints) {
+              final textScaler = MediaQuery.textScalerOf(context);
+              final labelStyle =
+                  Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ) ??
+                  const TextStyle();
+              // 用最长的一个「词」量一次宽度：标签可以换行，但单个词放不下就只能
+              // 省略。据此决定列数——常规字号的中文仍是四列，长英文或大字号自动
+              // 降列，不裁切标签。
+              final longestWord = tiles
+                  .expand((data) => data.label.split(' '))
+                  .fold<String>('', (a, b) => b.length > a.length ? b : a);
+              final painter = TextPainter(
+                text: TextSpan(text: longestWord, style: labelStyle),
+                textScaler: textScaler,
+                textDirection: Directionality.of(context),
+                maxLines: 1,
+              )..layout();
+              final needed = painter.width + 8;
+              final columns = math.min(
+                4,
+                math.max(2, (constraints.maxWidth / needed).floor()),
+              );
+              final cellWidth =
+                  (constraints.maxWidth - (columns - 1) * 4) / columns;
+              return GridView.count(
+                crossAxisCount: columns,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                childAspectRatio: 0.82,
+                // 图标 42 + 间距 7 + 标签两行 + 间距 1 + 副标题一行 + 上下内边距 16；
+                // 高度随系统字号放大，不能把文案挤到格子外面。
+                mainAxisExtent: math.max(
+                  cellWidth / 0.82,
+                  66 + textScaler.scale(20) * 2 + textScaler.scale(16),
+                ),
+                mainAxisSpacing: 4,
+                crossAxisSpacing: 4,
+                children: tiles
+                    .map((data) => _FeatureTile(data: data))
+                    .toList(growable: false),
+              );
+            },
           ),
         ],
       ),
@@ -389,8 +417,10 @@ class _FeatureTile extends StatelessWidget {
             const SizedBox(height: 7),
             Text(
               data.label,
-              maxLines: 1,
+              // 允许两行：英文标签（Currencies & rates 等）在四列宽度里一行放不下。
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
