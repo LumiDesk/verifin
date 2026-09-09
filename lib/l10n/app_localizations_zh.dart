@@ -2473,6 +2473,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get hideSingleCurrencyUnitDesc => '账本只使用一种货币时，不在每个金额旁重复显示单位';
 
   @override
+  String get runningBalanceLabel => '显示逐笔结余';
+
+  @override
+  String get runningBalanceDesc => '交易列表每行显示该账户在这笔交易后的余额';
+
+  @override
+  String runningBalancePrefix(Object amount) {
+    return '余额 $amount';
+  }
+
+  @override
   String moneyUnitLabel(String unit) {
     return '单位：$unit';
   }

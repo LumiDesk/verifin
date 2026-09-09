@@ -1174,6 +1174,15 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   /// 进 JSON 备份、初始化保留。AI 草稿与导入草稿本就不走自动识别，不受此开关影响。
   bool get autoSuggestEnabled => _autoSuggestEnabled;
 
+  /// 交易列表是否在每行显示该账户当时的结余。全局偏好（不分账本），**默认关**，
+  /// 进 JSON 备份、初始化保留。
+  bool get showRunningBalance => _showRunningBalance;
+
+  /// 交易 id → 该账户在这笔交易之后的余额（当前账本口径）。
+  /// 惰性计算并随派生视图一起失效；只有开启「显示逐笔结余」时才会被读取。
+  Map<String, double> get balanceAfterEntry => _balanceAfterEntryCache ??=
+      accountBalanceAfterEntry(accounts: accounts, entries: entries);
+
   void setAutoSuggestEnabled(bool value) {
     if (_autoSuggestEnabled == value) {
       return;
@@ -1195,6 +1204,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     required FabActionMode fabActionMode,
     required String? defaultAccountId,
     required bool autoSuggestEnabled,
+    required bool showRunningBalance,
   }) async {
     final nextAdvancedMaterial =
         advancedMaterialEnabled ?? _advancedMaterialEnabled;
@@ -1227,6 +1237,10 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         autoSuggestEnabled.toString(),
       );
       await _store.writeAndFlush(
+        _runningBalanceKey,
+        showRunningBalance.toString(),
+      );
+      await _store.writeAndFlush(
         _advancedMaterialKey,
         nextAdvancedMaterial.toString(),
       );
@@ -1249,6 +1263,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       ..clear()
       ..addAll(nextDefaultAccounts);
     _autoSuggestEnabled = autoSuggestEnabled;
+    _showRunningBalance = showRunningBalance;
     themePreferenceListenable.value = themePreference;
     localePreferenceListenable.value = localePreference;
     notifyListeners();
@@ -3932,6 +3947,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         'moneyUnitStyle': _moneyUnitStyle.name,
         'hideUnitInSingleCurrency': _hideUnitInSingleCurrency,
         'autoSuggestEnabled': _autoSuggestEnabled,
+        'showRunningBalance': _showRunningBalance,
         'homeTrendConfig': _homeTrendConfig.toJson(),
       },
     };
@@ -4113,6 +4129,8 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         data['hideUnitInSingleCurrency'] as bool? ?? true;
     // 旧备份没有这个键：按「功能一直是开着的」还原，不因恢复备份而静默关掉。
     final nextAutoSuggestEnabled = data['autoSuggestEnabled'] as bool? ?? true;
+    // 旧备份没有这个键：默认关闭，保持旧行为。
+    final nextShowRunningBalance = data['showRunningBalance'] as bool? ?? false;
     final homeTrendValue = data['homeTrendConfig'];
     final nextHomeTrendConfig = homeTrendValue is Map
         ? HomeTrendConfig.fromJson(Map<String, dynamic>.from(homeTrendValue))
@@ -4205,6 +4223,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _moneyUnitStyle = nextMoneyUnitStyle;
     _hideUnitInSingleCurrency = nextHideUnitInSingleCurrency;
     _autoSuggestEnabled = nextAutoSuggestEnabled;
+    _showRunningBalance = nextShowRunningBalance;
     _homeTrendConfig = nextHomeTrendConfig;
 
     // 备份恢复零参照完整性校验，是「幽灵同名分类」的唯一现实入口（内部不一致的外部/
@@ -4234,6 +4253,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       _hideUnitInSingleCurrency.toString(),
     );
     _store.write(_autoSuggestKey, _autoSuggestEnabled.toString());
+    _store.write(_runningBalanceKey, _showRunningBalance.toString());
     _store.write(_homeTrendKey, _homeTrendConfig.encode());
     if (_assetCoverUrl.isEmpty) {
       _store.delete(_assetCoverKey);

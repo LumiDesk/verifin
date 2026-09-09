@@ -2524,6 +2524,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'Do not repeat the unit beside every amount when a ledger uses only one currency';
 
   @override
+  String get runningBalanceLabel => 'Show running balance';
+
+  @override
+  String get runningBalanceDesc =>
+      'Show the account balance after each entry in the transaction list';
+
+  @override
+  String runningBalancePrefix(Object amount) {
+    return 'Balance $amount';
+  }
+
+  @override
   String moneyUnitLabel(String unit) {
     return 'Unit: $unit';
   }

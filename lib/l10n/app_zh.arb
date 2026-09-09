@@ -1668,6 +1668,9 @@
   "moneyUnitStyleCode": "代码前置（CNY 100）",
   "hideSingleCurrencyUnitLabel": "单币种隐藏单位",
   "hideSingleCurrencyUnitDesc": "账本只使用一种货币时，不在每个金额旁重复显示单位",
+  "runningBalanceLabel": "显示逐笔结余",
+  "runningBalanceDesc": "交易列表每行显示该账户在这笔交易后的余额",
+  "runningBalancePrefix": "余额 {amount}",
   "moneyUnitLabel": "单位：{unit}",
   "@moneyUnitLabel": {
     "placeholders": {"unit": {"type": "String"}}

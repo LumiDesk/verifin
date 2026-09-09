@@ -580,6 +580,10 @@ class _TransactionsPageState extends State<TransactionsPage> {
                               tags: controller.tags,
                               baseCurrencyCode:
                                   controller.activeBook.baseCurrencyCode,
+                              // 逐笔结余是可选显示；关着时连计算都不做。
+                              balanceAfterEntry: controller.showRunningBalance
+                                  ? controller.balanceAfterEntry
+                                  : null,
                               selectionMode: _selectionMode,
                               selectedIds: _selectedIds,
                               onEntryTap: (entry) {

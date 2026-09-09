@@ -4544,6 +4544,24 @@ abstract class AppLocalizations {
   /// **'账本只使用一种货币时，不在每个金额旁重复显示单位'**
   String get hideSingleCurrencyUnitDesc;
 
+  /// No description provided for @runningBalanceLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示逐笔结余'**
+  String get runningBalanceLabel;
+
+  /// No description provided for @runningBalanceDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'交易列表每行显示该账户在这笔交易后的余额'**
+  String get runningBalanceDesc;
+
+  /// No description provided for @runningBalancePrefix.
+  ///
+  /// In zh, this message translates to:
+  /// **'余额 {amount}'**
+  String runningBalancePrefix(Object amount);
+
   /// No description provided for @moneyUnitLabel.
   ///
   /// In zh, this message translates to:

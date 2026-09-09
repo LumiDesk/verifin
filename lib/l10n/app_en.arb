@@ -900,6 +900,9 @@
   "moneyUnitStyleCode": "Code before (USD 100)",
   "hideSingleCurrencyUnitLabel": "Hide unit for one currency",
   "hideSingleCurrencyUnitDesc": "Do not repeat the unit beside every amount when a ledger uses only one currency",
+  "runningBalanceLabel": "Show running balance",
+  "runningBalanceDesc": "Show the account balance after each entry in the transaction list",
+  "runningBalancePrefix": "Balance {amount}",
   "moneyUnitLabel": "Unit: {unit}",
   "@moneyUnitLabel": {
     "placeholders": {"unit": {"type": "String"}}

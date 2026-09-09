@@ -15,6 +15,7 @@ class TransactionTile extends StatelessWidget {
     this.selected = false,
     this.showDate = false,
     this.baseCurrencyCode,
+    this.runningBalance,
   });
 
   final LedgerEntry entry;
@@ -35,6 +36,9 @@ class TransactionTile extends StatelessWidget {
   /// 日期已在头部，保持关（默认）。
   final bool showDate;
   final String? baseCurrencyCode;
+
+  /// 该账户在这笔交易之后的余额（调用方按偏好决定是否传入）；为 null 时不显示。
+  final double? runningBalance;
 
   /// 把 [LedgerEntry.tagIds] 按顺序解析成标签名（跳过找不到的）。
   List<String> _tagLabels() {
@@ -119,6 +123,15 @@ class TransactionTile extends StatelessWidget {
         ? formatEntryStamp(entry.occurredAt)
         : formatTime(entry.occurredAt);
     final tagLabels = _tagLabels();
+    final runningBalanceText = runningBalance == null || fromAccount == null
+        ? null
+        : AppLocalizations.of(context).runningBalancePrefix(
+            formatUserMoney(
+              runningBalance!,
+              fromAccount.currencyCode,
+              forceUnit: true,
+            ),
+          );
     final subStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
       color: Theme.of(context).colorScheme.onSurface.withValues(
         alpha: veriUnifiedDesignPreview ? 0.62 : 0.46,
@@ -235,6 +248,21 @@ class TransactionTile extends StatelessWidget {
                             ),
                           ),
                         ],
+                        if (runningBalanceText != null)
+                          Flexible(
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 6),
+                              child: Text(
+                                runningBalanceText,
+                                maxLines: 1,
+                                softWrap: false,
+                                overflow: TextOverflow.ellipsis,
+                                style: subStyle?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
                         if (tagLabels.isNotEmpty)
                           Flexible(
                             child: Padding(
@@ -444,6 +472,7 @@ class TransactionListCard extends StatelessWidget {
     this.selectionMode = false,
     this.selectedIds = const <String>{},
     this.baseCurrencyCode,
+    this.balanceAfterEntry,
   });
 
   final List<LedgerEntry> entries;
@@ -457,6 +486,9 @@ class TransactionListCard extends StatelessWidget {
   final bool selectionMode;
   final Set<String> selectedIds;
   final String? baseCurrencyCode;
+
+  /// 交易 id → 该账户在这笔之后的余额；为 null 时行内不显示逐笔结余。
+  final Map<String, double>? balanceAfterEntry;
 
   @override
   Widget build(BuildContext context) {
@@ -472,6 +504,7 @@ class TransactionListCard extends StatelessWidget {
               selectionMode: selectionMode,
               selected: selectedIds.contains(item.$2.id),
               baseCurrencyCode: baseCurrencyCode,
+              runningBalance: balanceAfterEntry?[item.$2.id],
               onTap: onEntryTap == null ? null : () => onEntryTap!(item.$2),
               onLongPress: onEntryLongPress == null
                   ? null

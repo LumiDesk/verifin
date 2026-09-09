@@ -332,6 +332,62 @@ void main() {
     expect(find.text('餐饮'), findsNothing);
   });
 
+  testWidgets('开启逐笔结余后交易行显示该账户当时的余额', (WidgetTester tester) async {
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store);
+    final now = DateTime.now();
+    controller
+      ..addAccount(
+        Account(
+          id: 'cash-running',
+          bookId: controller.activeBook.id,
+          name: '现金账户',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 1000,
+          iconCode: 'cash',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+        ),
+      )
+      ..addEntry(
+        LedgerEntry(
+          id: 'running-entry',
+          bookId: controller.activeBook.id,
+          type: EntryType.expense,
+          amount: 100,
+          categoryId: 'dining',
+          accountId: 'cash-running',
+          note: '',
+          occurredAt: now,
+        ),
+      )
+      ..dispose();
+
+    // 默认关闭：列表里不出现余额。
+    final controller2 = await pumpApp(tester, store);
+    await tester.tap(find.text('最近交易'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('余额'), findsNothing);
+
+    // 打开偏好后显示该笔之后的余额：1000 − 100 = 900。
+    await controller2.saveAppPreferencesDraft(
+      themePreference: controller2.themePreference,
+      localePreference: controller2.localePreference,
+      hapticsEnabled: controller2.hapticsEnabled,
+      amountForceTwoDecimals: controller2.amountForceTwoDecimals,
+      moneyUnitStyle: controller2.moneyUnitStyle,
+      hideUnitInSingleCurrency: controller2.hideUnitInSingleCurrency,
+      fabActionMode: controller2.fabActionMode,
+      defaultAccountId: controller2.defaultAccountId,
+      autoSuggestEnabled: controller2.autoSuggestEnabled,
+      showRunningBalance: true,
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('900'), findsOneWidget);
+  });
+
   testWidgets('searches reimbursement entries by the word 退款', (
     WidgetTester tester,
   ) async {
