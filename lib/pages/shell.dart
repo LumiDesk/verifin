@@ -164,7 +164,12 @@ class _VeriFinShellState extends State<VeriFinShell> {
               child: PageView(
                 controller: _pageController,
                 onPageChanged: _handlePageChanged,
-                children: pages,
+                // 保活四个根页面：离屏即卸载会让每次切回都整页重建，并重跑首页
+                // 与资产页的 O(账户数×交易数) 聚合。页面本身仍会随 Controller
+                // 通知重建，数据不会因为保活而过期。
+                children: <Widget>[
+                  for (final page in pages) _KeepAlivePage(child: page),
+                ],
               ),
             ),
           ),
@@ -270,5 +275,28 @@ class _VeriFinShellState extends State<VeriFinShell> {
       return;
     }
     await startSharedCaptureEntry(context);
+  }
+}
+
+/// 让 PageView 里的根页面保持存活（`addAutomaticKeepAlives` 默认开启）。
+/// 用包装类而不是给四个页面各自加 mixin：页面本身不必改成 StatefulWidget。
+class _KeepAlivePage extends StatefulWidget {
+  const _KeepAlivePage({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_KeepAlivePage> createState() => _KeepAlivePageState();
+}
+
+class _KeepAlivePageState extends State<_KeepAlivePage>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }

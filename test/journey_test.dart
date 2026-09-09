@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:verifin/pages/home_page.dart';
 
 import 'support/test_harness.dart';
 
@@ -8,6 +9,20 @@ import 'support/test_harness.dart';
 /// 以便 headless CI 也能真实执行。
 void main() {
   useTestDatabases();
+
+  testWidgets('切换根页面后首页保持存活，不整页重建', (tester) async {
+    await pumpApp(tester);
+    expect(find.byType(HomePage, skipOffstage: false), findsOneWidget);
+
+    await tapBottomTab(tester, 1);
+    await tester.pumpAndSettle();
+    // 保活：离屏的首页仍在树里，切回来不必重新构建整页与重跑聚合。
+    expect(find.byType(HomePage, skipOffstage: false), findsOneWidget);
+
+    await tapBottomTab(tester, 3);
+    await tester.pumpAndSettle();
+    expect(find.byType(HomePage, skipOffstage: false), findsOneWidget);
+  });
 
   testWidgets('记账旅程：记一笔支出，首页与资产余额同步更新且可累计', (tester) async {
     await pumpApp(tester);
