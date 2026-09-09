@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
@@ -884,7 +885,8 @@ class _CategoryDonutPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _CategoryDonutPainter oldDelegate) {
-    return oldDelegate.segments != segments ||
+    // segments 由调用方每帧新建，按元素比较才能避免内容不变时的无谓重绘。
+    return !listEquals(oldDelegate.segments, segments) ||
         oldDelegate.trackColor != trackColor ||
         oldDelegate.selectedIndex != selectedIndex;
   }
@@ -956,7 +958,7 @@ class _CategoryCalloutPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _CategoryCalloutPainter oldDelegate) {
-    return oldDelegate.segments != segments ||
+    return !listEquals(oldDelegate.segments, segments) ||
         oldDelegate.ringSize != ringSize ||
         oldDelegate.textColor != textColor;
   }

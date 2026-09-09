@@ -347,7 +347,7 @@ class _BudgetTrendPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _BudgetTrendPainter oldDelegate) {
-    return oldDelegate.months != months ||
+    return !listEquals(oldDelegate.months, months) ||
         oldDelegate.labelColor != labelColor ||
         oldDelegate.yLabels != yLabels ||
         oldDelegate.selectedIndex != selectedIndex ||
