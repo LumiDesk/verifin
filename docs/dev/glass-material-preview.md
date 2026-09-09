@@ -47,8 +47,8 @@ pub 依赖。实时背景模糊不同于真实折射，不用静态高光或渐�
 - 高级材质由用户选择；关闭时不创建透镜，保留普通磨砂路径。
 
 Android release 验证使用 `integration_test/glass_navigation_test.dart` 和
-`integration_test/menu_animation_test.dart`（CI 的 `integration` 任务在 Android 模拟器上跑，
-首次加入时为非阻断；GPU 差异与特定机型崩溃仍需真机）；测试要求实际 Shader/filter 就绪，
+`integration_test/menu_animation_test.dart`（需在真机或本地模拟器手动执行，见
+[Android 开发](android-development.md)；托管 runner 上模拟器会被系统杀掉，故不进 CI）；测试要求实际 Shader/filter 就绪，
 检查膨胀、拖动、选中、首次打开和中间帧结果，不能以 fallback 通过。
 
 ```bash

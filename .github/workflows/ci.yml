@@ -56,62 +56,10 @@ jobs:
       - name: Build Android debug APK
         run: flutter build apk --debug --flavor github --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
 
-  # 真实引擎集成测试：导航透镜 Shader 的加载与采样、玻璃菜单连续进出这类行为，
-  # 只有在本机引擎上才验证得到，桌面 widget 测试替代不了。
-  # 模拟器仍不等于真机——GPU 驱动差异与特定机型崩溃（见
-  # docs/dev/android-glass-investigation.md）依旧只能人工真机验收。
-  integration:
-    name: Android integration tests
-    runs-on: ubuntu-latest
-    # 首次加入时设为非阻断：模拟器任务在本仓尚未跑通过之前，不应挡住正常 PR。
-    # 连续几次全绿后请删掉这一行，让它成为真正的门禁。
-    continue-on-error: true
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          flutter-version: '3.47.2'
-          cache: true
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      # GitHub 托管 runner 默认没有 /dev/kvm 权限，模拟器会退化成纯软件模拟并
-      # 在启动阶段超时（实测 10 分钟仍未 boot）。这是 android-emulator-runner
-      # 官方文档给出的放行方式。
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
-      # 先把 APK 构建好再启动模拟器：Gradle 构建与模拟器同时跑会抢内存，
-      # 实测模拟器会在构建期间被拖死（device offline）。构建产物带同样的参数，
-      # 后面 flutter test 的 assemble 会直接复用。
-      - name: Prebuild the debug APK
-        run: flutter build apk --debug --flavor github --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
-
-      - name: Run integration tests on an Android emulator
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 30
-          # default 镜像比 google_apis 启动快，集成测试也不需要 Google 服务；
-          # API 30 比 34 在托管 runner 上更稳（34 实测启动后 1 分多钟被压垮）。
-          target: default
-          arch: x86_64
-          profile: pixel_6
-          emulator-boot-timeout: 900
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 4096
-          disable-animations: true
-          script: |
-            flutter test integration_test/glass_navigation_test.dart integration_test/menu_animation_test.dart -d emulator-5554 --flavor github --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
+# 集成测试（integration_test/）刻意不挂在 CI：它们需要真实引擎（导航透镜 Shader、
+# 玻璃菜单连续进出），只能跑在设备或模拟器上。曾试过 android-emulator-runner：
+# 放行 /dev/kvm 后模拟器约 32 秒即可启动，但会在 Gradle 构建期间被系统杀掉
+# （device offline / emulator not found）；换镜像、加内存、预构建 APK 三次调整均未通过，
+# 故撤掉，避免长期红着的无效任务。需要时按 docs/dev/android-development.md 手动执行：
+#   flutter test integration_test/ -d <device> --flavor diagnostic \
+#     --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
