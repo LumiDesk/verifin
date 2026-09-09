@@ -542,7 +542,10 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
                 padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
                 child: VeriHeader(
                   title: l10n.importPreviewTitle,
-                  subtitle: widget.sourceLabel,
+                  // 导入是写进当前账本的，标题里必须写清目标账本，否则多账本用户会存错地方。
+                  subtitle:
+                      '${widget.sourceLabel} · '
+                      '${l10n.importPreviewTargetBook(controller.activeBook.name)}',
                   showBack: true,
                   actions: <Widget>[
                     if (_rootEntries.isNotEmpty)

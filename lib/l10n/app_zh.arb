@@ -2108,6 +2108,14 @@
   },
   "gotIt": "知道了",
   "importPreviewTitle": "导入预览",
+  "importPreviewTargetBook": "导入到「{book}」",
+  "@importPreviewTargetBook": {
+    "placeholders": {"book": {"type": "String"}}
+  },
+  "ledgerBookSwitched": "已切换到「{book}」",
+  "@ledgerBookSwitched": {
+    "placeholders": {"book": {"type": "String"}}
+  },
   "importPreviewHint": "点按可排除 / 恢复某笔，长按可编辑",
   "importPreviewSelectedOf": "将导入 {selected} / {total} 笔",
   "@importPreviewSelectedOf": {

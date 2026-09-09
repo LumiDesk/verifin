@@ -3312,6 +3312,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get importPreviewTitle => '导入预览';
 
   @override
+  String importPreviewTargetBook(String book) {
+    return '导入到「$book」';
+  }
+
+  @override
+  String ledgerBookSwitched(String book) {
+    return '已切换到「$book」';
+  }
+
+  @override
   String get importPreviewHint => '点按可排除 / 恢复某笔，长按可编辑';
 
   @override

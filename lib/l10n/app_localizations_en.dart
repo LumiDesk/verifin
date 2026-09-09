@@ -3403,6 +3403,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get importPreviewTitle => 'Import preview';
 
   @override
+  String importPreviewTargetBook(String book) {
+    return 'Import into \"$book\"';
+  }
+
+  @override
+  String ledgerBookSwitched(String book) {
+    return 'Switched to \"$book\"';
+  }
+
+  @override
   String get importPreviewHint =>
       'Tap to exclude / restore, long-press to edit';
 

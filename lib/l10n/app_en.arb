@@ -1169,6 +1169,14 @@
   "skippedFollowing": "These rows were skipped:\n{lines}",
   "gotIt": "Got it",
   "importPreviewTitle": "Import preview",
+  "importPreviewTargetBook": "Import into \"{book}\"",
+  "@importPreviewTargetBook": {
+    "placeholders": {"book": {"type": "String"}}
+  },
+  "ledgerBookSwitched": "Switched to \"{book}\"",
+  "@ledgerBookSwitched": {
+    "placeholders": {"book": {"type": "String"}}
+  },
   "importPreviewHint": "Tap to exclude / restore, long-press to edit",
   "importPreviewSelectedOf": "Importing {selected} / {total}",
   "@importPreviewSelectedOf": {

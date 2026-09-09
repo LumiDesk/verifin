@@ -6098,6 +6098,18 @@ abstract class AppLocalizations {
   /// **'导入预览'**
   String get importPreviewTitle;
 
+  /// No description provided for @importPreviewTargetBook.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入到「{book}」'**
+  String importPreviewTargetBook(String book);
+
+  /// No description provided for @ledgerBookSwitched.
+  ///
+  /// In zh, this message translates to:
+  /// **'已切换到「{book}」'**
+  String ledgerBookSwitched(String book);
+
   /// No description provided for @importPreviewHint.
   ///
   /// In zh, this message translates to:
