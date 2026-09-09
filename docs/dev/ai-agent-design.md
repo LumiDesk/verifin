@@ -5,6 +5,8 @@
 > 对应 Issue：[#32「关于 AI 助手的问题」](https://github.com/LumiDesk/verifin/issues/32)
 >
 > 调研基线：`main` @ `cd3bf33`，应用版本 `1.11.6+90`，日期 `2026-08-06`
+>
+> **命名说明（2026-09-09 复核）**：本文的符号名多为设计阶段命名，落地时已改名或合并——协议选择并入 `ai_capabilities.dart` 的 `resolveAiAgentMode()` 与 `ai_agent_engine.dart` 内的私有 `_AgentProtocol`（`ai_agent_protocol.dart` 未创建）；事件字段为 `stepId`/`toolName`/`arguments`（`AiAgentToolStarted`）、`result`+`duration`（`AiAgentToolCompleted`）、`text`（`AiAgentAnswerDelta`）；流式增量为 `AiToolCallDelta.name`/`.arguments`。**以源码为准**，工具当前行为见 [ai-tools.md](ai-tools.md)。
 
 > 说明：本文的现状分析与代码引用记录的是上述调研基线，用于保留 Issue #32 的问题证据和
 > 设计推导，不代表改造后的当前实现。当前架构与维护约定见 [ai-tools.md](ai-tools.md)、

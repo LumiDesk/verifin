@@ -2,7 +2,8 @@
 //
 // 账目类数据现只经 [LedgerRepository]。widget / 控制器逻辑测试注入
 // [InMemoryLedgerRepository]（同步、无真实 I/O，兼容 testWidgets 的 fake-async）；
-// 数据层真实 SQLite 覆盖见 test/data/。用 [makeController]/[pumpApp] 取代旧的
+// 数据层真实 SQLite 覆盖见 test/repository_test.dart、test/controller_persistence_test.dart、
+// test/migration_matrix_test.dart。用 [makeController]/[pumpApp] 取代旧的
 // 同步 `VeriFinController(store)`；相同 store 复用同一内存仓储（模拟同设备重启后
 // 重新载入），传入新 store 则得到隔离仓储。每个测试文件 main() 顶部调用
 // [useTestDatabases] 注册清理。

@@ -5,6 +5,8 @@
 > 审查基线：`main` @ `94eec0d`，Veri Fin `1.15.9+105`，SQLite schema v14
 >
 > 审查日期：2026-08-25
+>
+> **命名说明（2026-09-09 复核）**：本文的 API 名多为设计阶段命名，落地时部分改名或合并——`showMoneyNumberPad`/`showRateNumberPad` 统一为 `showNumberPadSheet`；`isZeroMoney`/`normalizeMoney` 实际为 `isZeroCurrencyAmount`/`normalizeCurrencyAmount`；`validateLedgerDataSnapshot` 实际为 `validateLedgerEntries`；`comparableBookAmount` 实际为 `comparableEntryAmountInBase`；`RecurringPage` 实际为 `RecurringRulesPage`。`EntryCurrencyDraft` 状态机未按本文设计落地（`entry_currency_draft.dart` 只有一个纯函数 `scaleDependentCurrencyAmount`）。**一律以源码为准。**
 
 本文是 `multi-currency-design.md` 落地后的第二轮加固设计。首轮实现已经建立
 “账本本位币 → 账户币种 → 交易原币”的三层金额模型；本轮不推翻该模型，而是修复它与
@@ -18,7 +20,7 @@ Android 小组件之间的接缝问题。
 - 新增 `entry_currency_draft.dart` 保持手工/导入/旧数据和固定周期规则的既有结算比例，
   新增 `ledger_data_validation.dart` 供交易聚合、账单导入和备份恢复共同校验；
 - `saveEntryAggregateDraftResult` 提供稳定成功/校验失败/持久化失败结果，原 bool API 仅作兼容；
-- 未修改 SQLite schema，仍为 v14；没有新增网络请求、权限、后台汇率任务或第三方依赖；
+- 未修改 SQLite schema（当时为 v14；当前为 v16）；没有新增网络请求、权限、后台汇率任务或第三方依赖；
 - 根工程 `dart format .`、`flutter analyze` 和全量 `flutter test` 已通过（877 项，随后新增
   CSV 外币退款往返测试单独通过）；UI Lab 的 analyze、23 项测试和 Web build 也已通过；
 - 剩余工作是发布前脚本复验，以及 CI release APK 上的 Android 真机专项。
@@ -36,7 +38,7 @@ Android 小组件之间的接缝问题。
 - 跨币转账保存两端实际金额，且 `baseAmount == 0`、不计入收支；
 - 当前资产先算账户原币余额，再按目标日期汇率折算；缺任一必要汇率时不展示部分总额；
 - 交易、附件、退款和“记住汇率”可在单个 repository 事务中原子保存；
-- SQLite v14、模型 JSON/row 映射、迁移矩阵和仓储契约的主体结构完整。
+- SQLite v14（当时版本；当前 v16）、模型 JSON/row 映射、迁移矩阵和仓储契约的主体结构完整。
 
 因此，本轮不改三层金额字段语义，不批量重算历史交易，不接入在线汇率，也不增加新的
 金额存储单位。
@@ -593,6 +595,9 @@ VoidCallback? onWidgetProjectionInvalidated;
 
 本轮预期**不需要 SQLite schema v15**。若实现过程中发现必须新增持久化字段，应暂停并按
 `AGENTS.md` 的 schema 迁移流程单独设计，不能顺手加列。
+
+> 事后核对（2026-09-09）：本轮确实没有升 schema；之后的 v15（账户分组回归纯文件夹）与
+> v16（账户图标 code 迁移）是另外两项独立改动，当前 schema 为 **v16**。
 
 ## 13. 测试矩阵
 

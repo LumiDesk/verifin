@@ -104,21 +104,25 @@ class VeriAnchoredChoice<T> extends StatelessWidget {
 const double _veriMenuPanelPadding = 6;
 const double _veriMenuDividerExtent = 9;
 
-double _veriMenuEntryExtent(VeriMenuEntry entry) => switch (entry) {
-  VeriMenuItem() => entry.subtitle == null ? 50 : 58,
-  VeriMenuDivider() => _veriMenuDividerExtent,
-};
+/// 菜单行的基准高度。列表行高由内容决定，这里的高度用于面板尺寸与展开原点，
+/// 必须跟着 [textScaler] 走，否则系统字号放大后菜单行会错位。
+double _veriMenuEntryExtent(VeriMenuEntry entry, TextScaler textScaler) =>
+    switch (entry) {
+      VeriMenuItem() => textScaler.scale(entry.subtitle == null ? 50 : 58),
+      VeriMenuDivider() => _veriMenuDividerExtent,
+    };
 
 double _veriMenuPanelExtent(
   List<VeriMenuEntry> entries, {
   VeriMenuItem? parent,
+  required TextScaler textScaler,
 }) {
   var extent = _veriMenuPanelPadding * 2;
   if (parent != null) {
-    extent += _veriMenuEntryExtent(parent) + _veriMenuDividerExtent;
+    extent += _veriMenuEntryExtent(parent, textScaler) + _veriMenuDividerExtent;
   }
   for (final entry in entries) {
-    extent += _veriMenuEntryExtent(entry);
+    extent += _veriMenuEntryExtent(entry, textScaler);
   }
   return extent;
 }
@@ -127,13 +131,14 @@ double _veriMenuEntryOffset(
   List<VeriMenuEntry> entries,
   VeriMenuItem target, {
   VeriMenuItem? parent,
+  required TextScaler textScaler,
 }) {
   var offset = parent == null
       ? 0.0
-      : _veriMenuEntryExtent(parent) + _veriMenuDividerExtent;
+      : _veriMenuEntryExtent(parent, textScaler) + _veriMenuDividerExtent;
   for (final entry in entries) {
     if (entry is VeriMenuItem && entry.id == target.id) return offset;
-    offset += _veriMenuEntryExtent(entry);
+    offset += _veriMenuEntryExtent(entry, textScaler);
   }
   return offset;
 }
@@ -289,7 +294,12 @@ class _VeriAnchoredMenuRouteState extends State<_VeriAnchoredMenuRoute>
     VeriMenuItem? parent;
     for (var index = 0; index <= targetIndex; index++) {
       final item = _path[index];
-      origin += _veriMenuEntryOffset(entries, item, parent: parent);
+      origin += _veriMenuEntryOffset(
+        entries,
+        item,
+        parent: parent,
+        textScaler: MediaQuery.textScalerOf(context),
+      );
       parent = item;
       entries = item.children;
     }
@@ -417,6 +427,7 @@ class _VeriAnchoredMenuRouteState extends State<_VeriAnchoredMenuRoute>
           height: _veriMenuPanelExtent(
             entries,
             parent: parent,
+            textScaler: MediaQuery.textScalerOf(context),
           ).clamp(0.0, layerMaxHeight),
         ));
       }
@@ -446,12 +457,15 @@ class _VeriAnchoredMenuRouteState extends State<_VeriAnchoredMenuRoute>
       final fullForegroundHeight = _veriMenuPanelExtent(
         _entries,
         parent: parent,
+        textScaler: MediaQuery.textScalerOf(context),
       ).clamp(0.0, foregroundMaxHeight);
       final collapsedHeight =
-          (_veriMenuPanelPadding + _veriMenuEntryExtent(parent)).clamp(
-            0.0,
-            fullForegroundHeight,
-          );
+          (_veriMenuPanelPadding +
+                  _veriMenuEntryExtent(
+                    parent,
+                    MediaQuery.textScalerOf(context),
+                  ))
+              .clamp(0.0, fullForegroundHeight);
 
       return AnimatedBuilder(
         animation: _submenuController,

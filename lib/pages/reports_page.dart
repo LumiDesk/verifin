@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
@@ -159,7 +160,7 @@ class ReportsPage extends StatelessWidget {
                   SizedBox(
                     height: 138,
                     child: InteractiveTrendChart(
-                      color: veriExpense,
+                      color: veriSemantic(context, veriExpense),
                       values: trendValues,
                       xLabels: sparseLabelsForWindow(trendWindow),
                       yLabels: reportAxisLabels(trendMax),
@@ -345,12 +346,16 @@ class _MonthSummaryCard extends StatelessWidget {
           SummaryMetric(
             label: l10n.metricMonthIncome,
             value: formatAmount(income),
-            color: isZeroAmount(income) ? zeroColor : veriIncome,
+            color: isZeroAmount(income)
+                ? zeroColor
+                : veriSemantic(context, veriIncome),
           ),
           SummaryMetric(
             label: l10n.metricMonthExpense,
             value: formatExpenseAmount(expense),
-            color: isZeroAmount(expense) ? zeroColor : veriExpense,
+            color: isZeroAmount(expense)
+                ? zeroColor
+                : veriSemantic(context, veriExpense),
           ),
           SummaryMetric(
             label: l10n.metricMonthNet,
@@ -400,9 +405,9 @@ class _BudgetExecutionCard extends StatelessWidget {
     final color = budget <= 0
         ? veriLine
         : remaining < 0
-        ? veriExpense
+        ? veriSemantic(context, veriExpense)
         : ratio >= 0.85
-        ? veriWarning
+        ? veriSemantic(context, veriWarning)
         : veriRoyal;
 
     return VeriCard(
@@ -474,7 +479,10 @@ class _BudgetExecutionCard extends StatelessWidget {
                             color: veriUnifiedDesignPreview && budget <= 0
                                 ? (isZeroAmount(expense)
                                       ? Theme.of(context).colorScheme.onSurface
-                                      : colorForType(EntryType.expense))
+                                      : colorForType(
+                                          context,
+                                          EntryType.expense,
+                                        ))
                                 : color,
                             fontWeight: FontWeight.w900,
                           ),
@@ -538,10 +546,10 @@ class _BudgetExecutionCard extends StatelessWidget {
                       ? AppLocalizations.of(context).notSet
                       : AppLocalizations.of(context).normalLabel,
                   accentColor: overBudgetCount > 0
-                      ? veriExpense
+                      ? veriSemantic(context, veriExpense)
                       : budgetedCount == 0
                       ? null
-                      : veriIncome,
+                      : veriSemantic(context, veriIncome),
                 ),
               ),
             ],
@@ -670,6 +678,7 @@ class _CategoryRingChartState extends State<_CategoryRingChart> {
     final segments = _categoryRingSegments(
       AppLocalizations.of(context),
       widget.stats,
+      Theme.of(context).brightness,
     );
     final ringSize = widget.ringSize;
     final mutedColor = Theme.of(
@@ -789,16 +798,17 @@ class _CategoryRingSegment {
 List<_CategoryRingSegment> _categoryRingSegments(
   AppLocalizations l10n,
   List<_CategoryStat> stats,
+  Brightness brightness,
 ) {
   if (stats.isEmpty) {
     return const <_CategoryRingSegment>[];
   }
-  const colors = <Color>[
+  final colors = <Color>[
     veriRoyal,
-    veriBlue,
+    veriSemanticFor(brightness, veriBlue),
     veriCyan,
     veriMint,
-    veriWarning,
+    veriSemanticFor(brightness, veriWarning),
     Color(0xFF8B95A7),
   ];
   final total = stats.fold<double>(0, (sum, stat) => sum + stat.amount);
@@ -884,7 +894,8 @@ class _CategoryDonutPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _CategoryDonutPainter oldDelegate) {
-    return oldDelegate.segments != segments ||
+    // segments 由调用方每帧新建，按元素比较才能避免内容不变时的无谓重绘。
+    return !listEquals(oldDelegate.segments, segments) ||
         oldDelegate.trackColor != trackColor ||
         oldDelegate.selectedIndex != selectedIndex;
   }
@@ -956,7 +967,7 @@ class _CategoryCalloutPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _CategoryCalloutPainter oldDelegate) {
-    return oldDelegate.segments != segments ||
+    return !listEquals(oldDelegate.segments, segments) ||
         oldDelegate.ringSize != ringSize ||
         oldDelegate.textColor != textColor;
   }
@@ -989,7 +1000,7 @@ class _CategoryStatTile extends StatelessWidget {
         children: <Widget>[
           CategoryIconBox(
             iconCode: stat.category.iconCode,
-            color: veriExpense,
+            color: veriSemantic(context, veriExpense),
             size: 30,
           ),
           const SizedBox(width: 10),
@@ -1010,7 +1021,7 @@ class _CategoryStatTile extends StatelessWidget {
                     Text(
                       formatExpenseAmount(stat.amount),
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: veriExpense,
+                        color: veriSemantic(context, veriExpense),
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -1021,7 +1032,7 @@ class _CategoryStatTile extends StatelessWidget {
                   value: stat.percent.clamp(0, 1).toDouble(),
                   minHeight: 5,
                   borderRadius: BorderRadius.circular(999),
-                  color: veriExpense,
+                  color: veriSemantic(context, veriExpense),
                   backgroundColor: Theme.of(
                     context,
                   ).colorScheme.surfaceContainerHighest,
@@ -1075,7 +1086,7 @@ class _TagStatTile extends StatelessWidget {
                     Text(
                       formatExpenseAmount(stat.amount),
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: veriExpense,
+                        color: veriSemantic(context, veriExpense),
                         fontWeight: FontWeight.w800,
                       ),
                     ),

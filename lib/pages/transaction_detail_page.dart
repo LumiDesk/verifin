@@ -149,7 +149,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
         (_type == EntryType.expense
             ? _refundTotal <= _amount + currencyAmountTolerance(_currencyCode)
             : _refunds.isEmpty);
-    final amountColor = colorForType(_type);
+    final amountColor = colorForType(context, _type);
     final formattedAmount = formatCurrencyNumber(_amount, _currencyCode);
     final amountText = switch (_type) {
       EntryType.expense => '-$formattedAmount',
@@ -640,7 +640,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
               (_missingRateCodes.toList()..sort()).join(', '),
             ),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: veriWarning,
+              color: veriSemantic(context, veriWarning),
               fontWeight: FontWeight.w700,
             ),
           ),

@@ -49,6 +49,8 @@ class _SettingsPageState extends State<SettingsPage> {
   String? _defaultAccountId;
   late bool _initialAutoSuggest;
   late bool _autoSuggest;
+  late bool _initialShowRunningBalance;
+  late bool _showRunningBalance;
   bool _initialized = false;
 
   @override
@@ -70,6 +72,8 @@ class _SettingsPageState extends State<SettingsPage> {
     _initialFabAction = _fabAction = controller.fabActionMode;
     _initialDefaultAccountId = _defaultAccountId = controller.defaultAccountId;
     _initialAutoSuggest = _autoSuggest = controller.autoSuggestEnabled;
+    _initialShowRunningBalance = _showRunningBalance =
+        controller.showRunningBalance;
     _initialized = true;
   }
 
@@ -218,6 +222,20 @@ class _SettingsPageState extends State<SettingsPage> {
                         value: _hideSingleCurrencyUnit,
                         onChanged: (value) =>
                             setState(() => _hideSingleCurrencyUnit = value),
+                      ),
+                      const Divider(height: 1),
+                      CompactSwitchRow(
+                        key: const Key('show_running_balance'),
+                        icon: Icons.functions_outlined,
+                        title: Text(
+                          AppLocalizations.of(context).runningBalanceLabel,
+                        ),
+                        subtitle: Text(
+                          AppLocalizations.of(context).runningBalanceDesc,
+                        ),
+                        value: _showRunningBalance,
+                        onChanged: (value) =>
+                            setState(() => _showRunningBalance = value),
                       ),
                     ],
                   ),
@@ -513,7 +531,8 @@ class _SettingsPageState extends State<SettingsPage> {
       _hideSingleCurrencyUnit != _initialHideSingleCurrencyUnit ||
       _fabAction != _initialFabAction ||
       _defaultAccountId != _initialDefaultAccountId ||
-      _autoSuggest != _initialAutoSuggest;
+      _autoSuggest != _initialAutoSuggest ||
+      _showRunningBalance != _initialShowRunningBalance;
 
   Future<void> _saveAndExit() async {
     if (await _save() && mounted) {
@@ -528,6 +547,7 @@ class _SettingsPageState extends State<SettingsPage> {
         _initialFabAction = _fabAction;
         _initialDefaultAccountId = _defaultAccountId;
         _initialAutoSuggest = _autoSuggest;
+        _initialShowRunningBalance = _showRunningBalance;
       });
       _exitController.exit();
     }
@@ -545,6 +565,7 @@ class _SettingsPageState extends State<SettingsPage> {
       fabActionMode: _fabAction,
       defaultAccountId: _defaultAccountId,
       autoSuggestEnabled: _autoSuggest,
+      showRunningBalance: _showRunningBalance,
     );
   }
 }
@@ -708,17 +729,17 @@ class _UpdateCheckDialogState extends State<_UpdateCheckDialog> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Icon(
+                    Icon(
                       Icons.warning_amber_rounded,
                       size: 16,
-                      color: veriExpense,
+                      color: veriSemantic(context, veriExpense),
                     ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         AppLocalizations.of(context).prereleaseNoticeInline,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: veriExpense,
+                          color: veriSemantic(context, veriExpense),
                           fontWeight: FontWeight.w600,
                         ),
                       ),

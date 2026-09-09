@@ -257,6 +257,7 @@
   "monthNumber": "M{month}",
   "assetsEmptyTitle": "No accounts yet",
   "assetsEmptyDesc": "Add an account from the top right; you can then view assets by type or group here.",
+  "assetsEmptyAddAction": "Add your first account",
   "assetsSortHint": "Drag the handles on the right to reorder sections",
   "hiddenAccountsCount": "{count} hidden accounts",
   "assetsCoverTitle": "Asset card background",
@@ -698,6 +699,14 @@
   },
   "noDimData": "No {dim} data",
   "noDimDesc": "No {dim} records in this time range.",
+  "chartTrendSemantics": "Line chart with {count} data points; tap or swipe to read each value.",
+  "@chartTrendSemantics": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "chartBarSemantics": "Bar chart with {count} items; tap or swipe to read each value.",
+  "@chartBarSemantics": {
+    "placeholders": {"count": {"type": "int"}}
+  },
   "reportsSubtitle": "Budget & stats",
   "noCategoryData": "No category data",
   "noCategoryDesc": "Expense records will show a category ranking here.",
@@ -891,6 +900,9 @@
   "moneyUnitStyleCode": "Code before (USD 100)",
   "hideSingleCurrencyUnitLabel": "Hide unit for one currency",
   "hideSingleCurrencyUnitDesc": "Do not repeat the unit beside every amount when a ledger uses only one currency",
+  "runningBalanceLabel": "Show running balance",
+  "runningBalanceDesc": "Show the account balance after each entry in the transaction list",
+  "runningBalancePrefix": "Balance {amount}",
   "moneyUnitLabel": "Unit: {unit}",
   "@moneyUnitLabel": {
     "placeholders": {"unit": {"type": "String"}}
@@ -1092,6 +1104,12 @@
   "aiToolTagRanking": "Query tag ranking",
   "aiToolQueryTransactions": "Query transactions",
   "aiToolLargestTransactions": "Query large transactions",
+  "aiToolTrend": "Query cash-flow trend",
+  "aiToolCompare": "Query month-over-month comparison",
+  "aiToolAccountsOverview": "Query account balances",
+  "aiToolNetWorth": "Query net worth",
+  "aiToolCreditCardBill": "Query credit card bill",
+  "aiToolBudgetStatus": "Query budget status",
   "aiToolUnknown": "Call read-only tool",
   "aiAgentRetryTitle": "Reconnecting",
   "aiAgentRetryNetwork": "The connection was interrupted; retrying safely",
@@ -1115,6 +1133,7 @@
   "aiTypeTransfer": "Transfer",
   "aiRetryAnswer": "Answer again",
   "aiPrivacyNotice": "AI features send your text and the read-only financial summaries needed to answer your questions to your configured third-party service. The configuration and full ledger remain on this device.",
+  "aiOptionalNotice": "AI is optional — recording, reports and backups all work without it.",
   "aiEntryTitle": "AI entry",
   "aiEntryInputHint": "Describe it in one sentence, e.g. \"taxi 32 yesterday\"",
   "aiEntryParse": "Parse",
@@ -1168,6 +1187,14 @@
   "skippedFollowing": "These rows were skipped:\n{lines}",
   "gotIt": "Got it",
   "importPreviewTitle": "Import preview",
+  "importPreviewTargetBook": "Import into \"{book}\"",
+  "@importPreviewTargetBook": {
+    "placeholders": {"book": {"type": "String"}}
+  },
+  "ledgerBookSwitched": "Switched to \"{book}\"",
+  "@ledgerBookSwitched": {
+    "placeholders": {"book": {"type": "String"}}
+  },
   "importPreviewHint": "Tap to exclude / restore, long-press to edit",
   "importPreviewSelectedOf": "Importing {selected} / {total}",
   "@importPreviewSelectedOf": {
@@ -1216,6 +1243,7 @@
     }
   },
   "importPreviewConfirmAccountsOnly": "Import ({count} accounts)",
+  "importPreviewNothingSelected": "Nothing selected to import",
   "@importPreviewConfirmAccountsOnly": {
     "placeholders": {
       "count": {
@@ -1635,6 +1663,7 @@
     }
   },
   "exchangeRateNotSet": "No rate set",
+  "creditRepayMissingRateHint": "No exchange rate set — tap “Transferred out” above to enter the amount actually debited, or maintain the rate first.",
   "exchangeRateDateAndStatus": "{date} · {status}",
   "@exchangeRateDateAndStatus": {
     "placeholders": {
@@ -1723,6 +1752,7 @@
   "@recurringGeneratedCount": {
     "placeholders": {"count": {"type": "int"}}
   },
+  "recurringGenerateFailed": "Catch-up failed, please retry",
   "assetValuationMissing": "{count} accounts need an exchange rate",
   "@assetValuationMissing": {
     "placeholders": {"count": {"type": "int"}}
@@ -1738,5 +1768,64 @@
     "placeholders": {"currency": {"type": "String"}}
   },
   "importSaveExchangeRates": "Save imported rates",
-  "importSaveExchangeRatesHint": "Off by default. When enabled, only rates used by included transactions are saved."
+  "importSaveExchangeRatesHint": "Off by default. When enabled, only rates used by included transactions are saved.",
+  "aiTitleSummary": "{range} · Income & expense summary",
+  "aiTitleCategoryRanking": "{range} · {type} category ranking",
+  "aiTitleTagRanking": "{range} · {type} tag ranking",
+  "aiTitleTransactions": "Transactions ({count})",
+  "aiTitleLargestTransactions": "{range} · Top {count} {extreme} {type}",
+  "aiTitleTrend": "{range} · {type} trend",
+  "aiTitleCompare": "{label} · MoM & YoY",
+  "aiTitleCreditCards": "Cards & credit accounts",
+  "aiTitleBudgetExecution": "{period} · Budget execution",
+  "aiStatNet": "Net",
+  "aiStatSpent": "Spent",
+  "aiStatTotalLiabilities": "Total liabilities",
+  "aiStatLastYearMonthExpense": "Same month last year (expense)",
+  "aiStatLastMonthIncome": "Last month's income",
+  "aiStatLastYearMonthIncome": "Same month last year (income)",
+  "aiHeaderCurrency": "Currency",
+  "aiHeaderBalance": "Balance",
+  "aiHeaderCurrentDebt": "Current debt",
+  "aiExtremeMax": "largest",
+  "aiExtremeMin": "smallest",
+  "aiGranularityMonthly": "monthly",
+  "aiGranularityDaily": "daily",
+  "aiOverBudget": "Over budget",
+  "aiNoBudgetAttention": "No categories over budget or near the limit.",
+  "aiNoAccounts": "This book has no accounts yet.",
+  "aiNoCreditAccounts": "This book has no credit accounts.",
+  "aiNoBudgetData": "This book has no budget data.",
+  "aiNoMatchingTransactions": "No matching transactions.",
+  "aiNoBaseline": "Baseline is 0, so a ratio can't be computed",
+  "aiMonthYearLabel": "{year}-{month}",
+  "aiBudgetPeriodLabel": "Budget period {year}-{month}",
+  "aiSepSemicolon": "; ",
+  "aiSepComma": ", ",
+  "aiSepEnum": ", ",
+  "aiSummaryLine": "{range} income {income} ({incomeCount} entries), expense {expense} ({expenseCount} entries), net {net}.",
+  "aiRankingRowLine": "{label} {amount} ({percent}%, {count} entries)",
+  "aiNoRecords": "{range}: no {type} records.",
+  "aiNoTagRecords": "{range}: no tagged {type} records.",
+  "aiCategoryRankingSummary": "{range} {type} category ranking: {detail}",
+  "aiTagRankingSummary": "{range} {type} tag ranking: {detail}",
+  "aiFoundTransactions": "Found {count} transactions: {detail}",
+  "aiEntryNote": " ({note})",
+  "aiLargestSummary": "{range}: {count} {extreme} {type} — {detail}",
+  "aiTrendSummary": "{range} {type} trend ({granularity}, {count} points, total {total}): {points}",
+  "aiCompareSummary": "{label} expense {expense} (MoM {expenseMom}, YoY {expenseYoy}); income {income} (MoM {incomeMom}, YoY {incomeYoy}).",
+  "aiAccountsSummary": "{count} accounts: {accounts}. {total}.",
+  "aiAssetsTotalLine": "Total of asset accounts {amount}",
+  "aiTotalMissingRateLine": "Total unavailable, missing rates for {codes}",
+  "aiMissingRatesNetWorth": "Some accounts are missing exchange rates ({codes}), so total assets and net assets can't be shown. Add them under {page}.",
+  "aiNetWorthSummary": "Total assets {assets}, total liabilities {liabilities}, net assets {net}.",
+  "aiCardDebtLine": "{name} owes {amount} {currency}",
+  "aiCardAvailableLine": ", available {amount}",
+  "aiCardBillLine": ", this cycle {amount}",
+  "aiCardDueLine": ", due on day {day} ({due})",
+  "aiBudgetNotSet": "{period} has no budget set; {amount} spent this period.",
+  "aiBudgetAttention": "Needs attention: {items}.",
+  "aiBudgetAttentionRow": "{label} {spent}/{budget} ({status})",
+  "aiDailyRemainingLine": ", {amount}/day remaining",
+  "aiBudgetSummary": "{period} budget {budget}, spent {spent}, remaining {remaining}{daily}. {attention}"
 }

@@ -20,6 +20,7 @@ import 'demo_data.dart';
 import 'model_lookup.dart';
 import 'amount_format.dart' as amount_format;
 import 'home_metrics.dart';
+import 'series_math.dart';
 import 'ledger_math.dart';
 import 'ledger_data_validation.dart';
 import 'logging/app_logger.dart';
@@ -83,6 +84,7 @@ const String _moneyUnitStyleKey = 'verifin.money_unit_style.v1';
 const String _hideSingleCurrencyUnitKey =
     'verifin.hide_single_currency_unit.v1';
 const String _autoSuggestKey = 'verifin.auto_suggest.v1';
+const String _runningBalanceKey = 'verifin.entry_running_balance.v1';
 const String _aiSettingsKey = 'verifin.ai.v1';
 const String _aiCapabilitiesKey = 'verifin.ai_capabilities.v1';
 const String _aiChatHistoryKey = 'verifin.ai_chat.v1';

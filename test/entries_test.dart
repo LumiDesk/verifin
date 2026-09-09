@@ -120,7 +120,7 @@ void main() {
     await createQuickEntry(tester);
 
     expect(find.byKey(const Key('save_entry_button')), findsOneWidget);
-    expect(find.text('− 45'), findsOneWidget);
+    expect(find.text('-45'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('save_entry_button')));
     await tester.pumpAndSettle();
@@ -150,8 +150,9 @@ void main() {
       return text.style?.color;
     }
 
-    // 支出红色;账户选择框前置图标为账户图标;日期/时间旁没有多余账户 Chip。
-    expect(amountColor(), veriExpense);
+    // 支出红色（浅色主题用加深变体）；账户选择框前置图标为账户图标；
+    // 日期/时间旁没有多余账户 Chip。
+    expect(amountColor(), veriSemanticFor(Brightness.light, veriExpense));
     expect(
       find.descendant(
         of: find.byKey(const Key('account_dropdown')),
@@ -163,11 +164,11 @@ void main() {
 
     await tester.tap(find.text('收入'));
     await tester.pumpAndSettle();
-    expect(amountColor(), veriIncome);
+    expect(amountColor(), veriSemanticFor(Brightness.light, veriIncome));
 
     await tester.tap(find.text('转账'));
     await tester.pumpAndSettle();
-    expect(amountColor(), veriBlue);
+    expect(amountColor(), veriSemanticFor(Brightness.light, veriBlue));
 
     // 账户选择弹窗展示账户图标与余额。
     await tester.tap(find.byKey(const Key('account_dropdown')));
@@ -329,6 +330,126 @@ void main() {
 
     expect(find.text('交通'), findsOneWidget);
     expect(find.text('餐饮'), findsNothing);
+  });
+
+  testWidgets('开启逐笔结余后交易行显示该账户当时的余额', (WidgetTester tester) async {
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store);
+    final now = DateTime.now();
+    controller
+      ..addAccount(
+        Account(
+          id: 'cash-running',
+          bookId: controller.activeBook.id,
+          name: '现金账户',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 1000,
+          iconCode: 'cash',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+        ),
+      )
+      ..addEntry(
+        LedgerEntry(
+          id: 'running-entry',
+          bookId: controller.activeBook.id,
+          type: EntryType.expense,
+          amount: 100,
+          categoryId: 'dining',
+          accountId: 'cash-running',
+          note: '',
+          occurredAt: now,
+        ),
+      )
+      ..dispose();
+
+    // 默认关闭：列表里不出现余额。
+    final controller2 = await pumpApp(tester, store);
+    await tester.tap(find.text('最近交易'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('余额'), findsNothing);
+
+    // 打开偏好后显示该笔之后的余额：1000 − 100 = 900。
+    await controller2.saveAppPreferencesDraft(
+      themePreference: controller2.themePreference,
+      localePreference: controller2.localePreference,
+      hapticsEnabled: controller2.hapticsEnabled,
+      amountForceTwoDecimals: controller2.amountForceTwoDecimals,
+      moneyUnitStyle: controller2.moneyUnitStyle,
+      hideUnitInSingleCurrency: controller2.hideUnitInSingleCurrency,
+      fabActionMode: controller2.fabActionMode,
+      defaultAccountId: controller2.defaultAccountId,
+      autoSuggestEnabled: controller2.autoSuggestEnabled,
+      showRunningBalance: true,
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('900'), findsOneWidget);
+  });
+
+  testWidgets('searches reimbursement entries by the word 退款', (
+    WidgetTester tester,
+  ) async {
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store);
+    final now = DateTime.now();
+    controller
+      ..addAccount(
+        Account(
+          id: 'cash-refund-search',
+          bookId: controller.activeBook.id,
+          name: '现金账户',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 0,
+          iconCode: 'cash',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+        ),
+      )
+      ..addEntry(
+        LedgerEntry(
+          id: 'reimbursable-search-test',
+          bookId: controller.activeBook.id,
+          type: EntryType.expense,
+          amount: 60,
+          categoryId: 'dining',
+          accountId: 'cash-refund-search',
+          note: '垫付',
+          occurredAt: now,
+          reimbursable: true,
+        ),
+      )
+      ..addEntry(
+        LedgerEntry(
+          id: 'plain-search-test',
+          bookId: controller.activeBook.id,
+          type: EntryType.expense,
+          amount: 20,
+          categoryId: 'transport',
+          accountId: 'cash-refund-search',
+          note: '公交',
+          occurredAt: now,
+        ),
+      )
+      ..dispose();
+
+    await pumpApp(tester, store);
+    await tester.tap(find.text('最近交易'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('transaction_search_field')),
+      '退款',
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+
+    // 「退款」只应命中确实关联了报销/退款的交易，而不是每一条。
+    expect(find.text('餐饮'), findsOneWidget);
+    expect(find.text('交通'), findsNothing);
   });
 
   testWidgets(

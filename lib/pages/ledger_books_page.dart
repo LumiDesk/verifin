@@ -89,7 +89,19 @@ class _LedgerBookRow extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(veriRadiusSm),
-        onTap: () => controller.switchLedgerBook(book.id),
+        onTap: () {
+          if (selected) {
+            return;
+          }
+          controller.switchLedgerBook(book.id);
+          // 切换账本会换掉整屏数据，给一条轻提示让用户知道确实切过去了。
+          unawaited(
+            VeriFeedbackHost.of(context).showMessage(
+              message: l10n.ledgerBookSwitched(book.name),
+              tone: VeriFeedbackTone.success,
+            ),
+          );
+        },
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: Row(

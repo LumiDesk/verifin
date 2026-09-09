@@ -169,7 +169,12 @@ void main() {
       expect(value.isNaN, isTrue);
       expect(formatHomeMetric(HomeMetric.netAssets, value), '—');
       expect(
-        homeMetricColor(HomeMetric.netAssets, value, Colors.grey),
+        homeMetricColor(
+          HomeMetric.netAssets,
+          value,
+          Colors.grey,
+          Brightness.light,
+        ),
         Colors.grey,
       );
     });

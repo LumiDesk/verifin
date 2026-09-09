@@ -192,6 +192,8 @@ class _Thumb extends StatelessWidget {
       children: <Widget>[
         GestureDetector(
           onTap: onView,
+          // 长按删除：与类注释一致，避免只能点右上角 16dp 小叉删除。
+          onLongPress: onRemove,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(veriRadiusSm),
             child: SizedBox(

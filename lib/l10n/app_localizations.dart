@@ -1472,6 +1472,12 @@ abstract class AppLocalizations {
   /// **'请先点击右上角添加资产，之后可以在这里按类型或分组查看资产。'**
   String get assetsEmptyDesc;
 
+  /// No description provided for @assetsEmptyAddAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加第一个账户'**
+  String get assetsEmptyAddAction;
+
   /// No description provided for @assetsSortHint.
   ///
   /// In zh, this message translates to:
@@ -3578,6 +3584,18 @@ abstract class AppLocalizations {
   /// **'暂无{dim}数据'**
   String noDimData(String dim);
 
+  /// No description provided for @chartTrendSemantics.
+  ///
+  /// In zh, this message translates to:
+  /// **'折线图，共 {count} 个数据点；点按或横向滑动可查看每个数据点的数值。'**
+  String chartTrendSemantics(int count);
+
+  /// No description provided for @chartBarSemantics.
+  ///
+  /// In zh, this message translates to:
+  /// **'柱状图，共 {count} 个数据项；点按或横向滑动可查看每项数值。'**
+  String chartBarSemantics(int count);
+
   /// No description provided for @noDimDesc.
   ///
   /// In zh, this message translates to:
@@ -4525,6 +4543,24 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'账本只使用一种货币时，不在每个金额旁重复显示单位'**
   String get hideSingleCurrencyUnitDesc;
+
+  /// No description provided for @runningBalanceLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示逐笔结余'**
+  String get runningBalanceLabel;
+
+  /// No description provided for @runningBalanceDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'交易列表每行显示该账户在这笔交易后的余额'**
+  String get runningBalanceDesc;
+
+  /// No description provided for @runningBalancePrefix.
+  ///
+  /// In zh, this message translates to:
+  /// **'余额 {amount}'**
+  String runningBalancePrefix(Object amount);
 
   /// No description provided for @moneyUnitLabel.
   ///
@@ -5636,6 +5672,42 @@ abstract class AppLocalizations {
   /// **'查询大额交易'**
   String get aiToolLargestTransactions;
 
+  /// No description provided for @aiToolTrend.
+  ///
+  /// In zh, this message translates to:
+  /// **'查询收支趋势'**
+  String get aiToolTrend;
+
+  /// No description provided for @aiToolCompare.
+  ///
+  /// In zh, this message translates to:
+  /// **'查询环比同比'**
+  String get aiToolCompare;
+
+  /// No description provided for @aiToolAccountsOverview.
+  ///
+  /// In zh, this message translates to:
+  /// **'查询账户余额'**
+  String get aiToolAccountsOverview;
+
+  /// No description provided for @aiToolNetWorth.
+  ///
+  /// In zh, this message translates to:
+  /// **'查询净资产'**
+  String get aiToolNetWorth;
+
+  /// No description provided for @aiToolCreditCardBill.
+  ///
+  /// In zh, this message translates to:
+  /// **'查询信用卡账单'**
+  String get aiToolCreditCardBill;
+
+  /// No description provided for @aiToolBudgetStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'查询预算执行'**
+  String get aiToolBudgetStatus;
+
   /// No description provided for @aiToolUnknown.
   ///
   /// In zh, this message translates to:
@@ -5773,6 +5845,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'AI 功能会把你输入的文字，以及回答问题所需的只读账目查询摘要发送到你配置的第三方服务；配置和完整账目仍只存本机。'**
   String get aiPrivacyNotice;
+
+  /// No description provided for @aiOptionalNotice.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 是可选功能：不配置也能正常记账、看报表和备份。'**
+  String get aiOptionalNotice;
 
   /// No description provided for @aiEntryTitle.
   ///
@@ -6092,6 +6170,18 @@ abstract class AppLocalizations {
   /// **'导入预览'**
   String get importPreviewTitle;
 
+  /// No description provided for @importPreviewTargetBook.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入到「{book}」'**
+  String importPreviewTargetBook(String book);
+
+  /// No description provided for @ledgerBookSwitched.
+  ///
+  /// In zh, this message translates to:
+  /// **'已切换到「{book}」'**
+  String ledgerBookSwitched(String book);
+
   /// No description provided for @importPreviewHint.
   ///
   /// In zh, this message translates to:
@@ -6151,6 +6241,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'确认导入（{count} 个账户）'**
   String importPreviewConfirmAccountsOnly(int count);
+
+  /// No description provided for @importPreviewNothingSelected.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有勾选任何可导入的内容'**
+  String get importPreviewNothingSelected;
 
   /// No description provided for @importPreviewNothingToImport.
   ///
@@ -7454,6 +7550,12 @@ abstract class AppLocalizations {
   /// **'尚未设置汇率'**
   String get exchangeRateNotSet;
 
+  /// No description provided for @creditRepayMissingRateHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'尚未设置汇率：可直接点上面的「转出金额」填入银行实际扣款金额，也可以先维护汇率。'**
+  String get creditRepayMissingRateHint;
+
   /// No description provided for @exchangeRateDateAndStatus.
   ///
   /// In zh, this message translates to:
@@ -7706,6 +7808,12 @@ abstract class AppLocalizations {
   /// **'已补记 {count} 笔交易'**
   String recurringGeneratedCount(int count);
 
+  /// No description provided for @recurringGenerateFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'补记失败，请重试'**
+  String get recurringGenerateFailed;
+
   /// No description provided for @assetValuationMissing.
   ///
   /// In zh, this message translates to:
@@ -7747,6 +7855,410 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'默认关闭；开启后只保存最终纳入交易使用的当日汇率。'**
   String get importSaveExchangeRatesHint;
+
+  /// No description provided for @aiTitleSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'{range} · 收支汇总'**
+  String aiTitleSummary(String range);
+
+  /// No description provided for @aiTitleCategoryRanking.
+  ///
+  /// In zh, this message translates to:
+  /// **'{range} · {type}分类排行'**
+  String aiTitleCategoryRanking(String range, String type);
+
+  /// No description provided for @aiTitleTagRanking.
+  ///
+  /// In zh, this message translates to:
+  /// **'{range} · {type}标签排行'**
+  String aiTitleTagRanking(String range, String type);
+
+  /// No description provided for @aiTitleTransactions.
+  ///
+  /// In zh, this message translates to:
+  /// **'交易明细（{count} 笔）'**
+  String aiTitleTransactions(int count);
+
+  /// No description provided for @aiTitleLargestTransactions.
+  ///
+  /// In zh, this message translates to:
+  /// **'{range} · {extreme}{type} Top {count}'**
+  String aiTitleLargestTransactions(
+    String range,
+    String extreme,
+    String type,
+    int count,
+  );
+
+  /// No description provided for @aiTitleTrend.
+  ///
+  /// In zh, this message translates to:
+  /// **'{range} · {type}趋势'**
+  String aiTitleTrend(String range, String type);
+
+  /// No description provided for @aiTitleCompare.
+  ///
+  /// In zh, this message translates to:
+  /// **'{label} · 环比与同比'**
+  String aiTitleCompare(String label);
+
+  /// No description provided for @aiTitleCreditCards.
+  ///
+  /// In zh, this message translates to:
+  /// **'信用卡 / 信用账户'**
+  String get aiTitleCreditCards;
+
+  /// No description provided for @aiTitleBudgetExecution.
+  ///
+  /// In zh, this message translates to:
+  /// **'{period} · 预算执行'**
+  String aiTitleBudgetExecution(String period);
+
+  /// No description provided for @aiStatNet.
+  ///
+  /// In zh, this message translates to:
+  /// **'净额'**
+  String get aiStatNet;
+
+  /// No description provided for @aiStatSpent.
+  ///
+  /// In zh, this message translates to:
+  /// **'已花'**
+  String get aiStatSpent;
+
+  /// No description provided for @aiStatTotalLiabilities.
+  ///
+  /// In zh, this message translates to:
+  /// **'总负债'**
+  String get aiStatTotalLiabilities;
+
+  /// No description provided for @aiStatLastYearMonthExpense.
+  ///
+  /// In zh, this message translates to:
+  /// **'去年同月支出'**
+  String get aiStatLastYearMonthExpense;
+
+  /// No description provided for @aiStatLastMonthIncome.
+  ///
+  /// In zh, this message translates to:
+  /// **'上月收入'**
+  String get aiStatLastMonthIncome;
+
+  /// No description provided for @aiStatLastYearMonthIncome.
+  ///
+  /// In zh, this message translates to:
+  /// **'去年同月收入'**
+  String get aiStatLastYearMonthIncome;
+
+  /// No description provided for @aiHeaderCurrency.
+  ///
+  /// In zh, this message translates to:
+  /// **'币种'**
+  String get aiHeaderCurrency;
+
+  /// No description provided for @aiHeaderBalance.
+  ///
+  /// In zh, this message translates to:
+  /// **'余额'**
+  String get aiHeaderBalance;
+
+  /// No description provided for @aiHeaderCurrentDebt.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前欠款'**
+  String get aiHeaderCurrentDebt;
+
+  /// No description provided for @aiExtremeMax.
+  ///
+  /// In zh, this message translates to:
+  /// **'最大'**
+  String get aiExtremeMax;
+
+  /// No description provided for @aiExtremeMin.
+  ///
+  /// In zh, this message translates to:
+  /// **'最小'**
+  String get aiExtremeMin;
+
+  /// No description provided for @aiGranularityMonthly.
+  ///
+  /// In zh, this message translates to:
+  /// **'按月'**
+  String get aiGranularityMonthly;
+
+  /// No description provided for @aiGranularityDaily.
+  ///
+  /// In zh, this message translates to:
+  /// **'按天'**
+  String get aiGranularityDaily;
+
+  /// No description provided for @aiOverBudget.
+  ///
+  /// In zh, this message translates to:
+  /// **'已超支'**
+  String get aiOverBudget;
+
+  /// No description provided for @aiNoBudgetAttention.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有超支或接近上限的分类。'**
+  String get aiNoBudgetAttention;
+
+  /// No description provided for @aiNoAccounts.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前账本还没有账户。'**
+  String get aiNoAccounts;
+
+  /// No description provided for @aiNoCreditAccounts.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前账本没有信用类账户。'**
+  String get aiNoCreditAccounts;
+
+  /// No description provided for @aiNoBudgetData.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前账本没有预算数据。'**
+  String get aiNoBudgetData;
+
+  /// No description provided for @aiNoMatchingTransactions.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有符合条件的交易。'**
+  String get aiNoMatchingTransactions;
+
+  /// No description provided for @aiNoBaseline.
+  ///
+  /// In zh, this message translates to:
+  /// **'基期为 0，无法计算比例'**
+  String get aiNoBaseline;
+
+  /// No description provided for @aiMonthYearLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'{year} 年 {month} 月'**
+  String aiMonthYearLabel(int year, int month);
+
+  /// No description provided for @aiBudgetPeriodLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'{year} 年 {month} 月预算期'**
+  String aiBudgetPeriodLabel(int year, int month);
+
+  /// No description provided for @aiSepSemicolon.
+  ///
+  /// In zh, this message translates to:
+  /// **'；'**
+  String get aiSepSemicolon;
+
+  /// No description provided for @aiSepComma.
+  ///
+  /// In zh, this message translates to:
+  /// **'，'**
+  String get aiSepComma;
+
+  /// No description provided for @aiSepEnum.
+  ///
+  /// In zh, this message translates to:
+  /// **'、'**
+  String get aiSepEnum;
+
+  /// No description provided for @aiSummaryLine.
+  ///
+  /// In zh, this message translates to:
+  /// **'{range} 收入 {income}（{incomeCount} 笔），支出 {expense}（{expenseCount} 笔），净额 {net}。'**
+  String aiSummaryLine(
+    String range,
+    String income,
+    int incomeCount,
+    String expense,
+    int expenseCount,
+    String net,
+  );
+
+  /// No description provided for @aiRankingRowLine.
+  ///
+  /// In zh, this message translates to:
+  /// **'{label} {amount}（{percent}%，{count} 笔）'**
+  String aiRankingRowLine(
+    String label,
+    String amount,
+    String percent,
+    int count,
+  );
+
+  /// No description provided for @aiNoRecords.
+  ///
+  /// In zh, this message translates to:
+  /// **'{range} 没有{type}记录。'**
+  String aiNoRecords(String range, String type);
+
+  /// No description provided for @aiNoTagRecords.
+  ///
+  /// In zh, this message translates to:
+  /// **'{range} 没有带标签的{type}记录。'**
+  String aiNoTagRecords(String range, String type);
+
+  /// No description provided for @aiCategoryRankingSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'{range} {type}分类排行：{detail}'**
+  String aiCategoryRankingSummary(String range, String type, String detail);
+
+  /// No description provided for @aiTagRankingSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'{range} {type}标签排行：{detail}'**
+  String aiTagRankingSummary(String range, String type, String detail);
+
+  /// No description provided for @aiFoundTransactions.
+  ///
+  /// In zh, this message translates to:
+  /// **'找到 {count} 笔交易：{detail}'**
+  String aiFoundTransactions(int count, String detail);
+
+  /// No description provided for @aiEntryNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'（{note}）'**
+  String aiEntryNote(String note);
+
+  /// No description provided for @aiLargestSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'{range} {extreme}的 {count} 笔{type}：{detail}'**
+  String aiLargestSummary(
+    String range,
+    String extreme,
+    int count,
+    String type,
+    String detail,
+  );
+
+  /// No description provided for @aiTrendSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'{range} {type}趋势（{granularity}，{count} 个点，合计 {total}）：{points}'**
+  String aiTrendSummary(
+    String range,
+    String type,
+    String granularity,
+    int count,
+    String total,
+    String points,
+  );
+
+  /// No description provided for @aiCompareSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'{label} 支出 {expense}（环比 {expenseMom}，同比 {expenseYoy}）；收入 {income}（环比 {incomeMom}，同比 {incomeYoy}）。'**
+  String aiCompareSummary(
+    String label,
+    String expense,
+    String expenseMom,
+    String expenseYoy,
+    String income,
+    String incomeMom,
+    String incomeYoy,
+  );
+
+  /// No description provided for @aiAccountsSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'共 {count} 个账户：{accounts}。{total}。'**
+  String aiAccountsSummary(int count, String accounts, String total);
+
+  /// No description provided for @aiAssetsTotalLine.
+  ///
+  /// In zh, this message translates to:
+  /// **'计入资产的账户合计 {amount}'**
+  String aiAssetsTotalLine(String amount);
+
+  /// No description provided for @aiTotalMissingRateLine.
+  ///
+  /// In zh, this message translates to:
+  /// **'合计因缺汇率无法给出（缺 {codes}）'**
+  String aiTotalMissingRateLine(String codes);
+
+  /// No description provided for @aiMissingRatesNetWorth.
+  ///
+  /// In zh, this message translates to:
+  /// **'有账户缺少汇率（{codes}），无法给出总资产与净资产；请先在「{page}」补齐。'**
+  String aiMissingRatesNetWorth(String codes, String page);
+
+  /// No description provided for @aiNetWorthSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'总资产 {assets}，总负债 {liabilities}，净资产 {net}。'**
+  String aiNetWorthSummary(String assets, String liabilities, String net);
+
+  /// No description provided for @aiCardDebtLine.
+  ///
+  /// In zh, this message translates to:
+  /// **'{name} 当前欠款 {amount} {currency}'**
+  String aiCardDebtLine(String name, String amount, String currency);
+
+  /// No description provided for @aiCardAvailableLine.
+  ///
+  /// In zh, this message translates to:
+  /// **'，可用额度 {amount}'**
+  String aiCardAvailableLine(String amount);
+
+  /// No description provided for @aiCardBillLine.
+  ///
+  /// In zh, this message translates to:
+  /// **'，本期账单 {amount}'**
+  String aiCardBillLine(String amount);
+
+  /// No description provided for @aiCardDueLine.
+  ///
+  /// In zh, this message translates to:
+  /// **'，{day} 号还款（{due}）'**
+  String aiCardDueLine(int day, String due);
+
+  /// No description provided for @aiBudgetNotSet.
+  ///
+  /// In zh, this message translates to:
+  /// **'{period} 还没有设置预算；本期已支出 {amount}。'**
+  String aiBudgetNotSet(String period, String amount);
+
+  /// No description provided for @aiBudgetAttention.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要关注：{items}。'**
+  String aiBudgetAttention(String items);
+
+  /// No description provided for @aiBudgetAttentionRow.
+  ///
+  /// In zh, this message translates to:
+  /// **'{label} {spent}/{budget}（{status}）'**
+  String aiBudgetAttentionRow(
+    String label,
+    String spent,
+    String budget,
+    String status,
+  );
+
+  /// No description provided for @aiDailyRemainingLine.
+  ///
+  /// In zh, this message translates to:
+  /// **'，剩余日均 {amount}'**
+  String aiDailyRemainingLine(String amount);
+
+  /// No description provided for @aiBudgetSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'{period} 预算 {budget}，已花 {spent}，剩余 {remaining}{daily}。{attention}'**
+  String aiBudgetSummary(
+    String period,
+    String budget,
+    String spent,
+    String remaining,
+    String daily,
+    String attention,
+  );
 }
 
 class _AppLocalizationsDelegate

@@ -265,7 +265,7 @@ class HeaderAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final baseColor = destructive
-        ? veriExpense
+        ? veriSemantic(context, veriExpense)
         : Theme.of(context).colorScheme.onSurface;
     final color = baseColor.withValues(alpha: onPressed == null ? 0.32 : 0.82);
     return IconButton(

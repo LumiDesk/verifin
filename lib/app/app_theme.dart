@@ -46,6 +46,33 @@ const Color veriLine = Color(0xFFE1E8F1);
 const Color veriExpense = Color(0xFFE84D6A);
 const Color veriIncome = Color(0xFF12B8A6);
 const Color veriWarning = Color(0xFFFFB33E);
+// 浅色底语义色变体。上面的亮色在白底上对比度不足（veriIncome 2.49:1、veriWarning 1.78:1、
+// veriBlue 3.15:1、veriExpense 3.68:1，均低于正文级 AA 要求的 4.5:1）。以下变体保持原色相、
+// 只压暗明度，在 #FFFFFF 与 #F3F5F8 上均 ≥ 4.5:1。深色主题继续用亮色。
+const Color veriExpenseOnLight = Color(0xFFC2334F);
+const Color veriIncomeOnLight = Color(0xFF0B7A6C);
+const Color veriBlueOnLight = Color(0xFF1F6FC4);
+const Color veriWarningOnLight = Color(0xFF8A5A00);
+
+/// 语义色在当前明暗下的实际取值：深色底用原亮色，浅色底用加深变体。
+/// 只对四个语义色生效，其它颜色原样返回。
+Color veriSemantic(BuildContext context, Color semanticColor) =>
+    veriSemanticFor(Theme.of(context).brightness, semanticColor);
+
+/// [veriSemantic] 的无 `BuildContext` 版本，供纯取色函数使用。
+Color veriSemanticFor(Brightness brightness, Color semanticColor) {
+  if (brightness == Brightness.dark) {
+    return semanticColor;
+  }
+  return switch (semanticColor) {
+    veriExpense => veriExpenseOnLight,
+    veriIncome => veriIncomeOnLight,
+    veriBlue => veriBlueOnLight,
+    veriWarning => veriWarningOnLight,
+    _ => semanticColor,
+  };
+}
+
 const Color veriSurfaceLight = Color(0xFFFFFFFF);
 const Color veriSurfaceDark = Color(0xFF0E1117);
 const Color veriSurfaceAltLight = Color(0xFFF5F8FC);
@@ -63,8 +90,8 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
     seedColor: veriRoyal,
     brightness: brightness,
     primary: veriRoyal,
-    secondary: veriBlue,
-    tertiary: veriIncome,
+    secondary: isDark ? veriBlue : veriBlueOnLight,
+    tertiary: isDark ? veriIncome : veriIncomeOnLight,
   );
   final canvas = isDark ? veriPreviewCanvasDark : veriPreviewCanvasLight;
   final colorScheme = veriUnifiedDesignPreview
@@ -180,11 +207,16 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(veriRadiusMd),
-        borderSide: const BorderSide(color: veriExpense),
+        borderSide: BorderSide(
+          color: isDark ? veriExpense : veriExpenseOnLight,
+        ),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(veriRadiusMd),
-        borderSide: const BorderSide(color: veriExpense, width: 1.4),
+        borderSide: BorderSide(
+          color: isDark ? veriExpense : veriExpenseOnLight,
+          width: 1.4,
+        ),
       ),
       isDense: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),

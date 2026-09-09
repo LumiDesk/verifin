@@ -57,7 +57,7 @@ class _BudgetTrendCardState extends State<_BudgetTrendCard> {
                     ),
                     const SizedBox(width: 8),
                     _ChartLegendDot(
-                      color: veriExpense,
+                      color: veriSemantic(context, veriExpense),
                       label: AppLocalizations.of(context).entryTypeExpense,
                     ),
                   ],
@@ -117,6 +117,7 @@ class _BudgetTrendCardState extends State<_BudgetTrendCard> {
                         tooltip: _selectedIndex == null
                             ? null
                             : _tooltipFor(months[_selectedIndex!]),
+                        brightness: Theme.of(context).brightness,
                       ),
                       child: const SizedBox.expand(),
                     ),
@@ -143,7 +144,7 @@ class _BudgetTrendCardState extends State<_BudgetTrendCard> {
           text: AppLocalizations.of(
             context,
           ).expenseAmountLabel(formatExpenseAmount(snapshot.expense)),
-          color: veriExpense,
+          color: veriSemantic(context, veriExpense),
         ),
       ],
     );
@@ -189,6 +190,7 @@ class _BudgetTrendPainter extends CustomPainter {
     required this.yLabels,
     this.selectedIndex,
     this.tooltip,
+    required this.brightness,
   });
 
   final List<BudgetMonthSnapshot> months;
@@ -199,6 +201,9 @@ class _BudgetTrendPainter extends CustomPainter {
   final List<String> yLabels;
   final int? selectedIndex;
   final ChartTooltip? tooltip;
+
+  /// 画布不经过 Theme,语义色需按当前明暗取实际值,必须由调用方显式传入。
+  final Brightness brightness;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -226,8 +231,8 @@ class _BudgetTrendPainter extends CustomPainter {
     final barPaint = Paint()
       ..shader = LinearGradient(
         colors: <Color>[
-          veriExpense.withValues(alpha: 0.82),
-          veriExpense.withValues(alpha: 0.30),
+          veriSemanticFor(brightness, veriExpense).withValues(alpha: 0.82),
+          veriSemanticFor(brightness, veriExpense).withValues(alpha: 0.30),
         ],
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
@@ -347,10 +352,11 @@ class _BudgetTrendPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _BudgetTrendPainter oldDelegate) {
-    return oldDelegate.months != months ||
+    return !listEquals(oldDelegate.months, months) ||
         oldDelegate.labelColor != labelColor ||
         oldDelegate.yLabels != yLabels ||
         oldDelegate.selectedIndex != selectedIndex ||
-        oldDelegate.tooltip != tooltip;
+        oldDelegate.tooltip != tooltip ||
+        oldDelegate.brightness != brightness;
   }
 }

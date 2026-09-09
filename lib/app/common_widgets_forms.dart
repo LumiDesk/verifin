@@ -182,41 +182,46 @@ class CompactSwitchRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: <Widget>[
-          VeriIconBox(icon: icon, size: 28),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                DefaultTextStyle.merge(
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                  child: title,
-                ),
-                if (subtitle != null) ...<Widget>[
-                  const SizedBox(height: 2),
+    // 整行可点：开关被缩到 0.82 后有效点击区不足 44dp，只点开关很难命中。
+    return InkWell(
+      onTap: onChanged == null ? null : () => onChanged!(!value),
+      borderRadius: BorderRadius.circular(veriRadiusSm),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: <Widget>[
+            VeriIconBox(icon: icon, size: 28),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
                   DefaultTextStyle.merge(
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
                     ),
-                    child: subtitle!,
+                    child: title,
                   ),
+                  if (subtitle != null) ...<Widget>[
+                    const SizedBox(height: 2),
+                    DefaultTextStyle.merge(
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      child: subtitle!,
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Transform.scale(
-            scale: 0.82,
-            alignment: Alignment.centerRight,
-            child: Switch(value: value, onChanged: onChanged),
-          ),
-        ],
+            const SizedBox(width: 8),
+            Transform.scale(
+              scale: 0.82,
+              alignment: Alignment.centerRight,
+              child: Switch(value: value, onChanged: onChanged),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -380,7 +385,9 @@ Future<bool> showConfirmDialog(
         FilledButton(
           onPressed: () => Navigator.of(dialogContext).pop(true),
           style: destructive
-              ? FilledButton.styleFrom(backgroundColor: veriExpense)
+              ? FilledButton.styleFrom(
+                  backgroundColor: veriSemantic(context, veriExpense),
+                )
               : null,
           child: Text(confirmLabel ?? l10n.commonConfirm),
         ),
@@ -424,7 +431,9 @@ Future<EditorExitDecision> showUnsavedChangesDialog({
         TextButton(
           onPressed: () =>
               Navigator.of(dialogContext).pop(EditorExitDecision.discard),
-          style: TextButton.styleFrom(foregroundColor: veriExpense),
+          style: TextButton.styleFrom(
+            foregroundColor: veriSemantic(context, veriExpense),
+          ),
           child: Text(l10n.discardChanges),
         ),
         FilledButton(

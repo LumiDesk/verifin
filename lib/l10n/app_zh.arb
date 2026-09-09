@@ -465,6 +465,7 @@
   },
   "assetsEmptyTitle": "还没有资产账户",
   "assetsEmptyDesc": "请先点击右上角添加资产，之后可以在这里按类型或分组查看资产。",
+  "assetsEmptyAddAction": "添加第一个账户",
   "assetsSortHint": "拖动右侧手柄调整分组顺序",
   "hiddenAccountsCount": "{count}个隐藏账户",
   "@hiddenAccountsCount": {
@@ -1306,6 +1307,14 @@
       }
     }
   },
+  "chartTrendSemantics": "折线图，共 {count} 个数据点；点按或横向滑动可查看每个数据点的数值。",
+  "@chartTrendSemantics": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "chartBarSemantics": "柱状图，共 {count} 个数据项；点按或横向滑动可查看每项数值。",
+  "@chartBarSemantics": {
+    "placeholders": {"count": {"type": "int"}}
+  },
   "noDimDesc": "该时间范围内没有{dim}记录。",
   "@noDimDesc": {
     "placeholders": {
@@ -1659,6 +1668,9 @@
   "moneyUnitStyleCode": "代码前置（CNY 100）",
   "hideSingleCurrencyUnitLabel": "单币种隐藏单位",
   "hideSingleCurrencyUnitDesc": "账本只使用一种货币时，不在每个金额旁重复显示单位",
+  "runningBalanceLabel": "显示逐笔结余",
+  "runningBalanceDesc": "交易列表每行显示该账户在这笔交易后的余额",
+  "runningBalancePrefix": "余额 {amount}",
   "moneyUnitLabel": "单位：{unit}",
   "@moneyUnitLabel": {
     "placeholders": {"unit": {"type": "String"}}
@@ -1916,6 +1928,12 @@
   "aiToolTagRanking": "查询标签排行",
   "aiToolQueryTransactions": "查询交易明细",
   "aiToolLargestTransactions": "查询大额交易",
+  "aiToolTrend": "查询收支趋势",
+  "aiToolCompare": "查询环比同比",
+  "aiToolAccountsOverview": "查询账户余额",
+  "aiToolNetWorth": "查询净资产",
+  "aiToolCreditCardBill": "查询信用卡账单",
+  "aiToolBudgetStatus": "查询预算执行",
   "aiToolUnknown": "调用只读工具",
   "aiAgentRetryTitle": "正在重新连接",
   "aiAgentRetryNetwork": "连接中断，正在安全重试",
@@ -1967,6 +1985,7 @@
   "aiTypeTransfer": "转账",
   "aiRetryAnswer": "重新回答",
   "aiPrivacyNotice": "AI 功能会把你输入的文字，以及回答问题所需的只读账目查询摘要发送到你配置的第三方服务；配置和完整账目仍只存本机。",
+  "aiOptionalNotice": "AI 是可选功能：不配置也能正常记账、看报表和备份。",
   "aiEntryTitle": "AI 记账",
   "aiEntryInputHint": "用一句话描述，例如「昨天打车 32」",
   "aiEntryParse": "解析",
@@ -2107,6 +2126,14 @@
   },
   "gotIt": "知道了",
   "importPreviewTitle": "导入预览",
+  "importPreviewTargetBook": "导入到「{book}」",
+  "@importPreviewTargetBook": {
+    "placeholders": {"book": {"type": "String"}}
+  },
+  "ledgerBookSwitched": "已切换到「{book}」",
+  "@ledgerBookSwitched": {
+    "placeholders": {"book": {"type": "String"}}
+  },
   "importPreviewHint": "点按可排除 / 恢复某笔，长按可编辑",
   "importPreviewSelectedOf": "将导入 {selected} / {total} 笔",
   "@importPreviewSelectedOf": {
@@ -2155,6 +2182,7 @@
     }
   },
   "importPreviewConfirmAccountsOnly": "确认导入（{count} 个账户）",
+  "importPreviewNothingSelected": "没有勾选任何可导入的内容",
   "@importPreviewConfirmAccountsOnly": {
     "placeholders": {
       "count": {
@@ -2588,6 +2616,7 @@
     }
   },
   "exchangeRateNotSet": "尚未设置汇率",
+  "creditRepayMissingRateHint": "尚未设置汇率：可直接点上面的「转出金额」填入银行实际扣款金额，也可以先维护汇率。",
   "exchangeRateDateAndStatus": "{date} · {status}",
   "@exchangeRateDateAndStatus": {
     "placeholders": {
@@ -2676,6 +2705,7 @@
   "@recurringGeneratedCount": {
     "placeholders": {"count": {"type": "int"}}
   },
+  "recurringGenerateFailed": "补记失败，请重试",
   "assetValuationMissing": "有 {count} 个账户待设置汇率",
   "@assetValuationMissing": {
     "placeholders": {"count": {"type": "int"}}
@@ -2691,5 +2721,242 @@
     "placeholders": {"currency": {"type": "String"}}
   },
   "importSaveExchangeRates": "保存导入汇率",
-  "importSaveExchangeRatesHint": "默认关闭；开启后只保存最终纳入交易使用的当日汇率。"
+  "importSaveExchangeRatesHint": "默认关闭；开启后只保存最终纳入交易使用的当日汇率。",
+  "aiTitleSummary": "{range} · 收支汇总",
+  "@aiTitleSummary": {
+    "placeholders": {"range": {"type": "String"}}
+  },
+  "aiTitleCategoryRanking": "{range} · {type}分类排行",
+  "@aiTitleCategoryRanking": {
+    "placeholders": {"range": {"type": "String"}, "type": {"type": "String"}}
+  },
+  "aiTitleTagRanking": "{range} · {type}标签排行",
+  "@aiTitleTagRanking": {
+    "placeholders": {"range": {"type": "String"}, "type": {"type": "String"}}
+  },
+  "aiTitleTransactions": "交易明细（{count} 笔）",
+  "@aiTitleTransactions": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "aiTitleLargestTransactions": "{range} · {extreme}{type} Top {count}",
+  "@aiTitleLargestTransactions": {
+    "placeholders": {
+      "range": {"type": "String"},
+      "extreme": {"type": "String"},
+      "type": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
+  "aiTitleTrend": "{range} · {type}趋势",
+  "@aiTitleTrend": {
+    "placeholders": {"range": {"type": "String"}, "type": {"type": "String"}}
+  },
+  "aiTitleCompare": "{label} · 环比与同比",
+  "@aiTitleCompare": {
+    "placeholders": {"label": {"type": "String"}}
+  },
+  "aiTitleCreditCards": "信用卡 / 信用账户",
+  "aiTitleBudgetExecution": "{period} · 预算执行",
+  "@aiTitleBudgetExecution": {
+    "placeholders": {"period": {"type": "String"}}
+  },
+  "aiStatNet": "净额",
+  "aiStatSpent": "已花",
+  "aiStatTotalLiabilities": "总负债",
+  "aiStatLastYearMonthExpense": "去年同月支出",
+  "aiStatLastMonthIncome": "上月收入",
+  "aiStatLastYearMonthIncome": "去年同月收入",
+  "aiHeaderCurrency": "币种",
+  "aiHeaderBalance": "余额",
+  "aiHeaderCurrentDebt": "当前欠款",
+  "aiExtremeMax": "最大",
+  "aiExtremeMin": "最小",
+  "aiGranularityMonthly": "按月",
+  "aiGranularityDaily": "按天",
+  "aiOverBudget": "已超支",
+  "aiNoBudgetAttention": "没有超支或接近上限的分类。",
+  "aiNoAccounts": "当前账本还没有账户。",
+  "aiNoCreditAccounts": "当前账本没有信用类账户。",
+  "aiNoBudgetData": "当前账本没有预算数据。",
+  "aiNoMatchingTransactions": "没有符合条件的交易。",
+  "aiNoBaseline": "基期为 0，无法计算比例",
+  "aiMonthYearLabel": "{year} 年 {month} 月",
+  "@aiMonthYearLabel": {
+    "placeholders": {"year": {"type": "int"}, "month": {"type": "int"}}
+  },
+  "aiBudgetPeriodLabel": "{year} 年 {month} 月预算期",
+  "@aiBudgetPeriodLabel": {
+    "placeholders": {"year": {"type": "int"}, "month": {"type": "int"}}
+  },
+  "aiSepSemicolon": "；",
+  "aiSepComma": "，",
+  "aiSepEnum": "、",
+  "aiSummaryLine": "{range} 收入 {income}（{incomeCount} 笔），支出 {expense}（{expenseCount} 笔），净额 {net}。",
+  "@aiSummaryLine": {
+    "placeholders": {
+      "range": {"type": "String"},
+      "income": {"type": "String"},
+      "incomeCount": {"type": "int"},
+      "expense": {"type": "String"},
+      "expenseCount": {"type": "int"},
+      "net": {"type": "String"}
+    }
+  },
+  "aiRankingRowLine": "{label} {amount}（{percent}%，{count} 笔）",
+  "@aiRankingRowLine": {
+    "placeholders": {
+      "label": {"type": "String"},
+      "amount": {"type": "String"},
+      "percent": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
+  "aiNoRecords": "{range} 没有{type}记录。",
+  "@aiNoRecords": {
+    "placeholders": {"range": {"type": "String"}, "type": {"type": "String"}}
+  },
+  "aiNoTagRecords": "{range} 没有带标签的{type}记录。",
+  "@aiNoTagRecords": {
+    "placeholders": {"range": {"type": "String"}, "type": {"type": "String"}}
+  },
+  "aiCategoryRankingSummary": "{range} {type}分类排行：{detail}",
+  "@aiCategoryRankingSummary": {
+    "placeholders": {
+      "range": {"type": "String"},
+      "type": {"type": "String"},
+      "detail": {"type": "String"}
+    }
+  },
+  "aiTagRankingSummary": "{range} {type}标签排行：{detail}",
+  "@aiTagRankingSummary": {
+    "placeholders": {
+      "range": {"type": "String"},
+      "type": {"type": "String"},
+      "detail": {"type": "String"}
+    }
+  },
+  "aiFoundTransactions": "找到 {count} 笔交易：{detail}",
+  "@aiFoundTransactions": {
+    "placeholders": {"count": {"type": "int"}, "detail": {"type": "String"}}
+  },
+  "aiEntryNote": "（{note}）",
+  "@aiEntryNote": {
+    "placeholders": {"note": {"type": "String"}}
+  },
+  "aiLargestSummary": "{range} {extreme}的 {count} 笔{type}：{detail}",
+  "@aiLargestSummary": {
+    "placeholders": {
+      "range": {"type": "String"},
+      "extreme": {"type": "String"},
+      "count": {"type": "int"},
+      "type": {"type": "String"},
+      "detail": {"type": "String"}
+    }
+  },
+  "aiTrendSummary": "{range} {type}趋势（{granularity}，{count} 个点，合计 {total}）：{points}",
+  "@aiTrendSummary": {
+    "placeholders": {
+      "range": {"type": "String"},
+      "type": {"type": "String"},
+      "granularity": {"type": "String"},
+      "count": {"type": "int"},
+      "total": {"type": "String"},
+      "points": {"type": "String"}
+    }
+  },
+  "aiCompareSummary": "{label} 支出 {expense}（环比 {expenseMom}，同比 {expenseYoy}）；收入 {income}（环比 {incomeMom}，同比 {incomeYoy}）。",
+  "@aiCompareSummary": {
+    "placeholders": {
+      "label": {"type": "String"},
+      "expense": {"type": "String"},
+      "expenseMom": {"type": "String"},
+      "expenseYoy": {"type": "String"},
+      "income": {"type": "String"},
+      "incomeMom": {"type": "String"},
+      "incomeYoy": {"type": "String"}
+    }
+  },
+  "aiAccountsSummary": "共 {count} 个账户：{accounts}。{total}。",
+  "@aiAccountsSummary": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "accounts": {"type": "String"},
+      "total": {"type": "String"}
+    }
+  },
+  "aiAssetsTotalLine": "计入资产的账户合计 {amount}",
+  "@aiAssetsTotalLine": {
+    "placeholders": {"amount": {"type": "String"}}
+  },
+  "aiTotalMissingRateLine": "合计因缺汇率无法给出（缺 {codes}）",
+  "@aiTotalMissingRateLine": {
+    "placeholders": {"codes": {"type": "String"}}
+  },
+  "aiMissingRatesNetWorth": "有账户缺少汇率（{codes}），无法给出总资产与净资产；请先在「{page}」补齐。",
+  "@aiMissingRatesNetWorth": {
+    "placeholders": {"codes": {"type": "String"}, "page": {"type": "String"}}
+  },
+  "aiNetWorthSummary": "总资产 {assets}，总负债 {liabilities}，净资产 {net}。",
+  "@aiNetWorthSummary": {
+    "placeholders": {
+      "assets": {"type": "String"},
+      "liabilities": {"type": "String"},
+      "net": {"type": "String"}
+    }
+  },
+  "aiCardDebtLine": "{name} 当前欠款 {amount} {currency}",
+  "@aiCardDebtLine": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "amount": {"type": "String"},
+      "currency": {"type": "String"}
+    }
+  },
+  "aiCardAvailableLine": "，可用额度 {amount}",
+  "@aiCardAvailableLine": {
+    "placeholders": {"amount": {"type": "String"}}
+  },
+  "aiCardBillLine": "，本期账单 {amount}",
+  "@aiCardBillLine": {
+    "placeholders": {"amount": {"type": "String"}}
+  },
+  "aiCardDueLine": "，{day} 号还款（{due}）",
+  "@aiCardDueLine": {
+    "placeholders": {"day": {"type": "int"}, "due": {"type": "String"}}
+  },
+  "aiBudgetNotSet": "{period} 还没有设置预算；本期已支出 {amount}。",
+  "@aiBudgetNotSet": {
+    "placeholders": {
+      "period": {"type": "String"},
+      "amount": {"type": "String"}
+    }
+  },
+  "aiBudgetAttention": "需要关注：{items}。",
+  "@aiBudgetAttention": {
+    "placeholders": {"items": {"type": "String"}}
+  },
+  "aiBudgetAttentionRow": "{label} {spent}/{budget}（{status}）",
+  "@aiBudgetAttentionRow": {
+    "placeholders": {
+      "label": {"type": "String"},
+      "spent": {"type": "String"},
+      "budget": {"type": "String"},
+      "status": {"type": "String"}
+    }
+  },
+  "aiDailyRemainingLine": "，剩余日均 {amount}",
+  "@aiDailyRemainingLine": {
+    "placeholders": {"amount": {"type": "String"}}
+  },
+  "aiBudgetSummary": "{period} 预算 {budget}，已花 {spent}，剩余 {remaining}{daily}。{attention}",
+  "@aiBudgetSummary": {
+    "placeholders": {
+      "period": {"type": "String"},
+      "budget": {"type": "String"},
+      "spent": {"type": "String"},
+      "remaining": {"type": "String"},
+      "daily": {"type": "String"},
+      "attention": {"type": "String"}
+    }
+  }
 }

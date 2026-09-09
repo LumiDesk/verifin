@@ -1,3 +1,5 @@
+import 'dart:ui' show Locale;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/ai/ai_agent_engine.dart';
 import 'package:verifin/app/ai/ai_agent_event.dart';
@@ -7,6 +9,7 @@ import 'package:verifin/app/ai/ai_error.dart';
 import 'package:verifin/app/ai/ai_query_tool.dart';
 import 'package:verifin/app/ai/ai_settings.dart';
 import 'package:verifin/app/models.dart';
+import 'package:verifin/l10n/app_localizations.dart';
 
 AiToolContext _context() {
   return AiToolContext(
@@ -28,6 +31,7 @@ AiToolContext _context() {
     balanceOf: (_) => 0,
     baseCurrencyCode: 'CNY',
     now: DateTime(2026, 6, 20),
+    l10n: lookupAppLocalizations(const Locale('zh')),
   );
 }
 
@@ -127,7 +131,11 @@ void main() {
         events.whereType<AiAgentAnswerDelta>().single.text,
         isNot(contains('private reasoning')),
       );
-      expect(transport.toolDefinitions.first, hasLength(5));
+      // 注册表里的每个工具都应作为一条原生 function definition 传给模型。
+      expect(
+        transport.toolDefinitions.first,
+        hasLength(buildAiQueryTools().length),
+      );
       final secondRound = transport.messages[1];
       expect(secondRound.whereType<AiAssistantToolMessage>(), hasLength(1));
       expect(secondRound.whereType<AiToolResultMessage>(), hasLength(2));

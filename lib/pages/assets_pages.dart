@@ -283,26 +283,36 @@ class _AssetsPageState extends State<AssetsPage> {
                         ),
                         const SizedBox(height: 18),
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: <Widget>[
-                            Text(
-                              AppLocalizations.of(context).assetsAmount(
-                                assets == null
-                                    ? '—'
-                                    : formatUserMoney(assets, baseCurrencyCode),
+                            Expanded(
+                              child: Text(
+                                AppLocalizations.of(context).assetsAmount(
+                                  assets == null
+                                      ? '—'
+                                      : formatUserMoney(
+                                          assets,
+                                          baseCurrencyCode,
+                                        ),
+                                ),
+                                style: TextStyle(color: assetCardTextColor),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              style: TextStyle(color: assetCardTextColor),
                             ),
-                            Text(
-                              AppLocalizations.of(context).liabilitiesAmount(
-                                liabilities == null
-                                    ? '—'
-                                    : formatUserMoney(
-                                        liabilities.abs(),
-                                        baseCurrencyCode,
-                                      ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                AppLocalizations.of(context).liabilitiesAmount(
+                                  liabilities == null
+                                      ? '—'
+                                      : formatUserMoney(
+                                          liabilities.abs(),
+                                          baseCurrencyCode,
+                                        ),
+                                ),
+                                style: TextStyle(color: assetCardTextColor),
+                                textAlign: TextAlign.end,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              style: TextStyle(color: assetCardTextColor),
                             ),
                           ],
                         ),
@@ -385,7 +395,10 @@ class _AssetsPageState extends State<AssetsPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const Icon(Icons.currency_exchange, color: veriWarning),
+                  Icon(
+                    Icons.currency_exchange,
+                    color: veriSemantic(context, veriWarning),
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -427,6 +440,20 @@ class _AssetsPageState extends State<AssetsPage> {
                 icon: Icons.account_balance_wallet_outlined,
                 title: AppLocalizations.of(context).assetsEmptyTitle,
                 description: AppLocalizations.of(context).assetsEmptyDesc,
+                // 空状态只说明原因不给出口，用户会卡在死路上。
+                action: FilledButton.icon(
+                  onPressed: () => unawaited(
+                    Navigator.of(context).push<void>(
+                      MaterialPageRoute<void>(
+                        builder: (context) => const AddAccountPage(),
+                      ),
+                    ),
+                  ),
+                  icon: const Icon(Icons.add, size: 18),
+                  label: Text(
+                    AppLocalizations.of(context).assetsEmptyAddAction,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 12),

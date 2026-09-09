@@ -320,4 +320,51 @@ void main() {
     expect(find.byKey(const Key('open_account_editor')), findsOneWidget);
     expect(find.text('保存修改？'), findsNothing);
   });
+
+  testWidgets('新建信用卡时可直接填额度、账单日与还款日', (tester) async {
+    // 表单较长，用高一点的画布，避免选项弹层里的日期落在屏幕外。
+    await tester.binding.setSurfaceSize(const Size(800, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final controller = await pumpApp(tester);
+    await tapBottomTab(tester, 1);
+    await tester.tap(find.byTooltip('资产操作'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('添加账户'));
+    await tester.pumpAndSettle();
+
+    // 切到信用卡类型后信用字段才出现。
+    await tester.tap(find.byKey(const Key('add_account_type_choice')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('信用卡').last);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('add_account_credit_limit')), findsOneWidget);
+
+    await tester.enterText(find.byType(TextFormField).first, '招行信用卡');
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('add_account_credit_limit')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('number_key_1')), findsOneWidget);
+    for (final key in <String>['1', '0', '0', '0', '0']) {
+      await tester.tap(find.byKey(Key('number_key_$key')));
+      await tester.pump();
+    }
+    await tester.tap(find.byKey(const Key('number_pad_ok')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('10000'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('add_account_statement_day')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('每月 5 日').last);
+    await tester.pumpAndSettle();
+    expect(find.text('每月 5 日'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+
+    final created = controller.accounts.single;
+    expect(created.name, '招行信用卡');
+    expect(created.creditLimit, 10000);
+    expect(created.statementDay, 5);
+  });
 }

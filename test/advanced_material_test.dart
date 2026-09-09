@@ -24,6 +24,7 @@ Future<bool> saveMaterial(VeriFinController c, bool enabled) =>
       amountForceTwoDecimals: c.amountForceTwoDecimals,
       moneyUnitStyle: c.moneyUnitStyle,
       hideUnitInSingleCurrency: c.hideUnitInSingleCurrency,
+      showRunningBalance: c.showRunningBalance,
       fabActionMode: c.fabActionMode,
       defaultAccountId: c.defaultAccountId,
       autoSuggestEnabled: c.autoSuggestEnabled,

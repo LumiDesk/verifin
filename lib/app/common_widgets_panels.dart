@@ -217,7 +217,9 @@ Color accountBalanceColor(
   if (isZeroCurrencyAmount(balance, account.currencyCode)) {
     return Theme.of(context).colorScheme.onSurface;
   }
-  return balance < 0 ? veriExpense : veriIncome;
+  return balance < 0
+      ? veriSemantic(context, veriExpense)
+      : veriSemantic(context, veriIncome);
 }
 
 class _AccountRow extends StatelessWidget {
@@ -510,7 +512,10 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                             : Text(
                                 '-${formatCompactAmount(AppLocalizations.of(context), expense)}',
                                 style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(color: veriExpense, fontSize: 9),
+                                    ?.copyWith(
+                                      color: veriSemantic(context, veriExpense),
+                                      fontSize: 9,
+                                    ),
                               ),
                       ),
                       SizedBox(
@@ -520,7 +525,10 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                             : Text(
                                 '+${formatCompactAmount(AppLocalizations.of(context), income)}',
                                 style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(color: veriIncome, fontSize: 9),
+                                    ?.copyWith(
+                                      color: veriSemantic(context, veriIncome),
+                                      fontSize: 9,
+                                    ),
                               ),
                       ),
                     ],
@@ -573,7 +581,7 @@ class ToolEntry extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
-        Icon(icon, color: veriBlue, size: 24),
+        Icon(icon, color: veriSemantic(context, veriBlue), size: 24),
         const SizedBox(height: 6),
         Text(label, style: Theme.of(context).textTheme.labelLarge),
       ],

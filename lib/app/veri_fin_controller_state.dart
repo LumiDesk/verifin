@@ -58,6 +58,7 @@ mixin _ControllerState on ChangeNotifier {
   List<Category>? _categoriesView;
   List<ExchangeRate>? _exchangeRatesView;
   Map<String, double>? _accountBalanceCache;
+  Map<String, double>? _balanceAfterEntryCache;
 
   void _invalidateDerivedViews() {
     _entriesView = null;
@@ -66,6 +67,7 @@ mixin _ControllerState on ChangeNotifier {
     _categoriesView = null;
     _exchangeRatesView = null;
     _accountBalanceCache = null;
+    _balanceAfterEntryCache = null;
   }
 
   @override
@@ -130,6 +132,8 @@ mixin _ControllerState on ChangeNotifier {
   MoneyUnitStyle _moneyUnitStyle = MoneyUnitStyle.symbol;
   bool _hideUnitInSingleCurrency = true;
   bool _autoSuggestEnabled = true;
+  // 交易列表是否在每行显示该账户当时的结余；默认关闭，避免信息过载。
+  bool _showRunningBalance = false;
   AiSettings _aiSettings = const AiSettings();
   AiCapabilityProfile? _aiCapabilityProfile;
 
@@ -228,6 +232,8 @@ mixin _ControllerState on ChangeNotifier {
     _syncAmountFormatContext();
     // 默认开启：老用户升级后行为不变，只有显式关过才为 false。
     _autoSuggestEnabled = _store.read(_autoSuggestKey) != 'false';
+    // 默认关闭：只有显式开过才为 true。
+    _showRunningBalance = _store.read(_runningBalanceKey) == 'true';
     _aiSettings = AiSettings.decode(_store.read(_aiSettingsKey));
     _aiCapabilityProfile = AiCapabilityProfile.decode(
       _store.read(_aiCapabilitiesKey),

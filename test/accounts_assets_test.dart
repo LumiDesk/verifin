@@ -419,8 +419,8 @@ void main() {
 
     expect(zeroColor, theme.colorScheme.onSurface);
     expect(nearZeroColor, theme.colorScheme.onSurface);
-    expect(positiveColor, veriIncome);
-    expect(negativeColor, veriExpense);
+    expect(positiveColor, veriSemanticFor(Brightness.light, veriIncome));
+    expect(negativeColor, veriSemanticFor(Brightness.light, veriExpense));
     expect(excludedColor, theme.colorScheme.onSurface.withValues(alpha: 0.42));
     expect(zeroColor, isNot(excludedColor));
   });

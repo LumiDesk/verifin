@@ -24,3 +24,17 @@ Controller 经 repository 写库。`VeriFinController.create()` 是生产初始�
 
 内存仓储、插件 stub 和 ffi factory 用于测试，不能替代生产持久化。
 历史设计稿中的旧行为需要用当前源码复核；Web 预览已移除，历史记录不再代表支持范围。
+
+## 文档权威顺序
+
+判断「当前实现事实」时按以下顺序取信，冲突时前者覆盖后者：
+
+1. **源码、测试、Gradle、CI 工作流与发布脚本**——唯一事实来源。
+2. [AGENTS.md](../../AGENTS.md)——执行规范：改动流程与必须遵守的规则。
+3. [design-system.md](../design-system.md)——界面与交互规范。
+4. [ui-guidelines.md](../ui-guidelines.md)——页面骨架与交互细则。
+5. [components.md](components.md)——可复用组件 / 弹窗 / 纯函数注册表。
+6. [tech-decisions.md](tech-decisions.md)（已决策取舍）与 [known-limitations.md](known-limitations.md)（已接受债与整改阈值）。
+7. **历史记录**：`docs/reviews/`、`docs/dev/*-design.md`、`code-review-*.md`、`*-research.md`、`*-investigation.md`——只解释背景与决策过程，**不代表当前实现**。
+
+文档与实现不一致时，以第 1 条为准，核实 git 历史后同步修正文档。

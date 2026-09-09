@@ -62,8 +62,8 @@ class _ReportAnalysisPageState extends State<ReportAnalysisPage> {
         : reportCategoryStats(entries, categories, _dimension);
     final tagStats = reportTagStats(entries, controller.tags, _dimension);
     final dimensionColor = _dimension == EntryType.expense
-        ? veriExpense
-        : veriIncome;
+        ? veriSemantic(context, veriExpense)
+        : veriSemantic(context, veriIncome);
     final dimensionTotal = _dimension == EntryType.expense
         ? summary.expense
         : summary.income;
@@ -176,7 +176,9 @@ class _ReportAnalysisPageState extends State<ReportAnalysisPage> {
       stat.categoryId,
       _dimension,
     );
-    final color = _dimension == EntryType.expense ? veriExpense : veriIncome;
+    final color = _dimension == EntryType.expense
+        ? veriSemantic(context, veriExpense)
+        : veriSemantic(context, veriIncome);
     return showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -396,7 +398,7 @@ class _SummaryCard extends StatelessWidget {
                 child: _SummaryMetric(
                   label: AppLocalizations.of(context).entryTypeIncome,
                   value: formatIncomeAmount(summary.income),
-                  color: veriIncome,
+                  color: veriSemantic(context, veriIncome),
                   count: summary.incomeCount,
                 ),
               ),
@@ -404,7 +406,7 @@ class _SummaryCard extends StatelessWidget {
                 child: _SummaryMetric(
                   label: AppLocalizations.of(context).entryTypeExpense,
                   value: formatExpenseAmount(summary.expense),
-                  color: veriExpense,
+                  color: veriSemantic(context, veriExpense),
                   count: summary.expenseCount,
                 ),
               ),
@@ -412,7 +414,9 @@ class _SummaryCard extends StatelessWidget {
                 child: _SummaryMetric(
                   label: AppLocalizations.of(context).netLabel,
                   value: formatSignedAmount(summary.net),
-                  color: summary.net >= 0 ? veriRoyal : veriExpense,
+                  color: summary.net >= 0
+                      ? veriRoyal
+                      : veriSemantic(context, veriExpense),
                 ),
               ),
             ],
@@ -626,7 +630,9 @@ class _ChangeCell extends StatelessWidget {
     if (ratio != null && ratio!.abs() >= 0.0005) {
       final rising = ratio! > 0;
       final good = rising == higherIsGood;
-      color = good ? veriIncome : veriExpense;
+      color = good
+          ? veriSemantic(context, veriIncome)
+          : veriSemantic(context, veriExpense);
     }
     return Expanded(
       flex: 3,
@@ -697,13 +703,13 @@ class _DimensionToggle extends StatelessWidget {
           segment(
             AppLocalizations.of(context).entryTypeExpense,
             EntryType.expense,
-            veriExpense,
+            veriSemantic(context, veriExpense),
           ),
           const SizedBox(width: 4),
           segment(
             AppLocalizations.of(context).entryTypeIncome,
             EntryType.income,
-            veriIncome,
+            veriSemantic(context, veriIncome),
           ),
         ],
       ),

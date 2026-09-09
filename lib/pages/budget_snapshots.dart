@@ -116,17 +116,26 @@ List<BudgetMonthSnapshot> _budgetMonthSnapshots({
   required DateTime anchor,
   required int count,
 }) {
+  // 一次遍历把所有支出按「预算键月」分桶，避免每个月各扫一遍全部交易。
+  final startDay = controller.budgetCycleStartDay;
+  final expenseByKeyMonth = <DateTime, double>{};
+  for (final entry in controller.entries) {
+    if (entry.type != EntryType.expense) {
+      continue;
+    }
+    final keyMonth = budgetCycleKeyMonthFor(entry.occurredAt, startDay);
+    expenseByKeyMonth.update(
+      keyMonth,
+      (sum) => sum + entry.netBaseAmount,
+      ifAbsent: () => entry.netBaseAmount,
+    );
+  }
   return List<BudgetMonthSnapshot>.generate(count, (index) {
     final month = DateTime(anchor.year, anchor.month - count + 1 + index);
-    // 每个键月的支出按其预算周期窗口聚合（自然月时窗口即该月）。
-    final entries = entriesInWindow(
-      controller.entries,
-      controller.budgetWindow(month),
-    );
     return BudgetMonthSnapshot(
       month: month,
       budget: controller.monthlyBudget(month),
-      expense: sumByType(entries, EntryType.expense),
+      expense: expenseByKeyMonth[DateTime(month.year, month.month)] ?? 0,
     );
   });
 }
@@ -143,13 +152,15 @@ List<CategoryBudgetSnapshot> computeCategoryBudgetSnapshots({
   // 多级分类按层级聚合：每笔支出计入其所属分类**及所有上级分类**，
   // 这样父分类的预算会包含其子分类的支出。
   final all = controller.categories;
+  // 分类查找表只建一次：原实现每笔支出都经 ancestorIds 重建整张表。
+  final categoryIndexById = categoryIndex(all);
   void accumulate(Map<String, double> into, List<LedgerEntry> source) {
     for (final entry in source.where(
       (entry) => entry.type == EntryType.expense,
     )) {
       final chain = <String>[
         entry.categoryId,
-        ...ancestorIds(all, entry.categoryId),
+        ...ancestorIdsFrom(categoryIndexById, entry.categoryId),
       ];
       for (final id in chain) {
         into.update(

@@ -61,17 +61,17 @@ bool entryTouchesAccount(LedgerEntry entry, String accountId) {
   return entry.accountId == accountId || entry.toAccountId == accountId;
 }
 
-Color colorForType(EntryType type) {
+Color colorForType(BuildContext context, EntryType type) {
   switch (type) {
     case EntryType.expense:
-      return veriExpense;
+      return veriSemantic(context, veriExpense);
     case EntryType.income:
-      return veriIncome;
+      return veriSemantic(context, veriIncome);
     case EntryType.transfer:
       return veriRoyal;
     case EntryType.refund:
       // 退款是「钱回来」的正向流入，沿用收入的青绿色。
-      return veriIncome;
+      return veriSemantic(context, veriIncome);
   }
 }
 

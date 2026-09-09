@@ -148,7 +148,7 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
                       ),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: _amount > widget.maxAmount! + _maxTolerance
-                            ? veriExpense
+                            ? veriSemantic(context, veriExpense)
                             : Theme.of(
                                 context,
                               ).colorScheme.onSurface.withValues(alpha: 0.55),
@@ -267,7 +267,10 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
       buttonBackground = isDark
           ? veriExpense.withValues(alpha: 0.26)
           : const Color(0xFFF6D2D8);
-      buttonForeground = isDark ? const Color(0xFFFFAAB6) : veriExpense;
+      // 浅色底用加深变体：原来的 veriExpense 在浅粉按键底上只有 2.65:1。
+      buttonForeground = isDark
+          ? const Color(0xFFFFAAB6)
+          : veriSemantic(context, veriExpense);
     } else if (isDot) {
       buttonBackground = isDark
           ? veriWarning.withValues(alpha: 0.26)
@@ -649,7 +652,7 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
                     child: Text(
                       type.label(AppLocalizations.of(context)),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: colorForType(type),
+                        color: colorForType(context, type),
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.4,
                       ),
@@ -677,7 +680,7 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
                     ),
                     leading: CategoryIconBox(
                       iconCode: category.iconCode,
-                      color: colorForType(category.type),
+                      color: colorForType(context, category.type),
                       size: 32,
                     ),
                     title: Text(

@@ -241,3 +241,40 @@ int bookkeepingDays(List<LedgerEntry> entries) {
     l10n.bookkeepingYears,
   );
 }
+
+/// 每笔交易**生效后**其所属账户的余额（含账户初始余额）。
+///
+/// 供交易列表可选的「逐笔结余」使用。按 [accountEffectDate] 升序累加，同日按 id
+/// 稳定排序；转账同时更新两端账户，退款按到账日计入到账账户；无账户的交易
+/// （`accountId` 为空）不产生条目。返回 map 的键是交易 id。
+Map<String, double> accountBalanceAfterEntry({
+  required Iterable<Account> accounts,
+  required Iterable<LedgerEntry> entries,
+}) {
+  final balances = <String, double>{
+    for (final account in accounts) account.id: account.initialBalance,
+  };
+  final ordered = entries.toList()
+    ..sort((a, b) {
+      final byDate = accountEffectDate(a).compareTo(accountEffectDate(b));
+      return byDate != 0 ? byDate : a.id.compareTo(b.id);
+    });
+  final result = <String, double>{};
+  for (final entry in ordered) {
+    final accountId = entry.accountId;
+    final toAccountId = entry.toAccountId;
+    if (accountId.isNotEmpty) {
+      balances[accountId] =
+          (balances[accountId] ?? 0) + accountDeltaForEntry(entry, accountId);
+    }
+    if (toAccountId != null && toAccountId.isNotEmpty) {
+      balances[toAccountId] =
+          (balances[toAccountId] ?? 0) +
+          accountDeltaForEntry(entry, toAccountId);
+    }
+    if (accountId.isNotEmpty) {
+      result[entry.id] = balances[accountId] ?? 0;
+    }
+  }
+  return result;
+}

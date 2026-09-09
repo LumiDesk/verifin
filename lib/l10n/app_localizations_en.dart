@@ -760,6 +760,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Add an account from the top right; you can then view assets by type or group here.';
 
   @override
+  String get assetsEmptyAddAction => 'Add your first account';
+
+  @override
   String get assetsSortHint =>
       'Drag the handles on the right to reorder sections';
 
@@ -1974,6 +1977,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String chartTrendSemantics(int count) {
+    return 'Line chart with $count data points; tap or swipe to read each value.';
+  }
+
+  @override
+  String chartBarSemantics(int count) {
+    return 'Bar chart with $count items; tap or swipe to read each value.';
+  }
+
+  @override
   String noDimDesc(String dim) {
     return 'No $dim records in this time range.';
   }
@@ -2509,6 +2522,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get hideSingleCurrencyUnitDesc =>
       'Do not repeat the unit beside every amount when a ledger uses only one currency';
+
+  @override
+  String get runningBalanceLabel => 'Show running balance';
+
+  @override
+  String get runningBalanceDesc =>
+      'Show the account balance after each entry in the transaction list';
+
+  @override
+  String runningBalancePrefix(Object amount) {
+    return 'Balance $amount';
+  }
 
   @override
   String moneyUnitLabel(String unit) {
@@ -3119,6 +3144,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiToolLargestTransactions => 'Query large transactions';
 
   @override
+  String get aiToolTrend => 'Query cash-flow trend';
+
+  @override
+  String get aiToolCompare => 'Query month-over-month comparison';
+
+  @override
+  String get aiToolAccountsOverview => 'Query account balances';
+
+  @override
+  String get aiToolNetWorth => 'Query net worth';
+
+  @override
+  String get aiToolCreditCardBill => 'Query credit card bill';
+
+  @override
+  String get aiToolBudgetStatus => 'Query budget status';
+
+  @override
   String get aiToolUnknown => 'Call read-only tool';
 
   @override
@@ -3198,6 +3241,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get aiPrivacyNotice =>
       'AI features send your text and the read-only financial summaries needed to answer your questions to your configured third-party service. The configuration and full ledger remain on this device.';
+
+  @override
+  String get aiOptionalNotice =>
+      'AI is optional — recording, reports and backups all work without it.';
 
   @override
   String get aiEntryTitle => 'AI entry';
@@ -3399,6 +3446,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get importPreviewTitle => 'Import preview';
 
   @override
+  String importPreviewTargetBook(String book) {
+    return 'Import into \"$book\"';
+  }
+
+  @override
+  String ledgerBookSwitched(String book) {
+    return 'Switched to \"$book\"';
+  }
+
+  @override
   String get importPreviewHint =>
       'Tap to exclude / restore, long-press to edit';
 
@@ -3440,6 +3497,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String importPreviewConfirmAccountsOnly(int count) {
     return 'Import ($count accounts)';
   }
+
+  @override
+  String get importPreviewNothingSelected => 'Nothing selected to import';
 
   @override
   String get importPreviewNothingToImport => 'No data to import';
@@ -4203,6 +4263,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exchangeRateNotSet => 'No rate set';
 
   @override
+  String get creditRepayMissingRateHint =>
+      'No exchange rate set — tap “Transferred out” above to enter the amount actually debited, or maintain the rate first.';
+
+  @override
   String exchangeRateDateAndStatus(String date, String status) {
     return '$date · $status';
   }
@@ -4356,6 +4420,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get recurringGenerateFailed => 'Catch-up failed, please retry';
+
+  @override
   String assetValuationMissing(int count) {
     return '$count accounts need an exchange rate';
   }
@@ -4383,4 +4450,302 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get importSaveExchangeRatesHint =>
       'Off by default. When enabled, only rates used by included transactions are saved.';
+
+  @override
+  String aiTitleSummary(String range) {
+    return '$range · Income & expense summary';
+  }
+
+  @override
+  String aiTitleCategoryRanking(String range, String type) {
+    return '$range · $type category ranking';
+  }
+
+  @override
+  String aiTitleTagRanking(String range, String type) {
+    return '$range · $type tag ranking';
+  }
+
+  @override
+  String aiTitleTransactions(int count) {
+    return 'Transactions ($count)';
+  }
+
+  @override
+  String aiTitleLargestTransactions(
+    String range,
+    String extreme,
+    String type,
+    int count,
+  ) {
+    return '$range · Top $count $extreme $type';
+  }
+
+  @override
+  String aiTitleTrend(String range, String type) {
+    return '$range · $type trend';
+  }
+
+  @override
+  String aiTitleCompare(String label) {
+    return '$label · MoM & YoY';
+  }
+
+  @override
+  String get aiTitleCreditCards => 'Cards & credit accounts';
+
+  @override
+  String aiTitleBudgetExecution(String period) {
+    return '$period · Budget execution';
+  }
+
+  @override
+  String get aiStatNet => 'Net';
+
+  @override
+  String get aiStatSpent => 'Spent';
+
+  @override
+  String get aiStatTotalLiabilities => 'Total liabilities';
+
+  @override
+  String get aiStatLastYearMonthExpense => 'Same month last year (expense)';
+
+  @override
+  String get aiStatLastMonthIncome => 'Last month\'s income';
+
+  @override
+  String get aiStatLastYearMonthIncome => 'Same month last year (income)';
+
+  @override
+  String get aiHeaderCurrency => 'Currency';
+
+  @override
+  String get aiHeaderBalance => 'Balance';
+
+  @override
+  String get aiHeaderCurrentDebt => 'Current debt';
+
+  @override
+  String get aiExtremeMax => 'largest';
+
+  @override
+  String get aiExtremeMin => 'smallest';
+
+  @override
+  String get aiGranularityMonthly => 'monthly';
+
+  @override
+  String get aiGranularityDaily => 'daily';
+
+  @override
+  String get aiOverBudget => 'Over budget';
+
+  @override
+  String get aiNoBudgetAttention =>
+      'No categories over budget or near the limit.';
+
+  @override
+  String get aiNoAccounts => 'This book has no accounts yet.';
+
+  @override
+  String get aiNoCreditAccounts => 'This book has no credit accounts.';
+
+  @override
+  String get aiNoBudgetData => 'This book has no budget data.';
+
+  @override
+  String get aiNoMatchingTransactions => 'No matching transactions.';
+
+  @override
+  String get aiNoBaseline => 'Baseline is 0, so a ratio can\'t be computed';
+
+  @override
+  String aiMonthYearLabel(int year, int month) {
+    return '$year-$month';
+  }
+
+  @override
+  String aiBudgetPeriodLabel(int year, int month) {
+    return 'Budget period $year-$month';
+  }
+
+  @override
+  String get aiSepSemicolon => '; ';
+
+  @override
+  String get aiSepComma => ', ';
+
+  @override
+  String get aiSepEnum => ', ';
+
+  @override
+  String aiSummaryLine(
+    String range,
+    String income,
+    int incomeCount,
+    String expense,
+    int expenseCount,
+    String net,
+  ) {
+    return '$range income $income ($incomeCount entries), expense $expense ($expenseCount entries), net $net.';
+  }
+
+  @override
+  String aiRankingRowLine(
+    String label,
+    String amount,
+    String percent,
+    int count,
+  ) {
+    return '$label $amount ($percent%, $count entries)';
+  }
+
+  @override
+  String aiNoRecords(String range, String type) {
+    return '$range: no $type records.';
+  }
+
+  @override
+  String aiNoTagRecords(String range, String type) {
+    return '$range: no tagged $type records.';
+  }
+
+  @override
+  String aiCategoryRankingSummary(String range, String type, String detail) {
+    return '$range $type category ranking: $detail';
+  }
+
+  @override
+  String aiTagRankingSummary(String range, String type, String detail) {
+    return '$range $type tag ranking: $detail';
+  }
+
+  @override
+  String aiFoundTransactions(int count, String detail) {
+    return 'Found $count transactions: $detail';
+  }
+
+  @override
+  String aiEntryNote(String note) {
+    return ' ($note)';
+  }
+
+  @override
+  String aiLargestSummary(
+    String range,
+    String extreme,
+    int count,
+    String type,
+    String detail,
+  ) {
+    return '$range: $count $extreme $type — $detail';
+  }
+
+  @override
+  String aiTrendSummary(
+    String range,
+    String type,
+    String granularity,
+    int count,
+    String total,
+    String points,
+  ) {
+    return '$range $type trend ($granularity, $count points, total $total): $points';
+  }
+
+  @override
+  String aiCompareSummary(
+    String label,
+    String expense,
+    String expenseMom,
+    String expenseYoy,
+    String income,
+    String incomeMom,
+    String incomeYoy,
+  ) {
+    return '$label expense $expense (MoM $expenseMom, YoY $expenseYoy); income $income (MoM $incomeMom, YoY $incomeYoy).';
+  }
+
+  @override
+  String aiAccountsSummary(int count, String accounts, String total) {
+    return '$count accounts: $accounts. $total.';
+  }
+
+  @override
+  String aiAssetsTotalLine(String amount) {
+    return 'Total of asset accounts $amount';
+  }
+
+  @override
+  String aiTotalMissingRateLine(String codes) {
+    return 'Total unavailable, missing rates for $codes';
+  }
+
+  @override
+  String aiMissingRatesNetWorth(String codes, String page) {
+    return 'Some accounts are missing exchange rates ($codes), so total assets and net assets can\'t be shown. Add them under $page.';
+  }
+
+  @override
+  String aiNetWorthSummary(String assets, String liabilities, String net) {
+    return 'Total assets $assets, total liabilities $liabilities, net assets $net.';
+  }
+
+  @override
+  String aiCardDebtLine(String name, String amount, String currency) {
+    return '$name owes $amount $currency';
+  }
+
+  @override
+  String aiCardAvailableLine(String amount) {
+    return ', available $amount';
+  }
+
+  @override
+  String aiCardBillLine(String amount) {
+    return ', this cycle $amount';
+  }
+
+  @override
+  String aiCardDueLine(int day, String due) {
+    return ', due on day $day ($due)';
+  }
+
+  @override
+  String aiBudgetNotSet(String period, String amount) {
+    return '$period has no budget set; $amount spent this period.';
+  }
+
+  @override
+  String aiBudgetAttention(String items) {
+    return 'Needs attention: $items.';
+  }
+
+  @override
+  String aiBudgetAttentionRow(
+    String label,
+    String spent,
+    String budget,
+    String status,
+  ) {
+    return '$label $spent/$budget ($status)';
+  }
+
+  @override
+  String aiDailyRemainingLine(String amount) {
+    return ', $amount/day remaining';
+  }
+
+  @override
+  String aiBudgetSummary(
+    String period,
+    String budget,
+    String spent,
+    String remaining,
+    String daily,
+    String attention,
+  ) {
+    return '$period budget $budget, spent $spent, remaining $remaining$daily. $attention';
+  }
 }

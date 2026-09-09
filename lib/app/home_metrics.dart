@@ -358,19 +358,27 @@ String formatHomeMetric(HomeMetric metric, double value) {
 }
 
 /// 指标取色：零值用传入的弱化色，否则按风格（结余按正负）取色。
-Color homeMetricColor(HomeMetric metric, double value, Color mutedColor) {
+/// 纯取色函数没有 context，明暗由调用方以 [brightness] 传入。
+Color homeMetricColor(
+  HomeMetric metric,
+  double value,
+  Color mutedColor,
+  Brightness brightness,
+) {
   if (!value.isFinite || isZeroAmount(value)) {
     return mutedColor;
   }
   switch (homeMetricStyle(metric)) {
     case HomeMetricStyle.expense:
-      return veriExpense;
+      return veriSemanticFor(brightness, veriExpense);
     case HomeMetricStyle.income:
-      return veriIncome;
+      return veriSemanticFor(brightness, veriIncome);
     case HomeMetricStyle.signed:
-      return value > 0 ? veriIncome : veriExpense;
+      return value > 0
+          ? veriSemanticFor(brightness, veriIncome)
+          : veriSemanticFor(brightness, veriExpense);
     case HomeMetricStyle.neutral:
-      return veriBlue;
+      return veriSemanticFor(brightness, veriBlue);
   }
 }
 

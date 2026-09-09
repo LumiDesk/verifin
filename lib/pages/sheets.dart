@@ -1557,7 +1557,9 @@ Future<bool> confirmDeleteAccount(
           FilledButton(
             onPressed: () =>
                 Navigator.of(context).pop(AccountDeleteAction.delete),
-            style: FilledButton.styleFrom(backgroundColor: veriExpense),
+            style: FilledButton.styleFrom(
+              backgroundColor: veriSemantic(context, veriExpense),
+            ),
             child: Text(l10n.accountDeleteWithEntries),
           ),
         ],

@@ -855,7 +855,10 @@
     "fabActionMode": "manualTapAiLongPress",
     "amountForceTwoDecimals": true,
     "currencyFractionStyle": "standard",
+    "moneyUnitStyle": "symbol",
+    "hideUnitInSingleCurrency": true,
     "autoSuggestEnabled": false,
+    "showRunningBalance": false,
     "homeTrendConfig": {
       "title": "本月概览",
       "big": "monthExpense",

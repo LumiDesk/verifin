@@ -318,4 +318,68 @@ void main() {
     expect(find.text('+150'), findsOneWidget);
     expect(find.text('+999'), findsNothing);
   });
+
+  testWidgets('退款弹层内容可滚动，保存按钮在小屏上也点得到', (WidgetTester tester) async {
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store);
+    final bookId = controller.activeBook.id;
+    controller
+      ..addAccount(
+        Account(
+          id: 'cash',
+          bookId: bookId,
+          name: '现金',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 1000,
+          iconCode: 'cash',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+        ),
+      )
+      ..addEntry(
+        LedgerEntry(
+          id: 'e5',
+          bookId: bookId,
+          type: EntryType.expense,
+          amount: 200,
+          categoryId: 'dining',
+          accountId: 'cash',
+          note: '',
+          occurredAt: DateTime(2026, 7, 4),
+        ),
+      );
+
+    // 矮屏：内容一屏放不下，必须能滚动到保存按钮，而不是被裁掉。
+    await tester.binding.setSurfaceSize(const Size(393, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(
+          theme: buildVeriFinTheme(Brightness.light),
+          home: const TransactionDetailPage(entryId: 'e5'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 矮屏下先滚到「添加退款」入口，再打开弹层。
+    await tester.scrollUntilVisible(
+      find.text('添加退款'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('添加退款'));
+    await tester.pumpAndSettle();
+
+    final saveButton = find.widgetWithText(FilledButton, '保存');
+    expect(saveButton, findsOneWidget);
+    // 弹层内必须存在滚动容器，否则 ensureVisible 会因找不到 Scrollable 直接抛错。
+    await tester.ensureVisible(saveButton);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
 }

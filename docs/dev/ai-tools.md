@@ -46,7 +46,7 @@
 | `AiTransactionsDisplay` | 一组具体交易（`entryIds`） | **可点击**交易列表 `TransactionListCard`，点击进详情页 |
 | `AiTableDisplay` | 模型自定义多列数据 | 表格 |
 
-> `display` 里的 `title` 目前仍是纯函数产生的中文默认文案；这是当前已知的 i18n 缺口，后续本地化时需保持工具层无 `BuildContext`。
+> `display` 里的 `title`、统计项 `label` 与表头，以及回喂模型的 `summary`，都经 `AiToolContext.l10n`（`AppLocalizations`）按当前语言解析；工具层仍无 `BuildContext`，语言由上层（聊天页）传入。`description` 与参数 schema 保持中文——它们只给模型看，不随界面语言变化。
 
 ## 工具清单（当前已实现）
 
@@ -57,21 +57,18 @@
 | `tagRanking` | 某时间段某类型按标签的金额排行与占比 | `type`,`range`,`limit` | `reportTagStats` | Ranking |
 | `queryTransactions` | 按类型 / 时间 / 金额区间 / 关键词筛选具体交易 | `type`,`range`,`minAmount`,`maxAmount`,`keyword`,`sortBy`,`limit` | `queryLedgerEntries` | Transactions |
 | `largestTransactions` | 某时间段某类型金额最大 / 最小的若干笔 | `type`,`range`,`limit`,`ascending` | `queryLedgerEntries` | Transactions |
+| `trend` | 某时间段某类型的趋势序列（短范围按天、长范围按月） | `type`,`range` | `reportTrend` | Trend |
+| `compare` | 指定月份与上月、去年同月的收支环比 / 同比 | `month` | `reportMonthlyComparison` | Stat |
+| `accountsOverview` | 各账户名称、币种与余额一览（不含隐藏账户） | — | `ctx.balanceOf` + `convertAccountBalancesToBase` | Table |
+| `netWorth` | 总资产 / 总负债 / 净资产（本位币口径） | — | `convertAccountBalancesToBase` | Stat |
+| `creditCardBill` | 信用类账户的欠款、可用额度、本期账单与还款日 | — | `credit_card.dart` | Table |
+| `budgetStatus` | 某预算期的预算、已花、剩余、剩余日均与需要关注的分类 | `month` | `budget_status.dart` | Stat |
 
 **时间窗参数 `range` 预设**：`thisMonth` / `lastMonth` / `thisYear` / `lastYear` / `last7Days` / `last30Days` / `last3Months` / `last6Months` / `last12Months` / `all`；或用 `start`+`end`（`YYYY-MM-DD`）指定显式区间。
 
 ## 待实现工具（下一批）
 
-按需补齐，各自复用现成纯函数，实现后移入上表：
-
-| 计划工具 | 作用 | 底层 |
-|---------|------|------|
-| `trend` | 收支趋势序列（日 / 月粒度） | `reportTrend` |
-| `compare` | 环比 / 同比对比 | `reportMonthlyComparison` |
-| `accountsOverview` | 各账户余额一览 | `ctx.balanceOf` |
-| `netWorth` | 资产 / 负债 / 净资产 | `home_metrics` |
-| `budgetStatus` | 预算执行情况 | 预算逻辑 |
-| `creditCardBill` | 信用卡本期账单 | `credit_card.dart` |
+当前批次已全部落地，暂无计划中的工具。新增按上面的「三步」流程走。
 
 ## 变更记录
 
@@ -79,3 +76,6 @@
 - Agent 升级（issue #32）：旧的文本猜测循环替换为 `AiAgentEngine`；原生 Tool Calls 与兼容标记协议共用强类型消息、工具 schema、执行边界和结构化事件。传输层新增完整 SSE 结束校验、空闲超时、错误分类、安全重试与非流式回退；聊天页展示并持久化已完成的工具步骤，不渲染推理文本、原始工具 JSON 或底层异常。
 - UI 打磨 + 结果卡片可持久化：`AiResultDisplay` 增加 `toJson`/`aiResultDisplayFromJson`，聊天历史每条可带 `displays`（序列化的结果卡片），**重开时连同图表一并还原**（交易列表仍只存 id、按当前数据实时解析）；聊天页改用通用 `VeriHeader`、输入栏/发送按钮/间距/字号/图表纵轴/表格样式全面优化；AI 设置页加「清空配置」。
 - 多币种：`AiToolContext` 增加账本本位币；统计与金额筛选明确采用冻结本位币口径，工具回馈模型的摘要保留 ISO 代码，用户可见结果卡片则遵循货币单位偏好并在卡片标题标注本位币；AI 记账草稿可解析 ISO 4217 原币并在保存前继续由用户复核。
+- 工具扩展：新增 `trend` / `compare` / `accountsOverview` / `netWorth` / `creditCardBill`；`AiToolContext` 增加 `bookId`（折算账户余额需要按账本定位汇率）。`netWorth` 与 `accountsOverview` 在缺汇率时明确说明缺哪种币、不给部分和。工具步骤标题同步登记在 `ai_tool_presentation.dart`。
+- `budgetStatus`：预算聚合与「超支 / 接近上限」判定抽到 `lib/app/budget_status.dart` 的纯函数 `computeBudgetStatus`；预算键月、单期覆盖等口径仍留在 controller，通过 `AiToolContext.budget`（`AiBudgetContext`）以回调注入，避免两处各写一套 key 规则。
+- i18n：`AiToolContext` 新增 `required AppLocalizations l10n`（聊天页传 `AppLocalizations.of(context)`，单测传 `lookupAppLocalizations(const Locale('zh'))`）。工具产出的卡片标题、统计项标签、表头与回喂模型的 summary 全部改为按当前语言解析，新增键统一加 `ai` 前缀并同步写入 `app_zh.arb` / `app_en.arb`。工具 `description` 与参数 schema 仍为中文（给模型看，不随界面语言变化）。

@@ -36,49 +36,28 @@ class VeriGlassLightPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (size.shortestSide < 2 || opacity <= 0) return;
-    final rect = (Offset.zero & size).deflate(0.7);
-    final rrect = borderRadius == null
-        ? RRect.fromRectAndRadius(rect, Radius.circular(radius))
-        : RRect.fromRectAndCorners(
-            rect,
-            topLeft: borderRadius!.topLeft,
-            topRight: borderRadius!.topRight,
-            bottomLeft: borderRadius!.bottomLeft,
-            bottomRight: borderRadius!.bottomRight,
-          );
-    final path = Path()..addRRect(rrect);
-    final metric = path.computeMetrics().first;
-    // 把整条轮廓组成连续的透明度网格，两次绘制完成柔光与细高光。
-    // 不为每 2dp 小段建立 MaskFilter 离屏任务：一张普通卡片原本就会
-    // 产生数百次独立模糊，多个卡片同时显示时会放大原生 GPU 资源压力。
-    final samples = (metric.length / 2).ceil().clamp(12, 1024);
-    final points = <Offset>[];
-    final normals = <Offset>[];
-    final lights = <double>[];
-    for (var i = 0; i <= samples; i++) {
-      final tangent = metric.getTangentForOffset(
-        i == samples ? 0 : metric.length * i / samples,
-      )!;
-      final normal = Offset(tangent.vector.dy, -tangent.vector.dx);
-      points.add(tangent.position);
-      normals.add(normal);
-      lights.add(
+    // 轮廓采样（Path 求长 + 逐点切线）只跟尺寸与圆角有关，缓存后拖动导航时
+    // 每帧不必再重建上千个切点；只有光照强度随 motion 重算。
+    final outline = _outlineFor(
+      size: size,
+      radius: radius,
+      borderRadius: borderRadius,
+    );
+    final points = outline.points;
+    final normals = outline.normals;
+    final lights = <double>[
+      for (var i = 0; i < points.length; i++)
         veriGlassEdgeLight(
-          Offset(
-            tangent.position.dx / size.width,
-            tangent.position.dy / size.height,
-          ),
-          normal,
+          Offset(points[i].dx / size.width, points[i].dy / size.height),
+          normals[i],
           motion: motion,
         ),
-      );
-    }
+    ];
     void drawRibbon(double halfWidth, double opacity) {
       const offsets = [-1.0, -0.5, 0.0, 0.5, 1.0];
       const weights = [0.0, 0.35, 1.0, 0.35, 0.0];
       final positions = <Offset>[];
       final colors = <Color>[];
-      final indices = <int>[];
       for (var i = 0; i < points.length; i++) {
         for (var j = 0; j < offsets.length; j++) {
           positions.add(points[i] + normals[i] * (offsets[j] * halfWidth));
@@ -87,18 +66,13 @@ class VeriGlassLightPainter extends CustomPainter {
               alpha: (lights[i] * opacity * weights[j]).clamp(0, 1),
             ),
           );
-          if (i < samples && j < offsets.length - 1) {
-            final a = i * offsets.length + j;
-            final b = a + offsets.length;
-            indices.addAll([a, b, a + 1, a + 1, b, b + 1]);
-          }
         }
       }
       final vertices = ui.Vertices(
         ui.VertexMode.triangles,
         positions,
         colors: colors,
-        indices: indices,
+        indices: outline.indices,
       );
       canvas.drawVertices(vertices, BlendMode.dst, Paint());
       vertices.dispose();
@@ -122,4 +96,80 @@ class VeriGlassLightPainter extends CustomPainter {
       borderRadius != oldDelegate.borderRadius ||
       activity != oldDelegate.activity ||
       motion != oldDelegate.motion;
+}
+
+/// 轮廓采样结果：同一尺寸与圆角下 Path、弧长与切点都不变。
+class _GlassOutline {
+  const _GlassOutline({
+    required this.points,
+    required this.normals,
+    required this.indices,
+  });
+
+  final List<Offset> points;
+  final List<Offset> normals;
+
+  /// 顶点网格的三角形索引，只与采样数有关。
+  final List<int> indices;
+}
+
+/// 缓存条目上限：卡片尺寸种类有限，超限直接清空，避免无限增长。
+const int _glassOutlineCacheLimit = 24;
+final Map<String, _GlassOutline> _glassOutlineCache = <String, _GlassOutline>{};
+
+_GlassOutline _outlineFor({
+  required Size size,
+  required double radius,
+  BorderRadius? borderRadius,
+}) {
+  final key =
+      '${size.width.toStringAsFixed(1)}x${size.height.toStringAsFixed(1)}'
+      '|$radius|${borderRadius ?? ''}';
+  final cached = _glassOutlineCache[key];
+  if (cached != null) {
+    return cached;
+  }
+  final rect = (Offset.zero & size).deflate(0.7);
+  final rrect = borderRadius == null
+      ? RRect.fromRectAndRadius(rect, Radius.circular(radius))
+      : RRect.fromRectAndCorners(
+          rect,
+          topLeft: borderRadius.topLeft,
+          topRight: borderRadius.topRight,
+          bottomLeft: borderRadius.bottomLeft,
+          bottomRight: borderRadius.bottomRight,
+        );
+  // 把整条轮廓组成连续的透明度网格，两次绘制完成柔光与细高光。
+  // 不为每 2dp 小段建立 MaskFilter 离屏任务：一张普通卡片原本就会
+  // 产生数百次独立模糊，多个卡片同时显示时会放大原生 GPU 资源压力。
+  final metric = (Path()..addRRect(rrect)).computeMetrics().first;
+  final samples = (metric.length / 2).ceil().clamp(12, 1024);
+  final points = <Offset>[];
+  final normals = <Offset>[];
+  for (var i = 0; i <= samples; i++) {
+    final tangent = metric.getTangentForOffset(
+      i == samples ? 0 : metric.length * i / samples,
+    )!;
+    points.add(tangent.position);
+    normals.add(Offset(tangent.vector.dy, -tangent.vector.dx));
+  }
+  const offsetCount = 5;
+  final indices = <int>[];
+  for (var i = 0; i < samples; i++) {
+    for (var j = 0; j < offsetCount - 1; j++) {
+      final a = i * offsetCount + j;
+      final b = a + offsetCount;
+      indices.addAll(<int>[a, b, a + 1, a + 1, b, b + 1]);
+    }
+  }
+  if (_glassOutlineCache.length >= _glassOutlineCacheLimit) {
+    _glassOutlineCache.clear();
+  }
+  final outline = _GlassOutline(
+    points: points,
+    normals: normals,
+    indices: indices,
+  );
+  _glassOutlineCache[key] = outline;
+  return outline;
 }

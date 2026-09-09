@@ -150,7 +150,7 @@ dart format .
 
 ### 设计令牌、金额与日期
 
-- 颜色使用 `veri*` 常量，圆角使用 `veriRadius*`，主色为 `veriRoyal`（`#346edb`）。禁止裸写 `Color(0x...)` 或魔法圆角；确有局部特例时写明原因。
+- 颜色使用 `veri*` 常量，圆角使用 `veriRadius*`，主色为 `veriRoyal`（`#346edb`）。禁止裸写 `Color(0x...)` 或魔法圆角；确有局部特例时写明原因。语义色（收入 / 支出 / 转账 / 提醒）必须经 `veriSemantic(context, veriX)` 取用（无 `BuildContext` 的纯函数用 `veriSemanticFor(brightness, veriX)`），不要直接渲染亮色常量，否则浅色主题对比度不达 AA。
 - 金额颜色只用 `colorForType` / `accountBalanceColor`；金额文本只用 `formatAmount` / `formatSignedAmount` / `formatCompactAmount` 等现有 helper。金额为零必须是中性色 `0`，不能显示 `-0`。
 - 日期和月份使用 l10n 的 `dateMonthDay` / `yearMonth` 等格式，不能手拼用户可见日期字符串。
 - **日历日算术禁止裸用绝对时长**：相隔天数用 `calendarDaysBetween`，推前/推后 N 天用 `addCalendarDays`。不要用 `difference().inDays` 或 `add(Duration(days: n))` 表达日历日；夏令时地区一天可能是 23/25 小时，这类 bug 在 UTC/中国时区 CI 中不会显现。秒、小时等真实时间间隔仍使用 `Duration`。

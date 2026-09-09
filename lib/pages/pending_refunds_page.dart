@@ -43,7 +43,10 @@ class PendingRefundsPage extends StatelessWidget {
                 VeriCard(
                   child: Row(
                     children: <Widget>[
-                      const Icon(Icons.schedule, color: veriBlue),
+                      Icon(
+                        Icons.schedule,
+                        color: veriSemantic(context, veriBlue),
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -57,7 +60,7 @@ class PendingRefundsPage extends StatelessWidget {
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
                               fontWeight: FontWeight.w800,
-                              color: veriIncome,
+                              color: veriSemantic(context, veriIncome),
                             ),
                       ),
                     ],

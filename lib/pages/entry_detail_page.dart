@@ -679,22 +679,24 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
         .firstOrNull;
     // 大金额颜色跟随类型:支出红、收入青绿、转账保持蓝色。
     final amountColor = switch (_type) {
-      EntryType.expense => veriExpense,
-      EntryType.income => veriIncome,
-      EntryType.transfer => veriBlue,
+      EntryType.expense => veriSemantic(context, veriExpense),
+      EntryType.income => veriSemantic(context, veriIncome),
+      EntryType.transfer => veriSemantic(context, veriBlue),
       // 退款不在此页手动选择，仅作穷尽兜底（正向流入用青绿）。
-      EntryType.refund => veriIncome,
+      EntryType.refund => veriSemantic(context, veriIncome),
     };
     // 用带单位的格式化：单币种账本按偏好隐藏单位，多币种账本必须能看出币种。
     final amountNumber = formatUserMoney(
       _amount,
       _currencyCode ?? controller.activeBook.baseCurrencyCode,
     );
+    // 符号与 formatSignedAmount 保持同一套写法（ASCII 正负号、无空格），
+    // 否则这里会成为全应用唯一使用 U+2212 加空格的位置。
     final amountText = switch (_type) {
-      EntryType.expense => '− $amountNumber',
-      EntryType.income => '+ $amountNumber',
+      EntryType.expense => '-$amountNumber',
+      EntryType.income => '+$amountNumber',
       EntryType.transfer => amountNumber,
-      EntryType.refund => '+ $amountNumber',
+      EntryType.refund => '+$amountNumber',
     };
     _captureInitialSnapshot();
 
@@ -1198,7 +1200,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
               (_missingRateCodes.toList()..sort()).join(', '),
             ),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: veriWarning,
+              color: veriSemantic(context, veriWarning),
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -2064,10 +2066,10 @@ class _EntryTypeButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final accent = switch (type) {
-      EntryType.expense => veriExpense,
-      EntryType.income => veriIncome,
+      EntryType.expense => veriSemantic(context, veriExpense),
+      EntryType.income => veriSemantic(context, veriIncome),
       EntryType.transfer => veriRoyal,
-      EntryType.refund => veriIncome,
+      EntryType.refund => veriSemantic(context, veriIncome),
     };
     return Material(
       key: selected ? Key('entry_type_selected_${type.name}') : null,
@@ -2243,24 +2245,31 @@ class _EntryCategoryTile extends StatelessWidget {
         ),
         if (onOpenBranch != null)
           Positioned(
-            right: -1,
-            bottom: 0,
-            child: Material(
-              color: accent,
-              elevation: 1,
-              shape: const CircleBorder(),
-              clipBehavior: Clip.antiAlias,
-              child: InkWell(
-                key: Key('entry_category_more_${category.id}'),
-                customBorder: const CircleBorder(),
-                onTap: onOpenBranch,
-                child: const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: Icon(
-                    Icons.more_horiz_rounded,
-                    size: 13,
-                    color: Colors.white,
+            // 视觉仍是 18dp 圆点，但把点击区扩到 32dp：18dp 低于可点目标下限，容易点不中。
+            right: -7,
+            bottom: -7,
+            child: SizedBox(
+              width: 32,
+              height: 32,
+              child: Center(
+                child: Material(
+                  color: accent,
+                  elevation: 1,
+                  shape: const CircleBorder(),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    key: Key('entry_category_more_${category.id}'),
+                    customBorder: const CircleBorder(),
+                    onTap: onOpenBranch,
+                    child: const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: Icon(
+                        Icons.more_horiz_rounded,
+                        size: 13,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
               ),

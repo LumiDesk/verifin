@@ -542,7 +542,10 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
                 padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
                 child: VeriHeader(
                   title: l10n.importPreviewTitle,
-                  subtitle: widget.sourceLabel,
+                  // 导入是写进当前账本的，标题里必须写清目标账本，否则多账本用户会存错地方。
+                  subtitle:
+                      '${widget.sourceLabel} · '
+                      '${l10n.importPreviewTargetBook(controller.activeBook.name)}',
                   showBack: true,
                   actions: <Widget>[
                     if (_rootEntries.isNotEmpty)
@@ -725,7 +728,10 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
                         ? null
                         : _confirm,
                     child: Text(
-                      includedCount == 0
+                      // 全部排除时按钮是禁用的；此时说清原因，而不是显示「只导入 0 个账户」。
+                      includedCount == 0 && _accountsToCreateCount == 0
+                          ? l10n.importPreviewNothingSelected
+                          : includedCount == 0
                           ? l10n.importPreviewConfirmAccountsOnly(
                               _accountsToCreateCount,
                             )
@@ -830,7 +836,11 @@ class _SummaryCard extends StatelessWidget {
           ),
           if (skipped > 0)
             ActionChip(
-              avatar: Icon(Icons.error_outline, size: 16, color: veriExpense),
+              avatar: Icon(
+                Icons.error_outline,
+                size: 16,
+                color: veriSemantic(context, veriExpense),
+              ),
               label: Text(l10n.importPreviewSkipped(skipped)),
               onPressed: onViewSkipped,
             ),
