@@ -36,7 +36,7 @@
 
 ### 📒 记账
 
-- 首页 FAB 数字键盘**快速记账**，支持支出 / 收入 / 转账三种类型；可选**「无账户」**只记金额、不计入任何账户余额；数字键盘支持**四则运算算式**（如 `500+800`），实时显示结果、算式不完整时提示；
+- 首页底栏的圆形记账按钮打开数字键盘**快速记账**，支持支出 / 收入 / 转账三种类型；可选**「无账户」**只记金额、不计入任何账户余额；数字键盘支持**四则运算算式**（如 `500+800`），实时显示结果、算式不完整时提示；
 - **默认付款账户**：在「我的 → 设置」或账户详情页把某账户设为默认，记账时（含 AI 未识别到账户时）自动预选它，每个账本各自设置；
 - **AI 对话记账**（可选）：把「记一笔」按钮设为 AI 模式，用一句话（如「昨天打车 32」）自动解析出类型 / 金额 / 分类 / 账户 / 备注草稿，确认后落账；也可设为**点击手动、长按 AI**，一个按钮两种入口；自带 API Key + 请求地址（OpenAI 兼容），配置只存本机；
 - **截图识账 / 分享识账**（可选，需先配置 AI）：把账单**截图「分享」给 Veri Fin**（或在 AI 记账弹层里选相册截图），文字识别在**本机离线完成、图片绝不上传**，识别文本由 AI 解析成草稿确认落账；账单**文本**同样可分享识别。Veri Fin 本体**不监听任何通知或屏幕**——Tasker 等自动化工具可经 Intent 接口把账单文本送进来（见 [`docs/automation.md`](docs/automation.md)）；
@@ -94,9 +94,9 @@
 | 备份加密 | `cryptography`（纯 Dart AES-GCM + PBKDF2-SHA256） |
 | 云备份 | `dart:io HttpClient` 手写 WebDAV 客户端（PUT / GET / PROPFIND / MKCOL） |
 | 图表 | 全部 `CustomPainter` 自绘（趋势 / 柱状 / 环形，带命中测试与数据气泡） |
-| 平台能力 | `local_auth`（生物解锁）、`flutter_local_notifications`（提醒）、`image_picker`（附件）、原生 `AppWidgetProvider`（桌面小组件）、MethodChannel 桥（SAF / 磁贴 / 更新检查） |
+| 平台能力 | `local_auth`（指纹解锁）、`flutter_local_notifications`（提醒）、`image_picker`（附件）、原生 `AppWidgetProvider`（桌面小组件）、MethodChannel 桥（SAF / 磁贴 / 更新检查） |
 | 测试 | 按领域拆分的 widget / 单元测试（内存仓储）+ ffi 真实 SQLite、迁移矩阵、模型往返与仓储契约测试 |
-| CI / 发布 | GitHub Actions：PR / `main` 执行 format + analyze + test；推 `vX.Y.Z` 标签构建 release APK/AAB 并创建 GitHub Release |
+| CI / 发布 | GitHub Actions：PR / `main` 执行 format + analyze + test 并构建不交付的 debug APK 门禁；推 `vX.Y.Z` 标签构建 release APK/AAB 并创建 GitHub 预发布（真机验收后手动提升为正式版） |
 
 ## 🚀 快速开始
 
@@ -119,8 +119,8 @@ Android 包名 `top.talyra42.verifin`。本地不构建交付 APK——正式安
 
 ## 📦 构建与发布
 
-- 质量 CI（`.github/workflows/ci.yml`）在每个 PR 和每次 push 到 `main` 时执行格式检查、静态分析与全量测试。
-- CI（`.github/workflows/flutter.yml`）只在推送 `vX.Y.Z` 标签时触发：analyze → test → `flutter build apk --release --target-platform android-arm64 --flavor github` + `flutter build appbundle --release --flavor play --dart-define=SELF_UPDATE=false` → 创建 GitHub Release（APK 命名 `verifin-vX.Y.Z-arm64-短提交号.apk`，AAB 命名 `verifin-vX.Y.Z-短提交号.aab`）。自建分发的**安装包只出 arm64-v8a 单架构 APK**（覆盖 2019 年后绝大多数机型、比 universal 约减半；极老 32 位设备装不了）；AAB 含全部 ABI，供 Google Play 上架用（由 Play 按设备分发）。release 开启 R8 代码/资源裁剪，反射依赖点由 `android/app/proguard-rules.pro` 的 keep 规则保护。
+- 质量 CI（`.github/workflows/ci.yml`）在每个 PR 和每次 push 到 `main` 时执行格式检查、静态分析、全量测试、统一设计/玻璃材质专项测试，并构建一个不交付的 `github` debug APK 作为 Kotlin / Manifest / 原生桥编译门禁。
+- CI（`.github/workflows/flutter.yml`）只在推送 `vX.Y.Z` 标签时触发：format → analyze → test → 候选外观专项测试（带 `UNIFIED_DESIGN_PREVIEW` / `GLASS_DESIGN_PREVIEW`）→ `flutter build apk --release --target-platform android-arm64 --flavor github` + `flutter build appbundle --release --flavor play --dart-define=SELF_UPDATE=false` → 创建 GitHub **预发布**（APK 命名 `verifin-vX.Y.Z-arm64-短提交号.apk`，AAB 命名 `verifin-vX.Y.Z-短提交号.aab`；真机验收通过后由维护者手动提升为正式版与 Latest）。自建分发的**安装包只出 arm64-v8a 单架构 APK**（覆盖 2019 年后绝大多数机型、比 universal 约减半；极老 32 位设备装不了）；AAB 含全部 ABI，供 Google Play 上架用（由 Play 按设备分发）。release 开启 R8 代码/资源裁剪，反射依赖点由 `android/app/proguard-rules.pro` 的 keep 规则保护。
 - **分发渠道 flavor（`github` / `play`）**：应用内自更新（下载 GitHub Release 安装包自动更新）只用于 GitHub 自分发的 `github` flavor；Google Play 政策禁止应用自下载 APK 更新，故 `play` flavor 移除 `REQUEST_INSTALL_PACKAGES` 权限并隐藏「检查更新」入口。**本地 Android 构建/运行需带 `--flavor github`。**
 - 发版前先提升并提交 `CHANGELOG.md` 的 `Unreleased`，确认位于 `main` 且工作树完全干净；随后运行版本发布脚本：
 

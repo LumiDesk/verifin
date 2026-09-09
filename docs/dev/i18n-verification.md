@@ -33,7 +33,7 @@
 ## 三、记账链路（英文模式，5 分钟）
 
 1. 快速记账数字键盘 → 保存；交易详情页各行（Type / Category / Account / Date / Time / Note / Tag / Mark reimbursable / Refund）。
-2. 转账（From account / To account / Fee）、待报销徽标（Reimbursable）、退款冲抵后徽标（Refunded）。
+2. 转账（From account / To account / Fee）、待报销徽标（Reimbursable）、退款到账徽标（Received）。
 3. 交易列表：筛选（时间 / 排序 / 账户 / 分类 / 标签 / 待报销）、搜索占位、多选批量操作栏（Select all / Category / Account / Delete）、删除确认弹窗。
 4. 图片附件行（Attachments / Take photo / Choose from gallery）。
 

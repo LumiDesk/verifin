@@ -18,7 +18,7 @@
 
 - Veri Fin 仍是本地优先、紧凑、可信的 Android 记账工具。导航服务于看账和记账，材质不能成为主角。
 - 默认设计中玻璃仅用于悬浮导航/控制层。用户主动要求的[内容玻璃预览](glass-material-preview.md)通过独立开关试验磨砂卡片；不改变此处导航材质和手势约定。
-- Android 是正式交付渠道；Web 开发预览直接运行真实页面和玻璃导航，使用浏览器独立持久化。边界见 [Android 真机开发](android-development.md)。
+- Android 是唯一交付渠道（Web 预览已移除）；真机直接运行正式入口，边界见 [Android 真机开发](android-development.md)。
 - 第一版不引入第三方液态玻璃依赖和 Fragment Shader；Android 真折射必须另做性能、Impeller 和中低端设备专项验证。
 
 ## 研究结论

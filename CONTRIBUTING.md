@@ -1,10 +1,10 @@
 # 贡献指南
 
-感谢参与 Veri Fin（包名 `verifin`）——一个免费、数据自主、本地优先的 Flutter 记账应用。本文件是快速上手入口，完整规范见 [`AGENTS.md`](AGENTS.md)，架构说明见 [`CLAUDE.md`](CLAUDE.md)。
+感谢参与 Veri Fin（包名 `verifin`）——一个免费、数据自主、本地优先的 Flutter 记账应用。本文件是快速上手入口，完整规范见 [`AGENTS.md`](AGENTS.md)，架构说明见 [`docs/dev/architecture.md`](docs/dev/architecture.md)。
 
 ## 环境准备
 
-- Flutter stable channel（`flutter --version`），Dart 随之附带。
+- Flutter **3.47.2**（与 CI 固定版本一致），Dart 随之附带。
 - Java 17（Android 构建用）。
 - 本地预览只在 **Android 模拟器或真机** 上进行；不在本机打 APK 作为交付物（APK 只由 GitHub CI 在打 `vX.Y.Z` 标签时构建）。
 
@@ -18,7 +18,7 @@ dart format .                       # 提交前格式化
 
 ## 上手路线
 
-1. 读 [`CLAUDE.md`](CLAUDE.md)：架构总览（单 Controller + InheritedNotifier、KV vs SQLite 分级、平台条件导入两件套）。
+1. 读 [`docs/dev/architecture.md`](docs/dev/architecture.md)：架构总览（单 Controller + InheritedNotifier、KV vs SQLite 分级、平台条件导入两件套）。
 2. 读 [`docs/dev/components.md`](docs/dev/components.md)：**写任何组件前先查这份组件清单**，有现成的就复用。
 3. 读 [`AGENTS.md`](AGENTS.md) 的「代码规范 · 组件化与工程约定」：组件化、图标入口、弹窗 helper、错误处理与日志、异步守卫、l10n。
 4. 关键技术选型见 [`docs/dev/tech-decisions.md`](docs/dev/tech-decisions.md)；已知限制与技术债见 [`docs/dev/known-limitations.md`](docs/dev/known-limitations.md)。
@@ -44,7 +44,7 @@ dart format .                       # 提交前格式化
 ## Pull Request
 
 - 说明变更内容、动机、测试结果；关联 issue（如有）；UI 变更附截图或录屏。
-- PR 与 push 到 `main` 会触发质量 CI（格式 + analyze + test），需全绿；发布构建仍只由 `vX.Y.Z` 标签触发。
+- PR 与 push 到 `main` 会触发质量 CI（格式 + analyze + test + 候选外观专项 + 不交付的 debug APK 编译门禁），需全绿；发布构建仍只由 `vX.Y.Z` 标签触发。
 
 ## 发版（仅维护者）
 

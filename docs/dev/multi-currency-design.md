@@ -21,7 +21,7 @@ SQLite/备份兼容、交易/转账/退款/周期记账口径、UI 流程、测�
 ## 0. 实现结果（2026-08-18）
 
 - 已按阶段 1–7 落地离线 ISO 4217 目录、minor-unit 格式化、三层金额、跨币转账/退款/周期记账、按日汇率、资产估值、统计/预算/AI/小组件、导入导出和 JSON v2 备份。
-- SQLite 最终 schema 为 **v14**；v13→v14 迁移把旧数字原样回填为 CNY，并把旧账本标为 `legacyUnconfirmed`。模型字段、汇率表、Repository 快照和全版本迁移矩阵均已同步。
+- SQLite 本轮落地时 schema 为 **v14**（当前为 **v16**，见 `lib/data/app_database.dart`）；v13→v14 迁移把旧数字原样回填为 CNY，并把旧账本标为 `legacyUnconfirmed`。模型字段、汇率表、Repository 快照和全版本迁移矩阵均已同步。
 - 导入 conversion issue 会先自动尝试已有历史汇率；仍缺率时，文件选择后按币种批量输入汇率并用纯 plan builder 重建，取消输入即保留为跳过项。导入汇率默认不保存，预览页开启开关后只保存最终保留交易使用的汇率。
 - 为让本应用 CSV 在空账本中也能无歧义重建跨币消费/转账，除原计划五列外又追加了可选 `账户币种`、`转入账户币种` 两列；旧七列表头仍兼容。
 - 第三方 parser 只读取真实样例已证实的字段：当前钱迹真实 fixture 的 `币种` 已进入强类型记录；一木/薄荷现有真实 fixture 未提供可验证的多币种列，因此未臆造字段名，仍按当前账本本位币导入。
@@ -396,7 +396,7 @@ resolveRate(bookId, currencyCode, date)
 按币种 minor unit 归一化：
 
 ```dart
-double normalizeCurrencyAmount(num value, CurrencyDefinition currency)
+double normalizeCurrencyAmount(num value, String currencyCode)
 ```
 
 - JPY/VND 等 0 位币种按整数归一；
@@ -806,6 +806,8 @@ UI 不拼汇率键、不直接访问 SQLite、不自行用 `amount * rate` 形�
 ### 12.3 纯函数结果类型
 
 不要用 `double?` 同时表达“成功为 0”和“失败”。建议定义：
+
+> 落地时实际命名为 `CurrencyConversionResult` / `ConvertedCurrencyAmount` / `MissingCurrencyRate`，总额类型是 `ConvertedAccountBalances`（字段 `completeTotal`）；以 `lib/app/currency_math.dart` 为准。下面的草案名只说明设计意图。
 
 ```dart
 sealed class ConversionResult {}
