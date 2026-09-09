@@ -99,14 +99,17 @@ jobs:
     runs-on: ubuntu-latest
     needs: android
     steps:
+      # 必须排在下载制品之前：actions/checkout 默认 clean=true，会删除工作区里
+      # 未跟踪的文件。放在下载之后会把刚下下来的 APK/AAB 一起清掉，发布出一个
+      # 没有附件的空版本（v1.16.16 就是这样发的）。
+      - name: Check out repository
+        uses: actions/checkout@v4
+
       - name: Download release artifacts
         uses: actions/download-artifact@v4
         with:
           name: verifin-android-release
           path: release-artifacts
-
-      - name: Check out repository
-        uses: actions/checkout@v4
 
       # 发布说明从 CHANGELOG.md 对应版本段落生成，避免像此前那样把某一版的
       # 说明硬编码进工作流、之后每次发版都重复旧文案。
@@ -137,6 +140,8 @@ jobs:
           files: |
             release-artifacts/**/*.apk
             release-artifacts/**/*.aab
+          # 附件匹配不到就整步失败，避免再发出一个没有安装包的「空」版本。
+          fail_on_unmatched_files: true
           # 默认发预发布：不标记为 Latest，待真机测试通过后在 GitHub 手动改为正式版。
           prerelease: true
           make_latest: 'false'
