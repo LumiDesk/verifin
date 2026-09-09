@@ -3122,6 +3122,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiToolLargestTransactions => 'Query large transactions';
 
   @override
+  String get aiToolTrend => 'Query cash-flow trend';
+
+  @override
+  String get aiToolCompare => 'Query month-over-month comparison';
+
+  @override
+  String get aiToolAccountsOverview => 'Query account balances';
+
+  @override
+  String get aiToolNetWorth => 'Query net worth';
+
+  @override
+  String get aiToolCreditCardBill => 'Query credit card bill';
+
+  @override
   String get aiToolUnknown => 'Call read-only tool';
 
   @override

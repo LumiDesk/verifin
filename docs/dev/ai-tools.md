@@ -57,6 +57,11 @@
 | `tagRanking` | 某时间段某类型按标签的金额排行与占比 | `type`,`range`,`limit` | `reportTagStats` | Ranking |
 | `queryTransactions` | 按类型 / 时间 / 金额区间 / 关键词筛选具体交易 | `type`,`range`,`minAmount`,`maxAmount`,`keyword`,`sortBy`,`limit` | `queryLedgerEntries` | Transactions |
 | `largestTransactions` | 某时间段某类型金额最大 / 最小的若干笔 | `type`,`range`,`limit`,`ascending` | `queryLedgerEntries` | Transactions |
+| `trend` | 某时间段某类型的趋势序列（短范围按天、长范围按月） | `type`,`range` | `reportTrend` | Trend |
+| `compare` | 指定月份与上月、去年同月的收支环比 / 同比 | `month` | `reportMonthlyComparison` | Stat |
+| `accountsOverview` | 各账户名称、币种与余额一览（不含隐藏账户） | — | `ctx.balanceOf` + `convertAccountBalancesToBase` | Table |
+| `netWorth` | 总资产 / 总负债 / 净资产（本位币口径） | — | `convertAccountBalancesToBase` | Stat |
+| `creditCardBill` | 信用类账户的欠款、可用额度、本期账单与还款日 | — | `credit_card.dart` | Table |
 
 **时间窗参数 `range` 预设**：`thisMonth` / `lastMonth` / `thisYear` / `lastYear` / `last7Days` / `last30Days` / `last3Months` / `last6Months` / `last12Months` / `all`；或用 `start`+`end`（`YYYY-MM-DD`）指定显式区间。
 
@@ -66,12 +71,9 @@
 
 | 计划工具 | 作用 | 底层 |
 |---------|------|------|
-| `trend` | 收支趋势序列（日 / 月粒度） | `reportTrend` |
-| `compare` | 环比 / 同比对比 | `reportMonthlyComparison` |
-| `accountsOverview` | 各账户余额一览 | `ctx.balanceOf` |
-| `netWorth` | 资产 / 负债 / 净资产 | `home_metrics` |
 | `budgetStatus` | 预算执行情况 | 预算逻辑 |
-| `creditCardBill` | 信用卡本期账单 | `credit_card.dart` |
+
+> `budgetStatus` 尚未实现：预算快照与执行判定目前只在 `lib/pages/budget_snapshots.dart`（`part of budget_pages.dart`），工具层拿不到纯函数。实现前需要先把「按月/期聚合 + 默认预算与单期覆盖」抽成 `lib/app/` 下的纯函数，再复用。
 
 ## 变更记录
 
@@ -79,3 +81,4 @@
 - Agent 升级（issue #32）：旧的文本猜测循环替换为 `AiAgentEngine`；原生 Tool Calls 与兼容标记协议共用强类型消息、工具 schema、执行边界和结构化事件。传输层新增完整 SSE 结束校验、空闲超时、错误分类、安全重试与非流式回退；聊天页展示并持久化已完成的工具步骤，不渲染推理文本、原始工具 JSON 或底层异常。
 - UI 打磨 + 结果卡片可持久化：`AiResultDisplay` 增加 `toJson`/`aiResultDisplayFromJson`，聊天历史每条可带 `displays`（序列化的结果卡片），**重开时连同图表一并还原**（交易列表仍只存 id、按当前数据实时解析）；聊天页改用通用 `VeriHeader`、输入栏/发送按钮/间距/字号/图表纵轴/表格样式全面优化；AI 设置页加「清空配置」。
 - 多币种：`AiToolContext` 增加账本本位币；统计与金额筛选明确采用冻结本位币口径，工具回馈模型的摘要保留 ISO 代码，用户可见结果卡片则遵循货币单位偏好并在卡片标题标注本位币；AI 记账草稿可解析 ISO 4217 原币并在保存前继续由用户复核。
+- 工具扩展：新增 `trend` / `compare` / `accountsOverview` / `netWorth` / `creditCardBill`；`AiToolContext` 增加 `bookId`（折算账户余额需要按账本定位汇率）。`netWorth` 与 `accountsOverview` 在缺汇率时明确说明缺哪种币、不给部分和。工具步骤标题同步登记在 `ai_tool_presentation.dart`。

@@ -3049,6 +3049,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiToolLargestTransactions => '查询大额交易';
 
   @override
+  String get aiToolTrend => '查询收支趋势';
+
+  @override
+  String get aiToolCompare => '查询环比同比';
+
+  @override
+  String get aiToolAccountsOverview => '查询账户余额';
+
+  @override
+  String get aiToolNetWorth => '查询净资产';
+
+  @override
+  String get aiToolCreditCardBill => '查询信用卡账单';
+
+  @override
   String get aiToolUnknown => '调用只读工具';
 
   @override

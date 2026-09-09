@@ -204,6 +204,7 @@ class _AiChatPageState extends State<AiChatPage> {
       baseCurrencyCode: scope.activeBook.baseCurrencyCode,
       now: DateTime.now(),
       exchangeRates: scope.exchangeRates,
+      bookId: scope.activeBook.id,
     );
     final settings = scope.aiSettings;
     final transport =

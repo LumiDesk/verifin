@@ -47,6 +47,24 @@ AiToolContext _ctx(
 Category _cat(String id, String label) =>
     Category(id: id, label: label, type: EntryType.expense, iconCode: 'food');
 
+Account _account({
+  required String id,
+  required String name,
+  String currencyCode = 'CNY',
+}) => Account(
+  id: id,
+  bookId: 'b',
+  name: name,
+  type: AccountType.cash,
+  groupId: null,
+  initialBalance: 0,
+  iconCode: 'cash',
+  note: '',
+  includeInAssets: true,
+  hidden: false,
+  currencyCode: currencyCode,
+);
+
 AiQueryTool _tool(String name) =>
     buildAiQueryTools().firstWhere((t) => t.name == name);
 
@@ -58,7 +76,10 @@ void main() {
     for (final t in tools) {
       expect(t.name.trim(), isNotEmpty);
       expect(t.description.trim(), isNotEmpty);
-      expect(t.schema.promptDescription, isNotEmpty);
+      // 无参工具（账户一览 / 净资产 / 信用卡账单）的参数说明本来就为空。
+      if (t.schema.properties.isNotEmpty) {
+        expect(t.schema.promptDescription, isNotEmpty);
+      }
     }
   });
 
@@ -209,6 +230,101 @@ void main() {
     expect(result.summary, contains('CNY 720'));
     expect(result.summary, contains('USD 100'));
     expect(result.summary, isNot(contains('CNY 0')));
+  });
+
+  test('trend 按时间窗返回趋势序列', () {
+    final ctx = _ctx(<LedgerEntry>[
+      _e(id: 'a', amount: 100, at: DateTime(2026, 6, 3)),
+      _e(id: 'b', amount: 50, at: DateTime(2026, 6, 10)),
+    ]);
+    final result = _tool(
+      'trend',
+    ).run(ctx, <String, Object?>{'range': 'thisMonth', 'type': 'expense'});
+    final display = result.display! as AiTrendDisplay;
+    expect(display.values.fold<double>(0, (sum, value) => sum + value), 150);
+    expect(result.summary, contains('150'));
+  });
+
+  test('compare 给出环比与同比', () {
+    final ctx = _ctx(<LedgerEntry>[
+      _e(id: 'a', amount: 200, at: DateTime(2026, 6, 3)),
+      _e(id: 'b', amount: 100, at: DateTime(2026, 5, 3)),
+    ]);
+    final result = _tool(
+      'compare',
+    ).run(ctx, <String, Object?>{'month': '2026-06'});
+    final display = result.display! as AiStatDisplay;
+    expect(display.items.first.value, 200);
+    expect(result.summary, contains('+100.0%'));
+  });
+
+  test('accountsOverview 列出账户与余额', () {
+    final ctx = AiToolContext(
+      entries: const <LedgerEntry>[],
+      accounts: <Account>[_account(id: 'a1', name: '现金')],
+      categories: const <Category>[],
+      tags: const <Tag>[],
+      balanceOf: (_) => 123.5,
+      baseCurrencyCode: 'CNY',
+      now: DateTime(2026, 6, 20),
+    );
+    final result = _tool(
+      'accountsOverview',
+    ).run(ctx, const <String, Object?>{});
+    final display = result.display! as AiTableDisplay;
+    expect(display.rows.single.first, '现金');
+    expect(display.rows.single[1], 'CNY');
+    expect(display.rows.single[2], contains('123.5'));
+  });
+
+  test('netWorth 缺汇率时不给部分和', () {
+    final ctx = AiToolContext(
+      entries: const <LedgerEntry>[],
+      accounts: <Account>[
+        _account(id: 'a1', name: '美元账户', currencyCode: 'USD'),
+      ],
+      categories: const <Category>[],
+      tags: const <Tag>[],
+      balanceOf: (_) => 100,
+      baseCurrencyCode: 'CNY',
+      now: DateTime(2026, 6, 20),
+    );
+    final result = _tool('netWorth').run(ctx, const <String, Object?>{});
+    expect(result.display, isNull);
+    expect(result.summary, contains('缺少汇率'));
+  });
+
+  test('creditCardBill 汇总欠款、可用额度与本期账单', () {
+    final card = Account(
+      id: 'acc',
+      bookId: 'b',
+      name: '信用卡',
+      type: AccountType.creditCard,
+      groupId: null,
+      initialBalance: 0,
+      iconCode: 'bank',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+      creditLimit: 10000,
+      statementDay: 5,
+      dueDay: 20,
+    );
+    final ctx = AiToolContext(
+      entries: <LedgerEntry>[
+        _e(id: 'c', amount: 300, at: DateTime(2026, 6, 6)),
+      ],
+      accounts: <Account>[card],
+      categories: const <Category>[],
+      tags: const <Tag>[],
+      balanceOf: (_) => -300,
+      baseCurrencyCode: 'CNY',
+      now: DateTime(2026, 6, 20),
+    );
+    final result = _tool('creditCardBill').run(ctx, const <String, Object?>{});
+    final display = result.display! as AiTableDisplay;
+    expect(display.rows.single.first, '信用卡');
+    expect(result.summary, contains('300'));
   });
 
   test('缺省 / 非法参数优雅降级不抛异常', () {

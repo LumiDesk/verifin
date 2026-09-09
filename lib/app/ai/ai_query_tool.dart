@@ -9,6 +9,7 @@
 // 说明：[AiResultDisplay] 里的 `title` 目前用中文默认文案；国际化（zh/en）随聊天页 UI 的
 // i18n 一并处理（见落地顺序第 5 步），此处先留中文默认。
 import '../models.dart';
+import '../credit_card.dart';
 import '../currency_math.dart';
 import '../ledger_math.dart';
 import '../report_analysis.dart';
@@ -27,6 +28,7 @@ class AiToolContext {
     required this.baseCurrencyCode,
     required this.now,
     this.exchangeRates = const <ExchangeRate>[],
+    this.bookId = '',
   });
 
   /// 当前账本交易（时间倒序或任意序均可，工具自行排序）。
@@ -49,6 +51,9 @@ class AiToolContext {
 
   /// 当前账本本地汇率快照；只用于转账等非收支记录的只读本位币比较。
   final List<ExchangeRate> exchangeRates;
+
+  /// 当前账本 id：汇率按账本隔离，折算账户余额时需要它定位汇率记录。
+  final String bookId;
 
   /// 当前时间（相对时间窗如「本月」的基准）。
   final DateTime now;
@@ -315,6 +320,11 @@ List<AiQueryTool> buildAiQueryTools() => <AiQueryTool>[
   const TagRankingTool(),
   const QueryTransactionsTool(),
   const LargestTransactionsTool(),
+  const TrendTool(),
+  const CompareTool(),
+  const AccountsOverviewTool(),
+  const NetWorthTool(),
+  const CreditCardBillTool(),
 ];
 
 // ─────────────────────────── 参数解析助手 ───────────────────────────
@@ -814,6 +824,307 @@ class LargestTransactionsTool extends AiQueryTool {
       display: AiTransactionsDisplay(
         title: '$rangeLabel · $extreme$typeLabel Top ${results.length}',
         entryIds: results.map((e) => e.id).toList(),
+      ),
+    );
+  }
+}
+
+/// 收支趋势：某时间窗内某类型的序列（短范围按天、长范围按月）。
+class TrendTool extends AiQueryTool {
+  const TrendTool();
+
+  @override
+  String get name => 'trend';
+
+  @override
+  String get description => '某时间段内收入或支出的趋势序列，短范围按天、长范围按月。';
+
+  @override
+  AiToolSchema get schema => const AiToolSchema(
+    properties: <String, AiToolParameter>{
+      'type': AiToolParameter(
+        type: AiToolParameterType.string,
+        description: '交易类型，默认 expense。',
+        enumValues: <Object>['expense', 'income'],
+      ),
+      ..._rangeParameters,
+    },
+  );
+
+  @override
+  AiToolResult run(AiToolContext ctx, Map<String, Object?> args) {
+    final window = _window(args, ctx.now, fallback: monthWindowFor(ctx.now));
+    final type = _type(args);
+    // 「全部时间」用最早一笔交易到今天的区间，而不是当年。
+    final range = window != null
+        ? ReportRange.custom(window.start, window.end)
+        : ReportRange.custom(
+            ctx.entries.isEmpty
+                ? ctx.now
+                : ctx.entries
+                      .map((entry) => entry.occurredAt)
+                      .reduce((a, b) => a.isBefore(b) ? a : b),
+            ctx.now,
+          );
+    final trend = reportTrend(ctx.entries, range, type);
+    final rangeLabel = _rangeLabel(window);
+    final typeLabel = _typeLabel(type);
+    final granularity = trend.granularity == ReportTrendGranularity.monthly
+        ? '按月'
+        : '按天';
+    final total = trend.values.fold<double>(0, (sum, value) => sum + value);
+    return AiToolResult(
+      summary: trend.points.isEmpty
+          ? '$rangeLabel 没有$typeLabel记录。'
+          : '$rangeLabel $typeLabel趋势（$granularity，${trend.points.length} 个点，'
+                '合计 ${_baseMoney(ctx, total)}）：'
+                '${trend.points.map((p) => '${p.label}=${_baseMoney(ctx, p.value)}').join('，')}',
+      display: trend.points.isEmpty
+          ? null
+          : AiTrendDisplay(
+              title: '$rangeLabel · $typeLabel趋势',
+              values: trend.values,
+              labels: trend.points.map((point) => point.label).toList(),
+              isExpense: type == EntryType.expense,
+            ),
+    );
+  }
+}
+
+/// 环比 / 同比：指定月份与上月、去年同月的收支对比。
+class CompareTool extends AiQueryTool {
+  const CompareTool();
+
+  @override
+  String get name => 'compare';
+
+  @override
+  String get description => '指定月份与上月、去年同月的收入与支出环比 / 同比对比。';
+
+  @override
+  AiToolSchema get schema => const AiToolSchema(
+    properties: <String, AiToolParameter>{
+      'month': AiToolParameter(
+        type: AiToolParameterType.string,
+        description: '要对比的月份，格式 YYYY-MM；缺省为当前月。',
+      ),
+    },
+  );
+
+  @override
+  AiToolResult run(AiToolContext ctx, Map<String, Object?> args) {
+    final raw = _str(args, 'month');
+    final parsed = raw == null ? null : DateTime.tryParse('$raw-01');
+    final month = parsed ?? DateTime(ctx.now.year, ctx.now.month);
+    final comparison = reportMonthlyComparison(ctx.entries, month);
+    String delta(double current, double previous) {
+      if (isZeroAmount(previous)) {
+        return isZeroAmount(current) ? '持平' : '基期为 0，无法计算比例';
+      }
+      final percent = (current - previous) / previous * 100;
+      return '${percent >= 0 ? '+' : ''}${percent.toStringAsFixed(1)}%';
+    }
+
+    final current = comparison.current;
+    final previous = comparison.previousMonth;
+    final lastYear = comparison.sameMonthLastYear;
+    final label = '${month.year} 年 ${month.month} 月';
+    return AiToolResult(
+      summary:
+          '$label 支出 ${_baseMoney(ctx, current.expense)}'
+          '（环比 ${delta(current.expense, previous.expense)}，'
+          '同比 ${delta(current.expense, lastYear.expense)}）；'
+          '收入 ${_baseMoney(ctx, current.income)}'
+          '（环比 ${delta(current.income, previous.income)}，'
+          '同比 ${delta(current.income, lastYear.income)}）。',
+      display: AiStatDisplay(
+        title: '$label · 环比与同比',
+        items: <AiStatItem>[
+          AiStatItem(label: '本月支出', value: current.expense),
+          AiStatItem(label: '上月支出', value: previous.expense),
+          AiStatItem(label: '去年同月支出', value: lastYear.expense),
+          AiStatItem(label: '本月收入', value: current.income),
+          AiStatItem(label: '上月收入', value: previous.income),
+          AiStatItem(label: '去年同月收入', value: lastYear.income),
+        ],
+      ),
+    );
+  }
+}
+
+/// 账户一览：各账户名称、币种与余额；总资产缺汇率时明确说明。
+class AccountsOverviewTool extends AiQueryTool {
+  const AccountsOverviewTool();
+
+  @override
+  String get name => 'accountsOverview';
+
+  @override
+  String get description => '当前账本各账户的名称、币种与余额一览（不含隐藏账户）。';
+
+  @override
+  AiToolSchema get schema => const AiToolSchema();
+
+  @override
+  AiToolResult run(AiToolContext ctx, Map<String, Object?> args) {
+    final accounts = ctx.accounts
+        .where((account) => !account.hidden)
+        .toList(growable: false);
+    if (accounts.isEmpty) {
+      return const AiToolResult(summary: '当前账本还没有账户。');
+    }
+    final total = convertAccountBalancesToBase(
+      accounts: accounts.where((account) => account.includeInAssets),
+      balanceOf: ctx.balanceOf,
+      bookId: ctx.bookId,
+      baseCurrencyCode: ctx.baseCurrencyCode,
+      date: ctx.now,
+      rates: ctx.exchangeRates,
+    );
+    final totalText = total.isComplete
+        ? '计入资产的账户合计 ${_baseMoney(ctx, total.completeTotal ?? 0)}'
+        : '合计因缺汇率无法给出（缺 ${total.missingCurrencyCodes.join('、')}）';
+    return AiToolResult(
+      summary:
+          '共 ${accounts.length} 个账户：'
+          '${accounts.map((account) => '${account.name} '
+              '${formatCurrencyNumber(ctx.balanceOf(account), account.currencyCode)} '
+              '${account.currencyCode}').join('；')}。$totalText。',
+      display: AiTableDisplay(
+        title: '账户余额',
+        headers: const <String>['账户', '币种', '余额'],
+        rows: accounts
+            .map(
+              (account) => <String>[
+                account.name,
+                account.currencyCode,
+                formatCurrencyNumber(
+                  ctx.balanceOf(account),
+                  account.currencyCode,
+                ),
+              ],
+            )
+            .toList(),
+      ),
+    );
+  }
+}
+
+/// 净资产：总资产 / 总负债 / 净资产（本位币口径）。
+class NetWorthTool extends AiQueryTool {
+  const NetWorthTool();
+
+  @override
+  String get name => 'netWorth';
+
+  @override
+  String get description => '总资产、总负债与净资产（本位币口径；缺汇率时不给部分和）。';
+
+  @override
+  AiToolSchema get schema => const AiToolSchema();
+
+  @override
+  AiToolResult run(AiToolContext ctx, Map<String, Object?> args) {
+    final valued = ctx.accounts
+        .where((account) => account.includeInAssets && !account.hidden)
+        .toList(growable: false);
+    final converted = convertAccountBalancesToBase(
+      accounts: valued,
+      balanceOf: ctx.balanceOf,
+      bookId: ctx.bookId,
+      baseCurrencyCode: ctx.baseCurrencyCode,
+      date: ctx.now,
+      rates: ctx.exchangeRates,
+    );
+    if (!converted.isComplete) {
+      return AiToolResult(
+        summary:
+            '有账户缺少汇率（${converted.missingCurrencyCodes.join('、')}），'
+            '无法给出总资产与净资产；请先在「货币与汇率」补齐。',
+      );
+    }
+    var assets = 0.0;
+    var liabilities = 0.0;
+    for (final account in valued) {
+      final amount = converted.amountsByAccountId[account.id] ?? 0;
+      if (amount > 0) {
+        assets += amount;
+      } else {
+        liabilities += -amount;
+      }
+    }
+    final net = assets - liabilities;
+    return AiToolResult(
+      summary:
+          '总资产 ${_baseMoney(ctx, assets)}，'
+          '总负债 ${_baseMoney(ctx, liabilities)}，'
+          '净资产 ${_baseMoney(ctx, net)}。',
+      display: AiStatDisplay(
+        title: '净资产',
+        items: <AiStatItem>[
+          AiStatItem(label: '总资产', value: assets),
+          AiStatItem(label: '总负债', value: liabilities),
+          AiStatItem(label: '净资产', value: net, emphasize: true),
+        ],
+      ),
+    );
+  }
+}
+
+/// 信用卡 / 信用账户：当前欠款、可用额度与本期账单。
+class CreditCardBillTool extends AiQueryTool {
+  const CreditCardBillTool();
+
+  @override
+  String get name => 'creditCardBill';
+
+  @override
+  String get description => '信用类账户的当前欠款、可用额度、本期账单与还款日倒计时。';
+
+  @override
+  AiToolSchema get schema => const AiToolSchema();
+
+  @override
+  AiToolResult run(AiToolContext ctx, Map<String, Object?> args) {
+    final cards = ctx.accounts
+        .where((account) => account.type.supportsCredit && !account.hidden)
+        .toList(growable: false);
+    if (cards.isEmpty) {
+      return const AiToolResult(summary: '当前账本没有信用类账户。');
+    }
+    final rows = <List<String>>[];
+    final parts = <String>[];
+    for (final card in cards) {
+      final balance = ctx.balanceOf(card);
+      final used = usedCredit(balance);
+      final available = availableCredit(card.creditLimit, balance);
+      final cycle = card.statementDay == null
+          ? null
+          : currentBillingCycle(card.statementDay!, ctx.now);
+      final bill = cycle == null
+          ? null
+          : billingCycleExpense(ctx.entries, card.id, cycle);
+      rows.add(<String>[
+        card.name,
+        formatCurrencyNumber(used, card.currencyCode),
+        available == null
+            ? '—'
+            : formatCurrencyNumber(available, card.currencyCode),
+        bill == null ? '—' : formatCurrencyNumber(bill, card.currencyCode),
+      ]);
+      parts.add(
+        '${card.name} 当前欠款 ${formatCurrencyNumber(used, card.currencyCode)} ${card.currencyCode}'
+        '${available == null ? '' : '，可用额度 ${formatCurrencyNumber(available, card.currencyCode)}'}'
+        '${bill == null ? '' : '，本期账单 ${formatCurrencyNumber(bill, card.currencyCode)}'}'
+        '${card.dueDay == null ? '' : '，${card.dueDay} 号还款（还有 ${daysUntilDue(card.dueDay!, ctx.now)} 天）'}',
+      );
+    }
+    return AiToolResult(
+      summary: parts.join('；'),
+      display: AiTableDisplay(
+        title: '信用卡 / 信用账户',
+        headers: const <String>['账户', '当前欠款', '可用额度', '本期账单'],
+        rows: rows,
       ),
     );
   }

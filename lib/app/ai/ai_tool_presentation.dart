@@ -28,10 +28,18 @@ AiToolStepPresentation presentAiAgentStep(
     'tagRanking' => l10n.aiToolTagRanking,
     'queryTransactions' => l10n.aiToolQueryTransactions,
     'largestTransactions' => l10n.aiToolLargestTransactions,
+    'trend' => l10n.aiToolTrend,
+    'compare' => l10n.aiToolCompare,
+    'accountsOverview' => l10n.aiToolAccountsOverview,
+    'netWorth' => l10n.aiToolNetWorth,
+    'creditCardBill' => l10n.aiToolCreditCardBill,
     _ => l10n.aiToolUnknown,
   };
   final details = <String>[
     if (_rangeLabel(l10n, step.arguments) case final String range) range,
+    if (step.arguments['month'] case final String month
+        when month.trim().isNotEmpty)
+      month.trim(),
     if (_typeLabel(l10n, step.arguments['type']) case final String type) type,
     if (step.arguments['keyword'] case final String keyword
         when keyword.trim().isNotEmpty)

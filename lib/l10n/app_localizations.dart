@@ -5642,6 +5642,36 @@ abstract class AppLocalizations {
   /// **'查询大额交易'**
   String get aiToolLargestTransactions;
 
+  /// No description provided for @aiToolTrend.
+  ///
+  /// In zh, this message translates to:
+  /// **'查询收支趋势'**
+  String get aiToolTrend;
+
+  /// No description provided for @aiToolCompare.
+  ///
+  /// In zh, this message translates to:
+  /// **'查询环比同比'**
+  String get aiToolCompare;
+
+  /// No description provided for @aiToolAccountsOverview.
+  ///
+  /// In zh, this message translates to:
+  /// **'查询账户余额'**
+  String get aiToolAccountsOverview;
+
+  /// No description provided for @aiToolNetWorth.
+  ///
+  /// In zh, this message translates to:
+  /// **'查询净资产'**
+  String get aiToolNetWorth;
+
+  /// No description provided for @aiToolCreditCardBill.
+  ///
+  /// In zh, this message translates to:
+  /// **'查询信用卡账单'**
+  String get aiToolCreditCardBill;
+
   /// No description provided for @aiToolUnknown.
   ///
   /// In zh, this message translates to:
