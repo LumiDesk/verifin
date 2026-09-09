@@ -44,7 +44,12 @@ bool hasChildren(List<Category> all, String parentId) {
 /// 就在此截断，不把这个「不存在的父 id」计入祖先。否则孤儿分类会把一个查不到的 id 当成
 /// 顶级返回，配合 [categoryByIdFrom] 的占位回退渲染出「幽灵同名分类」（见 report_analysis）。
 List<String> ancestorIds(List<Category> all, String id) {
-  final index = categoryIndex(all);
+  return ancestorIdsFrom(categoryIndex(all), id);
+}
+
+/// [ancestorIds] 的索引复用版本：批量遍历时先建一次 [categoryIndex]，
+/// 避免每笔交易都重建整张分类查找表。
+List<String> ancestorIdsFrom(Map<String, Category> index, String id) {
   final result = <String>[];
   final visited = <String>{id};
   var current = index[id]?.parentId;
