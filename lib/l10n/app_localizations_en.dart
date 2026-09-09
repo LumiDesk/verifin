@@ -760,6 +760,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Add an account from the top right; you can then view assets by type or group here.';
 
   @override
+  String get assetsEmptyAddAction => 'Add your first account';
+
+  @override
   String get assetsSortHint =>
       'Drag the handles on the right to reorder sections';
 
@@ -4215,6 +4218,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exchangeRateNotSet => 'No rate set';
+
+  @override
+  String get creditRepayMissingRateHint =>
+      'No exchange rate set — tap “Transferred out” above to enter the amount actually debited, or maintain the rate first.';
 
   @override
   String exchangeRateDateAndStatus(String date, String status) {

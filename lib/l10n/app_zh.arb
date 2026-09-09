@@ -465,6 +465,7 @@
   },
   "assetsEmptyTitle": "还没有资产账户",
   "assetsEmptyDesc": "请先点击右上角添加资产，之后可以在这里按类型或分组查看资产。",
+  "assetsEmptyAddAction": "添加第一个账户",
   "assetsSortHint": "拖动右侧手柄调整分组顺序",
   "hiddenAccountsCount": "{count}个隐藏账户",
   "@hiddenAccountsCount": {
@@ -2597,6 +2598,7 @@
     }
   },
   "exchangeRateNotSet": "尚未设置汇率",
+  "creditRepayMissingRateHint": "尚未设置汇率：可直接点上面的「转出金额」填入银行实际扣款金额，也可以先维护汇率。",
   "exchangeRateDateAndStatus": "{date} · {status}",
   "@exchangeRateDateAndStatus": {
     "placeholders": {

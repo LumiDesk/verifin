@@ -1472,6 +1472,12 @@ abstract class AppLocalizations {
   /// **'请先点击右上角添加资产，之后可以在这里按类型或分组查看资产。'**
   String get assetsEmptyDesc;
 
+  /// No description provided for @assetsEmptyAddAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加第一个账户'**
+  String get assetsEmptyAddAction;
+
   /// No description provided for @assetsSortHint.
   ///
   /// In zh, this message translates to:
@@ -7471,6 +7477,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'尚未设置汇率'**
   String get exchangeRateNotSet;
+
+  /// No description provided for @creditRepayMissingRateHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'尚未设置汇率：可直接点上面的「转出金额」填入银行实际扣款金额，也可以先维护汇率。'**
+  String get creditRepayMissingRateHint;
 
   /// No description provided for @exchangeRateDateAndStatus.
   ///

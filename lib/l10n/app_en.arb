@@ -257,6 +257,7 @@
   "monthNumber": "M{month}",
   "assetsEmptyTitle": "No accounts yet",
   "assetsEmptyDesc": "Add an account from the top right; you can then view assets by type or group here.",
+  "assetsEmptyAddAction": "Add your first account",
   "assetsSortHint": "Drag the handles on the right to reorder sections",
   "hiddenAccountsCount": "{count} hidden accounts",
   "assetsCoverTitle": "Asset card background",
@@ -1644,6 +1645,7 @@
     }
   },
   "exchangeRateNotSet": "No rate set",
+  "creditRepayMissingRateHint": "No exchange rate set — tap “Transferred out” above to enter the amount actually debited, or maintain the rate first.",
   "exchangeRateDateAndStatus": "{date} · {status}",
   "@exchangeRateDateAndStatus": {
     "placeholders": {

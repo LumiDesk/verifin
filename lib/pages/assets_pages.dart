@@ -440,6 +440,20 @@ class _AssetsPageState extends State<AssetsPage> {
                 icon: Icons.account_balance_wallet_outlined,
                 title: AppLocalizations.of(context).assetsEmptyTitle,
                 description: AppLocalizations.of(context).assetsEmptyDesc,
+                // 空状态只说明原因不给出口，用户会卡在死路上。
+                action: FilledButton.icon(
+                  onPressed: () => unawaited(
+                    Navigator.of(context).push<void>(
+                      MaterialPageRoute<void>(
+                        builder: (context) => const AddAccountPage(),
+                      ),
+                    ),
+                  ),
+                  icon: const Icon(Icons.add, size: 18),
+                  label: Text(
+                    AppLocalizations.of(context).assetsEmptyAddAction,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 12),

@@ -742,6 +742,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get assetsEmptyDesc => '请先点击右上角添加资产，之后可以在这里按类型或分组查看资产。';
 
   @override
+  String get assetsEmptyAddAction => '添加第一个账户';
+
+  @override
   String get assetsSortHint => '拖动右侧手柄调整分组顺序';
 
   @override
@@ -4091,6 +4094,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get exchangeRateNotSet => '尚未设置汇率';
+
+  @override
+  String get creditRepayMissingRateHint =>
+      '尚未设置汇率：可直接点上面的「转出金额」填入银行实际扣款金额，也可以先维护汇率。';
 
   @override
   String exchangeRateDateAndStatus(String date, String status) {

@@ -12,6 +12,7 @@ import '../app/models.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
+import 'currency_rates_page.dart';
 import 'sheets.dart';
 
 /// 信用类账户（信用卡 / 信用账户）还款页：本质是一笔「扣款账户 → 本账户」的转账，
@@ -157,6 +158,37 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
                       icon: Icons.currency_exchange,
                       onTap: () => _pickFromAmount(sourceAccount.currencyCode),
                     ),
+                    // 缺汇率时不能让用户以为走不下去：手填实际扣款金额和先维护汇率
+                    // 都是出路，这里把两条都写出来。
+                    if (_fromAmount == null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(4, 6, 4, 0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Expanded(
+                              child: Text(
+                                l10n.creditRepayMissingRateHint,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.6),
+                                    ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(context).push<void>(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const CurrencyRatesPage(),
+                                ),
+                              ),
+                              child: Text(l10n.currencyRatesTitle),
+                            ),
+                          ],
+                        ),
+                      ),
                   ],
                 ],
                 const SizedBox(height: 10),
