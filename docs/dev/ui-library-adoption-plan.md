@@ -1,9 +1,49 @@
 # 第三方 UI 组件库引入评估与改造计划
 
-状态：**待用户确认**（本文只做评估与方案，尚未改动任何界面代码）
+状态：**方向已定，待细化执行**（本文只做评估与方案；§0 的布局修复已落地，其余未改动界面代码）
 分支：`docs/ui-library-adoption-plan`
-评估日期：2026-09-10
+评估日期：2026-09-10（用户决策更新：2026-09-10）
 工具链：Flutter 3.47.2 / Dart 3.13.2（与 CI 固定版本一致），仅 Android
+
+## 0. 用户决策（2026-09-10）
+
+用户已就本文的关键问题给出明确方向，以下为**已定结论**，后续工作按此执行：
+
+| # | 决策 | 含义 |
+| --- | --- | --- |
+| A | **玻璃 / 高级材质 / 背景光效是设计败笔，应移除** | 不是"换个更好的玻璃库"，而是**删掉玻璃方向本身**。至少包含：基础磨砂（内容卡片、导航胶囊、快捷按钮、菜单、弹层）、高级材质方向光、导航折射透镜 Shader、全局背景渐变。目标是"高效率的软件"。 |
+| B | **不需要考虑无障碍** | 项目不把无障碍作为约束。此前未获用户确认的无障碍改动可以删除或保留，由实现方决定，不作为取舍依据。这条**直接解除**了 Syncfusion 的主要否决理由。 |
+| C | **图表库由实现方决策** | 用户授权直接定选型。 |
+| D | **可以用组件库优化交互，但不引入高级材质** | 组件库仍可引入（§6 的 `animated_toggle_switch`、§8 的图表库、§10 的 `toastification`），但一律走不透明、扁平、直接的表面。 |
+
+**仍未澄清**：第 4 条诉求中"看板文字位置"的真实含义——用户澄清**不是卡片顺序，而是文字位置**，见 §0.1。
+
+### 0.1 已修复：看板分区标题右侧文字错位
+
+用户澄清：看板各面板标题右侧的数值/文字**没有靠右，停在了卡片中间**。这不是卡片顺序问题（§7 原先判断的 C1 不是用户所指），而是**共享组件 `SectionTitle` 的布局缺陷**。
+
+**根因（已用测试定位）**：`SectionTitle`（`lib/app/common_widgets_scaffold.dart:373`）原实现为 `Row[Expanded(title), Flexible(trailing)]`。两个问题叠加：
+
+1. 调用方的 `Column` 多为 `CrossAxisAlignment.start`，`Row` 拿到的是**松约束**，只收缩到子项自然宽度——`spaceBetween` 一类的主轴对齐也就无处可推。
+2. `Flexible` 只给子项**最大宽度**，`Text` 会缩回自己的自然宽度；`textAlign: TextAlign.end` 于是在那个窄盒子内部生效，右边缘并没有落到内容区右侧。
+
+实测：`SectionTitle` 自身宽度 400dp 时，trailing 的右边缘停在 374dp，**差 26dp**；在看板真实卡片里差 **44dp**——正是用户看到的"跑到了中间"。
+
+**修复**：标题按自然宽度靠左，trailing 使用 `Flexible(fit: FlexFit.tight)` **占满剩余槽位**，再靠 `textAlign: end` 贴到槽位右端；外层用 `SizedBox(width: double.infinity)` 保证在松约束下也撑满。
+
+**影响面**：`SectionTitle` 共 16 个调用点，其中 9 处带 `trailing`（看板 5 处、统计分析页 3 处、账户报表等）。**回归测试** `test/reports_section_title_test.dart` 覆盖看板与统计分析页两个页面。
+
+**验证**：`flutter analyze` 无问题；全量 `flutter test` **988 通过 / 16 跳过**。
+
+### 0.2 决策变更带来的方案调整
+
+| 原方案 | 调整后 |
+| --- | --- |
+| §4 玻璃：三选一（调参 / 换磨砂库 / 换折射库） | **全部作废**——改为 §15 的**玻璃移除计划** |
+| §8 图表：因无障碍门禁否决 Syncfusion，选 fl_chart | 无障碍不再是约束（决策 B），两者都可行；仍**建议 `fl_chart`**（MIT、零新增依赖、体积小），除非明确需要 Syncfusion 特有图表类型 |
+| §9 导航：保留磨砂、调整 FAB 位置 | 磨砂**移除**，导航改**不透明胶囊**；指针状态机、位置与尺寸、Key 契约**全部保留** |
+| §10 短反馈：只换外观 | 维持"适配层"方案，但目标外观为**不透明卡片**，不用 `toastification` 的 `applyBlurEffect` |
+
 
 ## 1. 背景与目标
 
@@ -556,3 +596,93 @@ adb shell settings put system font_scale 1.0   # 复原（务必还原）
 - `toastification`：<https://pub.dev/packages/toastification>、<https://github.com/payam-zahedi/toastification>
 
 
+
+## 15. 玻璃移除计划（决策 A）
+
+### 15.1 最容易漏的一点
+
+玻璃由**两层开关**叠加，且**底部导航与快捷按钮的模糊根本不看任何开关**：
+
+| 层 | 门控 | 说明 |
+| --- | --- | --- |
+| 基础磨砂 | `veriGlassDesignPreview`（= `UNIFIED_DESIGN_PREVIEW && GLASS_DESIGN_PREVIEW`） | 内容卡片、菜单、弹层、导航高级分支 |
+| 高级材质 | 上述 **且** KV `verifin.advanced_material.v1` **且** Android | 仅方向光与折射透镜 |
+| **无门控** | 无 | **导航回退分支的 `BackdropFilter(blur 10)`（`root_navigation.dart:445`）与快捷按钮的 `BackdropFilter(blur 10)`（`:592`）** |
+
+结论：**只关「高级材质」开关没用**，只删导航高级分支同样没用——回退分支和快捷按钮仍会磨砂。这也解释了用户看到的"丑玻璃"：那是基础磨砂层，在默认构建里一直开着。
+
+### 15.2 逐项处置
+
+| 对象 | 位置 | 处置 | 替换为 |
+| --- | --- | --- | --- |
+| `VeriGlassSurface` | `glass_material.dart:38-135` | 删类 | 见 15.3 |
+| `VeriGlassBackdrop` | `app_theme.dart:307-339` | 删 | 平面画布色 `veriPreviewCanvasLight/Dark` |
+| 导航胶囊高级分支 | `root_navigation.dart:369-431` | 删整段 | — |
+| 导航胶囊回退分支 | `root_navigation.dart:432-549` | **保留并去玻璃** | 不透明表面 + 轻阴影 |
+| `VeriNavigationGlassLens` + shader | `navigation_glass_lens.dart`、`shaders/navigation_live_lens.frag` | 删文件 + `pubspec.yaml:96-97` 声明 | — |
+| `glass_lighting.dart` | 整文件 | 删 | — |
+| 快捷按钮玻璃 | `root_navigation.dart:592-593` | 去模糊 | 实心圆（`veriSurfaceLight/Dark` + `veriRoyal` 图标） |
+| 菜单面板 | `common_widgets_menu.dart:698` | 去 `VeriGlassSurface` 包裹 | 已有的实色 `baseSurface`（`:646-650`） |
+| 底部弹窗 | `sheets.dart:34-38` | 去 `VeriGlassSurface` | 默认实色 `backgroundColor`，保留顶部圆角 |
+| `BackdropGroup` | `common_widgets_scaffold.dart:38` | 删 | — |
+| 输入框玻璃填色 | `app_theme.dart:193-194` | 删分支 | 已有的实色分支（`:195-199`） |
+| 设置项「高级材质」 | `settings_page.dart:134-151` | 删 | — |
+| KV `verifin.advanced_material.v1` | controller 5 处 | 删 | 残留孤立键无害，无需迁移 |
+| `veriGlassCanvas*` 4 令牌 | `app_theme.dart:9-12` | 删 | — |
+| `veriGlassTint` | `app_theme.dart:14-23` | 删 | — |
+| `veriContentSurfaceColor` | `app_theme.dart:34-37` | **保留** | 它就是要用的实体色 |
+
+### 15.3 `VeriGlassSurface`：删类，而不是保空壳
+
+关键事实：**111 处 `VeriCard(` 调用点从不直接接触 `VeriGlassSurface`**。`VeriCard` 本身已经有一条完整的不透明分支（`common_widgets_scaffold.dart:92-146`，用 `veriContentSurfaceColor` + 边框 + 阴影），玻璃分支只是它前面的 `if (veriGlassDesignPreview) { ... }`。
+
+因此：**删掉 `VeriCard` 的玻璃分支、保留不透明分支，111 个调用点一行不改。**
+
+真正的 `VeriGlassSurface` 直接调用只有 4 处，各自装饰不同，逐一换成显式不透明容器即可（资产卡、菜单面板、底部弹窗、导航胶囊）。把 `grouped`/`reveal` 变成死参数保留空壳，与 AGENTS「不新建同构变体」相冲突。
+
+### 15.4 两个 dart-define 的处置
+
+- **`GLASS_DESIGN_PREVIEW`：删除。** 连同 `veriGlassDesignPreview` 及其全部使用点。
+- **`UNIFIED_DESIGN_PREVIEW`：保留。** 它主要控制**布局密度**，与本诉求无关，且是用户已评审过的紧凑排版。
+
+精确切分 `veriUnifiedDesignPreview`：
+
+- **保留（布局）**：`veriCardRadius`/`veriRadiusMd`/`veriRadiusLg`/`veriHeaderHeight`；`VeriPage` 内边距与背景；`VeriCard` 的 `compact` 与默认内边距；`VeriHeader` 的 `compact` 与副标题透明度；各页面的间距、字号（含导航标签 12/10sp）；`colorScheme.surface = canvas`。
+- **移除（材质）**：仅 `app_theme.dart:114-115` 的 `scaffoldBackgroundColor` 玻璃透明分支（改为直接取 canvas），以及 `:193-194` 的输入框玻璃填色分支。
+
+### 15.5 提交顺序（每步独立可编译、可过测试）
+
+| 步骤 | 内容 | 效果 |
+| --- | --- | --- |
+| 1 | 从两个 CI workflow 与文档命令去掉 `--dart-define=GLASS_DESIGN_PREVIEW=true` | `veriGlassDesignPreview=false`，玻璃代码休眠、相关测试自动 skip。**用户立刻看到不带玻璃的包**（导航回退分支与快捷按钮仍磨砂，留给步骤 2） |
+| 2 | 导航回退分支去玻璃、删高级分支；FAB 去模糊；删透镜文件 + `.frag` + pubspec 声明 + 相关测试 | 底部导航与快捷按钮变不透明 |
+| 3 | 删 `VeriCard` 玻璃分支；改资产卡/菜单/弹窗；删 `glass_material.dart` 与 `glass_lighting.dart` | 内容表面全部实色 |
+| 4 | `scaffoldBackgroundColor` 改取 canvas；删 `VeriGlassBackdrop`/`VeriPageTransitionsBuilder`/`BackdropGroup`/`veriGlassTint`/`veriGlassCanvas*` | 背景不再有渐变光效 |
+| 5 | 删设置项、KV、l10n、controller 引用；补文档与 CHANGELOG | 入口与数据层清理完毕 |
+
+### 15.6 粗心移除会立刻失败的点
+
+1. **回退分支与快捷按钮是无门控磨砂**（`root_navigation.dart:445,592`）——只删高级分支等于没删。
+2. **pubspec 的 shader 声明与 `.frag` 文件必须成对删**（`pubspec.yaml:96-97`）；只删一个会**构建失败**。
+3. **`_loadPreferences` 读取 KV**（`veri_fin_controller_state.dart:201`）——删常量必须同删读取点，否则**编译错误**。
+4. **`saveAppPreferencesDraft` 的参数**：`settings_page.dart:558` 与 `advanced_material_test.dart` 两处调用方必须同步改。
+5. **CI 的测试文件列表**（`ci.yml:51`、`flutter.yml:71`）引用了将被删的测试文件，不改会导致 **CI 直接失败**。
+6. **`integration_test/menu_animation_test.dart` 引用 `glass_reveal_pixels_test.dart`**——删后者会连带编译失败。
+7. **导航 Key 契约**：`quick_entry_fab`、`main_nav_capsule`、`main_tab_*` 被 20+ 测试与 `shell.dart` 依赖，改装饰时必须保留 Key 与命中区域。
+8. **主题 surface 必须保持不透明**（`material_stability_test` 强制断言 `colorScheme.surface.a == 1`）。
+
+### 15.7 涉及删除/改写的测试与文档
+
+**测试**：删 `glass_material_test`、`glass_lighting_test`、`glass_reveal_pixels_test`、`navigation_lens_test`、`advanced_material_test`、`integration_test/glass_navigation_test`；改写 `material_stability_test`（保留不透明与字号断言，删 `veriGlassTint`/路由背景部分）、`anchored_menu_test`（断言实色面板）、`root_navigation_test`（no-gradient 断言）、`integration_test/menu_animation_test`。
+
+**文档**：`design-system.md`（删「两档材质」整节）、`glass-material-preview.md`（改为已移除存根）、`liquid-glass-navigation.md`（保留指针状态机各节、删玻璃材质节）、`unified-design-preview.md`、`known-limitations.md`（删玻璃渲染开销条目）、`components.md`、`tech-decisions.md`、`android-glass-investigation.md`（标为历史）、`ui-guidelines.md`、`acceptance-checklist.md`、`architecture.md`、`README.md`、`AGENTS.md`、`CHANGELOG.md`。
+
+### 15.8 无障碍代码的处置（决策 B）
+
+用户明确不需要无障碍，且此前的无障碍改动未经用户确认。**建议：顺手清理，但不作为独立工作项。**
+
+- 直接服务于图表/组件的 `Semantics` 包装（如 `chart_painters.dart` 的语义摘要、`common_widgets_scaffold.dart` 的 `Semantics(button:)`）——**保留**，它们零成本且不影响视觉；删除反而要额外改动和测试调整。
+- `test/chart_semantics_test.dart`——**保留**，它锁的是"图表能播报数据"，删除没有收益。
+- `feedback.dart` 的 `Semantics(liveRegion: true)`——保留。
+
+理由：无障碍代码在此项目中不是"丑"或"慢"的来源，也几乎没有维护成本；删除它是纯粹的返工。真正的取舍点（Syncfusion 的图表无障碍缺口）已经因决策 B 而不再是障碍，所以**不需要为了绕开它而改动任何东西**。
