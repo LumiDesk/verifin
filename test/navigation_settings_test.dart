@@ -295,6 +295,34 @@ void main() {
     expect(barIndex(), 1, reason: '底栏要跟着落到资产页');
   });
 
+  testWidgets('快速连点不同 Tab 时页面跟着滚动', (WidgetTester tester) async {
+    await pumpApp(tester);
+    await tapBottomTab(tester, 3);
+    await tester.pumpAndSettle();
+
+    final controller = tester
+        .widget<PageView>(find.byType(PageView))
+        .controller!;
+    const start = 3.0;
+    var maxTravel = 0.0;
+
+    // 在两个相距最远的 Tab 之间以 40ms 间隔连点：每次点击都会把切页动画打断并
+    // 重新计时，页面最终能滚多远，直接取决于单次动画有多长。过渡是 500ms 时 24 次
+    // 连点只挪了约 0.3 页，看起来就像页面根本没动；250ms 下能挪 1.6 页以上。
+    for (var i = 0; i < 24; i++) {
+      await tester.tapAt(rootTabCenter(tester, i.isEven ? 0 : 3));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 40));
+      final travelled = (controller.page! - start).abs();
+      if (travelled > maxTravel) {
+        maxTravel = travelled;
+      }
+    }
+
+    expect(maxTravel, greaterThan(0.8), reason: '人手速连点时页面应有肉眼可见的滚动，而不是停在原地');
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('点击开关行的标题也能切换开关', (WidgetTester tester) async {
     await pumpApp(tester);
     await tapBottomTab(tester, 3);

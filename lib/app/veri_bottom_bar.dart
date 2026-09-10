@@ -72,7 +72,7 @@ class VeriBottomBar extends StatefulWidget {
   });
 
   /// 切换动画时长。调用方用同一时长驱动页面切换，两者才会同时起步、同时结束。
-  static const Duration switchDuration = Duration(milliseconds: 500);
+  static const Duration switchDuration = Duration(milliseconds: 250);
 
   final List<VeriBottomBarItem> items;
   final int selectedIndex;
