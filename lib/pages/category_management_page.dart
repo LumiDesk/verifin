@@ -76,21 +76,19 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
                   ],
                 ),
                 const SizedBox(height: 10),
-                SegmentedButton<EntryType>(
-                  segments: EntryType.userSelectable
-                      .map(
-                        (type) => ButtonSegment<EntryType>(
-                          value: type,
-                          label: Text(type.label(AppLocalizations.of(context))),
-                        ),
-                      )
-                      .toList(),
-                  selected: <EntryType>{_type},
-                  onSelectionChanged: _sorting
+                VeriSegmentedControl<EntryType>(
+                  values: EntryType.userSelectable,
+                  selected: _type,
+                  labelOf: (type) => type.label(AppLocalizations.of(context)),
+                  accentOf: (type) => type == EntryType.expense
+                      ? veriSemantic(context, veriExpense)
+                      : type == EntryType.income
+                      ? veriSemantic(context, veriIncome)
+                      : null,
+                  // 排序期间不接受切换口径。
+                  onChanged: _sorting
                       ? null
-                      : (selection) {
-                          setState(() => _type = selection.first);
-                        },
+                      : (type) => setState(() => _type = type),
                 ),
                 const SizedBox(height: 10),
                 VeriCard(

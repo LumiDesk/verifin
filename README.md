@@ -119,8 +119,8 @@ Android 包名 `top.talyra42.verifin`。本地不构建交付 APK——正式安
 
 ## 📦 构建与发布
 
-- 质量 CI（`.github/workflows/ci.yml`）在每个 PR 和每次 push 到 `main` 时执行格式检查、静态分析、全量测试、统一设计/玻璃材质专项测试，并构建一个不交付的 `github` debug APK 作为 Kotlin / Manifest / 原生桥编译门禁。`integration_test/` 需要真实引擎，不在 CI 跑，按 [Android 开发](docs/dev/android-development.md) 在真机或本地模拟器手动执行。
-- CI（`.github/workflows/flutter.yml`）只在推送 `vX.Y.Z` 标签时触发：format → analyze → test → 候选外观专项测试（带 `UNIFIED_DESIGN_PREVIEW` / `GLASS_DESIGN_PREVIEW`）→ `flutter build apk --release --target-platform android-arm64 --flavor github` + `flutter build appbundle --release --flavor play --dart-define=SELF_UPDATE=false` → 创建 GitHub **预发布**（APK 命名 `verifin-vX.Y.Z-arm64-短提交号.apk`，AAB 命名 `verifin-vX.Y.Z-短提交号.aab`；真机验收通过后由维护者手动提升为正式版与 Latest）。自建分发的**安装包只出 arm64-v8a 单架构 APK**（覆盖 2019 年后绝大多数机型、比 universal 约减半；极老 32 位设备装不了）；AAB 含全部 ABI，供 Google Play 上架用（由 Play 按设备分发）。release 开启 R8 代码/资源裁剪，反射依赖点由 `android/app/proguard-rules.pro` 的 keep 规则保护。
+- 质量 CI（`.github/workflows/ci.yml`）在每个 PR 和每次 push 到 `main` 时执行格式检查、静态分析、全量测试、统一设计专项测试，并构建一个不交付的 `github` debug APK 作为 Kotlin / Manifest / 原生桥编译门禁。`integration_test/` 需要真实引擎，不在 CI 跑，按 [Android 开发](docs/dev/android-development.md) 在真机或本地模拟器手动执行。
+X→ `flutter build apk --release --target-platform android-arm64 --flavor github` + `flutter build appbundle --release --flavor play --dart-define=SELF_UPDATE=false` → 创建 GitHub **预发布**（APK 命名 `verifin-vX.Y.Z-arm64-短提交号.apk`，AAB 命名 `verifin-vX.Y.Z-短提交号.aab`；真机验收通过后由维护者手动提升为正式版与 Latest）。自建分发的**安装包只出 arm64-v8a 单架构 APK**（覆盖 2019 年后绝大多数机型、比 universal 约减半；极老 32 位设备装不了）；AAB 含全部 ABI，供 Google Play 上架用（由 Play 按设备分发）。release 开启 R8 代码/资源裁剪，反射依赖点由 `android/app/proguard-rules.pro` 的 keep 规则保护。
 - **分发渠道 flavor（`github` / `play`）**：应用内自更新（下载 GitHub Release 安装包自动更新）只用于 GitHub 自分发的 `github` flavor；Google Play 政策禁止应用自下载 APK 更新，故 `play` flavor 移除 `REQUEST_INSTALL_PACKAGES` 权限并隐藏「检查更新」入口。**本地 Android 构建/运行需带 `--flavor github`。**
 - 发版前先提升并提交 `CHANGELOG.md` 的 `Unreleased`，确认位于 `main` 且工作树完全干净；随后运行版本发布脚本：
 
@@ -193,8 +193,8 @@ Veri Fin 是自由软件，基于 **GNU 通用公共许可证 v3.0 或更高版�
 
 </div>
 
-开发界面前请阅读 [统一设计与交互规范](docs/design-system.md)。Android 玻璃候选预览中的高级材质可开启，默认关闭，设置保存后启用；偏好仅保存在当前设备，不随账目备份迁移。
+开发界面前请阅读 [统一设计与交互规范](docs/design-system.md)。材质自 2026-09-10 起统一为不透明实色：无磨砂玻璃、无方向高光、无背景渐变。
 
-v1.16.0 起发布包包含统一设计。复现手机外观时，Flutter 运行/构建命令附加 `--dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true`；Android 同时指定 `--flavor github`。当前源码已修复逐段模糊高光引起的 GPU 资源压力，恢复 Android 高级材质开关；默认关闭，保存后生效，保留旧偏好和账目。CI 与本地验收统一使用 Flutter **3.47.2**；真机证据和独立诊断命令见 [Android 开发与环境自动补齐](docs/dev/android-development.md)。已发布 v1.16.1 的保护行为不变，正式更新仍须通过 CI 发版。
+v1.16.0 起发布包包含统一设计。复现手机外观时，Flutter 运行/构建命令附加 `--dart-define=UNIFIED_DESIGN_PREVIEW=true`（该参数只控制布局密度与排版）；Android 同时指定 `--flavor github`。CI 与本地验收统一使用 Flutter **3.47.2**；真机命令见 [Android 开发与环境自动补齐](docs/dev/android-development.md)。正式更新仍须通过 CI 发版。
 
 开发与评审仅使用 Android；Web 工程及浏览器适配已移除。规范入口为 [AGENTS.md](AGENTS.md)，架构导览见 [docs/dev/architecture.md](docs/dev/architecture.md)。

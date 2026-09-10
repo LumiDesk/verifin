@@ -85,7 +85,7 @@ void main() {
       veriSemanticFor(Brightness.light, veriExpense),
     );
 
-    await tester.tap(find.byKey(const Key('entry_type_income')));
+    await tester.tap(find.text('收入'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('entry_type_selected_income')), findsOneWidget);
     expect(
@@ -100,7 +100,7 @@ void main() {
       veriSemanticFor(Brightness.light, veriIncome),
     );
 
-    await tester.tap(find.byKey(const Key('entry_type_transfer')));
+    await tester.tap(find.text('转账'));
     await tester.pumpAndSettle();
     expect(
       tester

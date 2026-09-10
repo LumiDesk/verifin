@@ -4,25 +4,8 @@ import 'package:flutter/material.dart';
 const bool veriUnifiedDesignPreview = bool.fromEnvironment(
   'UNIFIED_DESIGN_PREVIEW',
 );
-const bool veriGlassDesignPreview =
-    veriUnifiedDesignPreview && bool.fromEnvironment('GLASS_DESIGN_PREVIEW');
-const Color veriGlassCanvasTopLight = Color(0xFFDCE8F5);
-const Color veriGlassCanvasBottomLight = Color(0xFFDFEDEE);
-const Color veriGlassCanvasTopDark = Color(0xFF152238);
-const Color veriGlassCanvasBottomDark = Color(0xFF152B30);
 
-Color veriGlassTint(Brightness brightness, {bool overlay = false}) =>
-    brightness == Brightness.dark
-    ? (overlay
-          ? Color.lerp(
-              veriPreviewSurfaceDark,
-              Colors.white,
-              0.12,
-            )!.withValues(alpha: 0.72)
-          : Colors.white.withValues(alpha: 0.055))
-    : Colors.white.withValues(alpha: overlay ? 0.64 : 0.50);
-
-// 候选材质令牌：实体内容与中性画布；不用于模拟玻璃折射。
+// 画布与内容基色：一律实体填色，不模拟玻璃折射或模糊。
 const Color veriPreviewCanvasLight = Color(0xFFF3F5F8);
 const Color veriPreviewCanvasDark = Color(0xFF101318);
 const Color veriPreviewSurfaceDark = Color(0xFF1A1F27);
@@ -35,6 +18,17 @@ Color veriContentSurfaceColor(Brightness brightness) =>
     brightness == Brightness.dark
     ? (veriUnifiedDesignPreview ? veriPreviewSurfaceDark : veriSurfaceDark)
     : veriSurfaceLight;
+
+/// 浮动元件（底部导航、快捷按钮、锚点菜单）的实体基色。
+///
+/// 必须比画布和内容卡片更亮一档：此前它们直接用卡片表面色，深色下与页面
+/// 背景几乎同色，导航胶囊看起来像“没有了边框的凹陷块”。抬高一层后靠
+/// 表面色差 + 描边 + 阴影表达层级，不需要模糊或渐变。
+Color veriElevatedSurfaceColor(Brightness brightness) =>
+    brightness == Brightness.dark ? veriSurfaceRaisedDark : veriSurfaceLight;
+
+/// 深色下高于卡片的浮动表面色。
+const Color veriSurfaceRaisedDark = Color(0xFF232A35);
 
 const Color veriMint = Color(0xFF34DBCB);
 const Color veriCyan = Color(0xFF34C2DB);
@@ -104,16 +98,10 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
 
   final baseTheme = ThemeData(
     useMaterial3: true,
-    pageTransitionsTheme: veriGlassDesignPreview
-        ? const PageTransitionsTheme(
-            builders: {TargetPlatform.android: VeriPageTransitionsBuilder()},
-          )
-        : const PageTransitionsTheme(),
+    pageTransitionsTheme: const PageTransitionsTheme(),
     brightness: brightness,
     colorScheme: colorScheme,
-    scaffoldBackgroundColor: veriGlassDesignPreview
-        ? Colors.transparent
-        : veriUnifiedDesignPreview
+    scaffoldBackgroundColor: veriUnifiedDesignPreview
         ? canvas
         : isDark
         ? const Color(0xFF0B0F15)
@@ -190,9 +178,7 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: veriGlassDesignPreview
-          ? veriGlassTint(brightness)
-          : isDark
+      fillColor: isDark
           ? (veriUnifiedDesignPreview
                 ? veriPreviewSurfaceDark
                 : veriSurfaceAltDark)
@@ -301,61 +287,4 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
       ),
     ),
   );
-}
-
-/// 实际绘制在内容后方的低饱和背景。颜色来自背景，不在玻璃前景伪造折射。
-class VeriGlassBackdrop extends StatelessWidget {
-  const VeriGlassBackdrop({super.key, required this.child});
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    if (!veriGlassDesignPreview) return child;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return RepaintBoundary(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: dark
-                ? const [
-                    veriGlassCanvasTopDark,
-                    veriPreviewCanvasDark,
-                    veriGlassCanvasBottomDark,
-                  ]
-                : const [
-                    veriGlassCanvasTopLight,
-                    veriPreviewCanvasLight,
-                    veriGlassCanvasBottomLight,
-                  ],
-            stops: const [0, 0.50, 1],
-          ),
-        ),
-        child: child,
-      ),
-    );
-  }
-}
-
-/// 背景属于路由画面，必须一起参与进入、退出和预测性返回。
-class VeriPageTransitionsBuilder extends PredictiveBackPageTransitionsBuilder {
-  const VeriPageTransitionsBuilder();
-
-  @override
-  Widget buildTransitions<T>(
-    PageRoute<T> route,
-    BuildContext context,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-    Widget child,
-  ) {
-    return super.buildTransitions(
-      route,
-      context,
-      animation,
-      secondaryAnimation,
-      VeriGlassBackdrop(child: child),
-    );
-  }
 }

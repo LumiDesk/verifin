@@ -1,11 +1,8 @@
-import 'dart:ui';
+import 'package:bottom_bar_matu/bottom_bar_matu.dart';
 
 import 'package:flutter/material.dart';
 
 import 'app_theme.dart';
-import 'glass_material.dart';
-import 'glass_lighting.dart';
-import 'navigation_glass_lens.dart';
 
 @immutable
 class VeriNavigationDestination {
@@ -28,12 +25,16 @@ class VeriNavigationDestination {
 class VeriRootNavigationBody extends StatelessWidget {
   const VeriRootNavigationBody({super.key, required this.child});
 
+  /// 停靠底栏的内容高度（不含系统安全区）。
+  static const double barHeight = 64;
+
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     return _VeriRootNavigationLayout(
-      listBottomPadding: MediaQuery.paddingOf(context).bottom + 12,
+      // 停靠底栏不透明且 Scaffold 已为它让位，列表末项只需少量留白。
+      listBottomPadding: 12,
       child: MediaQuery.removePadding(
         context: context,
         removeBottom: true,
@@ -57,71 +58,40 @@ class _VeriRootNavigationLayout extends InheritedWidget {
   }
 }
 
-/// 根页面列表在浮动导航后方绘制时所需的内容留白。
+/// 根页面列表的默认内边距（横向页边距 14、顶部 8、底部留白）。
+///
+/// 底栏已改为停靠式：`Scaffold` 会为它让出空间，列表末项不再需要按底栏高度避让，
+/// 底部只需一点呼吸空间。[VeriRootNavigationBody] 仍负责把 Scaffold 注入的
+/// bottom padding 从页面子树里移除（否则未显式给 padding 的 GridView 会被撑高）。
 EdgeInsets veriRootPageListPadding(BuildContext context) {
   final layout = context
       .dependOnInheritedWidgetOfExactType<_VeriRootNavigationLayout>();
-  return EdgeInsets.fromLTRB(
-    14,
-    8,
-    14,
-    layout?.listBottomPadding ?? MediaQuery.paddingOf(context).bottom + 12,
-  );
+  return EdgeInsets.fromLTRB(14, 8, 14, layout?.listBottomPadding ?? 12);
 }
 
-/// Veri Fin 根页面的浮动玻璃导航。
+/// Veri Fin 根页面的停靠底栏。
 ///
-/// 玻璃基底只使用均匀中性透明色、背景模糊、单一轮廓和阴影，不绘制渐变或
-/// 固定染色。选中滑块支持按压缩放、指针连续拖动和松手吸附；快捷记账按钮仅
-/// 由调用方在首页启用。
+/// 整宽、不透明、贴底（系统安全区之上）：条目由 `bottom_bar_matu` 绘制，
+/// 选中项有气泡动效。快捷记账按钮不在这里——它由 Shell 放在右下角浮动。
 class VeriRootNavigation extends StatefulWidget {
   const VeriRootNavigation({
     super.key,
     required this.currentIndex,
     required this.destinations,
     required this.onDestinationSelected,
-    required this.quickEntryLabel,
-    this.showQuickEntry = false,
-    this.onQuickEntryTap,
-    this.onQuickEntryLongPress,
     this.keyPrefix = 'main',
-    this.quickEntryKey = const Key('quick_entry_fab'),
   });
 
   final int currentIndex;
   final List<VeriNavigationDestination> destinations;
   final ValueChanged<int> onDestinationSelected;
-  final String quickEntryLabel;
-  final bool showQuickEntry;
-  final VoidCallback? onQuickEntryTap;
-  final VoidCallback? onQuickEntryLongPress;
   final String keyPrefix;
-  final Key quickEntryKey;
 
   @override
   State<VeriRootNavigation> createState() => _VeriRootNavigationState();
 }
 
-class _VeriRootNavigationState extends State<VeriRootNavigation>
-    with SingleTickerProviderStateMixin {
-  static const _navigationWidth = 298.0;
-  static const _pressMoveDuration = Duration(milliseconds: 280);
-  static const _snapDuration = Duration(milliseconds: 240);
-
-  late final AnimationController _indicatorController;
-
-  double _displayIndex = 0;
-  double _animationStart = 0;
-  double _animationEnd = 0;
-  bool _indicatorPressed = false;
-  bool _dragging = false;
-  bool _suppressNextDestinationTap = false;
-  int? _activePointer;
-  int? _pressedTargetIndex;
-  double? _pointerDownX;
-  double? _lastPointerX;
-  double _lightMotion = 0;
-
+class _VeriRootNavigationState extends State<VeriRootNavigation> {
   Key _key(String suffix) => ValueKey('${widget.keyPrefix}_$suffix');
 
   @override
@@ -130,595 +100,65 @@ class _VeriRootNavigationState extends State<VeriRootNavigation>
     assert(widget.destinations.isNotEmpty);
     assert(widget.currentIndex >= 0);
     assert(widget.currentIndex < widget.destinations.length);
-    _displayIndex = widget.currentIndex.toDouble();
-    _animationStart = _displayIndex;
-    _animationEnd = _displayIndex;
-    _indicatorController =
-        AnimationController(vsync: this, duration: _pressMoveDuration)
-          ..addListener(() {
-            final progress = Curves.easeOutCubic.transform(
-              _indicatorController.value,
-            );
-            setState(() {
-              _displayIndex = lerpDouble(
-                _animationStart,
-                _animationEnd,
-                progress,
-              )!;
-            });
-          });
-  }
-
-  @override
-  void didUpdateWidget(covariant VeriRootNavigation oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    assert(widget.destinations.isNotEmpty);
-    assert(widget.currentIndex >= 0);
-    assert(widget.currentIndex < widget.destinations.length);
-    if (oldWidget.currentIndex != widget.currentIndex &&
-        _activePointer == null) {
-      _animateIndicatorTo(widget.currentIndex.toDouble(), _snapDuration);
-    }
-  }
-
-  @override
-  void dispose() {
-    _indicatorController.dispose();
-    super.dispose();
-  }
-
-  void _animateIndicatorTo(double target, Duration duration) {
-    final clampedTarget = target
-        .clamp(0.0, widget.destinations.length - 1.0)
-        .toDouble();
-    _indicatorController.stop();
-    _animationStart = _displayIndex;
-    _animationEnd = clampedTarget;
-    if ((_animationStart - _animationEnd).abs() < 0.001) {
-      if (_displayIndex != clampedTarget) {
-        setState(() => _displayIndex = clampedTarget);
-      }
-      return;
-    }
-    _indicatorController.duration = duration;
-    _indicatorController.forward(from: 0);
-  }
-
-  void _handlePointerDown(PointerDownEvent event, double slotWidth) {
-    if (_activePointer != null) {
-      return;
-    }
-    final pressedIndex = (event.localPosition.dx / slotWidth).floor().clamp(
-      0,
-      widget.destinations.length - 1,
-    );
-    setState(() {
-      _activePointer = event.pointer;
-      _pointerDownX = event.localPosition.dx;
-      _lastPointerX = event.localPosition.dx;
-      _lightMotion = 0;
-      _pressedTargetIndex = pressedIndex;
-      _dragging = false;
-      _indicatorPressed = true;
-    });
-    _animateIndicatorTo(pressedIndex.toDouble(), _pressMoveDuration);
-  }
-
-  void _handlePointerMove(PointerMoveEvent event, double slotWidth) {
-    if (event.pointer != _activePointer ||
-        _pointerDownX == null ||
-        _pressedTargetIndex == null) {
-      return;
-    }
-    final movement =
-        event.localPosition.dx - (_lastPointerX ?? event.localPosition.dx);
-    _lastPointerX = event.localPosition.dx;
-    setState(
-      () => _lightMotion = (_lightMotion * 0.5 + movement / 12 * 0.5).clamp(
-        -1.0,
-        1.0,
-      ),
-    );
-    final delta = event.localPosition.dx - _pointerDownX!;
-    if (!_dragging && delta.abs() < 2) {
-      return;
-    }
-    final desiredIndex = (_pressedTargetIndex! + delta / slotWidth)
-        .clamp(0.0, widget.destinations.length - 1.0)
-        .toDouble();
-    if (!_dragging) {
-      setState(() => _dragging = true);
-    }
-    if (_indicatorController.isAnimating) {
-      setState(() => _animationEnd = desiredIndex);
-    } else {
-      setState(() => _displayIndex = desiredIndex);
-    }
-  }
-
-  void _handlePointerUp(PointerUpEvent event) {
-    if (event.pointer != _activePointer) {
-      return;
-    }
-    final wasDragging = _dragging;
-    final pressedTargetIndex = _pressedTargetIndex;
-    final targetIndex = _displayIndex.round().clamp(
-      0,
-      widget.destinations.length - 1,
-    );
-    setState(() {
-      _activePointer = null;
-      _pointerDownX = null;
-      _lastPointerX = null;
-      _lightMotion = 0;
-      _pressedTargetIndex = null;
-      _dragging = false;
-      _indicatorPressed = false;
-    });
-    if (wasDragging) {
-      _animateIndicatorTo(targetIndex.toDouble(), _snapDuration);
-      widget.onDestinationSelected(targetIndex);
-    } else if (pressedTargetIndex != null) {
-      _suppressNextDestinationTap = true;
-      _animateIndicatorTo(pressedTargetIndex.toDouble(), _snapDuration);
-      widget.onDestinationSelected(pressedTargetIndex);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _suppressNextDestinationTap = false;
-      });
-    }
   }
 
   void _handleDestinationTap(int index) {
-    if (_suppressNextDestinationTap) {
-      _suppressNextDestinationTap = false;
-      return;
-    }
-    _animateIndicatorTo(index.toDouble(), _snapDuration);
-    widget.onDestinationSelected(index);
-  }
-
-  void _handlePointerCancel(PointerCancelEvent event) {
-    if (event.pointer != _activePointer) {
-      return;
-    }
-    _indicatorController.stop();
-    setState(() {
-      _activePointer = null;
-      _pointerDownX = null;
-      _lastPointerX = null;
-      _lightMotion = 0;
-      _pressedTargetIndex = null;
-      _dragging = false;
-      _indicatorPressed = false;
+    // bottom_bar_matu 会在 didUpdateWidget 里同步回调 onSelect，也就是在整个构建
+    // 过程中；此时切页会重建整棵树，抛「setState() called during build」。
+    // 因此只记下意图，等这一帧结束再统一处理。
+    _pendingSelection = index;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final target = _pendingSelection;
+      _pendingSelection = null;
+      if (target == null) return;
+      widget.onDestinationSelected(target);
     });
-    _animateIndicatorTo(widget.currentIndex.toDouble(), _snapDuration);
   }
+
+  int? _pendingSelection;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return SafeArea(
-      key: _key('bottom_nav'),
-      top: false,
-      child: Padding(
-        key: _key('outer_spacing'),
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final quickEntrySpace = widget.showQuickEntry ? 68.0 : 0.0;
-            final maximumWidth = (constraints.maxWidth - quickEntrySpace).clamp(
-              0.0,
-              _navigationWidth,
-            );
-            return SizedBox(
-              height: 60,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: <Widget>[
-                  AnimatedAlign(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOutCubic,
-                    alignment: widget.showQuickEntry
-                        ? Alignment.centerLeft
-                        : Alignment.center,
-                    child: AnimatedContainer(
-                      key: _key('nav_capsule'),
-                      duration: const Duration(milliseconds: 220),
-                      curve: Curves.easeOutCubic,
-                      width: maximumWidth,
-                      height: 60,
-                      // 导航每帧都在重绘（拖动/吸附），单独成层后不再让整屏与页面里的
-                      // 玻璃模糊跟着重绘。
-                      child: RepaintBoundary(child: _buildGlassCapsule(isDark)),
-                    ),
-                  ),
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: IgnorePointer(
-                      key: _key('quick_entry_visibility'),
-                      ignoring: !widget.showQuickEntry,
-                      child: ExcludeSemantics(
-                        excluding: !widget.showQuickEntry,
-                        child: AnimatedScale(
-                          key: _key('quick_entry_scale'),
-                          duration: const Duration(milliseconds: 180),
-                          curve: Curves.easeOutCubic,
-                          scale: widget.showQuickEntry ? 1 : 0,
-                          child: _QuickEntryButton(
-                            keyPrefix: widget.keyPrefix,
-                            actionKey: widget.quickEntryKey,
-                            label: widget.quickEntryLabel,
-                            onTap: widget.onQuickEntryTap,
-                            onLongPress: widget.onQuickEntryLongPress,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
+    // 表面色要一直铺到屏幕最底（含系统手势条背后），否则手势条区域会露出页面
+    // 底色、和底栏分成两块。因此底衬在 SafeArea 之外，条目内容在 SafeArea 之内。
+    final surface = veriElevatedSurfaceColor(Theme.of(context).brightness);
+    final outline = Theme.of(context).brightness == Brightness.dark
+        ? Colors.white.withValues(alpha: 0.07)
+        : Colors.black.withValues(alpha: 0.07);
 
-  Widget _buildGlassCapsule(bool isDark) {
-    if (VeriMaterialScope.advancedOf(context) &&
-        !MediaQuery.highContrastOf(context)) {
-      return Stack(
-        clipBehavior: Clip.none,
-        fit: StackFit.expand,
-        children: [
-          Positioned.fill(
-            child: VeriGlassSurface(
-              radius: 999,
-              grouped: false,
-              tint: Colors.white.withValues(alpha: isDark ? 0.055 : 0.14),
-              child: const SizedBox.expand(),
-            ),
-          ),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final slotWidth =
-                  constraints.maxWidth / widget.destinations.length;
-              final selectedIndex = _displayIndex.round().clamp(
-                0,
-                widget.destinations.length - 1,
-              );
-              return Listener(
-                behavior: HitTestBehavior.opaque,
-                onPointerDown: (event) => _handlePointerDown(event, slotWidth),
-                onPointerMove: (event) => _handlePointerMove(event, slotWidth),
-                onPointerUp: _handlePointerUp,
-                onPointerCancel: _handlePointerCancel,
-                child: VeriNavigationGlassLens(
-                  keyPrefix: widget.keyPrefix,
-                  target: Rect.fromLTWH(
-                    _displayIndex * slotWidth + 3,
-                    3,
-                    slotWidth - 6,
-                    constraints.maxHeight - 6,
-                  ),
-                  pressed: _indicatorPressed || _dragging,
-                  motion: _lightMotion,
-                  source: Row(
-                    children: [
-                      for (
-                        var index = 0;
-                        index < widget.destinations.length;
-                        index++
-                      )
-                        Expanded(
-                          child: _DestinationButton(
-                            key: _key('tab_$index'),
-                            inkKey: _key('tab_ink_$index'),
-                            destination: widget.destinations[index],
-                            selected: index == selectedIndex,
-                            onTap: () => _handleDestinationTap(index),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      );
-    }
     return DecoratedBox(
+      key: _key('bottom_nav'),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.12),
-            blurRadius: 16,
-            offset: const Offset(0, 5),
-          ),
-        ],
+        color: surface,
+        border: Border(top: BorderSide(color: outline)),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(999),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Material(
-            key: _key('nav_material'),
-            color: Colors.transparent,
-            shape: const StadiumBorder(),
-            clipBehavior: Clip.antiAlias,
-            child: Ink(
-              key: _key('nav_ink'),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: isDark ? 0.055 : 0.14),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.16)
-                      : Colors.black.withValues(alpha: 0.10),
+      child: SafeArea(
+        top: false,
+        child: BottomBarDoubleBullet(
+          key: _key('nav_bar'),
+          selectedIndex: widget.currentIndex,
+          height: VeriRootNavigationBody.barHeight,
+          items: <BottomBarItem>[
+            for (var index = 0; index < widget.destinations.length; index++)
+              BottomBarItem(
+                // 未选中用线框图标、选中换填充图标：库的选中动画本身就是按
+                // 「同一个位置切换图标」设计的，两种风格切换时动效最自然。
+                iconData: index == widget.currentIndex
+                    ? widget.destinations[index].selectedIcon
+                    : widget.destinations[index].icon,
+                iconSize: 24,
+                label: widget.destinations[index].label,
+                labelMarginTop: 2,
+                labelTextStyle: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final slotWidth =
-                      constraints.maxWidth / widget.destinations.length;
-                  final selectedIndex = _displayIndex.round().clamp(
-                    0,
-                    widget.destinations.length - 1,
-                  );
-                  return Listener(
-                    behavior: HitTestBehavior.opaque,
-                    onPointerDown: (event) =>
-                        _handlePointerDown(event, slotWidth),
-                    onPointerMove: (event) =>
-                        _handlePointerMove(event, slotWidth),
-                    onPointerUp: _handlePointerUp,
-                    onPointerCancel: _handlePointerCancel,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: <Widget>[
-                        Positioned(
-                          key: _key('nav_indicator_position'),
-                          left: 0,
-                          top: 3,
-                          bottom: 3,
-                          width: slotWidth - 6,
-                          // 用 Transform 平移而不是改 Positioned.left：拖动时每帧只重绘、
-                          // 不重排，避免整条导航（含玻璃模糊）每帧走一次布局。
-                          child: Transform.translate(
-                            offset: Offset(_displayIndex * slotWidth + 3, 0),
-                            child: IgnorePointer(
-                              child: AnimatedScale(
-                                key: _key('nav_indicator_scale'),
-                                duration: const Duration(milliseconds: 160),
-                                curve: Curves.easeOutCubic,
-                                scale: _indicatorPressed || _dragging
-                                    ? 0.94
-                                    : 1,
-                                child: DecoratedBox(
-                                  key: _key('nav_indicator'),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        (isDark ? Colors.white : Colors.black)
-                                            .withValues(
-                                              alpha: isDark ? 0.12 : 0.065,
-                                            ),
-                                    borderRadius: BorderRadius.circular(999),
-                                    border: Border.all(
-                                      color:
-                                          (isDark ? Colors.white : Colors.black)
-                                              .withValues(
-                                                alpha: isDark ? 0.16 : 0.08,
-                                              ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Row(
-                          children: <Widget>[
-                            for (
-                              var index = 0;
-                              index < widget.destinations.length;
-                              index += 1
-                            )
-                              Expanded(
-                                child: _DestinationButton(
-                                  key: _key('tab_$index'),
-                                  inkKey: _key('tab_ink_$index'),
-                                  destination: widget.destinations[index],
-                                  selected: index == selectedIndex,
-                                  onTap: () => _handleDestinationTap(index),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickEntryButton extends StatelessWidget {
-  const _QuickEntryButton({
-    required this.keyPrefix,
-    required this.actionKey,
-    required this.label,
-    required this.onTap,
-    required this.onLongPress,
-  });
-
-  final String keyPrefix;
-  final Key actionKey;
-  final String label;
-  final VoidCallback? onTap;
-  final VoidCallback? onLongPress;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return CustomPaint(
-      foregroundPainter:
-          VeriMaterialScope.advancedOf(context) &&
-              !MediaQuery.highContrastOf(context)
-          ? VeriGlassLightPainter(
-              radius: 999,
-              brightness: Theme.of(context).brightness,
-            )
-          : null,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.12),
-              blurRadius: 16,
-              offset: const Offset(0, 5),
-            ),
           ],
-        ),
-        child: ClipOval(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: SizedBox(
-              width: 60,
-              height: 60,
-              child: Material(
-                key: ValueKey('${keyPrefix}_quick_entry_material'),
-                color: Colors.transparent,
-                shape: const CircleBorder(),
-                clipBehavior: Clip.antiAlias,
-                child: Ink(
-                  key: ValueKey('${keyPrefix}_quick_entry_ink'),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withValues(
-                      alpha: isDark ? 0.055 : 0.14,
-                    ),
-                    border: veriGlassDesignPreview
-                        ? null
-                        : Border.all(
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.16)
-                                : Colors.black.withValues(alpha: 0.10),
-                          ),
-                  ),
-                  child: Tooltip(
-                    message: label,
-                    child: InkWell(
-                      key: actionKey,
-                      customBorder: const CircleBorder(),
-                      hoverColor: Colors.white.withValues(
-                        alpha: isDark ? 0.08 : 0.26,
-                      ),
-                      splashColor: Colors.white.withValues(
-                        alpha: isDark ? 0.12 : 0.34,
-                      ),
-                      onTap: onTap,
-                      onLongPress: onLongPress,
-                      child: const Icon(Icons.add_rounded, color: veriRoyal),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DestinationButton extends StatefulWidget {
-  const _DestinationButton({
-    super.key,
-    required this.inkKey,
-    required this.destination,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final Key inkKey;
-  final VeriNavigationDestination destination;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  State<_DestinationButton> createState() => _DestinationButtonState();
-}
-
-class _DestinationButtonState extends State<_DestinationButton> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final color = widget.selected
-        ? scheme.onSurface.withValues(alpha: 0.94)
-        : scheme.onSurface.withValues(alpha: _hovered ? 0.76 : 0.48);
-    return Semantics(
-      selected: widget.selected,
-      button: true,
-      label: widget.destination.label,
-      child: Tooltip(
-        message: widget.destination.label,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-          child: Material(
-            color: Colors.transparent,
-            shape: const StadiumBorder(),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              key: widget.inkKey,
-              borderRadius: BorderRadius.circular(999),
-              hoverColor: Colors.transparent,
-              splashColor: Colors.transparent,
-              highlightColor: Colors.transparent,
-              onHover: (value) {
-                if (_hovered != value) {
-                  setState(() => _hovered = value);
-                }
-              },
-              onTap: widget.onTap,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Icon(
-                    widget.selected
-                        ? widget.destination.selectedIcon
-                        : widget.destination.icon,
-                    size: 21,
-                    color: color,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    widget.destination.label,
-                    // 大字号下英文标签会换行把图标挤出胶囊：限一行，宁可省略。
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontSize: veriUnifiedDesignPreview ? 12 : 10,
-                      color: color,
-                      fontWeight: widget.selected
-                          ? FontWeight.w700
-                          : FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          color: veriRoyal,
+          backgroundColor: Colors.transparent,
+          onSelect: _handleDestinationTap,
         ),
       ),
     );

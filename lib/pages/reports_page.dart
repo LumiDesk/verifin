@@ -387,6 +387,7 @@ class _BudgetExecutionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
+    final scheme = Theme.of(context).colorScheme;
     // 自定义预算周期时角标展示周期日期范围，自然月展示「N月」。
     final periodBadge = controller.budgetCycleIsCustom
         ? AppLocalizations.of(context).budgetCycleRange(
@@ -422,26 +423,12 @@ class _BudgetExecutionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  AppLocalizations.of(context).panelBudgetExecutionLabel,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-                ),
-              ),
-              Text(
-                periodBadge,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.48),
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+          // 与其他面板共用 SectionTitle：此前这里手写标题 + titleSmall(13sp)，
+          // 而其余面板走 SectionTitle 的 titleMedium(14sp)，导致「预算执行」的
+          // 标题比同页其它卡片小一号。
+          SectionTitle(
+            title: AppLocalizations.of(context).panelBudgetExecutionLabel,
+            trailing: periodBadge,
           ),
           const SizedBox(height: 10),
           Row(
@@ -518,101 +505,39 @@ class _BudgetExecutionCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
+          // 与本页顶部的收支摘要卡共用 SummaryMetric：三块指标的标签/数值字号
+          // 必须与同页其它卡片一致，此前这里是自绘的 _BudgetExecutionMetric，
+          // 标签与数值各小一号，看起来像是另一套排版。
           Row(
             children: <Widget>[
-              Expanded(
-                child: _BudgetExecutionMetric(
-                  label: AppLocalizations.of(context).monthBudgetLabel,
-                  value: formatAmount(budget),
-                ),
+              SummaryMetric(
+                label: AppLocalizations.of(context).monthBudgetLabel,
+                value: formatAmount(budget),
+                color: scheme.onSurface,
               ),
-              Expanded(
-                child: _BudgetExecutionMetric(
-                  label: AppLocalizations.of(context).budgetMonthExpense,
-                  value: formatExpenseAmount(expense),
-                ),
+              SummaryMetric(
+                label: AppLocalizations.of(context).budgetMonthExpense,
+                value: formatExpenseAmount(expense),
+                color: veriSemantic(context, veriExpense),
               ),
-              Expanded(
-                child: _BudgetExecutionMetric(
-                  label: AppLocalizations.of(context).categoryBudgetTitle,
-                  value: AppLocalizations.of(context).countItems(budgetedCount),
-                  // 未设分类预算时没有「执行情况」可判断，绿色「正常」会被误读为
-                  // 已设预算且执行良好。
-                  accent: overBudgetCount > 0
-                      ? AppLocalizations.of(
-                          context,
-                        ).overCountLabel(overBudgetCount)
-                      : budgetedCount == 0
-                      ? AppLocalizations.of(context).notSet
-                      : AppLocalizations.of(context).normalLabel,
-                  accentColor: overBudgetCount > 0
-                      ? veriSemantic(context, veriExpense)
-                      : budgetedCount == 0
-                      ? null
-                      : veriSemantic(context, veriIncome),
-                ),
+              SummaryMetric(
+                label: AppLocalizations.of(context).categoryBudgetTitle,
+                value: AppLocalizations.of(context).countItems(budgetedCount),
+                color: scheme.onSurface,
+                // 未设分类预算时没有「执行情况」可判断，绿色「正常」会被误读为
+                // 已设预算且执行良好。
+                detail: overBudgetCount > 0
+                    ? AppLocalizations.of(
+                        context,
+                      ).overCountLabel(overBudgetCount)
+                    : budgetedCount == 0
+                    ? AppLocalizations.of(context).notSet
+                    : AppLocalizations.of(context).normalLabel,
               ),
             ],
           ),
         ],
       ),
-    );
-  }
-}
-
-class _BudgetExecutionMetric extends StatelessWidget {
-  const _BudgetExecutionMetric({
-    required this.label,
-    required this.value,
-    this.accent,
-    this.accentColor,
-  });
-
-  final String label;
-  final String value;
-  final String? accent;
-  final Color? accentColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: <Widget>[
-        Text(
-          label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.48),
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(
-            context,
-          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-        ),
-        if (accent != null) ...<Widget>[
-          const SizedBox(height: 2),
-          Text(
-            accent!,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color:
-                  accentColor ??
-                  Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.44),
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ],
     );
   }
 }

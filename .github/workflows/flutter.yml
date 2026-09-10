@@ -68,20 +68,20 @@ jobs:
 
       # 固定到真机验收过的引擎版本；两渠道包含统一外观，高级材质仍默认关闭。
       - name: Verify release design flows
-        run: flutter test test/design_consistency_test.dart test/unified_design_preview_test.dart test/advanced_material_test.dart test/glass_lighting_test.dart test/glass_reveal_pixels_test.dart test/home_density_test.dart test/navigation_lens_test.dart test/anchored_menu_test.dart test/material_stability_test.dart test/navigation_settings_test.dart --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
+        run: flutter test test/design_consistency_test.dart test/unified_design_preview_test.dart test/home_density_test.dart test/anchored_menu_test.dart test/material_stability_test.dart test/navigation_settings_test.dart --dart-define=UNIFIED_DESIGN_PREVIEW=true
 
       - name: Build release APK (github flavor)
         # GitHub 自分发包：github flavor，保留应用内一键自更新（REQUEST_INSTALL_PACKAGES）。
         # 只构建 arm64-v8a：2019 年后的安卓机几乎全是 arm64，一个包覆盖 99%+ 设备，
         # 相比 universal（打包 armeabi-v7a/arm64/x86_64 三套原生库）体积约减半。
         # 极老的 32 位机型装不了——已在 Release 说明中告知。
-        run: flutter build apk --release --target-platform android-arm64 --flavor github --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
+        run: flutter build apk --release --target-platform android-arm64 --flavor github --dart-define=UNIFIED_DESIGN_PREVIEW=true
 
       - name: Build release App Bundle (play flavor)
         # Google Play 上架用 AAB：play flavor 移除 REQUEST_INSTALL_PACKAGES（Play 政策禁止
         # 应用自更新），并 --dart-define=SELF_UPDATE=false 隐藏应用内自更新入口。
         # 与 APK 同用 verifinRelease 签名；AAB 含全部 ABI，由 Play 按设备分发。
-        run: flutter build appbundle --release --flavor play --dart-define=SELF_UPDATE=false --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
+        run: flutter build appbundle --release --flavor play --dart-define=SELF_UPDATE=false --dart-define=UNIFIED_DESIGN_PREVIEW=true
 
       - name: Prepare release artifacts
         shell: bash

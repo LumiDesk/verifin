@@ -1,6 +1,6 @@
-# 统一磨砂玻璃材质预览
+# 磨砂玻璃材质预览（已移除）
 
-> 当前平台范围（2026-09-05）：已移除 Web 开发预览，使用 [Android 真机流程](android-development.md)。下文涉及浏览器的结果仅保留为历史验证记录，不代表当前支持。
+> **本文已作废。** 磨砂玻璃与「高级材质」于 2026-09-10 经用户判定为设计败笔并整体移除，相关代码（`glass_material.dart`、`glass_lighting.dart`、`navigation_glass_lens.dart` 与 `navigation_live_lens.frag`）已删除。本文仅作为历史调研留档；当前材质规范见 [统一设计规范](../design-system.md)。
 
 2026-09-05 Android 玻璃修复：旧方向高光的逐段模糊已在 REDMI K90 Pro Max（Android 17）独立复现 GPU 分配失败及 Vulkan 0x14 崩溃；连续透明度网格替换后，Flutter 3.47.2 release/R8 已完成该机开启、保存、冷启动、切页、深浅色及关闭验收，真实导航 Shader 集成测试通过。Android 恢复高级材质，默认关闭，旧 KV 保留；其他平台仍保护。不能据此断言所有 GPU 均已验证。CI 固定 Flutter 3.47.2，升级引擎须重做真机验收；正式包仍由 CI 构建，须用户明确授权发版，禁止要求清除应用数据。
 

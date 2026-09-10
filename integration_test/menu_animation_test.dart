@@ -4,11 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:verifin/app/app_theme.dart';
 import 'package:verifin/app/common_widgets.dart';
-import '../test/glass_reveal_pixels_test.dart' as pixel_regression;
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-  testWidgets('原机玻璃菜单表面与文字连续进入退出', (tester) async {
+  testWidgets('菜单表面与文字连续进入退出', (tester) async {
     final timings = <FrameTiming>[];
     void record(List<FrameTiming> frames) => timings.addAll(frames);
     binding.addTimingsCallback(record);
@@ -17,10 +16,6 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: buildVeriFinTheme(brightness),
-          builder: (_, child) => VeriMaterialScope(
-            advanced: true,
-            child: VeriGlassBackdrop(child: child!),
-          ),
           home: Scaffold(
             body: SafeArea(
               child: Column(
@@ -62,20 +57,11 @@ void main() {
         await tester.tap(find.byTooltip('菜单检查'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 70));
-        final opening = tester
-            .widgetList<VeriGlassSurface>(find.byType(VeriGlassSurface))
-            .singleWhere((s) => !s.grouped)
-            .reveal;
-        expect(opening, inExclusiveRange(0.0, 1.0));
+        expect(find.text('关闭菜单'), findsOneWidget);
         await tester.pumpAndSettle();
         await tester.tap(find.text('关闭菜单'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 70));
-        final closing = tester
-            .widgetList<VeriGlassSurface>(find.byType(VeriGlassSurface))
-            .singleWhere((s) => !s.grouped)
-            .reveal;
-        expect(closing, inExclusiveRange(0.0, 1.0));
         expect(find.text('关闭菜单'), findsOneWidget);
         await tester.pumpAndSettle();
         expect(find.text('关闭菜单'), findsNothing);
@@ -89,6 +75,4 @@ void main() {
       );
     }
   });
-  // 放在菜单冷启动检查之后，避免像素用例替菜单预热图形管线。
-  pixel_regression.main();
 }

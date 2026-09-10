@@ -14,22 +14,17 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 
 ## 族 1 — 布局脚手架 / 页面容器
 
-`VeriMaterialScope`（`glass_material.dart`，公共入口导出）注入设备材质偏好；`advancedOf(context)` 同时检查候选构建开关与 `veriAdvancedMaterialAvailable` 平台保护，缺省 false。高光修复并通过真机验收后开放 Android；其他平台直接使用透镜组件也不会加载 Shader。`VeriGlassLightPainter` 以两次连续透明度网格绘制柔光和细高光，禁止恢复每个微小线段单独模糊的路径，验收见 `android-glass-investigation.md`。
-`BudgetRingPainter` 仅保留 value/trackColor/progressColor，按用户要求恢复原常规渐变环；不再提供玻璃参数。
+`BudgetRingPainter` 仅保留 value/trackColor/progressColor，使用原常规渐变环；不再提供玻璃参数。
 
-`VeriGlassSurface` / `VeriGlassBackdrop` 通过 `glass_material.dart` 和公共入口导出，
-负责默认关闭的磨砂材质预览；卡片可共享过滤组，重叠菜单/弹层使用独立过滤。
-`VeriGlassBackdrop` 实现现位于 `app_theme.dart`，由 `glass_material.dart` 保持原入口导出；
-`VeriPageTransitionsBuilder` 在 Android 转场内部包裹每个路由自己的背景，保留系统预测性返回。
-Material 全局 surface 不透明；玻璃表面使用 srcOver 混合以保留首帧背景，导航使用同帧 ImageFiltered，不再生成截图。
-`sheets.dart` 的 `_showVeriModalSheet` 只统一材质封装，外部仍使用各领域 `show…Sheet`。
-`VeriGlassSurface.reveal`（默认 1）用于分层消退染色、模糊、阴影与方向光；菜单文字单独淡出，
-不能把背景过滤器包进整层 Opacity。`VeriGlassLightPainter.opacity` 对应控制光照消退。
-范围见 [玻璃材质预览](glass-material-preview.md)。
+**表面材质（2026-09-10 起）**：`VeriGlassSurface` / `VeriGlassBackdrop` / `VeriMaterialScope` /
+`VeriGlassLightPainter` / `VeriNavigationGlassLens` 与其 Shader 已全部删除。
+卡片、导航、快捷按钮、菜单与弹层一律用不透明实色：
+`VeriCard`（`common_widgets_scaffold.dart`）走 `veriContentSurfaceColor(brightness)` + 圆角 + 细描边；
+页面背景取 `scaffoldBackgroundColor` 的画布纯色；弹层由 `sheets.dart` 的 `_showVeriModalSheet`
+统一为实色表面 + 顶部圆角 + 内置拖拽把手，外部仍使用各领域 `show…Sheet`。
+**禁止**为了「做质感」重新引入 `BackdropFilter`、`ImageFilter.blur`、片元着色器滤镜或整屏渐变。
+历史实现与排查记录见 git 与 `docs/dev/glass-material-preview.md`。
 
-`VeriGlassLightPainter` / `veriGlassEdgeLight`（`glass_lighting.dart`）提供边界法线驱动的
-方向高光；`VeriNavigationGlassLens`（`navigation_glass_lens.dart`）通过 `navigation_live_lens.frag`
-过滤当前帧导航内容。旧截图绘制器、旧 Shader 和三场景诊断 target 已删除，历史复现从 Git 取回。
 `OnboardingGate`（`onboarding_page.dart`）位于 PrivacyConsentGate / AppLockGate 内部，完成引导前不构建首页。
 
 `VeriPage`、`VeriHeader` / `PageHeader` 与 `VeriCard` 支持显式 `compact` 参数。
@@ -44,7 +39,7 @@ Material 全局 surface 不透明；玻璃表面使用 srcOver 混合以保留�
 | `VeriCard` | Widget | `common_widgets.dart` | 统一圆角/描边/阴影卡片，可点击（`quietTap` 长按吞噬变体） |
 | `VeriHeader` | Widget | `common_widgets.dart` | 页眉（标题+副标题+返回+actions，最小高度 52、候选构建 56；用最小高度而非固定高度，系统字号放大时两行标题不会被裁掉） |
 | `PageHeader` | Widget | `common_widgets.dart` | `VeriHeader` 的薄封装（单 trailing） |
-| `VeriRootNavigation` / `VeriRootNavigationBody` / `VeriNavigationDestination` / `veriRootPageListPadding` | Widget / 值类 / 布局 helper | `root_navigation.dart` | 四个根页面的中性玻璃导航胶囊；Body 隔离 `extendBody` 注入的底栏 padding，避免嵌套日历/宫格增高；根列表再用 helper 按真实底栏高度避让，完整约定见 `liquid-glass-navigation.md` |
+| `VeriRootNavigation` / `VeriRootNavigationBody` / `VeriNavigationDestination` / `veriRootPageListPadding` | Widget / 值类 / 布局 helper | `root_navigation.dart` | 四个根页面的**停靠底栏**：整宽、不透明、贴底，底色铺到屏幕最底（含系统手势条背后，否则会分成两块）。条目由 `bottom_bar_matu` 的 `BottomBarDoubleBullet` 绘制：**未选中用 `destination.icon`（线框）、选中用 `selectedIcon`（填充）**，中文标签常显。**记账按钮不在底栏内**——由 `shell.dart` 放在 body 右下角浮动（圆角方形，`veriRadiusLg`；自绘 `Material`+`InkWell`，因为 `FloatingActionButton` 内部会吞掉长按，而长按要走 AI 记账），进出用 `AnimatedScale`+`AnimatedOpacity`。注意两条第三方约束：① 库会在 `didUpdateWidget` 里同步回灌 `onSelect`，外层切页必须用 `addPostFrameCallback` 延后，否则抛 `setState() called during build`；② 它的切换动画在 widget 测试里会因 `PathMetric.getTangentForOffset` 返回 null 而崩（Flutter 3.47 行为变化），真机按帧推进不受影响，测试只覆盖布局/常显标签/点按回调。条目不做逐项 Key（`iconBuilder` 会被多次调用导致同帧重键），测试按底栏内文字位置定位 |
 | `VeriFeedbackHost` / `VeriFeedbackController` / `VeriFeedbackRequest` / `VeriFeedbackResult` | 根级 Widget / Controller / 模型 | `feedback.dart` | 跨路由应用内轻提示：内容自适应宽高与三行正文、四条可见栈、优先级等待队列、2/4/8 秒与常驻、单操作 Future 结果、显式去重、前后台暂停；完整规范见 `feedback-system.md` |
 | `SectionTitle` | Widget | `common_widgets.dart` | 区块标题 + 可选 trailing |
 | `EmptyState` | Widget | `common_widgets.dart` | 空状态（图标+标题+描述+可选 `action` 操作入口） |
@@ -126,6 +121,7 @@ Material 全局 surface 不透明；玻璃表面使用 srcOver 混合以保留�
 | `SectionLabel` | Widget | `common_widgets.dart` | 分组小标题（分区 `VeriCard` 上方的灰色标签，设置页/账户详情页分模块用） |
 | `SettingsRow` | Widget | `common_widgets.dart` | 设置行（图标+标题+trailing 文本+chevron）；`leading` 可传账户图标等自定义前置，`contentColor` 可上色（如危险操作红色） |
 | `CompactSwitchRow` | Widget | `common_widgets.dart` | 紧凑开关行（整行可点，不只点开关）；`onChanged:null` 保留原生禁用语义，表示当前平台/状态不可用 |
+| `VeriSegmentedControl<T>` | Widget | `common_widgets.dart` | **统一分段控件**（文字标签 + 滑动胶囊指示，基于 `animated_toggle_switch`）。所有「N 选一的横向口径切换」一律用它，不要再手写 Row+InkWell 分段条或裸用 Material `SegmentedButton`。颜色只走设计令牌，调用方仅可通过 `accentOf` 指定选中项的语义强调色；`compact: true` 用于卡片标题行内的小切换；`onChanged: null` 整组禁用；自带 `Semantics`（第三方控件本身无语义）。**不用它**：图标型开关（走 `CompactSwitchRow`）、超过 4 项或需要分区的单选（走 `showOptionSheet` / `VeriAnchoredChoice`）、菜单触发器（走 `FilterPill`）、左右步进器（走 `MonthSwitcher`） |
 | `DetailInfoRow` | Widget | `common_widgets.dart` | 详情页 label/value 行（可点击带 chevron） |
 | `CurrencyAmountField` | Widget | `common_widgets.dart` | 交易/退款/周期编辑器统一的货币金额行；按 ISO minor unit 格式化且强制带单位，避免同一表单多币换算歧义；`amount == null` 时显示明确缺失态 |
 | `MoneyUnitLabel` | Widget | `common_widgets.dart` | 聚合卡片/页面的轻量「单位：¥/CNY」提示；概览、预算、日历、看板等已在统一上下文标单位的组件复用，不要在每个数字旁堆标识 |
@@ -153,8 +149,11 @@ Material 全局 surface 不透明；玻璃表面使用 srcOver 混合以保留�
 
 | 名称 | 类型 | 位置 | 用途 |
 |---|---|---|---|
-| `InteractiveTrendChart` | Widget | `chart_painters.dart` | 可交互折线图；`values, xLabels, yLabels, glow, tooltipOf` |
-| `InteractiveBarChart` | Widget | `chart_painters.dart` | 可交互柱状图；`values, xLabels, yLabels, tooltipOf` |
+| `InteractiveTrendChart` | Widget | `chart_painters.dart` | 可交互折线图；`values, xLabels, yLabels, glow, tooltipOf`。点击或**横向拖动**选中数据点，再点同一点或点图表外取消；自带 `Semantics` 摘要；位于可跳转卡片内时拦截点击 |
+| `InteractiveBarChart` | Widget | `chart_painters.dart` | 可交互柱状图；`values, xLabels, yLabels, tooltipOf`。交互与无障碍同上 |
+| `TrendLinePainter` / `BarChartPainter` | CustomPainter | `chart_painters.dart` | 上面两个控件的绘制实现。**自绘保留**：曾评估改用 `fl_chart`，实测其坐标轴刻度与既有内边距约定对不齐（出现重复刻度与刻度/线错位），故维持自绘；不要为「换库」而替换，除非同时解决刻度对齐 |
+| `BudgetRingPainter` | CustomPainter | `chart_painters.dart` | 预算进度圆环，**保持自研**：`SweepGradient` + `GradientRotation(-π/2)` 的接缝处理是规范硬要求，有像素级回归测试（`budget_ring_test.dart`）。不要换成通用进度环组件 |
+| `trendChartRect` / `barChartRect` / `chartNearestIndex` / `chartSlotIndex` / `drawChartTooltip` | 纯函数 | `chart_painters.dart` | 预算趋势组合图（`budget_trend_chart.dart`，自绘画布）仍在用的几何与命中计算；有 `chart_hit_test.dart` 覆盖 |
 | `TrendLinePainter` / `BarChartPainter` / `BudgetRingPainter` | CustomPainter | `chart_painters.dart` | 底层绘制（预算环等） |
 | `ChartTooltip` / `ChartTooltipLine` | 值类 | `chart_painters.dart` | 气泡数据模型 |
 | `trendChartRect` / `barChartRect` / `chartNearestIndex` / `chartSlotIndex` / `drawChartTooltip` | 纯函数 | `chart_painters.dart` | 绘图区计算 / 命中测试 / 气泡绘制 |

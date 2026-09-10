@@ -663,3 +663,126 @@ class _CardNumberFieldsState extends State<CardNumberFields> {
     );
   }
 }
+
+/// 统一分段控件：中文/文字标签浮在一条中性轨道上，选中项由滑动的胶囊指示。
+///
+/// 取代此前散落各页的手写分段条（记账页类型切换、账户详情日/月、统计口径、
+/// 时间范围、分类/周期/分组的口径切换）。这些实现原先至少有 6 种不同的轨道色、
+/// 圆角和选中样式，导致同类控件在不同页面观感不一致。
+///
+/// - 颜色全部取自设计令牌（[veriSurfaceAltDark] / [veriSurfaceLight] / 卡片表面色），
+///   调用方只能通过 [accentOf] 指定**语义强调色**（如支出红、收入青），不能自定义底板。
+/// - 自带 `Semantics`：整组标注为选中项，单个选项标注为按钮，补足第三方控件缺失的语义。
+/// - 标签用文字，不用图标；图标型开关仍走 [CompactSwitchRow]。
+class VeriSegmentedControl<T> extends StatelessWidget {
+  const VeriSegmentedControl({
+    super.key,
+    required this.values,
+    required this.selected,
+    required this.labelOf,
+    required this.onChanged,
+    this.accentOf,
+    this.compact = false,
+    this.semanticLabel,
+    this.keyOf,
+  });
+
+  /// 选项顺序即展示顺序。
+  final List<T> values;
+  final T selected;
+  final String Function(T value) labelOf;
+
+  /// 为 null 时整组禁用（如管理页排序期间不接受切换口径）。
+  final ValueChanged<T>? onChanged;
+
+  /// 选中项的文字强调色；返回 null 时用常规文字色。仅影响文字，不改底板。
+  final Color? Function(T value)? accentOf;
+
+  /// 紧凑档：用于卡片标题行内的小切换（如账户详情的日/月）。
+  final bool compact;
+
+  /// 整组控件的无障碍标签（如「统计口径」）。
+  final String? semanticLabel;
+
+  /// 为每个选项生成 Key；返回 null 表示该项不挂 Key。
+  /// 仅用于保持既有调用点的 Key 契约（如记账页 `entry_type_selected_*`）。
+  final Key? Function(T value)? keyOf;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final track = isDark ? veriSurfaceAltDark : veriSurfaceLight;
+    // 选中胶囊用卡片表面色：在深色下比轨道亮、浅色下比轨道白，形成明确的“浮起”层次。
+    final indicator = veriContentSurfaceColor(Theme.of(context).brightness);
+    final height = compact ? 30.0 : 40.0;
+    final radius = BorderRadius.circular(compact ? veriRadiusSm : veriRadiusMd);
+
+    return Semantics(
+      label: semanticLabel,
+      value: labelOf(selected),
+      container: true,
+      child: AnimatedToggleSwitch<T>.rolling(
+        current: selected,
+        values: values,
+        onChanged: onChanged,
+        // onChanged 为 null 时整组禁用（如管理页排序期间）。
+        active: onChanged != null,
+        height: height,
+        borderWidth: 0,
+        spacing: 2,
+        padding: const EdgeInsets.all(2),
+        indicatorSize: Size.fromWidth(compact ? 58 : 92),
+        animationDuration: const Duration(milliseconds: 260),
+        animationCurve: Curves.easeOutCubic,
+        iconOpacity: 1,
+        style: ToggleStyle(
+          backgroundColor: track,
+          indicatorColor: indicator,
+          borderRadius: radius,
+          indicatorBorderRadius: BorderRadius.circular(
+            (compact ? veriRadiusSm : veriRadiusMd) - 2,
+          ),
+          borderColor: Colors.transparent,
+          indicatorBorder: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.10)
+                : Colors.black.withValues(alpha: 0.06),
+          ),
+          boxShadow: const <BoxShadow>[],
+          indicatorBoxShadow: const <BoxShadow>[],
+        ),
+        iconBuilder: (value, foreground) {
+          final selectedNow = value == selected;
+          final enabled = onChanged != null;
+          final accent = accentOf?.call(value);
+          final color = selectedNow
+              ? (accent ?? scheme.onSurface.withValues(alpha: 0.94))
+              : scheme.onSurface.withValues(alpha: foreground ? 0.94 : 0.48);
+          return Opacity(
+            opacity: enabled ? 1 : 0.5,
+            child: Text(
+              labelOf(value),
+              // rolling 会把选中项额外渲染一份用于滑动动画；Key 只挂前景副本，
+              // 否则同一 Key 在一帧里出现两次（调用点的 findsOneWidget 会失败）。
+              key: foreground ? keyOf?.call(value) : null,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style:
+                  (compact
+                          ? Theme.of(context).textTheme.labelSmall
+                          : Theme.of(context).textTheme.labelLarge)
+                      ?.copyWith(
+                        color: color,
+                        fontWeight: selectedNow
+                            ? FontWeight.w800
+                            : FontWeight.w600,
+                      ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}

@@ -40,11 +40,12 @@ void main() {
   ) async {
     await pumpApp(tester);
 
+    // 底栏已改为停靠式（不透明、整宽贴底），内容不再延伸到它背后。
     expect(
       tester
           .widget<Scaffold>(find.byKey(const Key('main_shell_scaffold')))
           .extendBody,
-      isTrue,
+      isFalse,
     );
     expect(
       tester
@@ -61,10 +62,8 @@ void main() {
           .first,
     );
     final homeListPadding = homeList.padding! as EdgeInsets;
-    final navigationHeight = tester
-        .getSize(find.byKey(const Key('main_bottom_nav')))
-        .height;
-    expect(homeListPadding.bottom, navigationHeight + 12);
+    // Scaffold 已为停靠底栏让位，列表末项只需少量留白。
+    expect(homeListPadding.bottom, 12);
     expect(find.text('日常账本 · 单位：¥'), findsOneWidget);
 
     await tapBottomTab(tester, 1);
@@ -136,52 +135,24 @@ void main() {
     );
   });
 
-  testWidgets('drag release keeps snapping from the finger position', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('点击底栏条目切到对应页面', (WidgetTester tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(390, 844);
     addTearDown(tester.view.reset);
     await pumpApp(tester);
 
-    final capsuleRect = tester.getRect(
-      find.byKey(const Key('main_nav_capsule')),
-    );
-    final slotWidth = capsuleRect.width / 4;
-    final firstCenter = capsuleRect.left + slotWidth * 0.5;
-    final gesture = await tester.startGesture(
-      Offset(firstCenter, capsuleRect.center.dy),
-    );
-    await gesture.moveTo(
-      Offset(firstCenter + slotWidth * 2.7, capsuleRect.center.dy),
+    final navRect = tester.getRect(find.byKey(const Key('main_bottom_nav')));
+    final slotWidth = navRect.width / 4;
+    // 第四个条目的中心：点「我的」。
+    await tester.tapAt(
+      Offset(navRect.left + slotWidth * 3.5, navRect.center.dy),
     );
     await tester.pump();
-
-    final beforeRelease = tester
-        .getRect(find.byKey(const Key('main_nav_indicator')))
-        .center
-        .dx;
-    await gesture.up();
-    var previousPosition = beforeRelease;
-    for (var frame = 0; frame < 10; frame += 1) {
-      await tester.pump(const Duration(milliseconds: 16));
-      final currentPosition = tester
-          .getRect(find.byKey(const Key('main_nav_indicator')))
-          .center
-          .dx;
-      expect(
-        currentPosition,
-        greaterThanOrEqualTo(previousPosition - 0.1),
-        reason: '吸附到右侧目标时，第 $frame 帧不应向原 Tab 回退',
-      );
-      previousPosition = currentPosition;
-    }
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
+
     expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
-
-    await tester.fling(find.byType(PageView), const Offset(300, 0), 1000);
-    await tester.pumpAndSettle();
-    expect(find.text('预算与统计 · 单位：¥'), findsOneWidget);
   });
 
   testWidgets('点击开关行的标题也能切换开关', (WidgetTester tester) async {
@@ -289,8 +260,14 @@ void main() {
     final restarted = await pumpApp(tester, store);
     await tester.pumpAndSettle();
     expect(restarted.localePreference, LocalePreference.en);
-    // 底部导航是纯图标，标签在 Tooltip 里。
-    expect(find.byTooltip('Home'), findsOneWidget);
+    // 底部导航标签常显（规范要求），随语言切换为英文。
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('main_bottom_nav')),
+        matching: find.text('Home'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('changes currency unit style and single-currency visibility', (

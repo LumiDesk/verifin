@@ -602,8 +602,6 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     return generated;
   }
 
-  bool get advancedMaterialEnabled => _advancedMaterialEnabled;
-
   ThemePreference get themePreference => _themePreference;
 
   UserProfile get profile => _profile;
@@ -1194,7 +1192,6 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
 
   /// 主设置页一次性提交显示与记账偏好；所有 KV 写入完成后才更新 Controller。
   Future<bool> saveAppPreferencesDraft({
-    bool? advancedMaterialEnabled,
     required ThemePreference themePreference,
     required LocalePreference localePreference,
     required bool hapticsEnabled,
@@ -1206,8 +1203,6 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     required bool autoSuggestEnabled,
     required bool showRunningBalance,
   }) async {
-    final nextAdvancedMaterial =
-        advancedMaterialEnabled ?? _advancedMaterialEnabled;
     final nextDefaultAccounts = Map<String, String>.of(_defaultAccountIds);
     if (defaultAccountId == null || defaultAccountId.isEmpty) {
       nextDefaultAccounts.remove(_activeBookId);
@@ -1240,17 +1235,11 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         _runningBalanceKey,
         showRunningBalance.toString(),
       );
-      await _store.writeAndFlush(
-        _advancedMaterialKey,
-        nextAdvancedMaterial.toString(),
-      );
     } catch (error, stackTrace) {
       _handlePersistError(error, stackTrace);
       return false;
     }
 
-    _advancedMaterialEnabled = nextAdvancedMaterial;
-    advancedMaterialListenable.value = nextAdvancedMaterial;
     _themePreference = themePreference;
     _localePreference = localePreference;
     _hapticsEnabled = hapticsEnabled;

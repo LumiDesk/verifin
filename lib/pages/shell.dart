@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../app/app_theme.dart';
 import '../app/models.dart';
 import '../app/feedback.dart';
 import '../app/platform_bridge.dart';
@@ -150,39 +151,89 @@ class _VeriFinShellState extends State<VeriFinShell> {
       },
       child: Scaffold(
         key: const Key('main_shell_scaffold'),
-        extendBody: true,
+        // 停靠底栏是不透明的，内容不再延伸到它背后（否则会被底栏盖住半截）。
+        extendBody: false,
         // 四个主页面横向 PageView：左右滑动切换。图表（onHorizontalDrag）与
         // 交易行 Dismissible 都是更深层的手势消费者，会在竞技场里本地胜出，
         // 故在图表/可滑删行上拖动仍走各自交互，仅空白区滑动才切页。
         body: SafeArea(
           key: const Key('main_shell_body_safe_area'),
           bottom: false,
-          child: VeriRootNavigationBody(
-            // 页面内容单独成层：底部导航拖动/吸附时只重绘导航自身，不再连带重绘
-            // 整页（含页面里的玻璃模糊）。
-            child: RepaintBoundary(
-              child: PageView(
-                controller: _pageController,
-                onPageChanged: _handlePageChanged,
-                // 保活四个根页面：离屏即卸载会让每次切回都整页重建，并重跑首页
-                // 与资产页的 O(账户数×交易数) 聚合。页面本身仍会随 Controller
-                // 通知重建，数据不会因为保活而过期。
-                children: <Widget>[
-                  for (final page in pages) _KeepAlivePage(child: page),
-                ],
+          child: Stack(
+            children: <Widget>[
+              VeriRootNavigationBody(
+                child: RepaintBoundary(
+                  child: PageView(
+                    controller: _pageController,
+                    onPageChanged: _handlePageChanged,
+                    // 保活四个根页面：离屏即卸载会让每次切回都整页重建，并重跑首页
+                    // 与资产页的 O(账户数×交易数) 聚合。页面本身仍会随 Controller
+                    // 通知重建，数据不会因为保活而过期。
+                    children: <Widget>[
+                      for (final page in pages) _KeepAlivePage(child: page),
+                    ],
+                  ),
+                ),
               ),
-            ),
+              // 记账按钮：右下角浮动，压住内容之上；只在首页显示，进出带缩放淡入。
+              // 圆角方形（veriRadiusLg）+ veriRoyal，与最初的设计一致；用自绘
+              // Material+InkWell 而不是 FloatingActionButton，因为后者内部会吞掉
+              // 长按，而长按要走 AI 记账。
+              Positioned(
+                key: const Key('quick_entry_fab_slot'),
+                right: 16,
+                bottom: 16,
+                child: IgnorePointer(
+                  ignoring: _index != 0,
+                  child: AnimatedScale(
+                    key: const Key('quick_entry_scale'),
+                    scale: _index == 0 ? 1 : 0.7,
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOutCubic,
+                    child: AnimatedOpacity(
+                      key: const Key('quick_entry_opacity'),
+                      opacity: _index == 0 ? 1 : 0,
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeOutCubic,
+                      child: SizedBox(
+                        width: 56,
+                        height: 56,
+                        child: Tooltip(
+                          message: l10n.quickEntry,
+                          child: Material(
+                            key: const Key('quick_entry_fab'),
+                            color: veriRoyal,
+                            elevation: 6,
+                            shadowColor: Colors.black.withValues(alpha: 0.3),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(veriRadiusLg),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: InkWell(
+                              key: const Key('quick_entry_action'),
+                              onTap: () => _startQuickEntry(context),
+                              onLongPress: () =>
+                                  _startQuickEntry(context, longPress: true),
+                              child: const Icon(
+                                Icons.add_rounded,
+                                size: 28,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
         bottomNavigationBar: VeriRootNavigation(
           currentIndex: _index,
           destinations: destinations,
           onDestinationSelected: _goToTab,
-          quickEntryLabel: l10n.quickEntry,
-          showQuickEntry: _index == 0,
-          onQuickEntryTap: () => _startQuickEntry(context),
-          onQuickEntryLongPress: () =>
-              _startQuickEntry(context, longPress: true),
         ),
       ),
     );

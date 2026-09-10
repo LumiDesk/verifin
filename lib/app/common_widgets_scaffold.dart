@@ -35,7 +35,7 @@ class VeriPage extends StatelessWidget {
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: veriPageMaxWidth),
-          child: veriGlassDesignPreview ? BackdropGroup(child: child) : child,
+          child: child,
         ),
       ),
     );
@@ -65,30 +65,6 @@ class VeriCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    if (veriGlassDesignPreview) {
-      return VeriGlassSurface(
-        radius: compact ? veriCompactCardRadius : veriCardRadius,
-        child: onTap != null && quietTap
-            ? Semantics(
-                button: true,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: onTap,
-                  onLongPress: () {},
-                  child: Padding(padding: padding, child: child),
-                ),
-              )
-            : Material(
-                color: Colors.transparent,
-                child: onTap == null
-                    ? Padding(padding: padding, child: child)
-                    : InkWell(
-                        onTap: onTap,
-                        child: Padding(padding: padding, child: child),
-                      ),
-              ),
-      );
-    }
     final borderRadius = BorderRadius.circular(
       compact ? veriCompactCardRadius : veriCardRadius,
     );
@@ -378,18 +354,34 @@ class SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        Expanded(
-          child: Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-          ),
-        ),
-        if (trailing != null)
+    final titleText = Text(
+      title,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: Theme.of(
+        context,
+      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+    );
+    if (trailing == null) {
+      return titleText;
+    }
+    // 标题自然宽度靠左，trailing 占满剩余槽位后内部右对齐，贴到内容区右端。
+    //
+    // 两个细节缺一不可：
+    // 1) mainAxisSize.max + 外层 SizedBox(width: infinity)——调用方的 Column 多是
+    //    CrossAxisAlignment.start，Row 会被松约束，只收缩到子项自然宽度；那样
+    //    spaceBetween 也无处可推，trailing 会停在卡片中间（看板各面板曾如此）。
+    // 2) trailing 必须是 Flexible(fit: tight)——只给「最大宽度」的话 Text 会缩回
+    //    自然宽度，textAlign: end 就在自己的窄盒子里生效，同样到不了右端。
+    return SizedBox(
+      width: double.infinity,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: <Widget>[
+          Flexible(child: titleText),
+          const SizedBox(width: 10),
           Flexible(
+            fit: FlexFit.tight,
             child: Text(
               trailing!,
               maxLines: 1,
@@ -402,7 +394,8 @@ class SectionTitle extends StatelessWidget {
               ),
             ),
           ),
-      ],
+        ],
+      ),
     );
   }
 }

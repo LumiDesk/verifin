@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:verifin/app/common_widgets.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/local_storage/local_storage.dart';
 
@@ -40,6 +41,15 @@ void main() {
 
     await pumpApp(tester, store);
     await tapBottomTab(tester, 2);
+    await tester.pumpAndSettle();
+
+    // 分类统计面板在预算执行卡之后；卡片变高后它在 800dp 测试视口下落到首屏之外，
+    // 而 ListView 不会构建屏幕外的子项。先滚到该面板再断言。
+    await tester.scrollUntilVisible(
+      find.byType(SectionTitle).at(1),
+      200,
+      scrollable: firstVerticalScrollable(),
+    );
     await tester.pumpAndSettle();
 
     // 咖啡（子分类）的支出滚动计入顶级「餐饮」，看板不单列子分类。

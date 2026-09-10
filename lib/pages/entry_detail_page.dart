@@ -2025,74 +2025,22 @@ class _EntryTypeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Theme.of(
-          context,
-        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(veriRadiusMd),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(3),
-        child: Row(
-          children: <Widget>[
-            for (final type in EntryType.userSelectable)
-              Expanded(
-                child: _EntryTypeButton(
-                  type: type,
-                  selected: selected == type,
-                  onTap: () => onChanged(type),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EntryTypeButton extends StatelessWidget {
-  const _EntryTypeButton({
-    required this.type,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final EntryType type;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final accent = switch (type) {
-      EntryType.expense => veriSemantic(context, veriExpense),
-      EntryType.income => veriSemantic(context, veriIncome),
-      EntryType.transfer => veriRoyal,
-      EntryType.refund => veriSemantic(context, veriIncome),
-    };
-    return Material(
-      key: selected ? Key('entry_type_selected_${type.name}') : null,
-      color: selected ? scheme.surface : Colors.transparent,
-      borderRadius: BorderRadius.circular(veriRadiusSm),
-      child: InkWell(
-        key: Key('entry_type_${type.name}'),
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(veriRadiusSm),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 9),
-          child: Text(
-            type.label(AppLocalizations.of(context)),
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: selected
-                  ? accent
-                  : scheme.onSurface.withValues(alpha: 0.48),
-              fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-            ),
-          ),
-        ),
-      ),
+    final l10n = AppLocalizations.of(context);
+    return VeriSegmentedControl<EntryType>(
+      values: EntryType.userSelectable,
+      selected: selected,
+      semanticLabel: l10n.commonType,
+      labelOf: (type) => type.label(l10n),
+      // 支出/收入用语义色强调，转账保持中性（原先硬编码品牌蓝，与语义色路径不一致）。
+      accentOf: (type) => switch (type) {
+        EntryType.expense => veriSemantic(context, veriExpense),
+        EntryType.income ||
+        EntryType.refund => veriSemantic(context, veriIncome),
+        EntryType.transfer => null,
+      },
+      keyOf: (type) =>
+          type == selected ? Key('entry_type_selected_${type.name}') : null,
+      onChanged: onChanged,
     );
   }
 }
