@@ -60,19 +60,31 @@ class _VeriFinShellState extends State<VeriFinShell> {
     super.dispose();
   }
 
-  /// 切换到指定 Tab：底部导航点击与返回键均走此入口，带一段短动画。
+  /// 切换到指定 Tab：底部导航点击与返回键均走此入口。
   ///
-  /// 跨多页动画会依次触发中间页的 [PageView.onPageChanged]；这些页只是过场，
+  /// 相邻两页之间播一段短动画；**跨多页（跨度大于一页）直接瞬移**。此前一律走
+  /// 500ms 的 [PageController.animateToPage]，从第 4 个 Tab 回首页时要在半秒内扫过
+  /// 三个整页，每个中间页都要跟着滚动、合成一遍，这就是「在别的页面按返回回首页」
+  /// 时卡顿的来源。瞬移也符合用户预期（返回首页本来就该立刻到位）；底栏在同样跨度
+  /// 下也不播过场动画（见 [VeriBottomBar]），两者仍然同时结束。
+  ///
+  /// 跨多页动画还会依次触发中间页的 [PageView.onPageChanged]；这些页只是过场，
   /// 不能反向覆盖导航滑块正在吸附的最终目标。直接手势翻页时没有 programmatic
   /// target，仍由 [_handlePageChanged] 正常同步导航。
   void _goToTab(int index) {
     if (_programmaticPageTarget == null && index == _index) {
       return;
     }
+    final crossesMultiplePages = (index - _index).abs() > 1;
     setState(() {
       _index = index;
       _programmaticPageTarget = index;
     });
+    if (crossesMultiplePages) {
+      _pageController.jumpToPage(index);
+      _programmaticPageTarget = null;
+      return;
+    }
     unawaited(
       _pageController
           .animateToPage(

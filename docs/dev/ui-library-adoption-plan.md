@@ -14,11 +14,11 @@
 > | ③ 统一开关/切换条 | 推荐 `animated_toggle_switch`，需自建包装层 | **已采用**。新增 `VeriSegmentedControl`，收编 8 处切换条，补齐了库缺失的 `Semantics` |
 > | ④ 看板文字错位 | — | 根因是共享组件 `SectionTitle` 的布局缺陷，已修复并加回归测试 |
 > | ⑤ 替换图表 | 推荐 `fl_chart` | **试了又撤回**。fl_chart 的刻度与本项目内边距约定对不齐（出现重复刻度），自绘画布保留；依赖已移除。评估结论"换库"被实测推翻 |
-> | ⑥ 替换底部导航 | **不建议** `bottom_bar_matu`（认为做不出浮动形态） | **已采用**。用户要求改回"贴底整宽底栏"，正是该库的形态；条目现由 `BottomBarDoubleBullet` 绘制。三条第三方约束记在 `components.md` |
+> | ⑥ 替换底部导航 | **不建议** `bottom_bar_matu`（认为做不出浮动形态） | **先采用、后抄写自持**。用户要求改回"贴底整宽底栏"，正是该库的形态，条目由 `BottomBarDoubleBullet` 绘制；随后实测出该库多处动画缺陷（图标 State 被反复重建、进度可越界抛异常、`onSelect` 延迟 200ms），已抄写进 `lib/app/veri_bottom_bar.dart` 并修复，**依赖已从 pubspec 移除**。详见 `components.md` 的 `VeriBottomBar` 条目 |
 > | ⑦ 替换短反馈 | 可引入 `toastification`，需适配层 | **未引入**。库缺优先级队列/去重/后台暂停，且原"丑"的观感主要来自已移除的玻璃层；保留自研 |
 >
 > 当前底栏的关键约束（切页时序、安全区、品牌色圆点）见 `docs/dev/components.md` 的
-> `VeriRootNavigation` 条目；设计规范见 `docs/design-system.md`。
+> `VeriRootNavigation` 条目，绘制组件的抄写修复见同处 `VeriBottomBar` 条目；设计规范见 `docs/design-system.md`。
 
 状态：**评估已完成，落地以上表为准**；本文保留评估过程与决策记录。
 评估日期：2026-09-10

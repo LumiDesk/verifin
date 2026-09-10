@@ -6,9 +6,9 @@ import 'package:verifin/app/root_navigation.dart';
 
 /// 停靠底栏的布局与契约。
 ///
-/// 条目由 `bottom_bar_matu` 的 `BottomBarDoubleBullet` 绘制；快捷记账按钮已移出
-/// 底栏，改由 Shell 在右下角浮动（见 navigation_settings_test 中的壳层断言），
-/// 因此这里只覆盖底栏自身。
+/// 条目由本项目自有的 `VeriBottomBar` 绘制（抄写自 `bottom_bar_matu` 并修复，见
+/// `lib/app/veri_bottom_bar.dart` 头注释）；快捷记账按钮已移出底栏，改由 Shell 在
+/// 右下角浮动（见 navigation_settings_test 中的壳层断言），因此这里只覆盖底栏自身。
 void main() {
   testWidgets('停靠底栏在 360dp 视口下整宽贴底', (tester) async {
     tester.view.devicePixelRatio = 1;

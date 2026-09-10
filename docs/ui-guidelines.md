@@ -12,7 +12,7 @@
 
 ## 浮动根导航
 
-四个根页面统一使用 `VeriRootNavigation`。底栏是**停靠式**：整宽、不透明、贴底，条目由 `bottom_bar_matu` 绘制（未选中线框图标、选中填充图标，中文标签常显）；右下角的记账按钮是独立的浮动圆角方形，只在首页显示。选中项用中性强调，不给整条导航染品牌蓝。
+四个根页面统一使用 `VeriRootNavigation`。底栏是**停靠式**：整宽、不透明、贴底，条目由自有的 `VeriBottomBar` 绘制（未选中线框图标、选中填充图标，中文标签常显）；右下角的记账按钮是独立的浮动圆角方形，只在首页显示。选中项用中性强调，不给整条导航染品牌蓝。
 
 承载根导航的 Shell 必须关闭 `Scaffold.extendBody`（停靠底栏不透明，内容延伸到它背后会被盖住半截），并关闭 body 外层 `SafeArea` 的 bottom 裁切。PageView 外必须套 `VeriRootNavigationBody`，隔离 Scaffold 注入的 bottom padding，避免页面内未显式 padding 的 GridView（日历、功能宫格等）被底栏高度撑大。底栏内容用 `SafeArea(minimum: 12, maintainBottomViewPadding: true)` 让开系统导航条；根页面列表用 `veriRootPageListPadding(context)` 取统一内边距。
 

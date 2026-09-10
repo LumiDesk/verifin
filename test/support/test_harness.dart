@@ -108,9 +108,10 @@ class _LocalizedTestAppState extends State<_LocalizedTestApp> {
 /// 底栏第 [index] 个条目的中心点。
 ///
 /// 底栏条目等宽铺满整宽，所以按底栏矩形算位置即可。不用
-/// `find.byType(Text).at(i)` 定位条目：`bottom_bar_matu` 会把标签放进不参与命中
-/// 测试的图层，直接 tap 那个 Text 会触发 "would not hit test on the specified
-/// widget" 警告（虽然点击位置仍落在条目点击区，功能是对的）。
+/// `find.byType(Text).at(i)` 定位条目：底栏把标签和图标裹在不参与命中测试的图层里
+/// （`VeriBottomBar` 里是 `IgnorePointer` / 原库的同类处理），直接 tap 那个 Text 会
+/// 触发 "would not hit test on the specified widget" 警告（虽然点击位置仍落在条目
+/// 点击区，功能是对的）。
 Offset rootTabCenter(WidgetTester tester, int index) {
   final rect = tester.getRect(find.byKey(const Key('main_bottom_nav')));
   const count = 4;
@@ -120,9 +121,9 @@ Offset rootTabCenter(WidgetTester tester, int index) {
 Future<void> tapBottomTab(WidgetTester tester, int index) async {
   // 按位置点而不是按文案：测试可能已把界面切成英文，中文标签会找不到。
   await tester.tapAt(rootTabCenter(tester, index));
-  // 底栏的选中气泡动画（bottom_bar_matu）不会自行停止，直接 pumpAndSettle 会一直
-  // 等到超时。先推进固定帧数让切页动画走完、动画控制器离开未启动态，再 settle
-  // 等页面首帧内容（懒加载的列表项等）构建完。
+  // 先推进固定帧数把底栏的 500ms 选中动效和切页动画走完（两者同时长），再 settle
+  // 等页面首帧内容（懒加载的列表项等）构建完。`pumpAndSettle` 单用也能收敛，这里
+  // 显式推进是为了不依赖「动画恰好自行停下」这一点。
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 400));
   await tester.pump(const Duration(milliseconds: 400));

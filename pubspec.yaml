@@ -64,8 +64,10 @@ dependencies:
   google_mlkit_text_recognition: ^0.15.1
   # AI 对话查询的助手答复按 Markdown 渲染（表格/列表/加粗）；纯 Dart、为 LLM 输出设计。
   gpt_markdown: ^1.1.7
+  # 统一分段控件（滑块式选中胶囊）的底层实现。
   animated_toggle_switch: ^0.8.7
-  bottom_bar_matu: ^1.5.0
+  # 底栏不再依赖 bottom_bar_matu：其选中动效有多处缺陷（图标 State 被反复重建、
+  # 动画进度可越界、回调延迟 200ms），已抄写进 lib/app/veri_bottom_bar.dart 并修复。
 dev_dependencies:
   integration_test:
     sdk: flutter

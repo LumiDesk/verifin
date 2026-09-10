@@ -1,8 +1,7 @@
-import 'package:bottom_bar_matu/bottom_bar_matu.dart';
-
 import 'package:flutter/material.dart';
 
 import 'app_theme.dart';
+import 'veri_bottom_bar.dart';
 
 @immutable
 class VeriNavigationDestination {
@@ -77,7 +76,8 @@ const double _kMinBottomGap = 12;
 
 /// Veri Fin 根页面的停靠底栏。
 ///
-/// 整宽、不透明、贴底（系统安全区之上）：条目由 `bottom_bar_matu` 绘制，
+/// 整宽、不透明、贴底（系统安全区之上）：条目由本项目自有的 [VeriBottomBar] 绘制
+/// （抄写自 `bottom_bar_matu` 并修复了图标 State 被反复重建等问题，见该文件头注释），
 /// 选中项有气泡动效。快捷记账按钮不在这里——它由 Shell 放在右下角浮动。
 class VeriRootNavigation extends StatefulWidget {
   const VeriRootNavigation({
@@ -90,9 +90,9 @@ class VeriRootNavigation extends StatefulWidget {
 
   /// 选中切换的动画时长，供调用方对齐切页动画。
   ///
-  /// 与 `BottomBarDoubleBullet` 的动画时长一致；调用方用同一时长驱动页面切换，
-  /// 底栏动画与页面过渡才会同时起步、同时结束。库把该值写死，只能在这里镜像。
-  static const Duration switchDuration = Duration(milliseconds: 500);
+  /// 与 [VeriBottomBar.switchDuration] 同值；调用方用同一时长驱动页面切换，底栏
+  /// 动画与页面过渡才会同时起步、同时结束。跨多页跳转时两者都不播过场动画。
+  static const Duration switchDuration = VeriBottomBar.switchDuration;
 
   final int currentIndex;
   final List<VeriNavigationDestination> destinations;
@@ -104,18 +104,6 @@ class VeriRootNavigation extends StatefulWidget {
 }
 
 class _VeriRootNavigationState extends State<VeriRootNavigation> {
-  /// 已经派发出去的目标下标。
-  ///
-  /// [BottomBarDoubleBullet] 在自己的 `_onChangeIndex` 里，先启动动画、再
-  /// `await Future.delayed(200ms)`，**之后**才回调 `onSelect`。等它回调才切页，
-  /// 页面就比动画晚 200ms 起步，「点击 → 动画先播 → 等一下 → 才切页」的割裂感
-  /// 就是这么来的。所以底栏自己用 [Listener] 立刻识别点击并派发；随后到来的那次
-  /// 库回调按本字段识别为回声并丢弃。
-  int? _dispatchedIndex;
-
-  double? _pointerDownX;
-  double _barWidth = 0;
-
   Key _key(String suffix) => ValueKey('${widget.keyPrefix}_$suffix');
 
   @override
@@ -124,24 +112,6 @@ class _VeriRootNavigationState extends State<VeriRootNavigation> {
     assert(widget.destinations.isNotEmpty);
     assert(widget.currentIndex >= 0);
     assert(widget.currentIndex < widget.destinations.length);
-  }
-
-  /// 立刻把选中结果交给外层（同步，不延后一帧），让切页与底栏动画同时起步。
-  void _dispatch(int index) {
-    if (_dispatchedIndex == index) return;
-    _dispatchedIndex = index;
-    widget.onDestinationSelected(index);
-  }
-
-  /// 底栏条目按等宽槽位命中；轻微抖动仍算点击，明显横向位移不处理。
-  void _handleBarPointerUp(PointerUpEvent event) {
-    final downX = _pointerDownX;
-    _pointerDownX = null;
-    if (downX == null || _barWidth <= 0) return;
-    final dx = event.localPosition.dx;
-    if ((dx - downX).abs() > 12) return;
-    final slot = _barWidth / widget.destinations.length;
-    _dispatch((dx / slot).floor().clamp(0, widget.destinations.length - 1));
   }
 
   @override
@@ -167,49 +137,33 @@ class _VeriRootNavigationState extends State<VeriRootNavigation> {
         top: false,
         maintainBottomViewPadding: true,
         minimum: const EdgeInsets.only(bottom: _kMinBottomGap),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            _barWidth = constraints.maxWidth;
-            return Listener(
-              behavior: HitTestBehavior.opaque,
-              onPointerDown: (event) => _pointerDownX = event.localPosition.dx,
-              onPointerUp: _handleBarPointerUp,
-              onPointerCancel: (_) => _pointerDownX = null,
-              child: BottomBarDoubleBullet(
-                key: _key('nav_bar'),
-                selectedIndex: widget.currentIndex,
-                height: VeriRootNavigationBody.barHeight,
-                items: <BottomBarItem>[
-                  for (
-                    var index = 0;
-                    index < widget.destinations.length;
-                    index++
-                  )
-                    BottomBarItem(
-                      // 未选中用线框图标、选中换填充图标：库的选中动画本身就是按
-                      // 「同一个位置切换图标」设计的，两种风格切换时动效最自然。
-                      iconData: index == widget.currentIndex
-                          ? widget.destinations[index].selectedIcon
-                          : widget.destinations[index].icon,
-                      iconSize: 24,
-                      label: widget.destinations[index].label,
-                      labelMarginTop: 2,
-                      labelTextStyle: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                ],
-                color: veriRoyal,
-                // 库默认 circle1=蓝、circle2=红，切换时飞过两个异色圆点。统一成
-                // 品牌色，动效才和整体配色一致。
-                circle1Color: veriRoyal,
-                circle2Color: veriRoyal,
-                backgroundColor: Colors.transparent,
-                onSelect: _dispatch,
+        child: VeriBottomBar(
+          key: _key('nav_bar'),
+          selectedIndex: widget.currentIndex,
+          height: VeriRootNavigationBody.barHeight,
+          onSelect: widget.onDestinationSelected,
+          items: <VeriBottomBarItem>[
+            for (var index = 0; index < widget.destinations.length; index++)
+              VeriBottomBarItem(
+                // 未选中用线框图标、选中换填充图标：库的选中动画本身就是按
+                // 「同一个位置切换图标」设计的，两种风格切换时动效最自然。
+                iconData: index == widget.currentIndex
+                    ? widget.destinations[index].selectedIcon
+                    : widget.destinations[index].icon,
+                iconSize: 24,
+                label: widget.destinations[index].label,
+                labelTextStyle: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            );
-          },
+          ],
+          color: veriRoyal,
+          // 库默认 circle1=蓝、circle2=红，切换时飞过两个异色圆点。统一成
+          // 品牌色，动效才和整体配色一致。
+          circle1Color: veriRoyal,
+          circle2Color: veriRoyal,
+          backgroundColor: Colors.transparent,
         ),
       ),
     );
