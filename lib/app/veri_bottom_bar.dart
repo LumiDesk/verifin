@@ -173,7 +173,10 @@ class _VeriBottomBarState extends State<VeriBottomBar>
     }
 
     // 同步更新两端图标：不等任何延迟回调，快速连续切换也不会错位。
-    _iconKeys[previous].currentState?.updateSelect(false, forward);
+    // 条目数刚变少时 previous 可能已经越界（本应用的根导航固定四项，这里只做兜底）。
+    if (previous < _iconKeys.length) {
+      _iconKeys[previous].currentState?.updateSelect(false, forward);
+    }
     _iconKeys[index].currentState?.updateSelect(true, forward);
   }
 
