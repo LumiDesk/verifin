@@ -103,13 +103,31 @@ class _VeriFinShellState extends State<VeriFinShell> {
   /// 不能反向覆盖导航滑块正在吸附的最终目标。直接手势翻页时没有 programmatic
   /// target，仍由 [_handlePageChanged] 正常同步导航。
   void _goToTab(int index) {
-    if (_programmaticPageTarget == null && index == _index) {
+    // 是否「已经在目标页」以**页面实际停下的位置**为准，而不是 `_index`：`_index`
+    // 是点击时乐观写入的，切页动画被打断时它会先跑到目标值，而页面还停在半路。
+    // 只看 `_index` 的话，这种脱节状态下点「底栏已经显示在那儿的那个 Tab」会被当成
+    // 重复点击直接丢掉——表现就是点了没反应、卡在某个 Tab 上。
+    final settled = _pageController.hasClients
+        ? (_pageController.page ?? index.toDouble()).round()
+        : _index;
+    if (index == _index && settled == index) {
       return;
     }
     setState(() {
       _index = index;
       _programmaticPageTarget = index;
     });
+    _animateToTab(index);
+  }
+
+  /// 把页面送到 [index]，并保证「点了就一定到」。
+  ///
+  /// `PageController.animateToPage` 在滚动位置还没就绪时（位置缓存着待用页、或还没有
+  /// viewport 尺寸）会**一步都不走、直接返回一个已完成的 future**。此时若在完成回调里
+  /// 把底栏下标改回页面实际所在的页，这次点击就被悄悄吞掉了——用户看到的是「点了没反
+  /// 应、卡在原来的 Tab 上」。这里检测「动画已经结束但页面没到位」就重来一次，仍不成功
+  /// 再用 `jumpToPage` 兜底，任何情况下点击都有结果。
+  void _animateToTab(int index, {bool retried = false}) {
     unawaited(
       _pageController
           .animateToPage(
@@ -120,18 +138,26 @@ class _VeriFinShellState extends State<VeriFinShell> {
           )
           .whenComplete(() {
             // `hasClients` 之外还要看 `mounted`：子树被拆掉后 `_pageController.page`
-            // 会直接断言失败。二者都过不去就放弃这次吸附，下一页切换会重新对齐。
-            if (!mounted ||
-                !_pageController.hasClients ||
-                _programmaticPageTarget != index) {
+            // 会直接断言失败。
+            if (!mounted || !_pageController.hasClients) {
               return;
             }
-            final settledIndex = (_pageController.page ?? index).round().clamp(
-              0,
-              _rootPageCount - 1,
-            );
+            // 已被更晚的一次点击顶掉，交给那一次收尾。
+            if (_programmaticPageTarget != index) {
+              return;
+            }
+            final settled = (_pageController.page ?? index.toDouble())
+                .round()
+                .clamp(0, _rootPageCount - 1);
+            if (settled != index) {
+              if (!retried) {
+                _animateToTab(index, retried: true);
+                return;
+              }
+              _pageController.jumpToPage(index);
+            }
             setState(() {
-              _index = settledIndex;
+              _index = index;
               _programmaticPageTarget = null;
             });
           }),
@@ -155,8 +181,10 @@ class _VeriFinShellState extends State<VeriFinShell> {
       return Curves.easeInOutCubic;
     }
     final distance = targetPage * position.viewportDimension - position.pixels;
-    // 速度接近 0 说明上一次切换已经停稳，或者这次是全新的一次点击，两种都按原曲线走。
-    if (distance.abs() < 1 || _scrollVelocity.abs() < 20) {
+    // 速度不可用或接近 0（上一次切换已停稳、或这是全新的一次点击）时按原曲线走。
+    // `isFinite` 不能省：NaN 参与比较恒为 false，会漏过这道阈值直接算出 NaN 曲线。
+    final velocity = _scrollVelocity;
+    if (distance.abs() < 1 || !velocity.isFinite || velocity.abs() < 20) {
       return Curves.easeInOutCubic;
     }
     final seconds =
@@ -165,7 +193,7 @@ class _VeriFinShellState extends State<VeriFinShell> {
     // 三次贝塞尔 `Cubic(a, b, c, d)` 的起点斜率是 b/a、终点斜率是 (1-d)/(1-c)：
     // 取 d = 1 让终点平滑收住，b 由需要的起点斜率反推。斜率夹在区间内，避免剩余
     // 距离很小时反推出极大的 b 造成明显过冲。
-    final slope = (_scrollVelocity * seconds / distance).clamp(-0.9, 1.5);
+    final slope = (velocity * seconds / distance).clamp(-0.9, 1.5);
     return Cubic(0.645, 0.645 * slope, 0.355, 1);
   }
 

@@ -253,6 +253,48 @@ void main() {
     expect(find.text('日常账本 · 单位：¥'), findsOneWidget);
   });
 
+  testWidgets('连点不同 Tab 之后仍然响应，且底栏与页面一致', (WidgetTester tester) async {
+    await pumpApp(tester);
+    await tapBottomTab(tester, 3);
+    await tester.pumpAndSettle();
+
+    final controller = tester
+        .widget<PageView>(find.byType(PageView))
+        .controller!;
+    int barIndex() => tester
+        .widget<VeriRootNavigation>(find.byType(VeriRootNavigation))
+        .currentIndex;
+
+    // 在两个相距最远的 Tab 之间连点，让切页动画反复被打断。此时底栏下标是点击时
+    // 乐观写入的，页面还在半路，两者会短暂脱节。
+    for (var i = 0; i < 10; i++) {
+      await tester.tapAt(rootTabCenter(tester, 0));
+      await tester.pump(const Duration(milliseconds: 30));
+      await tester.tapAt(rootTabCenter(tester, 3));
+      await tester.pump(const Duration(milliseconds: 30));
+    }
+    await tester.pump(VeriRootNavigation.switchDuration);
+    await tester.pumpAndSettle();
+
+    expect(
+      barIndex(),
+      controller.page!.round(),
+      reason: '停稳后底栏下标必须与页面实际页码一致，否则会看不出自己在哪一页',
+    );
+
+    // 脱节状态下点「底栏已经显示在那儿的那个 Tab」曾被当成重复点击丢掉，表现是
+    // 点了没反应、卡在某个 Tab 上。这里连点之后必须仍然点得动。
+    await tester.tapAt(rootTabCenter(tester, 1));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(controller.page, lessThan(3), reason: '连点之后点击仍应立刻开始切页');
+
+    await tester.pump(VeriRootNavigation.switchDuration);
+    await tester.pumpAndSettle();
+    expect(controller.page!.round(), 1);
+    expect(barIndex(), 1, reason: '底栏要跟着落到资产页');
+  });
+
   testWidgets('点击开关行的标题也能切换开关', (WidgetTester tester) async {
     await pumpApp(tester);
     await tapBottomTab(tester, 3);
