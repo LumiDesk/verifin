@@ -8,7 +8,6 @@ import '../app/budget_cycle.dart';
 import '../app/category_tree.dart';
 import '../app/chart_painters.dart';
 import '../app/common_widgets.dart';
-import '../app/currency_math.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
 import '../app/series_math.dart';
@@ -131,9 +130,11 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
             children: <Widget>[
               VeriHeader(
                 title: AppLocalizations.of(context).budgetTitle,
-                subtitle:
-                    '$cycleLabel · '
-                    '${AppLocalizations.of(context).moneyUnitLabel(displayCurrencyUnit(controller.activeBook.baseCurrencyCode))}',
+                subtitle: currencyUnitSubtitle(
+                  AppLocalizations.of(context),
+                  cycleLabel,
+                  controller.activeBook.baseCurrencyCode,
+                ),
                 showBack: true,
                 actions: <Widget>[
                   HeaderAction(
@@ -589,9 +590,11 @@ class BudgetHistoryPage extends StatelessWidget {
             children: <Widget>[
               VeriHeader(
                 title: AppLocalizations.of(context).budgetHistoryTitle,
-                subtitle:
-                    '${AppLocalizations.of(context).last12MonthsSub} · '
-                    '${AppLocalizations.of(context).moneyUnitLabel(displayCurrencyUnit(controller.activeBook.baseCurrencyCode))}',
+                subtitle: currencyUnitSubtitle(
+                  AppLocalizations.of(context),
+                  AppLocalizations.of(context).last12MonthsSub,
+                  controller.activeBook.baseCurrencyCode,
+                ),
                 showBack: true,
               ),
               const SizedBox(height: 10),

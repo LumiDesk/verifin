@@ -537,11 +537,15 @@ class _CalendarPreviewState extends State<CalendarPreview> {
               );
             },
           ),
-          const SizedBox(height: 6),
-          Align(
-            alignment: Alignment.centerRight,
-            child: MoneyUnitLabel(currencyCode: widget.currencyCode),
-          ),
+          // 前置间距是专为单位留的，必须跟着单位一起收掉：只让 MoneyUnitLabel 自己
+          // 变空会把这 6dp 留在卡片底部，看起来像空了一块。
+          if (!textCurrencyUnitHidden) ...<Widget>[
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerRight,
+              child: MoneyUnitLabel(currencyCode: widget.currencyCode),
+            ),
+          ],
         ],
       ),
     );

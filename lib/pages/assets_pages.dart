@@ -170,15 +170,19 @@ class _AssetsPageState extends State<AssetsPage> {
     final visibleAssetSections = assetSections
         .where((section) => section.accounts.isNotEmpty)
         .toList(growable: false);
+    // 单币种账本按偏好隐藏单位时整条副标题省略，不留「本位币 」这种残句。
+    final baseUnit = optionalCurrencyUnit(baseCurrencyCode);
     return VeriPage(
       child: ListView(
         padding: veriRootPageListPadding(context),
         children: <Widget>[
           PageHeader(
             title: AppLocalizations.of(context).tabAssets,
-            subtitle: AppLocalizations.of(
-              context,
-            ).baseCurrencyAmountLabel(displayCurrencyUnit(baseCurrencyCode)),
+            subtitle: baseUnit == null
+                ? null
+                : AppLocalizations.of(
+                    context,
+                  ).baseCurrencyAmountLabel(baseUnit),
             trailing: VeriAnchoredMenuButton(
               icon: Icons.add,
               tooltip: AppLocalizations.of(context).assetsActions,

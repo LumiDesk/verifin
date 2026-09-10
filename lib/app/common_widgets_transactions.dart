@@ -88,7 +88,10 @@ class TransactionTile extends StatelessWidget {
         ? switch ((fromAccount, toAccount)) {
             (final from?, final to?)
                 when entry.accountAmount != null &&
-                    entry.toAccountAmount != null =>
+                    entry.toAccountAmount != null &&
+                    // 同币种转账两端单位相同，整条换算副行都是重复信息
+                    // （与下面非转账分支的 currencyCode 守卫同一口径）。
+                    from.currencyCode != to.currencyCode =>
               '${formatUserMoney(entry.accountAmount!, from.currencyCode, forceUnit: true)} → ${formatUserMoney(entry.toAccountAmount!, to.currencyCode, forceUnit: true)}',
             _ => null,
           }
@@ -126,11 +129,7 @@ class TransactionTile extends StatelessWidget {
     final runningBalanceText = runningBalance == null || fromAccount == null
         ? null
         : AppLocalizations.of(context).runningBalancePrefix(
-            formatUserMoney(
-              runningBalance!,
-              fromAccount.currencyCode,
-              forceUnit: true,
-            ),
+            formatUserMoney(runningBalance!, fromAccount.currencyCode),
           );
     final subStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
       color: Theme.of(context).colorScheme.onSurface.withValues(

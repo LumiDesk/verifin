@@ -730,6 +730,8 @@ class _RefundSheetState extends State<_RefundSheet> {
                     currencyCode: account.currencyCode,
                     amount: _accountAmount,
                     missingText: l10n.exchangeRateNotSet,
+                    // 退款原币锁死为原支出币种，单币种账本下这两端不可能出现第二个币种。
+                    forceUnit: false,
                     onTap: () => _editAccountAmount(account.currencyCode),
                   ),
                 CurrencyAmountField(
@@ -738,6 +740,7 @@ class _RefundSheetState extends State<_RefundSheet> {
                   currencyCode: baseCode,
                   amount: _baseAmount > 0 ? _baseAmount : null,
                   missingText: l10n.exchangeRateNotSet,
+                  forceUnit: false,
                   onTap: () => _editBaseAmount(baseCode),
                 ),
                 CompactSwitchRow(

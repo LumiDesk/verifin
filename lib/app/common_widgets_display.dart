@@ -170,6 +170,7 @@ class CurrencyAmountField extends StatelessWidget {
     required this.amount,
     required this.missingText,
     this.onTap,
+    this.forceUnit = true,
   });
 
   final String label;
@@ -178,17 +179,42 @@ class CurrencyAmountField extends StatelessWidget {
   final String missingText;
   final VoidCallback? onTap;
 
+  /// 是否强制显示单位，默认 true。
+  ///
+  /// **默认值不要改成跟随隐藏闸门**：记账页 / 交易详情页 / 周期规则页允许用币种选择器
+  /// 临时选一个账本里还没有的币种，那一刻账本按已落库数据仍算单币种、闸门是关的，但同一
+  /// 控件已经同时出现两个币种的金额，单位必须保留。退款表单两端金额被锁死为原支出币种，
+  /// 不可能出现第二个币种，属例外（显式传 false）。
+  final bool forceUnit;
+
   @override
   Widget build(BuildContext context) {
     return DetailInfoRow(
       label: label,
       value: amount == null
           ? missingText
-          : formatUserMoney(amount!, currencyCode, forceUnit: true),
+          : formatUserMoney(amount!, currencyCode, forceUnit: forceUnit),
       placeholder: amount == null,
       onTap: onTap,
     );
   }
+}
+
+/// 页面 / 卡片副标题里的「单位：x」。
+///
+/// [prefix] 是副标题里与单位无关的上下文（书名、账户类型、日期范围、统计区间）。
+/// 单位隐藏时：有 [prefix] 就只返回 [prefix]（不能把书名一起丢掉）；没有 [prefix] 的
+/// 副标题整条返回 null，**调用方必须整段省略**，不要渲染只剩分隔符或空白的残句。
+String? currencyUnitSubtitle(
+  AppLocalizations l10n,
+  String? prefix,
+  String currencyCode,
+) {
+  final hasPrefix = prefix != null && prefix.isNotEmpty;
+  final unit = optionalCurrencyUnit(currencyCode);
+  if (unit == null) return hasPrefix ? prefix : null;
+  final label = l10n.moneyUnitLabel(unit);
+  return hasPrefix ? '$prefix · $label' : label;
 }
 
 /// 聚合卡片/页面使用的轻量金额单位提示，避免在每个数字旁重复堆叠货币标识。
@@ -200,13 +226,15 @@ class MoneyUnitLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 单币种账本按偏好隐藏单位时整块不渲染：聚合卡片里的数字本身已经不带单位，
+    // 只在卡片角落留一句「单位：¥」是纯噪声（空态卡片里连数字都没有，更明显）。
+    final unit = optionalCurrencyUnit(currencyCode);
+    if (unit == null) return const SizedBox.shrink();
     final foreground =
         color ??
         Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.46);
     return Text(
-      AppLocalizations.of(
-        context,
-      ).moneyUnitLabel(displayCurrencyUnit(currencyCode)),
+      AppLocalizations.of(context).moneyUnitLabel(unit),
       key: Key('money_unit_$currencyCode'),
       style: Theme.of(context).textTheme.labelSmall?.copyWith(
         color: foreground,

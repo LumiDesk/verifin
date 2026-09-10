@@ -24,6 +24,8 @@
 | 我的 | 工具入口保持四列宫格，长文案和大字号不得溢出；不改成列表 |
 | 信息密度 | 通过间距和排版优化，不能删除业务指标、原有方块或改变预算结构 |
 
+**货币单位的显示口径**：金额旁的重复单位由 `formatUserMoney` 族自动处理（单币种账本 + 用户开启「单币种隐藏单位」时不显示）。页头副标题、卡片角标这类「单位单独占一个位置」的文字必须走 `currencyUnitSubtitle` / `MoneyUnitLabel`，不要直接调 `displayCurrencyUnit` 或裸拼 `currencyCode`；隐藏时副标题只保留上下文（书名、日期范围），没有上下文就整条省略。**多币种账本（任一账户/交易/周期规则/汇率非本位币）下单位必须照常显示**，收口不得把该显示的地方一起隐藏。豁免：记账/交易详情/周期规则里的「交易币种」行、汇率等式、货币选择器、导入列名——它们的主题就是币种。
+
 页面继续使用 `Scaffold > SafeArea > VeriPage` 与 `VeriHeader` / `PageHeader`。默认页面和固定页脚的头部对齐规则见 [页面骨架](ui-guidelines.md)。颜色、字号和圆角使用主题令牌，不在各页复制样式。语义色（收入 / 支出 / 转账 / 提醒）必须经 `veriSemantic(context, veriX)` 取用，无 `BuildContext` 的纯取色函数用 `veriSemanticFor(brightness, veriX)`：浅色底取加深变体（`veri*OnLight`，对比度 ≥ 4.5:1），深色底取原亮色；不要直接使用 `veriIncome` / `veriExpense` / `veriBlue` / `veriWarning` 渲染。
 
 ## 字体层级

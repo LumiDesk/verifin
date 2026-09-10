@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 import '../app/chart_painters.dart';
 import '../app/common_widgets.dart';
-import '../app/currency_math.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
 import '../app/report_analysis.dart';
@@ -76,9 +75,11 @@ class _ReportAnalysisPageState extends State<ReportAnalysisPage> {
             children: <Widget>[
               VeriHeader(
                 title: AppLocalizations.of(context).statAnalysisTitle,
-                subtitle:
-                    '${_range.label(AppLocalizations.of(context))} · '
-                    '${AppLocalizations.of(context).moneyUnitLabel(displayCurrencyUnit(controller.activeBook.baseCurrencyCode))}',
+                subtitle: currencyUnitSubtitle(
+                  AppLocalizations.of(context),
+                  _range.label(AppLocalizations.of(context)),
+                  controller.activeBook.baseCurrencyCode,
+                ),
                 showBack: true,
               ),
               const SizedBox(height: 10),
