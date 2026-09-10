@@ -69,6 +69,12 @@ EdgeInsets veriRootPageListPadding(BuildContext context) {
   return EdgeInsets.fromLTRB(14, 8, 14, layout?.listBottomPadding ?? 12);
 }
 
+/// 停靠底栏的最小底部留白（系统导航条留白为 0 时的保底值）。
+///
+/// 手势提示线关闭的机器上系统底部留白可能是 0；库把标签固定在条底 5dp，条目会直接
+/// 贴住屏幕下边缘。给一个下限就不贴边了。取值与页面列表的底部留白一致。
+const double _kMinBottomGap = 12;
+
 /// Veri Fin 根页面的停靠底栏。
 ///
 /// 整宽、不透明、贴底（系统安全区之上）：条目由 `bottom_bar_matu` 绘制，
@@ -82,6 +88,12 @@ class VeriRootNavigation extends StatefulWidget {
     this.keyPrefix = 'main',
   });
 
+  /// 选中切换的动画时长，供调用方对齐切页动画。
+  ///
+  /// 与 `BottomBarDoubleBullet` 的动画时长一致；调用方用同一时长驱动页面切换，
+  /// 底栏动画与页面过渡才会同时起步、同时结束。库把该值写死，只能在这里镜像。
+  static const Duration switchDuration = Duration(milliseconds: 500);
+
   final int currentIndex;
   final List<VeriNavigationDestination> destinations;
   final ValueChanged<int> onDestinationSelected;
@@ -92,6 +104,18 @@ class VeriRootNavigation extends StatefulWidget {
 }
 
 class _VeriRootNavigationState extends State<VeriRootNavigation> {
+  /// 已经派发出去的目标下标。
+  ///
+  /// [BottomBarDoubleBullet] 在自己的 `_onChangeIndex` 里，先启动动画、再
+  /// `await Future.delayed(200ms)`，**之后**才回调 `onSelect`。等它回调才切页，
+  /// 页面就比动画晚 200ms 起步，「点击 → 动画先播 → 等一下 → 才切页」的割裂感
+  /// 就是这么来的。所以底栏自己用 [Listener] 立刻识别点击并派发；随后到来的那次
+  /// 库回调按本字段识别为回声并丢弃。
+  int? _dispatchedIndex;
+
+  double? _pointerDownX;
+  double _barWidth = 0;
+
   Key _key(String suffix) => ValueKey('${widget.keyPrefix}_$suffix');
 
   @override
@@ -102,31 +126,37 @@ class _VeriRootNavigationState extends State<VeriRootNavigation> {
     assert(widget.currentIndex < widget.destinations.length);
   }
 
-  void _handleDestinationTap(int index) {
-    // bottom_bar_matu 会在 didUpdateWidget 里同步回调 onSelect，也就是在整个构建
-    // 过程中；此时切页会重建整棵树，抛「setState() called during build」。
-    // 因此只记下意图，等这一帧结束再统一处理。
-    _pendingSelection = index;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final target = _pendingSelection;
-      _pendingSelection = null;
-      if (target == null) return;
-      widget.onDestinationSelected(target);
-    });
+  /// 立刻把选中结果交给外层（同步，不延后一帧），让切页与底栏动画同时起步。
+  void _dispatch(int index) {
+    if (_dispatchedIndex == index) return;
+    _dispatchedIndex = index;
+    widget.onDestinationSelected(index);
   }
 
-  int? _pendingSelection;
+  /// 底栏条目按等宽槽位命中；轻微抖动仍算点击，明显横向位移不处理。
+  void _handleBarPointerUp(PointerUpEvent event) {
+    final downX = _pointerDownX;
+    _pointerDownX = null;
+    if (downX == null || _barWidth <= 0) return;
+    final dx = event.localPosition.dx;
+    if ((dx - downX).abs() > 12) return;
+    final slot = _barWidth / widget.destinations.length;
+    _dispatch((dx / slot).floor().clamp(0, widget.destinations.length - 1));
+  }
 
   @override
   Widget build(BuildContext context) {
-    // 表面色要一直铺到屏幕最底（含系统手势条背后），否则手势条区域会露出页面
-    // 底色、和底栏分成两块。因此底衬在 SafeArea 之外，条目内容在 SafeArea 之内。
+    // 表面色要一直铺到屏幕最底（含系统导航条背后），否则那一条会露出页面底色、
+    // 和底栏分成两块。因此底衬在最外，条目内容再用内边距让开。
     final surface = veriElevatedSurfaceColor(Theme.of(context).brightness);
     final outline = Theme.of(context).brightness == Brightness.dark
         ? Colors.white.withValues(alpha: 0.07)
         : Colors.black.withValues(alpha: 0.07);
-
+    // 系统导航条留白。SafeArea 取 max(系统安全区, minimum)：真有系统留白（三键导航
+    // 约 48dp、手势提示线约 24dp）时尊重它，为 0 时（提示线关闭，部分 ROM 如此）
+    // 落到 12dp 下限，条目不贴屏幕下边缘。是 max 不是相加，不会重复留白。
+    // maintainBottomViewPadding：键盘弹出时 padding.bottom 会被 viewInsets 吃掉，
+    // 用 viewPadding 才不会让底栏跟着键盘跳动。
     return DecoratedBox(
       key: _key('bottom_nav'),
       decoration: BoxDecoration(
@@ -135,30 +165,51 @@ class _VeriRootNavigationState extends State<VeriRootNavigation> {
       ),
       child: SafeArea(
         top: false,
-        child: BottomBarDoubleBullet(
-          key: _key('nav_bar'),
-          selectedIndex: widget.currentIndex,
-          height: VeriRootNavigationBody.barHeight,
-          items: <BottomBarItem>[
-            for (var index = 0; index < widget.destinations.length; index++)
-              BottomBarItem(
-                // 未选中用线框图标、选中换填充图标：库的选中动画本身就是按
-                // 「同一个位置切换图标」设计的，两种风格切换时动效最自然。
-                iconData: index == widget.currentIndex
-                    ? widget.destinations[index].selectedIcon
-                    : widget.destinations[index].icon,
-                iconSize: 24,
-                label: widget.destinations[index].label,
-                labelMarginTop: 2,
-                labelTextStyle: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                ),
+        maintainBottomViewPadding: true,
+        minimum: const EdgeInsets.only(bottom: _kMinBottomGap),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            _barWidth = constraints.maxWidth;
+            return Listener(
+              behavior: HitTestBehavior.opaque,
+              onPointerDown: (event) => _pointerDownX = event.localPosition.dx,
+              onPointerUp: _handleBarPointerUp,
+              onPointerCancel: (_) => _pointerDownX = null,
+              child: BottomBarDoubleBullet(
+                key: _key('nav_bar'),
+                selectedIndex: widget.currentIndex,
+                height: VeriRootNavigationBody.barHeight,
+                items: <BottomBarItem>[
+                  for (
+                    var index = 0;
+                    index < widget.destinations.length;
+                    index++
+                  )
+                    BottomBarItem(
+                      // 未选中用线框图标、选中换填充图标：库的选中动画本身就是按
+                      // 「同一个位置切换图标」设计的，两种风格切换时动效最自然。
+                      iconData: index == widget.currentIndex
+                          ? widget.destinations[index].selectedIcon
+                          : widget.destinations[index].icon,
+                      iconSize: 24,
+                      label: widget.destinations[index].label,
+                      labelMarginTop: 2,
+                      labelTextStyle: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                ],
+                color: veriRoyal,
+                // 库默认 circle1=蓝、circle2=红，切换时飞过两个异色圆点。统一成
+                // 品牌色，动效才和整体配色一致。
+                circle1Color: veriRoyal,
+                circle2Color: veriRoyal,
+                backgroundColor: Colors.transparent,
+                onSelect: _dispatch,
               ),
-          ],
-          color: veriRoyal,
-          backgroundColor: Colors.transparent,
-          onSelect: _handleDestinationTap,
+            );
+          },
         ),
       ),
     );

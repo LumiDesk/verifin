@@ -14,6 +14,9 @@ void main() {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(360, 800);
     tester.view.padding = const FakeViewPadding(bottom: 20);
+    // 底栏读取的是 viewPadding（键盘弹起时 padding 会被 viewInsets 吃掉），
+    // 真机上两者一致，测试也要一起设，否则模拟不出系统留白。
+    tester.view.viewPadding = const FakeViewPadding(bottom: 20);
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(const _NavigationHarness());
@@ -22,12 +25,34 @@ void main() {
     final navRect = tester.getRect(find.byKey(const Key('main_bottom_nav')));
     expect(navRect.left, 0, reason: '停靠底栏应整宽，不再留浮动外边距');
     expect(navRect.right, 360);
-    // 表面一直铺到屏幕最底（盖住系统手势条），否则手势条区域会露出页面底色。
+    // 表面一直铺到屏幕最底（盖住系统导航条），否则那一条会露出页面底色。
     expect(navRect.bottom, 800);
-    // 条目内容在 SafeArea 之内，不压到手势条上。
+    // 条目内容让开系统导航条。
     final barRect = tester.getRect(find.byKey(const Key('main_nav_bar')));
     expect(barRect.bottom, lessThanOrEqualTo(800 - 20));
     expect(barRect.height, lessThanOrEqualTo(VeriRootNavigationBody.barHeight));
+  });
+
+  testWidgets('系统不留白时底栏仍有最小底部间距，不贴屏幕下边缘', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(360, 800);
+    // 手势提示线关闭的机器：系统不报底部留白（部分 ROM/机型如此）。
+    tester.view.padding = FakeViewPadding.zero;
+    tester.view.viewPadding = FakeViewPadding.zero;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const _NavigationHarness());
+
+    final navRect = tester.getRect(find.byKey(const Key('main_bottom_nav')));
+    expect(navRect.bottom, 800, reason: '表面色仍要铺到屏幕最底');
+
+    // 库把标签固定在条底 5dp；没有下限时条目会直接贴住物理下边缘。
+    final barRect = tester.getRect(find.byKey(const Key('main_nav_bar')));
+    expect(
+      800 - barRect.bottom,
+      greaterThanOrEqualTo(10),
+      reason: '系统不留白时也要保住最小底部间距，否则条目贴边',
+    );
   });
 
   testWidgets('四个中文标签常显在底栏内', (tester) async {

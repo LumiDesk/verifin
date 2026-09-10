@@ -77,8 +77,9 @@ class _VeriFinShellState extends State<VeriFinShell> {
       _pageController
           .animateToPage(
             index,
-            duration: const Duration(milliseconds: 260),
-            curve: Curves.easeOutCubic,
+            // 与底栏的选中动画同时长：点击后两者同时起步、同时结束。
+            duration: VeriRootNavigation.switchDuration,
+            curve: Curves.easeInOutCubic,
           )
           .whenComplete(() {
             if (!mounted || _programmaticPageTarget != index) {

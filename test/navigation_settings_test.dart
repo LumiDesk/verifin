@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/app_version.dart';
 import 'package:verifin/app/common_widgets.dart';
 import 'package:verifin/app/models.dart';
+import 'package:verifin/app/root_navigation.dart';
 import 'package:verifin/local_storage/local_storage.dart';
 import 'package:verifin/pages/budget_pages.dart';
 import 'package:verifin/pages/home_page.dart';
@@ -153,6 +154,30 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
+  });
+
+  testWidgets('点击底栏后页面立刻开始切换，不等底栏的回调', (WidgetTester tester) async {
+    await pumpApp(tester);
+    await tapBottomTab(tester, 3);
+    await tester.pumpAndSettle();
+
+    // 回首页。bottom_bar_matu 的 onSelect 要等 200ms 才回调；若切页依赖它，
+    // 这里推进 100ms 后页面还停在原处。
+    await tester.tapAt(rootTabCenter(tester, 0));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    final controller = tester
+        .widget<PageView>(find.byType(PageView))
+        .controller!;
+    final page = controller.page!;
+    expect(page, lessThan(3), reason: '点击后 100ms 内页面应已在移动，说明切页与底栏动画同时起步');
+    expect(page, greaterThan(0), reason: '此时应还在过渡中，未到底');
+
+    // 走完整段动画后应正好落在首页。
+    await tester.pump(VeriRootNavigation.switchDuration);
+    await tester.pumpAndSettle();
+    expect(find.text('日常账本 · 单位：¥'), findsOneWidget);
   });
 
   testWidgets('点击开关行的标题也能切换开关', (WidgetTester tester) async {
