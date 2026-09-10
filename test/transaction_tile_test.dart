@@ -71,17 +71,20 @@ void main() {
     LedgerEntry e, {
     bool showDate = false,
     String? baseCurrencyCode,
+    List<Account>? tileAccounts,
+    double? runningBalance,
   }) async {
     await tester.pumpWidget(
       zhMaterialApp(
         home: Scaffold(
           body: TransactionTile(
             e,
-            accounts: <Account>[account],
+            accounts: tileAccounts ?? <Account>[account],
             categories: categories,
             tags: tags,
             showDate: showDate,
             baseCurrencyCode: baseCurrencyCode,
+            runningBalance: runningBalance,
           ),
         ),
       ),
@@ -155,5 +158,100 @@ void main() {
     expect(find.text('-10 \$'), findsOneWidget);
     expect(find.text('72 ¥'), findsOneWidget);
     expect(find.text('-72'), findsNothing);
+  });
+
+  testWidgets('同币种转账不显示换算副行（两端单位相同，纯重复）', (tester) async {
+    const to = Account(
+      id: 'acc2',
+      bookId: 'b1',
+      name: '现金',
+      type: AccountType.cash,
+      groupId: null,
+      initialBalance: 0,
+      iconCode: 'cash',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+    );
+    await pumpTile(
+      tester,
+      LedgerEntry(
+        id: 'same',
+        bookId: 'b1',
+        type: EntryType.transfer,
+        amount: 100,
+        currencyCode: 'CNY',
+        accountAmount: 100,
+        toAccountAmount: 100,
+        baseAmount: 0,
+        categoryId: 'transfer_out',
+        accountId: account.id,
+        toAccountId: to.id,
+        note: '',
+        occurredAt: DateTime(2026, 8, 1),
+      ),
+      tileAccounts: <Account>[account, to],
+      baseCurrencyCode: 'CNY',
+    );
+
+    // 主金额不带单位，副行也不该再出现「100 ¥ → 100 ¥」。
+    // 账户名标签「招商银行 → 现金」是正常信息，这里只要求不再出现带单位的换算副行。
+    expect(find.textContaining('¥'), findsNothing);
+  });
+
+  testWidgets('跨币种转账保留两端单位（反向保护）', (tester) async {
+    amount_format.moneyUnitStyle = MoneyUnitStyle.code;
+    amount_format.activeBookUsesMultipleCurrencies = true;
+    const usd = Account(
+      id: 'acc2',
+      bookId: 'b1',
+      name: '美元现金',
+      type: AccountType.cash,
+      groupId: null,
+      initialBalance: 0,
+      iconCode: 'cash',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+      currencyCode: 'USD',
+    );
+    await pumpTile(
+      tester,
+      LedgerEntry(
+        id: 'fx',
+        bookId: 'b1',
+        type: EntryType.transfer,
+        amount: 720,
+        currencyCode: 'CNY',
+        accountAmount: 720,
+        toAccountAmount: 100,
+        baseAmount: 0,
+        categoryId: 'transfer_out',
+        accountId: account.id,
+        toAccountId: usd.id,
+        note: '',
+        occurredAt: DateTime(2026, 8, 1),
+      ),
+      tileAccounts: <Account>[account, usd],
+      baseCurrencyCode: 'CNY',
+    );
+
+    // 两端币种不同，必须保留单位才能分辨哪端是哪种币。
+    expect(find.text('CNY 720 → USD 100'), findsOneWidget);
+  });
+
+  testWidgets('逐笔结余在单币种账本不带单位', (tester) async {
+    await pumpTile(tester, entry(), runningBalance: 970);
+
+    expect(find.textContaining('余额'), findsOneWidget);
+    expect(find.textContaining('970'), findsOneWidget);
+    expect(find.textContaining('¥'), findsNothing);
+  });
+
+  testWidgets('逐笔结余在多币种账本保留单位（反向保护）', (tester) async {
+    amount_format.activeBookUsesMultipleCurrencies = true;
+    await pumpTile(tester, entry(), runningBalance: 970);
+
+    expect(find.textContaining('970 ¥'), findsOneWidget);
   });
 }

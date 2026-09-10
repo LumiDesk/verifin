@@ -283,6 +283,79 @@ void main() {
     expect(display.rows.single[2], contains('123.5'));
   });
 
+  test('单币种隐藏单位时账户表去掉币种列，摘要也不写币种代码', () {
+    final ctx = AiToolContext(
+      entries: const <LedgerEntry>[],
+      accounts: <Account>[_account(id: 'a1', name: '现金')],
+      categories: const <Category>[],
+      tags: const <Tag>[],
+      balanceOf: (_) => 123.5,
+      baseCurrencyCode: 'CNY',
+      now: DateTime(2026, 6, 20),
+      l10n: lookupAppLocalizations(const Locale('zh')),
+      currencyDisplay: MoneyCodeDisplay.none,
+    );
+    final result = _tool(
+      'accountsOverview',
+    ).run(ctx, const <String, Object?>{});
+    final display = result.display! as AiTableDisplay;
+    // 币种列整列去掉，余额列顺位前移。
+    expect(display.headers, <String>['账户', '余额']);
+    expect(display.rows.single, <String>['现金', '123.5']);
+    // 摘要句要跟界面上的金额同口径，否则模型会照着写出「合计 CNY …」。
+    expect(result.summary, isNot(contains('CNY')));
+  });
+
+  test('单币种隐藏单位时同币种转账只报一次金额', () {
+    const from = Account(
+      id: 'a',
+      bookId: 'b',
+      name: '招行',
+      type: AccountType.cash,
+      groupId: null,
+      initialBalance: 0,
+      iconCode: 'cash',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+    );
+    const to = Account(
+      id: 'b2',
+      bookId: 'b',
+      name: '现金',
+      type: AccountType.cash,
+      groupId: null,
+      initialBalance: 0,
+      iconCode: 'cash',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+    );
+    final transfer = LedgerEntry(
+      id: 'transfer',
+      bookId: 'b',
+      type: EntryType.transfer,
+      amount: 100,
+      currencyCode: 'CNY',
+      accountAmount: 100,
+      toAccountAmount: 100,
+      baseAmount: 0,
+      categoryId: 'transfer_out',
+      accountId: from.id,
+      toAccountId: to.id,
+      note: '',
+      occurredAt: DateTime(2026, 6, 15),
+    );
+    final result = _tool('queryTransactions').run(
+      _ctx(<LedgerEntry>[transfer], accounts: const <Account>[from, to]),
+      <String, Object?>{'range': 'all', 'type': 'transfer'},
+    );
+
+    // 两端同币种，报「100 → 100」是重复信息。
+    expect(result.summary, isNot(contains('→')));
+    expect(result.summary, contains('100'));
+  });
+
   test('netWorth 缺汇率时不给部分和', () {
     final ctx = AiToolContext(
       entries: const <LedgerEntry>[],
@@ -332,6 +405,41 @@ void main() {
     final result = _tool('creditCardBill').run(ctx, const <String, Object?>{});
     final display = result.display! as AiTableDisplay;
     expect(display.rows.single.first, '信用卡');
+    expect(result.summary, contains('300'));
+  });
+
+  test('单币种隐藏单位时信用卡摘要不带币种代码', () {
+    final card = Account(
+      id: 'acc',
+      bookId: 'b',
+      name: '信用卡',
+      type: AccountType.creditCard,
+      groupId: null,
+      initialBalance: 0,
+      iconCode: 'bank',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+      creditLimit: 10000,
+      statementDay: 5,
+      dueDay: 20,
+    );
+    final ctx = AiToolContext(
+      entries: <LedgerEntry>[
+        _e(id: 'c', amount: 300, at: DateTime(2026, 6, 6)),
+      ],
+      accounts: <Account>[card],
+      categories: const <Category>[],
+      tags: const <Tag>[],
+      balanceOf: (_) => -300,
+      baseCurrencyCode: 'CNY',
+      now: DateTime(2026, 6, 20),
+      l10n: lookupAppLocalizations(const Locale('zh')),
+      currencyDisplay: MoneyCodeDisplay.none,
+    );
+    final result = _tool('creditCardBill').run(ctx, const <String, Object?>{});
+    // 卡片表格本来就没有币种列，摘要句是这张卡唯一的币种来源；隐藏单位时它也不能写代码。
+    expect(result.summary, isNot(contains('CNY')));
     expect(result.summary, contains('300'));
   });
 
