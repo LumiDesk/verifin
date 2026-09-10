@@ -148,8 +148,10 @@ class _VeriBottomBarState extends State<VeriBottomBar>
     });
   }
 
-  /// 切换选中项。跨多页跳转（跨度大于一页）不播过场动画：调用方此时是瞬移页面
-  /// （见 `VeriFinShell._goToTab`），底栏跟着直接落位，两者仍然同时结束。
+  /// 切换选中项。
+  ///
+  /// 每次切换都从旧位置扫到新位置，跨度多大都一样——页面那边同步播同一时长的过渡，
+  /// 两者才会一起起步、一起结束。
   void _select(int index) {
     assert(index >= 0 && index < widget.items.length, 'selectedIndex 越界');
     if (index == _selectedIndex) {
@@ -158,19 +160,13 @@ class _VeriBottomBarState extends State<VeriBottomBar>
 
     final previous = _selectedIndex;
     final forward = index > previous;
-    final animate = (index - previous).abs() == 1;
 
     setState(() {
       _selectedIndex = index;
-      _fromIndex = animate ? previous : index;
-      _animating = animate;
+      _fromIndex = previous;
+      _animating = true;
     });
-
-    if (animate) {
-      _controller.forward(from: 0);
-    } else {
-      _controller.stop();
-    }
+    _controller.forward(from: 0);
 
     // 同步更新两端图标：不等任何延迟回调，快速连续切换也不会错位。
     // 条目数刚变少时 previous 可能已经越界（本应用的根导航固定四项，这里只做兜底）。

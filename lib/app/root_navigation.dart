@@ -91,7 +91,7 @@ class VeriRootNavigation extends StatefulWidget {
   /// 选中切换的动画时长，供调用方对齐切页动画。
   ///
   /// 与 [VeriBottomBar.switchDuration] 同值；调用方用同一时长驱动页面切换，底栏
-  /// 动画与页面过渡才会同时起步、同时结束。跨多页跳转时两者都不播过场动画。
+  /// 动画与页面过渡才会同时起步、同时结束。跨多页（跨度大于一页）同样播这段过场。
   static const Duration switchDuration = VeriBottomBar.switchDuration;
 
   final int currentIndex;

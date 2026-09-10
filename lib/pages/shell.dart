@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
 import '../app/app_theme.dart';
@@ -34,9 +35,18 @@ class _VeriFinShellState extends State<VeriFinShell> {
   DateTime? _lastBackPressedAt;
   final PageController _pageController = PageController();
 
+  /// 最近一次滚动更新时的位置与帧时间戳，用于在打断切页动画时估算当前速度。
+  ///
+  /// `ScrollPosition` 不公开速度（`activity` 是 `@protected`），所以在控制器监听里
+  /// 按帧差分一次：连点不同 Tab、甩动中途改点都能接上真实速度。
+  double? _lastScrollPixels;
+  Duration? _lastScrollAt;
+  double _scrollVelocity = 0;
+
   @override
   void initState() {
     super.initState();
+    _pageController.addListener(_trackScrollVelocity);
     AppCaptureBridge.setQuickEntryHandler(_openQuickEntryFromPlatform);
     AppCaptureBridge.setSharedCaptureHandler(_openSharedCaptureFromPlatform);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -56,45 +66,64 @@ class _VeriFinShellState extends State<VeriFinShell> {
   void dispose() {
     AppCaptureBridge.clearQuickEntryHandler();
     AppCaptureBridge.clearSharedCaptureHandler();
+    _pageController.removeListener(_trackScrollVelocity);
     _pageController.dispose();
     super.dispose();
   }
 
-  /// 切换到指定 Tab：底部导航点击与返回键均走此入口。
+  /// 按帧差分滚动速度，供 [_switchCurve] 在改点目标时接上初速度。
+  void _trackScrollVelocity() {
+    final binding = SchedulerBinding.instance;
+    // `currentFrameTimeStamp` 只在 `handleBeginFrame` 到 `handleDrawFrame` 之间有效，
+    // 而滚动通知在帧外也会到达（`ensureVisible` 触发的 `jumpTo` 就是），帧外直接跳过
+    // 本次采样，不能让断言把整条通知链打断。
+    if (binding.schedulerPhase == SchedulerPhase.idle) {
+      return;
+    }
+    final now = binding.currentFrameTimeStamp;
+    final pixels = _pageController.position.pixels;
+    final lastAt = _lastScrollAt;
+    final lastPixels = _lastScrollPixels;
+    _lastScrollAt = now;
+    _lastScrollPixels = pixels;
+    if (lastAt == null || lastPixels == null) {
+      return;
+    }
+    final seconds =
+        (now - lastAt).inMicroseconds / Duration.microsecondsPerSecond;
+    if (seconds <= 0) {
+      return;
+    }
+    _scrollVelocity = (pixels - lastPixels) / seconds;
+  }
+
+  /// 切换到指定 Tab：底部导航点击与返回键均走此入口，带一段短动画。
   ///
-  /// 相邻两页之间播一段短动画；**跨多页（跨度大于一页）直接瞬移**。此前一律走
-  /// 500ms 的 [PageController.animateToPage]，从第 4 个 Tab 回首页时要在半秒内扫过
-  /// 三个整页，每个中间页都要跟着滚动、合成一遍，这就是「在别的页面按返回回首页」
-  /// 时卡顿的来源。瞬移也符合用户预期（返回首页本来就该立刻到位）；底栏在同样跨度
-  /// 下也不播过场动画（见 [VeriBottomBar]），两者仍然同时结束。
-  ///
-  /// 跨多页动画还会依次触发中间页的 [PageView.onPageChanged]；这些页只是过场，
+  /// 跨多页动画会依次触发中间页的 [PageView.onPageChanged]；这些页只是过场，
   /// 不能反向覆盖导航滑块正在吸附的最终目标。直接手势翻页时没有 programmatic
   /// target，仍由 [_handlePageChanged] 正常同步导航。
   void _goToTab(int index) {
     if (_programmaticPageTarget == null && index == _index) {
       return;
     }
-    final crossesMultiplePages = (index - _index).abs() > 1;
     setState(() {
       _index = index;
       _programmaticPageTarget = index;
     });
-    if (crossesMultiplePages) {
-      _pageController.jumpToPage(index);
-      _programmaticPageTarget = null;
-      return;
-    }
     unawaited(
       _pageController
           .animateToPage(
             index,
             // 与底栏的选中动画同时长：点击后两者同时起步、同时结束。
             duration: VeriRootNavigation.switchDuration,
-            curve: Curves.easeInOutCubic,
+            curve: _switchCurve(index),
           )
           .whenComplete(() {
-            if (!mounted || _programmaticPageTarget != index) {
+            // `hasClients` 之外还要看 `mounted`：子树被拆掉后 `_pageController.page`
+            // 会直接断言失败。二者都过不去就放弃这次吸附，下一页切换会重新对齐。
+            if (!mounted ||
+                !_pageController.hasClients ||
+                _programmaticPageTarget != index) {
               return;
             }
             final settledIndex = (_pageController.page ?? index).round().clamp(
@@ -107,6 +136,37 @@ class _VeriFinShellState extends State<VeriFinShell> {
             });
           }),
     );
+  }
+
+  /// 切换 Tab 用的曲线。
+  ///
+  /// 直接传 `Curves.easeInOutCubic` 时，`animateToPage` 每次都按这条曲线从 0 重新
+  /// 插值，而它起步斜率只有 0.07：动画没播完就改点别的 Tab，页面会先「刹停」再重新
+  /// 加速。实测（`test/navigation_settings_test.dart` 的连点回归）改点目标的那一帧，
+  /// 每帧位移会从 0.0279 页掉到 0.0086 页——速度一帧掉到三成，看起来就是一顿。
+  ///
+  /// 这里按当前滚动速度反推一条起点斜率匹配的曲线，速度不断档。终点斜率仍为 0
+  /// （平滑收住），时长与终点都不变，底栏的选中动效依旧和页面同时起步、同时结束。
+  Curve _switchCurve(int targetPage) {
+    final position = _pageController.position;
+    if (!position.hasPixels ||
+        !position.hasViewportDimension ||
+        !position.hasContentDimensions) {
+      return Curves.easeInOutCubic;
+    }
+    final distance = targetPage * position.viewportDimension - position.pixels;
+    // 速度接近 0 说明上一次切换已经停稳，或者这次是全新的一次点击，两种都按原曲线走。
+    if (distance.abs() < 1 || _scrollVelocity.abs() < 20) {
+      return Curves.easeInOutCubic;
+    }
+    final seconds =
+        VeriRootNavigation.switchDuration.inMicroseconds /
+        Duration.microsecondsPerSecond;
+    // 三次贝塞尔 `Cubic(a, b, c, d)` 的起点斜率是 b/a、终点斜率是 (1-d)/(1-c)：
+    // 取 d = 1 让终点平滑收住，b 由需要的起点斜率反推。斜率夹在区间内，避免剩余
+    // 距离很小时反推出极大的 b 造成明显过冲。
+    final slope = (_scrollVelocity * seconds / distance).clamp(-0.9, 1.5);
+    return Cubic(0.645, 0.645 * slope, 0.355, 1);
   }
 
   void _handlePageChanged(int value) {

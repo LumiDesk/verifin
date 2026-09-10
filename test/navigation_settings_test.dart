@@ -180,7 +180,7 @@ void main() {
     expect(controller.page!.round(), 2);
   });
 
-  testWidgets('跨多页跳转与安卓返回回首页都直接瞬移，不扫过中间页', (WidgetTester tester) async {
+  testWidgets('安卓返回回首页同样走滚动动画，不瞬移', (WidgetTester tester) async {
     await pumpApp(tester);
     await tapBottomTab(tester, 3);
     await tester.pumpAndSettle();
@@ -190,14 +190,66 @@ void main() {
         .controller!;
     expect(controller.page!.round(), 3);
 
-    // 安卓返回：在第 4 个 Tab 上按返回键回首页，跨度 3 页。此前走 500ms 的整段
-    // 动画扫过中间两页（每个中间页都要跟着滚动合成一遍），这是「返回首页卡顿」的
-    // 来源；现在应当一帧内落位。
+    // 安卓返回：在第 4 个 Tab 上按返回键回首页。跨度 3 页也要正常滚动过去，
+    // 不能一步到位——跨多页时用户同样要看到页面滚动动画。
     await tester.binding.handlePopRoute();
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
-    expect(controller.page!.round(), 0, reason: '跨多页跳转应当瞬移，不留中间过渡');
+    expect(controller.page, lessThan(3), reason: '返回后页面应已开始滚动');
+    expect(controller.page, greaterThan(0), reason: '100ms 后应还在过渡中，不能直接落位');
+
+    await tester.pump(VeriRootNavigation.switchDuration);
     await tester.pumpAndSettle();
+    expect(controller.page!.round(), 0);
+    expect(find.text('日常账本 · 单位：¥'), findsOneWidget);
+  });
+
+  testWidgets('跨多页点按同样滚动过去，并落在目标页', (WidgetTester tester) async {
+    await pumpApp(tester);
+    await tapBottomTab(tester, 3);
+    await tester.pumpAndSettle();
+
+    final controller = tester
+        .widget<PageView>(find.byType(PageView))
+        .controller!;
+
+    // 从「我的」直接点「首页」，跨度 3 页。跨多页同样要看到页面滚动，不能一步到位。
+    await tester.tapAt(rootTabCenter(tester, 0));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(controller.page, lessThan(3), reason: '跨多页点按也要滚动，不能瞬移');
+    expect(controller.page, greaterThan(0), reason: '100ms 后应还在途中');
+
+    await tester.pump(VeriRootNavigation.switchDuration);
+    await tester.pumpAndSettle();
+    expect(controller.page!.round(), 0);
+  });
+
+  testWidgets('连点不同 Tab 改目标后仍然正确落位', (WidgetTester tester) async {
+    await pumpApp(tester);
+    await tapBottomTab(tester, 3);
+    await tester.pumpAndSettle();
+
+    final controller = tester
+        .widget<PageView>(find.byType(PageView))
+        .controller!;
+
+    // 动画没播完就改点别的 Tab：页面必须改朝新目标走，而不是停住或退回原处。
+    await tester.tapAt(rootTabCenter(tester, 2));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(controller.page, lessThan(3), reason: '第一次点按应已开始滚动');
+
+    await tester.tapAt(rootTabCenter(tester, 0));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(controller.page, greaterThan(0), reason: '改目标后仍在过渡途中');
+
+    await tester.pump(VeriRootNavigation.switchDuration);
+    await tester.pumpAndSettle();
+    expect(controller.page!.round(), 0, reason: '应落在最后点选的首页');
     expect(find.text('日常账本 · 单位：¥'), findsOneWidget);
   });
 
