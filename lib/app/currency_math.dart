@@ -106,6 +106,21 @@ String displayCurrencyUnit(String currencyCode, {MoneyUnitStyle? unitStyle}) {
   };
 }
 
+/// 界面文字里的货币单位是否应隐藏：单币种账本 + 用户开启「单币种隐藏单位」。
+///
+/// 与 [formatUserMoney] 共用同一个闸门（`amount_format.activeMoneyCodeDisplay`）。
+/// 金额旁的重复单位由格式化函数负责；这个 getter 供**单独占一个位置的单位文字**使用
+/// ——页头副标题、卡片角标、AI 摘要句等。它们不走格式化函数，历史上各自拼接字符串，
+/// 因而整体绕过了偏好。
+bool get textCurrencyUnitHidden =>
+    amount_format.activeMoneyCodeDisplay == MoneyCodeDisplay.none;
+
+/// 界面文字用的单位文本；应隐藏时返回 null。
+///
+/// 拿到 null 就整段省略，不要渲染空串、也不要把分隔符留下。
+String? optionalCurrencyUnit(String currencyCode) =>
+    textCurrencyUnitHidden ? null : displayCurrencyUnit(currencyCode);
+
 String _compactCurrencySymbol(CurrencyDefinition currency) {
   // CLDR 的 CNY 常规符号是 `CN¥`，用于跨地区文本消歧很合适，但用户选择“符号”
   // 样式时期待的是紧凑的 `¥`；需要无歧义时可切回 ISO 代码样式。

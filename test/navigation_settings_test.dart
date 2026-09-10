@@ -65,13 +65,13 @@ void main() {
     final homeListPadding = homeList.padding! as EdgeInsets;
     // Scaffold 已为停靠底栏让位，列表末项只需少量留白。
     expect(homeListPadding.bottom, 12);
-    expect(find.text('日常账本 · 单位：¥'), findsOneWidget);
+    expect(find.text('日常账本'), findsOneWidget);
 
     await tapBottomTab(tester, 1);
     expect(find.text('净资产'), findsAtLeastNWidgets(1));
 
     await tapBottomTab(tester, 2);
-    expect(find.text('预算与统计 · 单位：¥'), findsOneWidget);
+    expect(find.text('预算与统计'), findsOneWidget);
 
     await tapBottomTab(tester, 3);
     expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
@@ -202,7 +202,7 @@ void main() {
     await tester.pump(VeriRootNavigation.switchDuration);
     await tester.pumpAndSettle();
     expect(controller.page!.round(), 0);
-    expect(find.text('日常账本 · 单位：¥'), findsOneWidget);
+    expect(find.text('日常账本'), findsOneWidget);
   });
 
   testWidgets('跨多页点按同样滚动过去，并落在目标页', (WidgetTester tester) async {
@@ -250,7 +250,7 @@ void main() {
     await tester.pump(VeriRootNavigation.switchDuration);
     await tester.pumpAndSettle();
     expect(controller.page!.round(), 0, reason: '应落在最后点选的首页');
-    expect(find.text('日常账本 · 单位：¥'), findsOneWidget);
+    expect(find.text('日常账本'), findsOneWidget);
   });
 
   testWidgets('连点不同 Tab 之后仍然响应，且底栏与页面一致', (WidgetTester tester) async {

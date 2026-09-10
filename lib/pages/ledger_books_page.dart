@@ -124,10 +124,12 @@ class _LedgerBookRow extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 3),
+                    // 只有一个账本时币种不携带任何信息（没有可比较的对象）；
+                    // 多账本才用它区分各账本的口径。
                     Text(
                       '${book.isDefault ? '${AppLocalizations.of(context).defaultBookLabel} · ' : ''}'
-                      '${AppLocalizations.of(context).entriesCountFull(entryCount)} · '
-                      '${book.baseCurrencyCode}',
+                      '${AppLocalizations.of(context).entriesCountFull(entryCount)}'
+                      '${controller.ledgerBooks.length > 1 ? ' · ${book.baseCurrencyCode}' : ''}',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: Theme.of(
                           context,

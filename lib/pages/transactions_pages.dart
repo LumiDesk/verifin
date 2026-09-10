@@ -351,16 +351,17 @@ class _TransactionsPageState extends State<TransactionsPage> {
                           subtitle: _selectionMode
                               ? null
                               : (_dateMode
-                                    ? '${AppLocalizations.of(context).dateMonthDay(_visibleDate)} · '
-                                          '${AppLocalizations.of(context).moneyUnitLabel(displayCurrencyUnit(controller.activeBook.baseCurrencyCode))}'
-                                    : AppLocalizations.of(
-                                        context,
-                                      ).moneyUnitLabel(
-                                        displayCurrencyUnit(
-                                          controller
-                                              .activeBook
-                                              .baseCurrencyCode,
-                                        ),
+                                    ? currencyUnitSubtitle(
+                                        AppLocalizations.of(context),
+                                        AppLocalizations.of(
+                                          context,
+                                        ).dateMonthDay(_visibleDate),
+                                        controller.activeBook.baseCurrencyCode,
+                                      )
+                                    : currencyUnitSubtitle(
+                                        AppLocalizations.of(context),
+                                        null,
+                                        controller.activeBook.baseCurrencyCode,
                                       )),
                           showBack: true,
                           actions: <Widget>[

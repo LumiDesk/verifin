@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 import '../app/chart_painters.dart';
 import '../app/common_widgets.dart';
-import '../app/currency_math.dart';
 import '../app/home_metrics.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
@@ -187,9 +186,11 @@ class HomePage extends StatelessWidget {
           PageHeader(
             compact: veriUnifiedDesignPreview,
             title: AppLocalizations.of(context).tabHome,
-            subtitle:
-                '${controller.activeBook.name} · '
-                '${AppLocalizations.of(context).moneyUnitLabel(displayCurrencyUnit(controller.activeBook.baseCurrencyCode))}',
+            subtitle: currencyUnitSubtitle(
+              AppLocalizations.of(context),
+              controller.activeBook.name,
+              controller.activeBook.baseCurrencyCode,
+            ),
           ),
           if (recurringMissingByRule.isNotEmpty) ...<Widget>[
             const SizedBox(height: 10),
@@ -944,8 +945,10 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
             children: <Widget>[
               VeriHeader(
                 title: l10n.incomeExpenseTitle,
-                subtitle: l10n.moneyUnitLabel(
-                  displayCurrencyUnit(controller.activeBook.baseCurrencyCode),
+                subtitle: currencyUnitSubtitle(
+                  l10n,
+                  null,
+                  controller.activeBook.baseCurrencyCode,
                 ),
                 showBack: true,
                 actions: <Widget>[

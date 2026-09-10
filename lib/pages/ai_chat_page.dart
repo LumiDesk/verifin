@@ -14,6 +14,7 @@ import '../app/ai/ai_client.dart';
 import '../app/ai/ai_query_tool.dart';
 import '../app/ai/ai_settings.dart';
 import '../app/ai/ai_tool_presentation.dart';
+import '../app/amount_format.dart';
 import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
 import '../app/veri_fin_scope.dart';
@@ -204,6 +205,9 @@ class _AiChatPageState extends State<AiChatPage> {
       baseCurrencyCode: scope.activeBook.baseCurrencyCode,
       now: DateTime.now(),
       l10n: l10n,
+      // 摘要句与结果卡片要跟界面上金额的单位口径一致：单币种账本隐藏单位时，
+      // 摘要也不能出现币种代码，否则模型会照着写出与卡片矛盾的「合计 CNY 4,300」。
+      currencyDisplay: activeMoneyCodeDisplay,
       exchangeRates: scope.exchangeRates,
       bookId: scope.activeBook.id,
       budget: AiBudgetContext(

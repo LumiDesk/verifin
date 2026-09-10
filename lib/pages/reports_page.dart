@@ -7,7 +7,6 @@ import '../app/app_theme.dart';
 import '../app/category_tree.dart';
 import '../app/chart_painters.dart';
 import '../app/common_widgets.dart';
-import '../app/currency_math.dart';
 import '../app/model_lookup.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
@@ -277,9 +276,11 @@ class ReportsPage extends StatelessWidget {
         children: <Widget>[
           PageHeader(
             title: AppLocalizations.of(context).tabReports,
-            subtitle:
-                '${AppLocalizations.of(context).reportsSubtitle} · '
-                '${AppLocalizations.of(context).moneyUnitLabel(displayCurrencyUnit(controller.activeBook.baseCurrencyCode))}',
+            subtitle: currencyUnitSubtitle(
+              AppLocalizations.of(context),
+              AppLocalizations.of(context).reportsSubtitle,
+              controller.activeBook.baseCurrencyCode,
+            ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[

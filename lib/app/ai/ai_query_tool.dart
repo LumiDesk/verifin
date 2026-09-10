@@ -57,6 +57,7 @@ class AiToolContext {
     this.exchangeRates = const <ExchangeRate>[],
     this.bookId = '',
     this.budget,
+    this.currencyDisplay = MoneyCodeDisplay.code,
   });
 
   /// 当前语言的文案：卡片标题、统计项标签、表头与回喂模型的 summary 都用它解析。
@@ -80,6 +81,17 @@ class AiToolContext {
 
   /// 统计、筛选与工具回传金额使用的当前账本本位币。
   final String baseCurrencyCode;
+
+  /// summary 与卡片里金额的货币标识显示方式，由上层按当前偏好解析后传入。
+  ///
+  /// 单币种账本 + 用户开启「单币种隐藏单位」时上层的具体值是
+  /// [MoneyCodeDisplay.none]，此时摘要句与表格都不出现币种，和界面上已经隐藏单位的
+  /// 金额保持一致；否则模型会照着摘要写出「合计 CNY 4,300」这类与界面矛盾的文字。
+  ///
+  /// **工具层不读 `amount_format` 的全局闸门**：工具是只读纯函数、按数据快照单测，
+  /// 读全局会让结果依赖测试执行顺序，也无法表达多币种账本。默认值保留改动前的行为，
+  /// 供只关心金额口径的单测使用。
+  final MoneyCodeDisplay currencyDisplay;
 
   /// 当前账本本地汇率快照；只用于转账等非收支记录的只读本位币比较。
   final List<ExchangeRate> exchangeRates;
@@ -499,8 +511,16 @@ String _typeLabel(AppLocalizations l10n, EntryType type) => switch (type) {
   EntryType.refund => l10n.entryTypeRefund,
 };
 
-String _baseMoney(AiToolContext context, num value) =>
-    formatMoney(value, context.baseCurrencyCode);
+/// 回喂模型的本位币金额。
+///
+/// 走 [AiToolContext.currencyDisplay] 而不是 `formatMoney` 的默认值：后者恒为
+/// `MoneyCodeDisplay.code`，单币种账本里也会写出 `CNY 12000`，既与界面上已经隐藏
+/// 单位的金额对不上，也会诱导模型在回答正文里照抄币种代码。
+String _baseMoney(AiToolContext context, num value) => formatMoney(
+  value,
+  context.baseCurrencyCode,
+  display: context.currencyDisplay,
+);
 
 // ─────────────────────────── 工具实现 ───────────────────────────
 
@@ -785,11 +805,20 @@ class QueryTransactionsTool extends AiQueryTool {
           .firstOrNull;
       final fromCode = from?.currencyCode ?? entry.currencyCode;
       final fromAmount = entry.accountAmount ?? entry.amount;
-      final fromText = formatMoney(fromAmount, fromCode);
+      final fromText = formatMoney(
+        fromAmount,
+        fromCode,
+        display: ctx.currencyDisplay,
+      );
       if (to == null || entry.toAccountAmount == null) {
         return fromText;
       }
-      return '$fromText → ${formatMoney(entry.toAccountAmount!, to.currencyCode)}';
+      // 同币种转账两端金额相同，只报一次，避免「100 → 100」这种重复。
+      if (to.currencyCode == fromCode) {
+        return fromText;
+      }
+      return '$fromText → '
+          '${formatMoney(entry.toAccountAmount!, to.currencyCode, display: ctx.currencyDisplay)}';
     }
 
     final detail = results
@@ -1080,8 +1109,7 @@ class AccountsOverviewTool extends AiQueryTool {
             .map(
               (account) =>
                   '${account.name} '
-                  '${formatCurrencyNumber(ctx.balanceOf(account), account.currencyCode)} '
-                  '${account.currencyCode}',
+                  '${formatMoney(ctx.balanceOf(account), account.currencyCode, display: ctx.currencyDisplay)}',
             )
             .join(l10n.aiSepSemicolon),
         totalText,
@@ -1090,14 +1118,17 @@ class AccountsOverviewTool extends AiQueryTool {
         title: l10n.accountBalanceLabel,
         headers: <String>[
           l10n.accountLabel,
-          l10n.aiHeaderCurrency,
+          // 单币种账本下每行都是同一个币种，整列去掉；多币种时它是唯一的辨币依据。
+          if (ctx.currencyDisplay != MoneyCodeDisplay.none)
+            l10n.aiHeaderCurrency,
           l10n.aiHeaderBalance,
         ],
         rows: accounts
             .map(
               (account) => <String>[
                 account.name,
-                account.currencyCode,
+                if (ctx.currencyDisplay != MoneyCodeDisplay.none)
+                  account.currencyCode,
                 formatCurrencyNumber(
                   ctx.balanceOf(account),
                   account.currencyCode,
@@ -1220,7 +1251,10 @@ class CreditCardBillTool extends AiQueryTool {
         l10n.aiCardDebtLine(
               card.name,
               formatCurrencyNumber(used, card.currencyCode),
-              card.currencyCode,
+              // 单币种账本不留币种代码；这里的空串会自然充当后半句之间的分隔空格。
+              ctx.currencyDisplay == MoneyCodeDisplay.none
+                  ? ''
+                  : card.currencyCode,
             ) +
             (available == null
                 ? ''

@@ -101,9 +101,11 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
               children: <Widget>[
                 VeriHeader(
                   title: currentAccount.name,
-                  subtitle:
-                      '${currentAccount.type.label(AppLocalizations.of(context))} · '
-                      '${AppLocalizations.of(context).moneyUnitLabel(displayCurrencyUnit(currentAccount.currencyCode))}',
+                  subtitle: currencyUnitSubtitle(
+                    AppLocalizations.of(context),
+                    currentAccount.type.label(AppLocalizations.of(context)),
+                    currentAccount.currencyCode,
+                  ),
                   showBack: true,
                   actions: <Widget>[
                     HeaderAction(
@@ -981,9 +983,11 @@ class AccountReportPage extends StatelessWidget {
             children: <Widget>[
               VeriHeader(
                 title: AppLocalizations.of(context).accountReportTitle,
-                subtitle:
-                    '${currentAccount.name} · '
-                    '${AppLocalizations.of(context).moneyUnitLabel(displayCurrencyUnit(controller.activeBook.baseCurrencyCode))}',
+                subtitle: currencyUnitSubtitle(
+                  AppLocalizations.of(context),
+                  currentAccount.name,
+                  controller.activeBook.baseCurrencyCode,
+                ),
                 showBack: true,
               ),
               const SizedBox(height: 10),

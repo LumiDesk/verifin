@@ -272,7 +272,12 @@ class ProfilePage extends StatelessWidget {
                 icon: Icons.currency_exchange,
                 color: veriCyan,
                 label: AppLocalizations.of(context).currencyRatesTitle,
-                subtitle: controller.activeBook.baseCurrencyCode,
+                // 单币种账本隐藏单位时不留币种代码；空串保住宫格的行高一致。
+                subtitle:
+                    optionalCurrencyUnit(
+                      controller.activeBook.baseCurrencyCode,
+                    ) ??
+                    '',
                 onTap: () => Navigator.of(context).push<void>(
                   MaterialPageRoute<void>(
                     builder: (context) => const CurrencyRatesPage(),
