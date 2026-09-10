@@ -105,29 +105,21 @@ class _LocalizedTestAppState extends State<_LocalizedTestApp> {
   }
 }
 
-/// 四个根目的地的中文标签（顺序与 `shell.dart` 的 destinations 一致）。
+/// 底栏第 [index] 个条目的中心点。
 ///
-/// 底栏条目现由 `bottom_bar_matu` 绘制，它不支持给单个条目挂 Key（其 iconBuilder
-/// 会被多次调用，同一 Key 会在一帧里重复）。改用标签定位；但页面内容里也可能出现
-/// 同名文字（如「我的」宫格），因此一律限定在导航胶囊内。
-const List<String> rootTabLabels = <String>['首页', '资产', '看板', '我的'];
-
-/// 导航胶囊内第 [index] 个条目，与语言无关（按胶囊内的文字顺序取）。
-Finder rootTabAt(int index) => find
-    .descendant(
-      of: find.byKey(const Key('main_bottom_nav')),
-      matching: find.byType(Text),
-    )
-    .at(index);
-
-Finder rootTab(String label) => find.descendant(
-  of: find.byKey(const Key('main_bottom_nav')),
-  matching: find.text(label),
-);
+/// 底栏条目等宽铺满整宽，所以按底栏矩形算位置即可。不用
+/// `find.byType(Text).at(i)` 定位条目：`bottom_bar_matu` 会把标签放进不参与命中
+/// 测试的图层，直接 tap 那个 Text 会触发 "would not hit test on the specified
+/// widget" 警告（虽然点击位置仍落在条目点击区，功能是对的）。
+Offset rootTabCenter(WidgetTester tester, int index) {
+  final rect = tester.getRect(find.byKey(const Key('main_bottom_nav')));
+  const count = 4;
+  return Offset(rect.left + rect.width * (index + 0.5) / count, rect.center.dy);
+}
 
 Future<void> tapBottomTab(WidgetTester tester, int index) async {
-  // 按位置取而不是按文案：测试可能已把界面切成英文，中文标签会找不到。
-  await tester.tap(rootTabAt(index));
+  // 按位置点而不是按文案：测试可能已把界面切成英文，中文标签会找不到。
+  await tester.tapAt(rootTabCenter(tester, index));
   // 底栏的选中气泡动画（bottom_bar_matu）不会自行停止，直接 pumpAndSettle 会一直
   // 等到超时。先推进固定帧数让切页动画走完、动画控制器离开未启动态，再 settle
   // 等页面首帧内容（懒加载的列表项等）构建完。
