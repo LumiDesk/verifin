@@ -105,9 +105,34 @@ class _LocalizedTestAppState extends State<_LocalizedTestApp> {
   }
 }
 
+/// 四个根目的地的中文标签（顺序与 `shell.dart` 的 destinations 一致）。
+///
+/// 底栏条目现由 `bottom_bar_matu` 绘制，它不支持给单个条目挂 Key（其 iconBuilder
+/// 会被多次调用，同一 Key 会在一帧里重复）。改用标签定位；但页面内容里也可能出现
+/// 同名文字（如「我的」宫格），因此一律限定在导航胶囊内。
+const List<String> rootTabLabels = <String>['首页', '资产', '看板', '我的'];
+
+/// 导航胶囊内第 [index] 个条目，与语言无关（按胶囊内的文字顺序取）。
+Finder rootTabAt(int index) => find
+    .descendant(
+      of: find.byKey(const Key('main_nav_capsule')),
+      matching: find.byType(Text),
+    )
+    .at(index);
+
+Finder rootTab(String label) => find.descendant(
+  of: find.byKey(const Key('main_nav_capsule')),
+  matching: find.text(label),
+);
+
 Future<void> tapBottomTab(WidgetTester tester, int index) async {
-  await tester.tap(find.byKey(Key('main_tab_$index')));
-  await tester.pumpAndSettle();
+  // 按位置取而不是按文案：测试可能已把界面切成英文，中文标签会找不到。
+  await tester.tap(rootTabAt(index));
+  // 底栏的选中气泡动画（bottom_bar_matu）不会自行停止，pumpAndSettle 会一直等到
+  // 超时。这里只推进固定帧数：足够跑完标签切换与 PageView 过渡。
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
+  await tester.pump(const Duration(milliseconds: 400));
 }
 
 /// 当前页面自身的纵向滚动视图。

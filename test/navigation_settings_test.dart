@@ -136,9 +136,7 @@ void main() {
     );
   });
 
-  testWidgets('drag release keeps snapping from the finger position', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('拖动松手后落到手指下方最近的目的地', (WidgetTester tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(390, 844);
     addTearDown(tester.view.reset);
@@ -156,32 +154,21 @@ void main() {
       Offset(firstCenter + slotWidth * 2.7, capsuleRect.center.dy),
     );
     await tester.pump();
-
-    final beforeRelease = tester
-        .getRect(find.byKey(const Key('main_nav_indicator')))
-        .center
-        .dx;
     await gesture.up();
-    var previousPosition = beforeRelease;
-    for (var frame = 0; frame < 10; frame += 1) {
-      await tester.pump(const Duration(milliseconds: 16));
-      final currentPosition = tester
-          .getRect(find.byKey(const Key('main_nav_indicator')))
-          .center
-          .dx;
-      expect(
-        currentPosition,
-        greaterThanOrEqualTo(previousPosition - 0.1),
-        reason: '吸附到右侧目标时，第 $frame 帧不应向原 Tab 回退',
-      );
-      previousPosition = currentPosition;
-    }
-    await tester.pumpAndSettle();
+    // 底栏的选中气泡动画不会自行停止，用固定帧数推进而不是 pumpAndSettle。
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
+
+    // 起点是第 0 个条目，拖动约 2.7 个槽位后落在第 3 个目的地。
+    // （连续拖动跟随与「松手不回退到起始 Tab」的旧自绘滑块已随 bottom_bar_matu
+    //   接管条目而移除，这里只保证落点正确。）
+    expect(find.text('我的'), findsWidgets);
     expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
 
-    await tester.fling(find.byType(PageView), const Offset(300, 0), 1000);
-    await tester.pumpAndSettle();
-    expect(find.text('预算与统计 · 单位：¥'), findsOneWidget);
+    // bottom_bar_matu 的选中动画用 Future.delayed 串起两段 200ms，且 dispose 时不
+    // 取消。用例结束前把时钟推过去，否则测试框架报「Timer is still pending」。
+    await tester.pump(const Duration(milliseconds: 600));
   });
 
   testWidgets('点击开关行的标题也能切换开关', (WidgetTester tester) async {
@@ -289,8 +276,14 @@ void main() {
     final restarted = await pumpApp(tester, store);
     await tester.pumpAndSettle();
     expect(restarted.localePreference, LocalePreference.en);
-    // 底部导航是纯图标，标签在 Tooltip 里。
-    expect(find.byTooltip('Home'), findsOneWidget);
+    // 底部导航标签常显（规范要求），随语言切换为英文。
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('main_nav_capsule')),
+        matching: find.text('Home'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('changes currency unit style and single-currency visibility', (

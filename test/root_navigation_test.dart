@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:verifin/app/app_theme.dart';
@@ -38,7 +37,7 @@ void main() {
     await tester.pump();
     expect(find.textContaining('long:1'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('main_tab_1')));
+    await tester.tap(find.text('资产'));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('page:1'), findsOneWidget);
@@ -52,19 +51,12 @@ void main() {
     );
   });
 
-  testWidgets('导航与快捷按钮使用不透明实色，不绘制渐变', (tester) async {
+  testWidgets('导航与快捷按钮使用不透明实色，不绘制模糊', (tester) async {
     await tester.pumpWidget(const _NavigationHarness());
 
     final navMaterial = tester.widget<Material>(
       find.byKey(const Key('main_nav_material')),
     );
-    final indicatorDecoration =
-        tester
-                .widget<DecoratedBox>(
-                  find.byKey(const Key('main_nav_indicator')),
-                )
-                .decoration
-            as BoxDecoration;
     final quickEntryMaterial = tester.widget<Material>(
       find.byKey(const Key('main_quick_entry_material')),
     );
@@ -72,13 +64,20 @@ void main() {
     // 曾经这里是磨砂玻璃：表面半透明 + BackdropFilter。现在必须是不透明实色。
     expect(navMaterial.color!.a, 1, reason: '导航胶囊必须不透明，不能透出下层内容');
     expect(quickEntryMaterial.color!.a, 1, reason: '快捷记账按钮必须不透明');
-    expect(indicatorDecoration.gradient, isNull);
     expect(find.byType(BackdropFilter), findsNothing);
   });
 
-  testWidgets('dragging the slider snaps to a complete destination', (
-    tester,
-  ) async {
+  testWidgets('条目由 bottom_bar_matu 绘制，四个中文标签始终可见', (tester) async {
+    await tester.pumpWidget(const _NavigationHarness());
+
+    // 静止时必须显示实时文字（规范要求），不能是截图或图标替代；
+    // 条目不做逐项 Key，测试用唯一的中文标签定位。
+    for (final label in <String>['首页', '资产', '看板', '我的']) {
+      expect(find.text(label), findsWidgets, reason: '$label 标签应常显');
+    }
+  });
+
+  testWidgets('拖动跨过多个条目后吸附到最近的目的地', (tester) async {
     await tester.pumpWidget(const _NavigationHarness());
 
     final capsuleRect = tester.getRect(
@@ -98,52 +97,28 @@ void main() {
 
     expect(find.textContaining('page:2'), findsOneWidget);
   });
-  testWidgets('pressing the current slider gives a subtle compression', (
-    tester,
-  ) async {
+
+  testWidgets('在条目边界点按只解析为一个目的地', (tester) async {
     await tester.pumpWidget(const _NavigationHarness());
 
     final capsuleRect = tester.getRect(
       find.byKey(const Key('main_nav_capsule')),
     );
+    final slotWidth = capsuleRect.width / 4;
+    // 正好落在第 0/1 个条目的分界线上：原始指针与条目自身都不能各选一次。
     final gesture = await tester.startGesture(
-      Offset(capsuleRect.left + capsuleRect.width / 8, capsuleRect.center.dy),
+      Offset(capsuleRect.left + slotWidth, capsuleRect.center.dy),
     );
-    await tester.pump();
-
-    expect(
-      tester
-          .widget<AnimatedScale>(
-            find.byKey(const Key('main_nav_indicator_scale')),
-          )
-          .scale,
-      0.94,
-    );
-    expect(
-      tester
-          .widget<AnimatedScale>(
-            find.byKey(const Key('main_nav_indicator_scale')),
-          )
-          .duration,
-      const Duration(milliseconds: 160),
-    );
-
     await gesture.up();
     await tester.pumpAndSettle();
 
-    expect(
-      tester
-          .widget<AnimatedScale>(
-            find.byKey(const Key('main_nav_indicator_scale')),
-          )
-          .scale,
-      1,
-    );
+    final resolved =
+        find.textContaining('page:0').evaluate().length +
+        find.textContaining('page:1').evaluate().length;
+    expect(resolved, 1, reason: '一次点按只能选中一个目的地');
   });
 
-  testWidgets('a tap on a tab boundary always resolves to one tab', (
-    tester,
-  ) async {
+  testWidgets('按住条目后向远处拖动，最终落在手指下的目的地', (tester) async {
     await tester.pumpWidget(const _NavigationHarness());
 
     final capsuleRect = tester.getRect(
@@ -151,107 +126,31 @@ void main() {
     );
     final slotWidth = capsuleRect.width / 4;
     final gesture = await tester.startGesture(
-      Offset(capsuleRect.left + slotWidth, capsuleRect.center.dy),
+      Offset(capsuleRect.left + slotWidth * 0.5, capsuleRect.center.dy),
     );
+    await tester.pump();
+    // 按住期间不应立刻跳转。
+    expect(find.textContaining('page:0'), findsOneWidget);
+
+    await gesture.moveTo(
+      Offset(capsuleRect.left + slotWidth * 2.5, capsuleRect.center.dy),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
     await gesture.up();
     await tester.pumpAndSettle();
 
-    final resolvedPageCount =
-        find.textContaining('page:0').evaluate().length +
-        find.textContaining('page:1').evaluate().length;
-    expect(resolvedPageCount, 1);
-    final indicatorRect = tester.getRect(
-      find.byKey(const Key('main_nav_indicator')),
-    );
-    final firstCenter = tester
-        .getCenter(find.byKey(const Key('main_tab_0')))
-        .dx;
-    final secondCenter = tester
-        .getCenter(find.byKey(const Key('main_tab_1')))
-        .dx;
-    final nearestCenterDistance = <double>[
-      (indicatorRect.center.dx - firstCenter).abs(),
-      (indicatorRect.center.dx - secondCenter).abs(),
-    ].reduce((a, b) => a < b ? a : b);
-    expect(nearestCenterDistance, lessThan(0.5));
+    expect(find.textContaining('page:2'), findsOneWidget);
   });
 
-  testWidgets(
-    'pressing a distant tab moves toward the finger without jumping',
-    (tester) async {
-      await tester.pumpWidget(const _NavigationHarness());
-
-      final capsuleRect = tester.getRect(
-        find.byKey(const Key('main_nav_capsule')),
-      );
-      final slotWidth = capsuleRect.width / 4;
-      final firstCenter = tester
-          .getCenter(find.byKey(const Key('main_tab_0')))
-          .dx;
-      final fourthCenter = tester
-          .getCenter(find.byKey(const Key('main_tab_3')))
-          .dx;
-      final gesture = await tester.startGesture(
-        Offset(fourthCenter, capsuleRect.center.dy),
-      );
-      await tester.pump();
-
-      expect(
-        tester.getRect(find.byKey(const Key('main_nav_indicator'))).center.dx,
-        closeTo(firstCenter, 0.5),
-      );
-
-      await tester.pump(const Duration(milliseconds: 40));
-      final movingCenter = tester
-          .getRect(find.byKey(const Key('main_nav_indicator')))
-          .center
-          .dx;
-      expect(movingCenter, greaterThan(firstCenter));
-      expect(movingCenter, lessThan(fourthCenter));
-
-      await gesture.moveTo(
-        Offset(capsuleRect.left + slotWidth * 2.5, capsuleRect.center.dy),
-      );
-      await tester.pump(const Duration(milliseconds: 100));
-      await gesture.up();
-      await tester.pumpAndSettle();
-
-      expect(find.textContaining('page:2'), findsOneWidget);
-    },
-  );
-
-  testWidgets('hover changes content color without painting a background', (
-    tester,
-  ) async {
+  testWidgets('点按任意条目都能切到它', (tester) async {
     await tester.pumpWidget(const _NavigationHarness());
 
-    final tab = find.byKey(const Key('main_tab_3'));
-    final iconFinder = find
-        .descendant(of: tab, matching: find.byType(Icon))
-        .first;
-    final tabContext = tester.element(tab);
-    final scheme = Theme.of(tabContext).colorScheme;
-
-    expect(
-      tester.widget<Icon>(iconFinder).color,
-      scheme.onSurface.withValues(alpha: 0.48),
-    );
-    final ink = tester.widget<InkWell>(find.byKey(const Key('main_tab_ink_3')));
-    expect(ink.hoverColor, Colors.transparent);
-    expect(ink.highlightColor, Colors.transparent);
-    expect(ink.splashColor, Colors.transparent);
-
-    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
-    await mouse.addPointer(location: Offset.zero);
-    await mouse.moveTo(tester.getCenter(tab));
-    await tester.pump();
-
-    expect(
-      tester.widget<Icon>(iconFinder).color,
-      scheme.onSurface.withValues(alpha: 0.76),
-    );
-
-    await mouse.removePointer();
+    const labels = <String>['首页', '资产', '看板', '我的'];
+    for (var i = 0; i < labels.length; i++) {
+      await tester.tap(find.text(labels[i]));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('page:$i'), findsOneWidget);
+    }
   });
 }
 

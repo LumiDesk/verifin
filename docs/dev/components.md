@@ -39,7 +39,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `VeriCard` | Widget | `common_widgets.dart` | 统一圆角/描边/阴影卡片，可点击（`quietTap` 长按吞噬变体） |
 | `VeriHeader` | Widget | `common_widgets.dart` | 页眉（标题+副标题+返回+actions，最小高度 52、候选构建 56；用最小高度而非固定高度，系统字号放大时两行标题不会被裁掉） |
 | `PageHeader` | Widget | `common_widgets.dart` | `VeriHeader` 的薄封装（单 trailing） |
-| `VeriRootNavigation` / `VeriRootNavigationBody` / `VeriNavigationDestination` / `veriRootPageListPadding` | Widget / 值类 / 布局 helper | `root_navigation.dart` | 四个根页面的不透明浮动导航胶囊；Body 隔离 `extendBody` 注入的底栏 padding，避免嵌套日历/宫格增高；根列表再用 helper 按真实底栏高度避让，完整约定见 `liquid-glass-navigation.md` |
+| `VeriRootNavigation` / `VeriRootNavigationBody` / `VeriNavigationDestination` / `veriRootPageListPadding` | Widget / 值类 / 布局 helper | `root_navigation.dart` | 四个根页面的不透明浮动导航胶囊。**条目由 `bottom_bar_matu` 的 `BottomBarBubble` 绘制**（选中气泡动效、中文标签常显）；胶囊底板、描边、阴影、指针拖动状态机与快捷记账按钮仍由本组件提供。注意两条第三方约束：① 库会在 `didUpdateWidget` 里同步回灌 `onSelect`，所以驱动它的 `selectedIndex` 只在松手后更新，回调统一用 `addPostFrameCallback` 延后，否则抛 `setState() called during build`；② 它的选中动画不会自行停止且 `dispose` 不取消 200ms 计时器，测试里不能 `pumpAndSettle`（会超时），要用固定帧数推进。条目不做逐项 Key（`iconBuilder` 会被多次调用导致同帧重键），测试按胶囊内文字位置定位。Body 隔离 `extendBody` 注入的底栏 padding；根列表用 helper 按真实底栏高度避让 |
 | `VeriFeedbackHost` / `VeriFeedbackController` / `VeriFeedbackRequest` / `VeriFeedbackResult` | 根级 Widget / Controller / 模型 | `feedback.dart` | 跨路由应用内轻提示：内容自适应宽高与三行正文、四条可见栈、优先级等待队列、2/4/8 秒与常驻、单操作 Future 结果、显式去重、前后台暂停；完整规范见 `feedback-system.md` |
 | `SectionTitle` | Widget | `common_widgets.dart` | 区块标题 + 可选 trailing |
 | `EmptyState` | Widget | `common_widgets.dart` | 空状态（图标+标题+描述+可选 `action` 操作入口） |

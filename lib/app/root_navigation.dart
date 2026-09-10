@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'package:bottom_bar_matu/bottom_bar_matu.dart';
+
 import 'package:flutter/material.dart';
 
 import 'app_theme.dart';
@@ -109,7 +111,6 @@ class _VeriRootNavigationState extends State<VeriRootNavigation>
   double _displayIndex = 0;
   double _animationStart = 0;
   double _animationEnd = 0;
-  bool _indicatorPressed = false;
   bool _dragging = false;
   bool _suppressNextDestinationTap = false;
   int? _activePointer;
@@ -117,6 +118,7 @@ class _VeriRootNavigationState extends State<VeriRootNavigation>
   double? _pointerDownX;
   double? _lastPointerX;
   double _lightMotion = 0;
+  int? _pendingSelection;
 
   Key _key(String suffix) => ValueKey('${widget.keyPrefix}_$suffix');
 
@@ -195,7 +197,6 @@ class _VeriRootNavigationState extends State<VeriRootNavigation>
       _lightMotion = 0;
       _pressedTargetIndex = pressedIndex;
       _dragging = false;
-      _indicatorPressed = true;
     });
     _animateIndicatorTo(pressedIndex.toDouble(), _pressMoveDuration);
   }
@@ -249,19 +250,30 @@ class _VeriRootNavigationState extends State<VeriRootNavigation>
       _lightMotion = 0;
       _pressedTargetIndex = null;
       _dragging = false;
-      _indicatorPressed = false;
     });
     if (wasDragging) {
       _animateIndicatorTo(targetIndex.toDouble(), _snapDuration);
-      widget.onDestinationSelected(targetIndex);
+      _notifyDestination(targetIndex);
     } else if (pressedTargetIndex != null) {
       _suppressNextDestinationTap = true;
       _animateIndicatorTo(pressedTargetIndex.toDouble(), _snapDuration);
-      widget.onDestinationSelected(pressedTargetIndex);
+      _notifyDestination(pressedTargetIndex);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _suppressNextDestinationTap = false;
       });
     }
+  }
+
+  /// 把选中结果上报给外层，延后到当前帧结束。
+  ///
+  /// 上报会驱动 Shell 切页（PageView 动画 + 整树重建）；若在指针/动画回调里同步
+  /// 触发，会和 bottom_bar_matu 自身的动画通知撞在一起，抛
+  /// 「setState() called during build」。
+  void _notifyDestination(int index) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      widget.onDestinationSelected(index);
+    });
   }
 
   void _handleDestinationTap(int index) {
@@ -269,8 +281,19 @@ class _VeriRootNavigationState extends State<VeriRootNavigation>
       _suppressNextDestinationTap = false;
       return;
     }
-    _animateIndicatorTo(index.toDouble(), _snapDuration);
-    widget.onDestinationSelected(index);
+    // bottom_bar_matu 会在 didUpdateWidget 里同步回调 onSelect，也就是在整个构建
+    // 过程中；此时 setState（_animateIndicatorTo 会触发）会抛
+    // 「setState() called during build」，回灌外层切页更会连带整树重建。
+    // 因此这里只记下意图，等这一帧结束再统一处理。
+    _pendingSelection = index;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final target = _pendingSelection;
+      _pendingSelection = null;
+      if (target == null) return;
+      _animateIndicatorTo(target.toDouble(), _snapDuration);
+      widget.onDestinationSelected(target);
+    });
   }
 
   void _handlePointerCancel(PointerCancelEvent event) {
@@ -285,7 +308,6 @@ class _VeriRootNavigationState extends State<VeriRootNavigation>
       _lightMotion = 0;
       _pressedTargetIndex = null;
       _dragging = false;
-      _indicatorPressed = false;
     });
     _animateIndicatorTo(widget.currentIndex.toDouble(), _snapDuration);
   }
@@ -390,6 +412,12 @@ class _VeriRootNavigationState extends State<VeriRootNavigation>
         child: LayoutBuilder(
           builder: (context, constraints) {
             final slotWidth = constraints.maxWidth / widget.destinations.length;
+            // 喂给底栏的选中项只在「没有手指按着」时跟随，取整数槽位。
+            //
+            // 不能把拖动中的连续位置直接传给它：bottom_bar_matu 在 didUpdateWidget
+            // 里会回灌 onSelect，而拖动时外层正在重建，于是变成
+            // 「setState() called during build」。拖动连续跟随由 _displayIndex 与
+            // 自绘层完成，松手吸附后再把最终结果交给它。
             final selectedIndex = _displayIndex.round().clamp(
               0,
               widget.destinations.length - 1,
@@ -400,56 +428,40 @@ class _VeriRootNavigationState extends State<VeriRootNavigation>
               onPointerMove: (event) => _handlePointerMove(event, slotWidth),
               onPointerUp: _handlePointerUp,
               onPointerCancel: _handlePointerCancel,
-              child: Stack(
-                fit: StackFit.expand,
-                children: <Widget>[
-                  Positioned(
-                    key: _key('nav_indicator_position'),
-                    left: 0,
-                    top: 3,
-                    bottom: 3,
-                    width: slotWidth - 6,
-                    // 用 Transform 平移而不是改 Positioned.left：拖动时每帧只重绘、
-                    // 不重排，避免整条导航每帧走一次布局。
-                    child: Transform.translate(
-                      offset: Offset(_displayIndex * slotWidth + 3, 0),
-                      child: IgnorePointer(
-                        child: AnimatedScale(
-                          key: _key('nav_indicator_scale'),
-                          duration: const Duration(milliseconds: 160),
-                          curve: Curves.easeOutCubic,
-                          scale: _indicatorPressed || _dragging ? 0.94 : 1,
-                          child: DecoratedBox(
-                            key: _key('nav_indicator'),
-                            decoration: BoxDecoration(
-                              color: (isDark ? Colors.white : Colors.black)
-                                  .withValues(alpha: isDark ? 0.12 : 0.065),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                          ),
-                        ),
+              // 条目绘制交给 bottom_bar_matu：它负责图标、文字与选中气泡动效。
+              // 外面仍由本组件提供胶囊底板、指针拖动状态机与快捷记账按钮；
+              // 拖动时把 _displayIndex 四舍五入喂给它，选中反馈跟着手指走。
+              //
+              // 条目不做逐项 Key：库的 iconBuilder 会被多次调用，同一 Key 会在一帧
+              // 里出现多份。选中/拖动只按位置计算，测试改用唯一的中文标签定位。
+              child: BottomBarBubble(
+                key: _key('nav_bar'),
+                selectedIndex: selectedIndex,
+                items: <BottomBarItem>[
+                  for (final destination in widget.destinations)
+                    BottomBarItem(
+                      iconData: destination.icon,
+                      iconSize: 22,
+                      label: destination.label,
+                      labelMarginTop: 2,
+                      labelTextStyle: TextStyle(
+                        fontSize: veriUnifiedDesignPreview ? 12 : 10,
+                        fontWeight: FontWeight.w700,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.72),
                       ),
                     ),
-                  ),
-                  Row(
-                    children: <Widget>[
-                      for (
-                        var index = 0;
-                        index < widget.destinations.length;
-                        index += 1
-                      )
-                        Expanded(
-                          child: _DestinationButton(
-                            key: _key('tab_$index'),
-                            inkKey: _key('tab_ink_$index'),
-                            destination: widget.destinations[index],
-                            selected: index == selectedIndex,
-                            onTap: () => _handleDestinationTap(index),
-                          ),
-                        ),
-                    ],
-                  ),
                 ],
+                // 选中态只做轻微的中性强调：规范要求不给整条导航染品牌蓝，
+                // 选中反馈由库自身的气泡动效承担。
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.14),
+                backgroundColor: Colors.transparent,
+                height: 60,
+                bubbleSize: 22,
+                onSelect: _handleDestinationTap,
               ),
             );
           },
@@ -522,91 +534,6 @@ class _QuickEntryButton extends StatelessWidget {
                 onTap: onTap,
                 onLongPress: onLongPress,
                 child: const Icon(Icons.add_rounded, color: veriRoyal),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DestinationButton extends StatefulWidget {
-  const _DestinationButton({
-    super.key,
-    required this.inkKey,
-    required this.destination,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final Key inkKey;
-  final VeriNavigationDestination destination;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  State<_DestinationButton> createState() => _DestinationButtonState();
-}
-
-class _DestinationButtonState extends State<_DestinationButton> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final color = widget.selected
-        ? scheme.onSurface.withValues(alpha: 0.94)
-        : scheme.onSurface.withValues(alpha: _hovered ? 0.76 : 0.48);
-    return Semantics(
-      selected: widget.selected,
-      button: true,
-      label: widget.destination.label,
-      child: Tooltip(
-        message: widget.destination.label,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-          child: Material(
-            color: Colors.transparent,
-            shape: const StadiumBorder(),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              key: widget.inkKey,
-              borderRadius: BorderRadius.circular(999),
-              hoverColor: Colors.transparent,
-              splashColor: Colors.transparent,
-              highlightColor: Colors.transparent,
-              onHover: (value) {
-                if (_hovered != value) {
-                  setState(() => _hovered = value);
-                }
-              },
-              onTap: widget.onTap,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Icon(
-                    widget.selected
-                        ? widget.destination.selectedIcon
-                        : widget.destination.icon,
-                    size: 21,
-                    color: color,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    widget.destination.label,
-                    // 大字号下英文标签会换行把图标挤出胶囊：限一行，宁可省略。
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontSize: veriUnifiedDesignPreview ? 12 : 10,
-                      color: color,
-                      fontWeight: widget.selected
-                          ? FontWeight.w700
-                          : FontWeight.w500,
-                    ),
-                  ),
-                ],
               ),
             ),
           ),
