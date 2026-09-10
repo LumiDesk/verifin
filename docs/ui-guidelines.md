@@ -16,7 +16,7 @@
 
 承载根导航的 Shell 必须关闭 `Scaffold.extendBody`（停靠底栏不透明，内容延伸到它背后会被盖住半截），并关闭 body 外层 `SafeArea` 的 bottom 裁切。PageView 外必须套 `VeriRootNavigationBody`，隔离 Scaffold 注入的 bottom padding，避免页面内未显式 padding 的 GridView（日历、功能宫格等）被底栏高度撑大。底栏内容用 `SafeArea(minimum: 12, maintainBottomViewPadding: true)` 让开系统导航条；根页面列表用 `veriRootPageListPadding(context)` 取统一内边距。
 
-底栏只响应点击。点击后底栏动画与页面过渡必须同时起步、同时结束——库的 `onSelect` 要等 200ms 才回调，因此底栏自己用 `Listener` 立刻派发，切页时长取 `VeriRootNavigation.switchDuration`。完整时序与第三方约束见 `docs/dev/components.md` 的组件条目。
+底栏只响应点击。点击后底栏的扫过动效与页面过渡同时起步、同时收住：页面由弹簧驱动、**没有固定时长**，弹簧的收敛时间与距离无关，底栏取同一时间尺度（`VeriRootNavigation.switchDuration`）即可对齐。完整时序见 `docs/dev/components.md` 的组件条目。
 
 底栏与记账按钮都使用不透明表面色加一条顶部描边，不绘制渐变、不做背景模糊或折射。品牌蓝只用于记账按钮等明确主操作，不用于选中 Tab。
 

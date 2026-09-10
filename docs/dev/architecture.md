@@ -14,7 +14,7 @@ Controller 经 repository 写库。`VeriFinController.create()` 是生产初始�
 | SQLite 与持久化 | `lib/data/`；[技术决策](tech-decisions.md)、repository contract 与 migration matrix 测试 |
 | 模型 | `lib/app/models/`，`models.dart` 稳定导出；JSON/SQLite 映射须同步 |
 | 页面与弹窗 | `lib/pages/`、`pages/sheets.dart`、`app/entry_sheets.dart`；[组件目录](components.md) |
-| 共享绘制、菜单、图表 | `common_widgets.dart`、`chart_painters.dart`、`root_navigation.dart`；[统一设计](../design-system.md) |
+| 共享绘制、菜单、图表 | `common_widgets.dart`、`chart_painters.dart`、`root_navigation.dart`、`veri_bottom_bar.dart`；[统一设计](../design-system.md) |
 | 多币种、预算、退款 | [多币种](multi-currency-design.md)、[单期预算](category-budget-override-design.md)、[退款](refund-design.md) |
 | 导入、备份 | `lib/app/backup/import/`、`lib/app/backup/`；只在预览确认后落库，字节格式仅由 BackupService 编解码 |
 | AI | `lib/app/ai/`；[只读查询工具](ai-tools.md)、[主动采集](auto-capture-plan.md) |

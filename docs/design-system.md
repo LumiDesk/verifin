@@ -38,7 +38,7 @@
 | --- | --- |
 | 内容卡片 | `veriContentSurfaceColor(brightness)` 实色 + 圆角 + 细描边；深色 `veriPreviewSurfaceDark`，浅色 `veriSurfaceLight` |
 | 页面背景 | `scaffoldBackgroundColor` 取画布纯色（`veriPreviewCanvasLight` / `veriPreviewCanvasDark`），不用渐变 |
-| 底部导航胶囊 | 不透明表面色 + 单描边 + 阴影；浮动位置、尺寸与指针状态机不变 |
+| 底部导航（停靠底栏） | 不透明表面色 + 顶部细描边；表面色一直铺到屏幕最底（含系统导航条背后） |
 | 快捷记账按钮 | 不透明圆形表面 + `veriRoyal` 加号 |
 | 菜单 / 弹层 | 实色面板（`veriSurfaceLight` / `veriSurfaceAltDark`）+ 圆角描边；进出为淡入淡出 + 0.96→1 缩放 |
 | 预算圆环 | 保持原常规 SweepGradient 进度环，颜色、比例与无接缝处理不变 |
@@ -54,7 +54,7 @@
 ## 导航与输入
 
 - 四个根目的地使用同一条**停靠底栏**：整宽、不透明、贴底，条目由自有的 `VeriBottomBar` 绘制（抄写自 `bottom_bar_matu` 并修复其动画缺陷，依赖已移除）；首页才显示右下角浮动的记账按钮。选中项用中性强调，不给整条导航染品牌蓝。
-- 底栏**只响应点击**，不再有拖动切页与自绘滑块。点击后底栏动画与页面过渡必须**同时起步、同时结束**（`VeriRootNavigation.switchDuration` 与切页时长取同一值）；跨页动画只认最终目的地。
+- 底栏**只响应点击**，不再有拖动切页与自绘滑块。点击后底栏的扫过动效与页面过渡**同时起步、同时收住**：页面由弹簧驱动、没有固定时长（见 `components.md`），弹簧的收敛时间与距离无关，底栏取同一时间尺度即可对齐。跨页动画只认最终目的地。
 - 底栏表面色一直铺到屏幕最底（含系统导航条背后），不留分块；条目内容用 `SafeArea(minimum: 12, maintainBottomViewPadding: true)` 取 `max(系统留白, 12)` 让开，既不在手势提示线关闭时贴边，也不在键盘弹起时跳动。`Scaffold` 不启用 `extendBody`，列表末项只需少量留白。
 - 最近交易等分区标题的 hover、按压 highlight 和 splash 均不绘制横条，保留点击与键盘焦点。动效尊重系统减少动画设置。
 - 单选、确认框、输入和底部弹窗复用公共入口；金额使用数字键盘。保存失败要保留草稿并反馈，不能误报成功。短反馈统一用根级 Feedback Host。

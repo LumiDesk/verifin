@@ -53,6 +53,12 @@ adb devices -l
 仅在复现同类错误时使用上述 Java/Kotlin 绕过，不复制到 CI 全局配置。`local.properties`
 由 Flutter 维护且不提交；正式 keystore 永远不替换或输出。
 
+**别拿并行 `input tap` 压测模拟器。** 每次 `input` 都会在设备上起一个 JVM，几十路并发足以把
+模拟器自己打爆：之后应用冷启动会从几秒退化到 30 秒以上、日志出现 `NO_INPUT_CHANNEL`、点击
+全部打空，还会弹出「应用无响应」对话框——**看着像应用的 Bug，其实是模拟器废了**。`adb reboot`
+即可恢复。连点、快速切页这类压测优先用 `flutter test` 的 widget 测试（可控、可复现、能断言），
+真机/模拟器只做最终确认。
+
 ## 日常真机开发
 
 手机开启 USB 调试并授权电脑；某些 ROM 还需允许 USB 安装。`unauthorized`、锁屏或
