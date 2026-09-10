@@ -66,7 +66,8 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      # 固定到真机验收过的引擎版本；两渠道包含统一外观，高级材质仍默认关闭。
+      # 固定到真机验收过的引擎版本；两渠道都带 UNIFIED_DESIGN_PREVIEW，
+      # 保证发布包与已评审外观一致（该参数只控制布局密度，与材质无关）。
       - name: Verify release design flows
         run: flutter test test/design_consistency_test.dart test/unified_design_preview_test.dart test/home_density_test.dart test/anchored_menu_test.dart test/material_stability_test.dart test/navigation_settings_test.dart --dart-define=UNIFIED_DESIGN_PREVIEW=true
 
