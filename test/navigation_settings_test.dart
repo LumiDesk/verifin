@@ -40,11 +40,12 @@ void main() {
   ) async {
     await pumpApp(tester);
 
+    // 底栏已改为停靠式（不透明、整宽贴底），内容不再延伸到它背后。
     expect(
       tester
           .widget<Scaffold>(find.byKey(const Key('main_shell_scaffold')))
           .extendBody,
-      isTrue,
+      isFalse,
     );
     expect(
       tester
@@ -61,10 +62,8 @@ void main() {
           .first,
     );
     final homeListPadding = homeList.padding! as EdgeInsets;
-    final navigationHeight = tester
-        .getSize(find.byKey(const Key('main_bottom_nav')))
-        .height;
-    expect(homeListPadding.bottom, navigationHeight + 12);
+    // Scaffold 已为停靠底栏让位，列表末项只需少量留白。
+    expect(homeListPadding.bottom, 12);
     expect(find.text('日常账本 · 单位：¥'), findsOneWidget);
 
     await tapBottomTab(tester, 1);
@@ -136,39 +135,24 @@ void main() {
     );
   });
 
-  testWidgets('拖动松手后落到手指下方最近的目的地', (WidgetTester tester) async {
+  testWidgets('点击底栏条目切到对应页面', (WidgetTester tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(390, 844);
     addTearDown(tester.view.reset);
     await pumpApp(tester);
 
-    final capsuleRect = tester.getRect(
-      find.byKey(const Key('main_nav_capsule')),
+    final navRect = tester.getRect(find.byKey(const Key('main_bottom_nav')));
+    final slotWidth = navRect.width / 4;
+    // 第四个条目的中心：点「我的」。
+    await tester.tapAt(
+      Offset(navRect.left + slotWidth * 3.5, navRect.center.dy),
     );
-    final slotWidth = capsuleRect.width / 4;
-    final firstCenter = capsuleRect.left + slotWidth * 0.5;
-    final gesture = await tester.startGesture(
-      Offset(firstCenter, capsuleRect.center.dy),
-    );
-    await gesture.moveTo(
-      Offset(firstCenter + slotWidth * 2.7, capsuleRect.center.dy),
-    );
-    await tester.pump();
-    await gesture.up();
-    // 底栏的选中气泡动画不会自行停止，用固定帧数推进而不是 pumpAndSettle。
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
 
-    // 起点是第 0 个条目，拖动约 2.7 个槽位后落在第 3 个目的地。
-    // （连续拖动跟随与「松手不回退到起始 Tab」的旧自绘滑块已随 bottom_bar_matu
-    //   接管条目而移除，这里只保证落点正确。）
-    expect(find.text('我的'), findsWidgets);
     expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
-
-    // bottom_bar_matu 的选中动画用 Future.delayed 串起两段 200ms，且 dispose 时不
-    // 取消。用例结束前把时钟推过去，否则测试框架报「Timer is still pending」。
-    await tester.pump(const Duration(milliseconds: 600));
   });
 
   testWidgets('点击开关行的标题也能切换开关', (WidgetTester tester) async {
@@ -279,7 +263,7 @@ void main() {
     // 底部导航标签常显（规范要求），随语言切换为英文。
     expect(
       find.descendant(
-        of: find.byKey(const Key('main_nav_capsule')),
+        of: find.byKey(const Key('main_bottom_nav')),
         matching: find.text('Home'),
       ),
       findsOneWidget,

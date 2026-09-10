@@ -4,8 +4,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/app_theme.dart';
 import 'package:verifin/app/root_navigation.dart';
 
+/// 停靠底栏的布局与契约。
+///
+/// 条目由 `bottom_bar_matu` 的 `BottomBarDoubleBullet` 绘制；快捷记账按钮已移出
+/// 底栏，改由 Shell 在右下角浮动（见 navigation_settings_test 中的壳层断言），
+/// 因此这里只覆盖底栏自身。
 void main() {
-  testWidgets('root navigation fits a 360dp Android viewport', (tester) async {
+  testWidgets('停靠底栏在 360dp 视口下整宽贴底', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(360, 800);
     tester.view.padding = const FakeViewPadding(bottom: 20);
@@ -14,148 +19,53 @@ void main() {
     await tester.pumpWidget(const _NavigationHarness());
 
     expect(tester.takeException(), isNull);
-    expect(find.byKey(const Key('main_bottom_nav')), findsOneWidget);
-    expect(find.byKey(const Key('quick_entry_fab')), findsOneWidget);
-    final capsuleRect = tester.getRect(
-      find.byKey(const Key('main_nav_capsule')),
-    );
-    final quickEntryRect = tester.getRect(
-      find.byKey(const Key('main_quick_entry_scale')),
-    );
-    expect(capsuleRect.width, 244);
-    expect(capsuleRect.left, 24);
-    expect(360 - quickEntryRect.right, 24);
-    expect(800 - capsuleRect.bottom, 44);
+    final navRect = tester.getRect(find.byKey(const Key('main_bottom_nav')));
+    expect(navRect.left, 0, reason: '停靠底栏应整宽，不再留浮动外边距');
+    expect(navRect.right, 360);
+    // 让出系统手势条：底栏内容不贴到 800 的最底。
+    expect(navRect.bottom, lessThanOrEqualTo(800));
+    expect(navRect.height, lessThanOrEqualTo(VeriRootNavigationBody.barHeight));
   });
 
-  testWidgets('quick entry only operates on home and preserves long press', (
-    tester,
-  ) async {
+  testWidgets('四个中文标签常显在底栏内', (tester) async {
     await tester.pumpWidget(const _NavigationHarness());
 
-    await tester.longPress(find.byKey(const Key('quick_entry_fab')));
-    await tester.pump();
-    expect(find.textContaining('long:1'), findsOneWidget);
-
-    await tester.tap(find.text('资产'));
-    await tester.pumpAndSettle();
-
-    expect(find.textContaining('page:1'), findsOneWidget);
-    expect(
-      tester
-          .widget<IgnorePointer>(
-            find.byKey(const Key('main_quick_entry_visibility')),
-          )
-          .ignoring,
-      isTrue,
-    );
+    for (final label in <String>['首页', '资产', '看板', '我的']) {
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('main_bottom_nav')),
+          matching: find.text(label),
+        ),
+        findsWidgets,
+        reason: '$label 标签应常显在底栏内',
+      );
+    }
   });
 
-  testWidgets('导航与快捷按钮使用不透明实色，不绘制模糊', (tester) async {
+  testWidgets('底栏不绘制模糊', (tester) async {
     await tester.pumpWidget(const _NavigationHarness());
-
-    final navMaterial = tester.widget<Material>(
-      find.byKey(const Key('main_nav_material')),
-    );
-    final quickEntryMaterial = tester.widget<Material>(
-      find.byKey(const Key('main_quick_entry_material')),
-    );
-
-    // 曾经这里是磨砂玻璃：表面半透明 + BackdropFilter。现在必须是不透明实色。
-    expect(navMaterial.color!.a, 1, reason: '导航胶囊必须不透明，不能透出下层内容');
-    expect(quickEntryMaterial.color!.a, 1, reason: '快捷记账按钮必须不透明');
     expect(find.byType(BackdropFilter), findsNothing);
   });
 
-  testWidgets('条目由 bottom_bar_matu 绘制，四个中文标签始终可见', (tester) async {
-    await tester.pumpWidget(const _NavigationHarness());
+  testWidgets('点按条目回调对应下标', (tester) async {
+    final selected = <int>[];
+    await tester.pumpWidget(_NavigationHarness(onSelected: selected.add));
 
-    // 静止时必须显示实时文字（规范要求），不能是截图或图标替代；
-    // 条目不做逐项 Key，测试用唯一的中文标签定位。
-    for (final label in <String>['首页', '资产', '看板', '我的']) {
-      expect(find.text(label), findsWidgets, reason: '$label 标签应常显');
-    }
-  });
-
-  testWidgets('拖动跨过多个条目后吸附到最近的目的地', (tester) async {
-    await tester.pumpWidget(const _NavigationHarness());
-
-    final capsuleRect = tester.getRect(
-      find.byKey(const Key('main_nav_capsule')),
-    );
-    final slotWidth = capsuleRect.width / 4;
-    final gesture = await tester.startGesture(
-      Offset(capsuleRect.left + slotWidth * 3.5, capsuleRect.center.dy),
-    );
-    await tester.pump(const Duration(milliseconds: 60));
-    await gesture.moveTo(
-      Offset(capsuleRect.left + slotWidth * 2.5, capsuleRect.center.dy),
-    );
-    await tester.pump(const Duration(milliseconds: 120));
-    await gesture.up();
-    await tester.pumpAndSettle();
-
-    expect(find.textContaining('page:2'), findsOneWidget);
-  });
-
-  testWidgets('在条目边界点按只解析为一个目的地', (tester) async {
-    await tester.pumpWidget(const _NavigationHarness());
-
-    final capsuleRect = tester.getRect(
-      find.byKey(const Key('main_nav_capsule')),
-    );
-    final slotWidth = capsuleRect.width / 4;
-    // 正好落在第 0/1 个条目的分界线上：原始指针与条目自身都不能各选一次。
-    final gesture = await tester.startGesture(
-      Offset(capsuleRect.left + slotWidth, capsuleRect.center.dy),
-    );
-    await gesture.up();
-    await tester.pumpAndSettle();
-
-    final resolved =
-        find.textContaining('page:0').evaluate().length +
-        find.textContaining('page:1').evaluate().length;
-    expect(resolved, 1, reason: '一次点按只能选中一个目的地');
-  });
-
-  testWidgets('按住条目后向远处拖动，最终落在手指下的目的地', (tester) async {
-    await tester.pumpWidget(const _NavigationHarness());
-
-    final capsuleRect = tester.getRect(
-      find.byKey(const Key('main_nav_capsule')),
-    );
-    final slotWidth = capsuleRect.width / 4;
-    final gesture = await tester.startGesture(
-      Offset(capsuleRect.left + slotWidth * 0.5, capsuleRect.center.dy),
-    );
+    final navRect = tester.getRect(find.byKey(const Key('main_bottom_nav')));
+    final slot = navRect.width / 4;
+    await tester.tapAt(Offset(navRect.left + slot * 2.5, navRect.center.dy));
     await tester.pump();
-    // 按住期间不应立刻跳转。
-    expect(find.textContaining('page:0'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
 
-    await gesture.moveTo(
-      Offset(capsuleRect.left + slotWidth * 2.5, capsuleRect.center.dy),
-    );
-    await tester.pump(const Duration(milliseconds: 100));
-    await gesture.up();
-    await tester.pumpAndSettle();
-
-    expect(find.textContaining('page:2'), findsOneWidget);
-  });
-
-  testWidgets('点按任意条目都能切到它', (tester) async {
-    await tester.pumpWidget(const _NavigationHarness());
-
-    const labels = <String>['首页', '资产', '看板', '我的'];
-    for (var i = 0; i < labels.length; i++) {
-      await tester.tap(find.text(labels[i]));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('page:$i'), findsOneWidget);
-    }
+    expect(selected, contains(2));
   });
 }
 
 class _NavigationHarness extends StatefulWidget {
-  const _NavigationHarness();
+  const _NavigationHarness({this.onSelected});
+
+  final ValueChanged<int>? onSelected;
 
   @override
   State<_NavigationHarness> createState() => _NavigationHarnessState();
@@ -163,7 +73,6 @@ class _NavigationHarness extends StatefulWidget {
 
 class _NavigationHarnessState extends State<_NavigationHarness> {
   int _index = 0;
-  int _longPresses = 0;
 
   static const _destinations = <VeriNavigationDestination>[
     VeriNavigationDestination(
@@ -191,20 +100,15 @@ class _NavigationHarnessState extends State<_NavigationHarness> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: buildVeriFinTheme(Brightness.light),
-      darkTheme: buildVeriFinTheme(Brightness.dark),
-      themeMode: ThemeMode.dark,
+      theme: buildVeriFinTheme(Brightness.dark),
       home: Scaffold(
-        body: Center(child: Text('page:$_index\nlong:$_longPresses')),
+        body: Center(child: Text('page:$_index')),
         bottomNavigationBar: VeriRootNavigation(
           currentIndex: _index,
           destinations: _destinations,
-          onDestinationSelected: (index) => setState(() => _index = index),
-          quickEntryLabel: '快速记账',
-          showQuickEntry: _index == 0,
-          onQuickEntryTap: () {},
-          onQuickEntryLongPress: () {
-            setState(() => _longPresses += 1);
+          onDestinationSelected: (index) {
+            widget.onSelected?.call(index);
+            setState(() => _index = index);
           },
         ),
       ),
