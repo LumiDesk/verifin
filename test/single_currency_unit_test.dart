@@ -206,6 +206,24 @@ void main() {
       expect(find.textContaining('单位：'), findsNothing);
     });
 
+    testWidgets('日历卡连角标带前置间距一起收掉，底部不留空白', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(393, 2000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final controller = await makeController();
+      await pumpPage(tester, controller, const HomePage());
+
+      expect(find.byType(CalendarPreview), findsOneWidget);
+      // 只让 MoneyUnitLabel 自己变空会留下那 6dp 前置间距，卡片底部空一条；
+      // 断言整块没有被构造，而不只是渲染为空。
+      expect(
+        find.descendant(
+          of: find.byType(CalendarPreview),
+          matching: find.byType(MoneyUnitLabel),
+        ),
+        findsNothing,
+      );
+    });
+
     testWidgets('「货币与汇率」入口副标题不再显示币种', (tester) async {
       await tester.binding.setSurfaceSize(const Size(393, 1400));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -257,6 +275,22 @@ void main() {
       await pumpPage(tester, controller, AccountDetailPage(account: account));
 
       expect(find.textContaining('单位：'), findsOneWidget);
+    });
+
+    testWidgets('日历卡角标连同前置间距一起保留', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(393, 2000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final controller = await makeController();
+      addForeignAccount(controller);
+      await pumpPage(tester, controller, const HomePage());
+
+      expect(
+        find.descendant(
+          of: find.byType(CalendarPreview),
+          matching: find.byType(MoneyUnitLabel),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('多个账本时列表行尾保留币种以区分口径', (tester) async {
