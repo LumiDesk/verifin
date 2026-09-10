@@ -175,42 +175,58 @@ class _VeriFinShellState extends State<VeriFinShell> {
                   ),
                 ),
               ),
-              // 记账按钮：右下角浮动，压住内容之上；只在首页显示。
-              // 用自绘圆钮而非 FloatingActionButton：后者不支持长按（长按走 AI 记账）。
-              if (_index == 0)
-                Positioned(
-                  key: const Key('quick_entry_fab_slot'),
-                  right: 16,
-                  bottom: 16,
-                  child: Tooltip(
-                    message: l10n.quickEntry,
-                    // InkWell 在 Tooltip 之内：Tooltip 自己会认领长按手势（用来弹出
-                    // 说明），放在外层会把「长按走 AI 记账」吞掉。
-                    child: Material(
-                      key: const Key('quick_entry_fab'),
-                      color: veriRoyal,
-                      shape: const CircleBorder(),
-                      elevation: 4,
-                      clipBehavior: Clip.antiAlias,
-                      child: InkWell(
-                        key: const Key('quick_entry_action'),
-                        customBorder: const CircleBorder(),
-                        onTap: () => _startQuickEntry(context),
-                        onLongPress: () =>
-                            _startQuickEntry(context, longPress: true),
-                        child: const SizedBox(
-                          width: 56,
-                          height: 56,
-                          child: Icon(
-                            Icons.add_rounded,
-                            size: 28,
-                            color: Colors.white,
+              // 记账按钮：右下角浮动，压住内容之上；只在首页显示，进出带缩放淡入。
+              // 圆角方形（veriRadiusLg）+ veriRoyal，与最初的设计一致；用自绘
+              // Material+InkWell 而不是 FloatingActionButton，因为后者内部会吞掉
+              // 长按，而长按要走 AI 记账。
+              Positioned(
+                key: const Key('quick_entry_fab_slot'),
+                right: 16,
+                bottom: 16,
+                child: IgnorePointer(
+                  ignoring: _index != 0,
+                  child: AnimatedScale(
+                    key: const Key('quick_entry_scale'),
+                    scale: _index == 0 ? 1 : 0.7,
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOutCubic,
+                    child: AnimatedOpacity(
+                      key: const Key('quick_entry_opacity'),
+                      opacity: _index == 0 ? 1 : 0,
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeOutCubic,
+                      child: SizedBox(
+                        width: 56,
+                        height: 56,
+                        child: Tooltip(
+                          message: l10n.quickEntry,
+                          child: Material(
+                            key: const Key('quick_entry_fab'),
+                            color: veriRoyal,
+                            elevation: 6,
+                            shadowColor: Colors.black.withValues(alpha: 0.3),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(veriRadiusLg),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: InkWell(
+                              key: const Key('quick_entry_action'),
+                              onTap: () => _startQuickEntry(context),
+                              onLongPress: () =>
+                                  _startQuickEntry(context, longPress: true),
+                              child: const Icon(
+                                Icons.add_rounded,
+                                size: 28,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
                 ),
+              ),
             ],
           ),
         ),

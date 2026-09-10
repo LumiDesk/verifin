@@ -142,7 +142,11 @@ class _VeriRootNavigationState extends State<VeriRootNavigation> {
           items: <BottomBarItem>[
             for (var index = 0; index < widget.destinations.length; index++)
               BottomBarItem(
-                iconData: widget.destinations[index].icon,
+                // 未选中用线框图标、选中换填充图标：库的选中动画本身就是按
+                // 「同一个位置切换图标」设计的，两种风格切换时动效最自然。
+                iconData: index == widget.currentIndex
+                    ? widget.destinations[index].selectedIcon
+                    : widget.destinations[index].icon,
                 iconSize: 24,
                 label: widget.destinations[index].label,
                 labelMarginTop: 2,
