@@ -95,7 +95,8 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `showCurrencyPickerSheet` | Sheet 函数 | `sheets.dart` | 可搜索的离线 ISO 4217 法定货币选择器（代码/中英文名/符号，支持常用/业务优先币种与排除项）；取消返回 `null` |
 | `evaluateAmountExpression` / `amountExpressionHasOperator` | 纯函数 | `calc_expression.dart` | 算式求值（不完整返回 null，结果已规整到分）/ 是否含运算符 |
 | `CurrencyCatalog` | 静态目录 | `currency_catalog.dart` | 离线 ISO 4217 法定货币定义、常用币种排序与中英文搜索；业务层不得另建货币清单 |
-| `normalizeCurrencyAmount` / `formatCurrencyNumber` / `formatMoney` / `formatUserMoney` / `formatSignedUserMoney` / `displayCurrencyUnit` / `formatRateValue` / `formatRateValueExact` | 纯函数 | `currency_math.dart` | 按币种 minor unit 规整与格式化；用户界面优先用 `formatUserMoney` 族，自动遵循符号/代码与单币种隐藏偏好；`formatRateValue` 是 4/6/8 位自适应的界面文本，CSV 等精确往返必须用 `formatRateValueExact` |
+| `normalizeCurrencyAmount` / `formatCurrencyNumber` / `formatMoney` / `formatUserMoney` / `formatSignedUserMoney` / `formatRateValue` / `formatRateValueExact` | 纯函数 | `currency_math.dart` | 按币种 minor unit 规整与格式化；**用户界面一律用 `formatUserMoney` 族**，它自动遵循符号/代码与单币种隐藏偏好；`formatMoney` 的 `display` 默认 `MoneyCodeDisplay.code`（恒带单位），只适合 AI 摘要等显式要求代码的场景。`formatRateValue` 是 4/6/8 位自适应的界面文本，CSV 等精确往返必须用 `formatRateValueExact` |
+| `textCurrencyUnitHidden` / `optionalCurrencyUnit` | 纯函数 | `currency_math.dart` | **「单独占一个位置的单位文字」的唯一入口**：单币种账本 + 开启隐藏时返回 `true` / `null`。`displayCurrencyUnit` 不读闸门（它只解析符号/代码样式），只允许在币种选择器、汇率等式这类「界面主题就是币种」的地方直接用；页头副标题、卡片角标一律走下面这对 helper |
 | `exchangeRateAt` / `rateToBaseAt` / `convertCurrencyAmount` | 纯函数 | `currency_math.dart` | 按交易日取最近历史汇率（不使用未来值）/ 经本位币交叉换算；缺汇率返回强类型结果 |
 | `convertAccountBalancesToBase` / `ConvertedAccountBalances` | 纯函数 / 结果类型 | `currency_math.dart` | 把账户原币余额完整折算到本位币；任一账户缺率时 `completeTotal == null`，并返回缺失币种和受影响账户，禁止展示部分总额 |
 
@@ -124,8 +125,9 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `CompactSwitchRow` | Widget | `common_widgets.dart` | 紧凑开关行（整行可点，不只点开关）；`onChanged:null` 保留原生禁用语义，表示当前平台/状态不可用 |
 | `VeriSegmentedControl<T>` | Widget | `common_widgets.dart` | **统一分段控件**（文字标签 + 滑动胶囊指示，基于 `animated_toggle_switch`）。所有「N 选一的横向口径切换」一律用它，不要再手写 Row+InkWell 分段条或裸用 Material `SegmentedButton`。颜色只走设计令牌，调用方仅可通过 `accentOf` 指定选中项的语义强调色；`compact: true` 用于卡片标题行内的小切换；`onChanged: null` 整组禁用；自带 `Semantics`（第三方控件本身无语义）。**不用它**：图标型开关（走 `CompactSwitchRow`）、超过 4 项或需要分区的单选（走 `showOptionSheet` / `VeriAnchoredChoice`）、菜单触发器（走 `FilterPill`）、左右步进器（走 `MonthSwitcher`） |
 | `DetailInfoRow` | Widget | `common_widgets.dart` | 详情页 label/value 行（可点击带 chevron） |
-| `CurrencyAmountField` | Widget | `common_widgets.dart` | 交易/退款/周期编辑器统一的货币金额行；按 ISO minor unit 格式化且强制带单位，避免同一表单多币换算歧义；`amount == null` 时显示明确缺失态 |
-| `MoneyUnitLabel` | Widget | `common_widgets.dart` | 聚合卡片/页面的轻量「单位：¥/CNY」提示；概览、预算、日历、看板等已在统一上下文标单位的组件复用，不要在每个数字旁堆标识 |
+| `CurrencyAmountField` | Widget | `common_widgets.dart` | 交易/退款/周期编辑器统一的货币金额行；按 ISO minor unit 格式化；`amount == null` 时显示明确缺失态。`forceUnit` **默认 `true` 且不要改**：编辑器允许临时选一个账本里还没有的币种，那一刻闸门还关着但同屏已出现两个币种，单位必须保留。只有两端币种被锁死、不可能出现第二币种的地方（退款表单）才显式传 `false` |
+| `MoneyUnitLabel` | Widget | `common_widgets.dart` | 聚合卡片/页面的轻量「单位：¥/CNY」提示（概览、预算、日历、走势、AI 结果卡）；单币种账本隐藏单位时**整块不渲染**（返回 `SizedBox.shrink`，widget 仍在树上，测试可用它当渲染探针） |
+| `currencyUnitSubtitle` | 纯函数 | `common_widgets.dart` | **页头 / 卡片副标题拼「单位：x」的唯一入口**：传 `l10n`、上下文前缀（书名/账户类型/日期范围，可空）与币种代码。隐藏单位时返回前缀本身（**不会把书名一起丢掉**），无前缀时返回 `null`——调用方必须据此整段省略副标题，不要渲染只剩分隔符的残句 |
 | `SummaryMetric` | Widget | `common_widgets.dart` | **指标块**（label+value+color+detail）。各类统计小块一律用它，勿新造 `_XxxMetric`/`_XxxTile` |
 | `FilterPill` | Widget | `common_widgets.dart` | 筛选胶囊（标签+可选图标+chevron） |
 | `ToolEntry` | Widget | `common_widgets.dart` | 工具入口图标块 |
@@ -194,5 +196,6 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 - `app_theme.dart` 新增候选材质令牌与纯函数 `veriContentSurfaceColor(Brightness)`，供 `VeriCard` 和资产封面共用；`veriUnifiedDesignPreview` 默认关闭。既有组件的候选行为见 [统一设计候选方案](unified-design-preview.md)。
 
 - 新增可复用件 → 归入对应族、加进本表、放对的文件（通用叶子组件→`common_widgets.dart`，跨路由反馈 Host→`feedback.dart`，弹窗 helper→`sheets.dart`，记账相关 widget→`entry_sheets.dart`，纯计算→对应 `*_math`/`*_tree` 模块）。
+- **新增任何显示货币的位置**：先判断它是「金额自带单位」（走 `formatUserMoney` 族，已自动跟随偏好）还是「单位单独占位」（走 `currencyUnitSubtitle` / `MoneyUnitLabel`）。不要直接调 `displayCurrencyUnit` 或裸拼 model 的 `currencyCode`——那是 2026-09-10 那轮 17 处泄漏的成因，见 [单币种隐藏单位失效点审查](../reviews/2026-09-10-single-currency-unit-leak-audit.md)。
 - 同一 UI 片段或逻辑在 **≥2 个文件**出现 → 立即抽共享件，变体用参数表达。
 - 删除/重命名可复用件 → 同步改本表与所有调用点。
