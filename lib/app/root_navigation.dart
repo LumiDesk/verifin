@@ -365,7 +365,7 @@ class _VeriRootNavigationState extends State<VeriRootNavigation>
   /// 曾在此实现磨砂玻璃（BackdropFilter）与高级材质方向光/折射透镜；两者都被判定
   /// 为设计败笔而移除。命中区域、Key 契约与拖动行为必须与之前完全一致。
   Widget _buildCapsule(bool isDark) {
-    final surface = veriContentSurfaceColor(
+    final surface = veriElevatedSurfaceColor(
       isDark ? Brightness.dark : Brightness.light,
     );
     final borderColor = isDark
@@ -493,7 +493,7 @@ class _QuickEntryButton extends StatelessWidget {
         height: 60,
         child: Material(
           key: ValueKey('${keyPrefix}_quick_entry_material'),
-          color: veriContentSurfaceColor(
+          color: veriElevatedSurfaceColor(
             isDark ? Brightness.dark : Brightness.light,
           ),
           shape: const CircleBorder(),

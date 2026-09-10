@@ -213,39 +213,49 @@ class _OnboardingScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(28, 12, 28, 12),
+      padding: const EdgeInsets.fromLTRB(28, 8, 28, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
+          // 图标底板用品牌色的柔和高光而非纯色块：单屏里它是唯一的视觉焦点，
+          // 需要一点层次而不是一个死板的方形色块。
           Container(
-            width: 66,
-            height: 66,
+            width: 76,
+            height: 76,
             decoration: BoxDecoration(
-              color: veriRoyal.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(veriRadiusLg),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: <Color>[
+                  veriRoyal.withValues(alpha: 0.22),
+                  veriRoyal.withValues(alpha: 0.10),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(veriRadiusXl),
+              border: Border.all(color: veriRoyal.withValues(alpha: 0.18)),
             ),
-            child: Icon(icon, size: 34, color: veriRoyal),
+            child: Icon(icon, size: 38, color: veriRoyal),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 26),
           Text(
             title,
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.2,
+            ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Text(
             description,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              height: 1.6,
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.66),
+              height: 1.65,
+              color: scheme.onSurface.withValues(alpha: 0.62),
             ),
           ),
-          if (child != null) ...<Widget>[const SizedBox(height: 24), child!],
+          if (child != null) ...<Widget>[const SizedBox(height: 28), child!],
         ],
       ),
     );
@@ -370,21 +380,22 @@ class _Dots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final inactive = Theme.of(
+      context,
+    ).colorScheme.onSurface.withValues(alpha: 0.18);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
         for (var i = 0; i < count; i += 1)
           AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeOutCubic,
             margin: const EdgeInsets.symmetric(horizontal: 3),
-            width: i == index ? 18 : 7,
+            // 选中项拉长成小胶囊，未选中保持圆点：比单纯变宽更容易看出当前进度。
+            width: i == index ? 22 : 7,
             height: 7,
             decoration: BoxDecoration(
-              color: i == index
-                  ? veriRoyal
-                  : Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.18),
+              color: i == index ? veriRoyal : inactive,
               borderRadius: BorderRadius.circular(999),
             ),
           ),

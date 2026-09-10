@@ -636,7 +636,9 @@ class _VeriMenuPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final visibility = _VeriMenuVisibility.of(context);
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final baseSurface = dark ? veriSurfaceAltDark : veriSurfaceLight;
+    final baseSurface = veriElevatedSurfaceColor(
+      dark ? Brightness.dark : Brightness.light,
+    );
     final surface = Color.lerp(
       baseSurface,
       Colors.black,
