@@ -1,24 +1,22 @@
 # Veri Fin UI 规范
 
-当前约定统一收录于 [设计与交互规范](design-system.md)。高级光照和透镜还需在设置中开启“高级材质”（默认关闭）；本文相关光学描述仅适用于开启后。
+当前约定统一收录于 [设计与交互规范](design-system.md)。材质自 2026-09-10 起为不透明实色：无磨砂玻璃、无方向高光、无导航折射透镜。
 
 当前默认规范继续有效。[统一设计候选方案](dev/unified-design-preview.md) 仅在显式
-预览构建中改变材质、间距和字号，等待用户确认后再提升为正式规范。
-用户要求的[磨砂玻璃材质预览](dev/glass-material-preview.md)另通过 `GLASS_DESIGN_PREVIEW` 开启；预算卡必须保持原始布局，不因材质迭代重做结构。
-该预览现按用户参考图使用方向高光和导航透镜 Shader，替代均匀白边；下文旧导航材质的禁止高光规则仅适用于默认实现。
+预览构建中改变间距和字号，等待用户确认后再提升为正式规范；它不改变材质。
 
 ## Android 真机评审
 
 视觉方案使用独立 diagnostic flavor 的正式入口在手机上评审；保留桌面 widget 布局测试。
 环境检测、缺失工具自动安装、日志和 release/R8 验收见 [Android 开发](dev/android-development.md)。
 
-## 浮动根导航与中性玻璃
+## 浮动根导航
 
 四个根页面统一使用 `VeriRootNavigation`。导航是浮动胶囊，快捷记账是同材质圆形按钮且只在首页显示；非首页隐藏按钮后胶囊居中。选中图标/文字在深色模式使用白色、浅色模式使用黑色，未选中为灰色；Hover 只增强图标/文字，不绘制背景。
 
-承载根导航的 Shell 必须启用 `Scaffold.extendBody` 并关闭 body 外层 `SafeArea` 的 bottom 裁切，页面内容需延伸到玻璃背后，不得留下整宽底栏底色。PageView 外必须套 `VeriRootNavigationBody`，隔离 Scaffold 注入的 bottom padding，避免页面内未显式 padding 的 GridView（日历、功能宫格等）被底栏高度撑大。导航在系统安全区之外再保留左右、底部各 24dp 外边距；四个根页面列表使用 `veriRootPageListPadding(context)` 按保存的实际底栏高度避让末项。
+承载根导航的 Shell 必须启用 `Scaffold.extendBody` 并关闭 body 外层 `SafeArea` 的 bottom 裁切，页面内容需延伸到导航背后，不得留下整宽底栏底色。PageView 外必须套 `VeriRootNavigationBody`，隔离 Scaffold 注入的 bottom padding，避免页面内未显式 padding 的 GridView（日历、功能宫格等）被底栏高度撑大。导航在系统安全区之外再保留左右、底部各 24dp 外边距；四个根页面列表使用 `veriRootPageListPadding(context)` 按保存的实际底栏高度避让末项。
 
-玻璃层禁止手写线性/径向渐变、固定品牌染色或额外顶部高光线；只允许均匀中性透明色、背景模糊、单一轮廓和阴影。品牌蓝只用于圆形快捷记账的加号等明确主操作，不用于选中 Tab。真正的背景折射/色差必须使用单独评估并验证过的 Android Shader，不能用静态渐变冒充。
+导航胶囊使用不透明表面色、单一描边和阴影，不绘制渐变、不做背景模糊或折射。品牌蓝只用于圆形快捷记账的加号等明确主操作，不用于选中 Tab。
 
 滑块按下缩放到 94%，按住非当前 Tab 时以 280ms 柔顺追向手指，移动超过 2px 后连续跟随，松手以 240ms 吸附最近目的地，缩放回弹 160ms。不得退回到 `GestureDetector` 默认水平拖动阈值，否则会重现“起步卡一下”和远距离按下直接跳转。完整状态机、研究记录和测试范围见 `docs/dev/liquid-glass-navigation.md`。
 

@@ -14,22 +14,17 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 
 ## 族 1 — 布局脚手架 / 页面容器
 
-`VeriMaterialScope`（`glass_material.dart`，公共入口导出）注入设备材质偏好；`advancedOf(context)` 同时检查候选构建开关与 `veriAdvancedMaterialAvailable` 平台保护，缺省 false。高光修复并通过真机验收后开放 Android；其他平台直接使用透镜组件也不会加载 Shader。`VeriGlassLightPainter` 以两次连续透明度网格绘制柔光和细高光，禁止恢复每个微小线段单独模糊的路径，验收见 `android-glass-investigation.md`。
-`BudgetRingPainter` 仅保留 value/trackColor/progressColor，按用户要求恢复原常规渐变环；不再提供玻璃参数。
+`BudgetRingPainter` 仅保留 value/trackColor/progressColor，使用原常规渐变环；不再提供玻璃参数。
 
-`VeriGlassSurface` / `VeriGlassBackdrop` 通过 `glass_material.dart` 和公共入口导出，
-负责默认关闭的磨砂材质预览；卡片可共享过滤组，重叠菜单/弹层使用独立过滤。
-`VeriGlassBackdrop` 实现现位于 `app_theme.dart`，由 `glass_material.dart` 保持原入口导出；
-`VeriPageTransitionsBuilder` 在 Android 转场内部包裹每个路由自己的背景，保留系统预测性返回。
-Material 全局 surface 不透明；玻璃表面使用 srcOver 混合以保留首帧背景，导航使用同帧 ImageFiltered，不再生成截图。
-`sheets.dart` 的 `_showVeriModalSheet` 只统一材质封装，外部仍使用各领域 `show…Sheet`。
-`VeriGlassSurface.reveal`（默认 1）用于分层消退染色、模糊、阴影与方向光；菜单文字单独淡出，
-不能把背景过滤器包进整层 Opacity。`VeriGlassLightPainter.opacity` 对应控制光照消退。
-范围见 [玻璃材质预览](glass-material-preview.md)。
+**表面材质（2026-09-10 起）**：`VeriGlassSurface` / `VeriGlassBackdrop` / `VeriMaterialScope` /
+`VeriGlassLightPainter` / `VeriNavigationGlassLens` 与其 Shader 已全部删除。
+卡片、导航、快捷按钮、菜单与弹层一律用不透明实色：
+`VeriCard`（`common_widgets_scaffold.dart`）走 `veriContentSurfaceColor(brightness)` + 圆角 + 细描边；
+页面背景取 `scaffoldBackgroundColor` 的画布纯色；弹层由 `sheets.dart` 的 `_showVeriModalSheet`
+统一为实色表面 + 顶部圆角 + 内置拖拽把手，外部仍使用各领域 `show…Sheet`。
+**禁止**为了「做质感」重新引入 `BackdropFilter`、`ImageFilter.blur`、片元着色器滤镜或整屏渐变。
+历史实现与排查记录见 git 与 `docs/dev/glass-material-preview.md`。
 
-`VeriGlassLightPainter` / `veriGlassEdgeLight`（`glass_lighting.dart`）提供边界法线驱动的
-方向高光；`VeriNavigationGlassLens`（`navigation_glass_lens.dart`）通过 `navigation_live_lens.frag`
-过滤当前帧导航内容。旧截图绘制器、旧 Shader 和三场景诊断 target 已删除，历史复现从 Git 取回。
 `OnboardingGate`（`onboarding_page.dart`）位于 PrivacyConsentGate / AppLockGate 内部，完成引导前不构建首页。
 
 `VeriPage`、`VeriHeader` / `PageHeader` 与 `VeriCard` 支持显式 `compact` 参数。
@@ -44,7 +39,7 @@ Material 全局 surface 不透明；玻璃表面使用 srcOver 混合以保留�
 | `VeriCard` | Widget | `common_widgets.dart` | 统一圆角/描边/阴影卡片，可点击（`quietTap` 长按吞噬变体） |
 | `VeriHeader` | Widget | `common_widgets.dart` | 页眉（标题+副标题+返回+actions，最小高度 52、候选构建 56；用最小高度而非固定高度，系统字号放大时两行标题不会被裁掉） |
 | `PageHeader` | Widget | `common_widgets.dart` | `VeriHeader` 的薄封装（单 trailing） |
-| `VeriRootNavigation` / `VeriRootNavigationBody` / `VeriNavigationDestination` / `veriRootPageListPadding` | Widget / 值类 / 布局 helper | `root_navigation.dart` | 四个根页面的中性玻璃导航胶囊；Body 隔离 `extendBody` 注入的底栏 padding，避免嵌套日历/宫格增高；根列表再用 helper 按真实底栏高度避让，完整约定见 `liquid-glass-navigation.md` |
+| `VeriRootNavigation` / `VeriRootNavigationBody` / `VeriNavigationDestination` / `veriRootPageListPadding` | Widget / 值类 / 布局 helper | `root_navigation.dart` | 四个根页面的不透明浮动导航胶囊；Body 隔离 `extendBody` 注入的底栏 padding，避免嵌套日历/宫格增高；根列表再用 helper 按真实底栏高度避让，完整约定见 `liquid-glass-navigation.md` |
 | `VeriFeedbackHost` / `VeriFeedbackController` / `VeriFeedbackRequest` / `VeriFeedbackResult` | 根级 Widget / Controller / 模型 | `feedback.dart` | 跨路由应用内轻提示：内容自适应宽高与三行正文、四条可见栈、优先级等待队列、2/4/8 秒与常驻、单操作 Future 结果、显式去重、前后台暂停；完整规范见 `feedback-system.md` |
 | `SectionTitle` | Widget | `common_widgets.dart` | 区块标题 + 可选 trailing |
 | `EmptyState` | Widget | `common_widgets.dart` | 空状态（图标+标题+描述+可选 `action` 操作入口） |

@@ -1,8 +1,8 @@
 # Veri Fin Agent 开发指南
 
-2026-09-05 Android 玻璃修复：旧方向高光的逐段模糊已在 REDMI K90 Pro Max（Android 17）独立复现 GPU 分配失败及 Vulkan 0x14 崩溃；连续透明度网格替换后，Flutter 3.47.2 release/R8 已完成该机开启、保存、冷启动、切页、深浅色及关闭验收，真实导航 Shader 集成测试通过。Android 恢复高级材质，默认关闭，旧 KV 保留；其他平台仍保护。不能据此断言所有 GPU 均已验证。CI 固定 Flutter 3.47.2，升级引擎须重做真机验收；正式包仍由 CI 构建，须用户明确授权发版，禁止要求清除应用数据。
+2026-09-10 材质方向调整：磨砂玻璃与「高级材质」（方向高光、导航折射透镜、全局背景渐变）经用户判定为设计败笔，已整体移除。卡片、导航、快捷按钮、菜单与弹层一律使用**不透明实色**表面，页面背景为单一纯色；界面目标是高效率、干净直接，不再引入模糊、折射或光效层。`GLASS_DESIGN_PREVIEW` 已删除，构建命令不应再出现该参数。CI 固定 Flutter 3.47.2；正式包仍由 CI 构建，须用户明确授权发版，禁止要求清除应用数据。
 
-v1.16.0 发布说明：CI Android 两渠道显式带 `--dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true`，保证手机包含已评审外观。高级材质仍默认关闭、由设置保存控制。本地与发布包对照时必须使用相同参数；无参数构建保留旧外观用于回归。
+v1.16.0 发布说明：CI Android 两渠道显式带 `--dart-define=UNIFIED_DESIGN_PREVIEW=true`，保证手机包含已评审外观。该参数现在**只控制布局密度与排版**，与材质无关。本地与发布包对照时必须使用相同参数；无参数构建保留旧外观用于回归。
 
 界面调整必读 [统一设计与交互规范](docs/design-system.md)：集中记录已确认布局、两档材质、深浅色光照、设置持久化与验收约定；历史研究稿不得覆盖该规范。候选统一排版现覆盖全部页面；导航静止必须显示实时文字，预算环禁止内外白线。
 
@@ -28,9 +28,7 @@ v1.16.0 发布说明：CI Android 两渠道显式带 `--dart-define=UNIFIED_DESI
 - `docs/dev/refund-design.md`、`docs/dev/auto-capture-plan.md`、`docs/dev/i18n-verification.md`、`docs/automation.md`：对应领域的设计与验收资料。`refund-design.md` 含历史方案，退款当前行为以源码、测试和 `docs/dev/known-limitations.md` 为准。
 - `docs/dev/android-development.md`：真机开发、工具链检测和缺失时自动安装、日志、隔离验收及测试应用清理。
 - `docs/dev/unified-design-preview.md`：默认关闭的统一设计候选方案；用户确认前不得把 `UNIFIED_DESIGN_PREVIEW` 默认开启或移除旧外观路径。
-- `docs/dev/glass-material-preview.md`：用户主动要求的内容磨砂玻璃预览，通过额外的 `GLASS_DESIGN_PREVIEW` 开关试验；不得以材质调整为由改动预算等既有结构。
-- 玻璃光效按用户参考图：左上/右下渐隐高光，不用均匀白边；导航允许真实纹理透镜与动态光照，高级材质默认关闭、保存后启用；关闭使用普通磨砂且不创建透镜，深色高光需单独减弱。与旧玻璃文档冲突时以该用户指定方向及最新预览文档为准。
-- `docs/dev/liquid-glass-navigation.md`：浮动根导航的材质边界、指针拖动状态机、窄屏适配、真实 Android 应用验证与后续 Shader 取舍；修改根导航或新增类似玻璃控件前必读。
+- `docs/dev/liquid-glass-navigation.md`：浮动根导航的指针拖动状态机、窄屏适配、真实 Android 应用验证；材质部分已随玻璃移除作废，仅状态机与布局约定仍有效。修改根导航前必读。
 - `docs/dev/feedback-system.md`：根级轻提示 Host 的调用、时长、操作结果、去重、优先级队列与迁移规范；新增或替换短反馈前必读。
 - `README.md`、`docs/product.md`、`docs/acceptance-checklist.md`：用于理解产品和验收范围；其中少量历史描述可能落后，必须与当前实现交叉核对。
 
@@ -96,7 +94,7 @@ dart format .
 视觉迭代保留首页预算圆环、支出/剩余日均、概览指标方块和“我的”四列宫格。
 
 - Android 运行/构建仍必须显式使用 `--flavor github`；验证 Play 时使用 `--flavor play --dart-define=SELF_UPDATE=false`。桌面 widget 测试不能替代 Android 原生能力、生命周期和性能验收。
-- 图形故障隔离是例外：仅本地使用独立 applicationId 的 `--flavor diagnostic`，可运行最小绘制入口或正式 `lib/main.dart` 验收，不能当作交付物。命令、工具链与原机证据见 `docs/dev/android-glass-investigation.md`。
+- 图形故障隔离是例外：仅本地使用独立 applicationId 的 `--flavor diagnostic`，可运行最小绘制入口或正式 `lib/main.dart` 验收，不能当作交付物。命令、工具链与历史原机证据见 `docs/dev/android-glass-investigation.md`（该文记录的玻璃问题已不再适用，仅保留排查方法）。
 - 提交前执行 `dart format .`、`flutter analyze` 和 `flutter test`。只改文档时至少做 diff/链接/路径校验，可不运行 Flutter 测试，但要在汇报中说明。
 - 不把本地 `flutter build apk` 当成交付依据；正式 APK/AAB 由 GitHub Actions 构建。
 

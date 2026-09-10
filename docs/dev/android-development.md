@@ -60,7 +60,7 @@ adb devices -l
 出现多个设备时必须显式选择 `-s <serial>` / `-d <device-id>`，不得盲装。
 
 ```powershell
-flutter run -d <device-id> --flavor diagnostic --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
+flutter run -d <device-id> --flavor diagnostic --dart-define=UNIFIED_DESIGN_PREVIEW=true
 ```
 
 默认调试使用独立 applicationId `top.talyra42.verifin.graphicsdiagnostic`，显示名称
@@ -74,7 +74,7 @@ debug 支持 hot reload；最终图形/OCR/插件行为必须另外用 release/R
 采集日志先保存历史 crash buffer，再启动目标应用；记录 package、pid、版本、引擎和时间。
 按目标 pid 保存本次 logcat，避免把其他应用日志混入结论。日志和截图放在被忽略的
 `build/`，不提交账目、凭证或原始敏感内容。图形问题分离绘制路径复现，见
-[玻璃调查](android-glass-investigation.md)。
+[图形问题排查方法](android-glass-investigation.md)（历史记录，玻璃已移除）。
 
 需要持续亮屏时，先记录 `adb shell settings get global stay_on_while_plugged_in`，
 可临时 `adb shell svc power stayon usb`；任务结束恢复原值，不改变用户永久息屏习惯。
@@ -83,10 +83,10 @@ debug 支持 hot reload；最终图形/OCR/插件行为必须另外用 release/R
 
 ## 验收与交付
 
-- 使用两个设计参数与发布包一致；widget 测试保留 393×852 和 360dp 布局检查，
+ - 使用与发布包一致的设计参数（`UNIFIED_DESIGN_PREVIEW=true`）；widget 测试保留 393×852 和 360dp 布局检查，
   真机按其实际逻辑尺寸截图，不能把桌面测试当作原生验收。
-- 高级材质开/关都验证：设置保存/取消、强停冷启、四页/导航拖动、深浅色、前后台。
-  release/R8 下实际 Shader/纹理必须就绪；命令见玻璃调查中的集成测试入口。
+- 材质与导航验收：强停冷启、四页切换、导航点击/拖动/取消、菜单与弹层进出、深浅色、前后台。
+  卡片、导航与弹层必须保持不透明实色；出现背景模糊、渐变或 Shader 滤镜即为回归。
 - 提交前 format、analyze、全量测试及发布外观专项；数据库相关改动跑 ffi 持久化/迁移矩阵。
 - 正式 APK/AAB 只由授权后的 CI 发布生成。本地 APK 是诊断证据，不作为正式交付。
 - CI 成功后下载同签名、更高 versionCode APK 覆盖安装，保留账目；用户验收后才提升 Latest。
