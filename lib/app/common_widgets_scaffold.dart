@@ -35,7 +35,7 @@ class VeriPage extends StatelessWidget {
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: veriPageMaxWidth),
-          child: veriGlassDesignPreview ? BackdropGroup(child: child) : child,
+          child: child,
         ),
       ),
     );
@@ -65,30 +65,6 @@ class VeriCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    if (veriGlassDesignPreview) {
-      return VeriGlassSurface(
-        radius: compact ? veriCompactCardRadius : veriCardRadius,
-        child: onTap != null && quietTap
-            ? Semantics(
-                button: true,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: onTap,
-                  onLongPress: () {},
-                  child: Padding(padding: padding, child: child),
-                ),
-              )
-            : Material(
-                color: Colors.transparent,
-                child: onTap == null
-                    ? Padding(padding: padding, child: child)
-                    : InkWell(
-                        onTap: onTap,
-                        child: Padding(padding: padding, child: child),
-                      ),
-              ),
-      );
-    }
     final borderRadius = BorderRadius.circular(
       compact ? veriCompactCardRadius : veriCardRadius,
     );

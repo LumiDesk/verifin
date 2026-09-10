@@ -3,9 +3,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import 'app_theme.dart';
-import 'glass_material.dart';
-import 'glass_lighting.dart';
-import 'navigation_glass_lens.dart';
 
 @immutable
 class VeriNavigationDestination {
@@ -69,11 +66,10 @@ EdgeInsets veriRootPageListPadding(BuildContext context) {
   );
 }
 
-/// Veri Fin 根页面的浮动玻璃导航。
+/// Veri Fin 根页面的浮动导航。
 ///
-/// 玻璃基底只使用均匀中性透明色、背景模糊、单一轮廓和阴影，不绘制渐变或
-/// 固定染色。选中滑块支持按压缩放、指针连续拖动和松手吸附；快捷记账按钮仅
-/// 由调用方在首页启用。
+/// 不透明圆角胶囊：中性表面色 + 单一描边 + 阴影，不使用模糊、折射或方向光。
+/// 选中滑块支持按压缩放、指针连续拖动和松手吸附；快捷记账按钮仅由调用方在首页启用。
 class VeriRootNavigation extends StatefulWidget {
   const VeriRootNavigation({
     super.key,
@@ -327,9 +323,8 @@ class _VeriRootNavigationState extends State<VeriRootNavigation>
                       curve: Curves.easeOutCubic,
                       width: maximumWidth,
                       height: 60,
-                      // 导航每帧都在重绘（拖动/吸附），单独成层后不再让整屏与页面里的
-                      // 玻璃模糊跟着重绘。
-                      child: RepaintBoundary(child: _buildGlassCapsule(isDark)),
+                      // 导航每帧都在重绘（拖动/吸附），单独成层避免牵连页面重绘。
+                      child: RepaintBoundary(child: _buildCapsule(isDark)),
                     ),
                   ),
                   Positioned(
@@ -365,51 +360,83 @@ class _VeriRootNavigationState extends State<VeriRootNavigation>
     );
   }
 
-  Widget _buildGlassCapsule(bool isDark) {
-    if (VeriMaterialScope.advancedOf(context) &&
-        !MediaQuery.highContrastOf(context)) {
-      return Stack(
-        clipBehavior: Clip.none,
-        fit: StackFit.expand,
-        children: [
-          Positioned.fill(
-            child: VeriGlassSurface(
-              radius: 999,
-              grouped: false,
-              tint: Colors.white.withValues(alpha: isDark ? 0.055 : 0.14),
-              child: const SizedBox.expand(),
-            ),
+  /// 不透明导航胶囊：只保留圆角、描边、阴影与整套指针状态机。
+  ///
+  /// 曾在此实现磨砂玻璃（BackdropFilter）与高级材质方向光/折射透镜；两者都被判定
+  /// 为设计败笔而移除。命中区域、Key 契约与拖动行为必须与之前完全一致。
+  Widget _buildCapsule(bool isDark) {
+    final surface = veriContentSurfaceColor(
+      isDark ? Brightness.dark : Brightness.light,
+    );
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.10)
+        : Colors.black.withValues(alpha: 0.08);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.12),
+            blurRadius: 16,
+            offset: const Offset(0, 5),
           ),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final slotWidth =
-                  constraints.maxWidth / widget.destinations.length;
-              final selectedIndex = _displayIndex.round().clamp(
-                0,
-                widget.destinations.length - 1,
-              );
-              return Listener(
-                behavior: HitTestBehavior.opaque,
-                onPointerDown: (event) => _handlePointerDown(event, slotWidth),
-                onPointerMove: (event) => _handlePointerMove(event, slotWidth),
-                onPointerUp: _handlePointerUp,
-                onPointerCancel: _handlePointerCancel,
-                child: VeriNavigationGlassLens(
-                  keyPrefix: widget.keyPrefix,
-                  target: Rect.fromLTWH(
-                    _displayIndex * slotWidth + 3,
-                    3,
-                    slotWidth - 6,
-                    constraints.maxHeight - 6,
+        ],
+      ),
+      child: Material(
+        key: _key('nav_material'),
+        color: surface,
+        shape: StadiumBorder(side: BorderSide(color: borderColor)),
+        clipBehavior: Clip.antiAlias,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final slotWidth = constraints.maxWidth / widget.destinations.length;
+            final selectedIndex = _displayIndex.round().clamp(
+              0,
+              widget.destinations.length - 1,
+            );
+            return Listener(
+              behavior: HitTestBehavior.opaque,
+              onPointerDown: (event) => _handlePointerDown(event, slotWidth),
+              onPointerMove: (event) => _handlePointerMove(event, slotWidth),
+              onPointerUp: _handlePointerUp,
+              onPointerCancel: _handlePointerCancel,
+              child: Stack(
+                fit: StackFit.expand,
+                children: <Widget>[
+                  Positioned(
+                    key: _key('nav_indicator_position'),
+                    left: 0,
+                    top: 3,
+                    bottom: 3,
+                    width: slotWidth - 6,
+                    // 用 Transform 平移而不是改 Positioned.left：拖动时每帧只重绘、
+                    // 不重排，避免整条导航每帧走一次布局。
+                    child: Transform.translate(
+                      offset: Offset(_displayIndex * slotWidth + 3, 0),
+                      child: IgnorePointer(
+                        child: AnimatedScale(
+                          key: _key('nav_indicator_scale'),
+                          duration: const Duration(milliseconds: 160),
+                          curve: Curves.easeOutCubic,
+                          scale: _indicatorPressed || _dragging ? 0.94 : 1,
+                          child: DecoratedBox(
+                            key: _key('nav_indicator'),
+                            decoration: BoxDecoration(
+                              color: (isDark ? Colors.white : Colors.black)
+                                  .withValues(alpha: isDark ? 0.12 : 0.065),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                  pressed: _indicatorPressed || _dragging,
-                  motion: _lightMotion,
-                  source: Row(
-                    children: [
+                  Row(
+                    children: <Widget>[
                       for (
                         var index = 0;
                         index < widget.destinations.length;
-                        index++
+                        index += 1
                       )
                         Expanded(
                           child: _DestinationButton(
@@ -422,128 +449,10 @@ class _VeriRootNavigationState extends State<VeriRootNavigation>
                         ),
                     ],
                   ),
-                ),
-              );
-            },
-          ),
-        ],
-      );
-    }
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.12),
-            blurRadius: 16,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(999),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Material(
-            key: _key('nav_material'),
-            color: Colors.transparent,
-            shape: const StadiumBorder(),
-            clipBehavior: Clip.antiAlias,
-            child: Ink(
-              key: _key('nav_ink'),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: isDark ? 0.055 : 0.14),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.16)
-                      : Colors.black.withValues(alpha: 0.10),
-                ),
+                ],
               ),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final slotWidth =
-                      constraints.maxWidth / widget.destinations.length;
-                  final selectedIndex = _displayIndex.round().clamp(
-                    0,
-                    widget.destinations.length - 1,
-                  );
-                  return Listener(
-                    behavior: HitTestBehavior.opaque,
-                    onPointerDown: (event) =>
-                        _handlePointerDown(event, slotWidth),
-                    onPointerMove: (event) =>
-                        _handlePointerMove(event, slotWidth),
-                    onPointerUp: _handlePointerUp,
-                    onPointerCancel: _handlePointerCancel,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: <Widget>[
-                        Positioned(
-                          key: _key('nav_indicator_position'),
-                          left: 0,
-                          top: 3,
-                          bottom: 3,
-                          width: slotWidth - 6,
-                          // 用 Transform 平移而不是改 Positioned.left：拖动时每帧只重绘、
-                          // 不重排，避免整条导航（含玻璃模糊）每帧走一次布局。
-                          child: Transform.translate(
-                            offset: Offset(_displayIndex * slotWidth + 3, 0),
-                            child: IgnorePointer(
-                              child: AnimatedScale(
-                                key: _key('nav_indicator_scale'),
-                                duration: const Duration(milliseconds: 160),
-                                curve: Curves.easeOutCubic,
-                                scale: _indicatorPressed || _dragging
-                                    ? 0.94
-                                    : 1,
-                                child: DecoratedBox(
-                                  key: _key('nav_indicator'),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        (isDark ? Colors.white : Colors.black)
-                                            .withValues(
-                                              alpha: isDark ? 0.12 : 0.065,
-                                            ),
-                                    borderRadius: BorderRadius.circular(999),
-                                    border: Border.all(
-                                      color:
-                                          (isDark ? Colors.white : Colors.black)
-                                              .withValues(
-                                                alpha: isDark ? 0.16 : 0.08,
-                                              ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Row(
-                          children: <Widget>[
-                            for (
-                              var index = 0;
-                              index < widget.destinations.length;
-                              index += 1
-                            )
-                              Expanded(
-                                child: _DestinationButton(
-                                  key: _key('tab_$index'),
-                                  inkKey: _key('tab_ink_$index'),
-                                  destination: widget.destinations[index],
-                                  selected: index == selectedIndex,
-                                  onTap: () => _handleDestinationTap(index),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );
@@ -568,69 +477,51 @@ class _QuickEntryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return CustomPaint(
-      foregroundPainter:
-          VeriMaterialScope.advancedOf(context) &&
-              !MediaQuery.highContrastOf(context)
-          ? VeriGlassLightPainter(
-              radius: 999,
-              brightness: Theme.of(context).brightness,
-            )
-          : null,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.12),
-              blurRadius: 16,
-              offset: const Offset(0, 5),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.12),
+            blurRadius: 16,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: SizedBox(
+        width: 60,
+        height: 60,
+        child: Material(
+          key: ValueKey('${keyPrefix}_quick_entry_material'),
+          color: veriContentSurfaceColor(
+            isDark ? Brightness.dark : Brightness.light,
+          ),
+          shape: const CircleBorder(),
+          clipBehavior: Clip.antiAlias,
+          child: Ink(
+            key: ValueKey('${keyPrefix}_quick_entry_ink'),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.10)
+                    : Colors.black.withValues(alpha: 0.08),
+              ),
             ),
-          ],
-        ),
-        child: ClipOval(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: SizedBox(
-              width: 60,
-              height: 60,
-              child: Material(
-                key: ValueKey('${keyPrefix}_quick_entry_material'),
-                color: Colors.transparent,
-                shape: const CircleBorder(),
-                clipBehavior: Clip.antiAlias,
-                child: Ink(
-                  key: ValueKey('${keyPrefix}_quick_entry_ink'),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withValues(
-                      alpha: isDark ? 0.055 : 0.14,
-                    ),
-                    border: veriGlassDesignPreview
-                        ? null
-                        : Border.all(
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.16)
-                                : Colors.black.withValues(alpha: 0.10),
-                          ),
-                  ),
-                  child: Tooltip(
-                    message: label,
-                    child: InkWell(
-                      key: actionKey,
-                      customBorder: const CircleBorder(),
-                      hoverColor: Colors.white.withValues(
-                        alpha: isDark ? 0.08 : 0.26,
-                      ),
-                      splashColor: Colors.white.withValues(
-                        alpha: isDark ? 0.12 : 0.34,
-                      ),
-                      onTap: onTap,
-                      onLongPress: onLongPress,
-                      child: const Icon(Icons.add_rounded, color: veriRoyal),
-                    ),
-                  ),
+            child: Tooltip(
+              message: label,
+              child: InkWell(
+                key: actionKey,
+                customBorder: const CircleBorder(),
+                hoverColor: (isDark ? Colors.white : Colors.black).withValues(
+                  alpha: 0.06,
                 ),
+                splashColor: (isDark ? Colors.white : Colors.black).withValues(
+                  alpha: 0.10,
+                ),
+                onTap: onTap,
+                onLongPress: onLongPress,
+                child: const Icon(Icons.add_rounded, color: veriRoyal),
               ),
             ),
           ),

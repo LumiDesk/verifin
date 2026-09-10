@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app/app_theme.dart';
-import 'app/glass_material.dart';
 import 'app/backup/backup_coordinator.dart';
 import 'app/feedback.dart';
 import 'app/home_widget_service.dart';
@@ -304,10 +303,6 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
             valueListenable: _controller.localePreferenceListenable,
             builder: (context, localePreference, _) {
               return MaterialApp(
-                // 拉伸越界会把列表放进独立滤镜缓冲，玻璃不能再采到路由背景。
-                scrollBehavior: veriGlassDesignPreview
-                    ? const MaterialScrollBehavior().copyWith(overscroll: false)
-                    : null,
                 onGenerateTitle: (context) =>
                     AppLocalizations.of(context).appTitle,
                 debugShowCheckedModeBanner: false,
@@ -318,19 +313,12 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
                 themeMode: themePreference.themeMode,
                 theme: buildVeriFinTheme(Brightness.light),
                 darkTheme: buildVeriFinTheme(Brightness.dark),
-                builder: (context, child) => ValueListenableBuilder<bool>(
-                  valueListenable: _controller.advancedMaterialListenable,
-                  builder: (context, advanced, content) =>
-                      VeriMaterialScope(advanced: advanced, child: content!),
-                  child: VeriGlassBackdrop(
-                    child: PrivacyConsentGate(
-                      child: AppLockGate(
-                        child: OnboardingGate(
-                          child: VeriFeedbackHost(
-                            controller: _feedbackController,
-                            child: child ?? const SizedBox.shrink(),
-                          ),
-                        ),
+                builder: (context, child) => PrivacyConsentGate(
+                  child: AppLockGate(
+                    child: OnboardingGate(
+                      child: VeriFeedbackHost(
+                        controller: _feedbackController,
+                        child: child ?? const SizedBox.shrink(),
                       ),
                     ),
                   ),

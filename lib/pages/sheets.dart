@@ -17,7 +17,7 @@ import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
 import 'account_icon_picker.dart';
 
-/// 保留现有 Sheet 语义，仅在材质预览中为内容加入共享玻璃层。
+/// 统一的底部弹层外壳：实色表面 + 顶部圆角 + 内置拖拽把手。
 Future<T?> _showVeriModalSheet<T>({
   required BuildContext context,
   required WidgetBuilder builder,
@@ -27,44 +27,38 @@ Future<T?> _showVeriModalSheet<T>({
   ShapeBorder? shape,
 }) => showModalBottomSheet<T>(
   context: context,
-  // 拖拽把手改为在玻璃表面内部渲染（见下方 Column），避免 showModalBottomSheet
-  // 自带的把手浮在透明 sheet 背景上、与玻璃内容脱节。
+  // 拖拽把手在内容内部渲染（见下方 Column），与弹层表面成一体。
   showDragHandle: false,
   isScrollControlled: isScrollControlled,
-  backgroundColor: veriGlassDesignPreview
-      ? Colors.transparent
-      : backgroundColor,
+  backgroundColor: backgroundColor,
   shape: shape,
-  builder: (context) => VeriGlassSurface(
-    grouped: false,
-    radius: veriRadiusXl,
+  builder: (context) => Material(
     // 底部弹窗只圆顶部两个角，左下/右下保持直角，避免方块机上观感怪异。
     borderRadius: BorderRadius.vertical(top: Radius.circular(veriRadiusXl)),
-    child: Material(
-      color: Colors.transparent,
-      child: Stack(
-        alignment: Alignment.topCenter,
-        children: <Widget>[
-          Padding(
-            padding: EdgeInsets.only(
-              top: showDragHandle == true ? _VeriSheetDragHandle.height : 0,
-            ),
-            child: builder(context),
+    clipBehavior: Clip.antiAlias,
+    color: backgroundColor,
+    child: Stack(
+      alignment: Alignment.topCenter,
+      children: <Widget>[
+        Padding(
+          padding: EdgeInsets.only(
+            top: showDragHandle == true ? _VeriSheetDragHandle.height : 0,
           ),
-          if (showDragHandle == true)
-            const Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: _VeriSheetDragHandle(),
-            ),
-        ],
-      ),
+          child: builder(context),
+        ),
+        if (showDragHandle == true)
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: _VeriSheetDragHandle(),
+          ),
+      ],
     ),
   ),
 );
 
-/// 玻璃底部弹窗内嵌的拖拽把手：落在玻璃表面内部，与内容连成一体。
+/// 底部弹窗内嵌的拖拽把手：与内容连成一体。
 class _VeriSheetDragHandle extends StatelessWidget {
   const _VeriSheetDragHandle();
 

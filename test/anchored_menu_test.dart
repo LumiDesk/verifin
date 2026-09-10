@@ -4,7 +4,7 @@ import 'package:verifin/app/app_theme.dart';
 import 'package:verifin/app/common_widgets.dart';
 
 void main() {
-  testWidgets('玻璃菜单关闭中途表面逐渐消退而不是保持原色', (tester) async {
+  testWidgets('菜单关闭中途逐渐淡出而不是硬切', (tester) async {
     await tester.pumpWidget(
       _MenuTestApp(
         entries: const [
@@ -14,28 +14,18 @@ void main() {
     );
     await tester.tap(find.byTooltip('更多'));
     await tester.pumpAndSettle();
-    double tintAlpha() => tester
-        .widgetList<DecoratedBox>(find.byType(DecoratedBox))
-        .map((box) => box.decoration)
-        .whereType<BoxDecoration>()
-        .where(
-          (box) =>
-              box.color != null &&
-              box.borderRadius == BorderRadius.circular(veriRadiusXl),
-        )
-        .first
-        .color!
-        .a;
-    final resting = tintAlpha();
+    double panelOpacity() => tester
+        .widgetList<FadeTransition>(find.byType(FadeTransition))
+        .map((fade) => fade.opacity.value)
+        .firstWhere((value) => value > 0 && value < 1, orElse: () => 1);
     await tester.tap(find.text('动画检查'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 110));
     expect(find.text('动画检查'), findsOneWidget);
-    expect(tintAlpha(), lessThan(resting * 0.9));
-    expect(tintAlpha(), greaterThan(0));
+    expect(panelOpacity(), lessThan(1));
     await tester.pumpAndSettle();
     expect(find.text('动画检查'), findsNothing);
-  }, skip: !veriGlassDesignPreview);
+  });
   testWidgets('renders icon title subtitle divider and selected state', (
     tester,
   ) async {
@@ -108,25 +98,10 @@ void main() {
         .widgetList<Material>(find.byType(Material))
         .map((material) => material.color)
         .whereType<Color>();
-    if (veriGlassDesignPreview) {
-      expect(
-        tester
-            .widgetList<VeriGlassSurface>(find.byType(VeriGlassSurface))
-            .map((surface) => surface.tint),
-        contains(
-          Color.lerp(
-            veriGlassTint(Brightness.light, overlay: true),
-            Colors.black,
-            0.28 * 0.62,
-          ),
-        ),
-      );
-    } else {
-      expect(
-        panelMaterials,
-        contains(Color.lerp(veriSurfaceLight, Colors.black, 0.28 * 0.62)),
-      );
-    }
+    expect(
+      panelMaterials,
+      contains(Color.lerp(veriSurfaceLight, Colors.black, 0.28 * 0.62)),
+    );
     expect(find.text('列表视图'), findsOneWidget);
     expect(find.text('卡片视图'), findsNWidgets(3));
     expect(find.byIcon(Icons.check_rounded), findsOneWidget);

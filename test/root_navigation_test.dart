@@ -52,12 +52,12 @@ void main() {
     );
   });
 
-  testWidgets('glass surfaces have no authored gradients', (tester) async {
+  testWidgets('导航与快捷按钮使用不透明实色，不绘制渐变', (tester) async {
     await tester.pumpWidget(const _NavigationHarness());
 
-    final navDecoration =
-        tester.widget<Ink>(find.byKey(const Key('main_nav_ink'))).decoration
-            as BoxDecoration;
+    final navMaterial = tester.widget<Material>(
+      find.byKey(const Key('main_nav_material')),
+    );
     final indicatorDecoration =
         tester
                 .widget<DecoratedBox>(
@@ -65,15 +65,15 @@ void main() {
                 )
                 .decoration
             as BoxDecoration;
-    final quickEntryDecoration =
-        tester
-                .widget<Ink>(find.byKey(const Key('main_quick_entry_ink')))
-                .decoration
-            as BoxDecoration;
+    final quickEntryMaterial = tester.widget<Material>(
+      find.byKey(const Key('main_quick_entry_material')),
+    );
 
-    expect(navDecoration.gradient, isNull);
+    // 曾经这里是磨砂玻璃：表面半透明 + BackdropFilter。现在必须是不透明实色。
+    expect(navMaterial.color!.a, 1, reason: '导航胶囊必须不透明，不能透出下层内容');
+    expect(quickEntryMaterial.color!.a, 1, reason: '快捷记账按钮必须不透明');
     expect(indicatorDecoration.gradient, isNull);
-    expect(quickEntryDecoration.gradient, isNull);
+    expect(find.byType(BackdropFilter), findsNothing);
   });
 
   testWidgets('dragging the slider snaps to a complete destination', (
