@@ -176,4 +176,43 @@ void main() {
     await tester.tap(find.byKey(const Key('attachment_remove_visual_1')));
     expect(removed, <int>[1]);
   });
+
+  testWidgets('记账页类型分段条的转账选中色是语义蓝，与下方金额一致', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 1000);
+    addTearDown(tester.view.reset);
+
+    final controller = await makeController();
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(home: const EntryDetailPage(initialAmount: 30)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 选中项的文字色由调用点的 accentOf 提供；`entry_type_selected_*` 这个 Key
+    // 只挂在当前选中项上，取到的就是分段条里那一份。
+    Color? accentOf(String type) => tester
+        .widget<Text>(find.byKey(Key('entry_type_selected_$type')))
+        .style
+        ?.color;
+
+    expect(accentOf('expense'), veriSemanticFor(Brightness.light, veriExpense));
+
+    await tester.tap(find.text('收入'));
+    await tester.pumpAndSettle();
+    expect(accentOf('income'), veriSemanticFor(Brightness.light, veriIncome));
+
+    await tester.tap(find.text('转账'));
+    await tester.pumpAndSettle();
+
+    // 转账此前留中性色（浅色主题下近乎全黑、深色下近乎全白），与下方的大金额
+    // （veriSemantic(context, veriBlue)）对不上。
+    expect(
+      accentOf('transfer'),
+      veriSemanticFor(Brightness.light, veriBlue),
+      reason: '转账选中色应与本页下方金额用的是同一支语义蓝',
+    );
+  });
 }

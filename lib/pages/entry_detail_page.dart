@@ -2031,12 +2031,13 @@ class _EntryTypeSelector extends StatelessWidget {
       selected: selected,
       semanticLabel: l10n.commonType,
       labelOf: (type) => type.label(l10n),
-      // 支出/收入用语义色强调，转账保持中性（原先硬编码品牌蓝，与语义色路径不一致）。
+      // 支出/收入用语义色强调；转账用语义蓝——与本页下方的大金额、分类图标取同一支
+      // 颜色。此前转账留中性色，深色下选中文字近乎全白，和下面的蓝色金额对不上。
       accentOf: (type) => switch (type) {
         EntryType.expense => veriSemantic(context, veriExpense),
         EntryType.income ||
         EntryType.refund => veriSemantic(context, veriIncome),
-        EntryType.transfer => null,
+        EntryType.transfer => veriSemantic(context, veriBlue),
       },
       keyOf: (type) =>
           type == selected ? Key('entry_type_selected_${type.name}') : null,

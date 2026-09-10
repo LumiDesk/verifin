@@ -664,6 +664,13 @@ class _CardNumberFieldsState extends State<CardNumberFields> {
   }
 }
 
+/// 分段控件轨道的内边距与选项间隙。
+///
+/// 与传给 `AnimatedToggleSwitch` 的 `padding` / `spacing` 取自同一组数值：
+/// [VeriSegmentedControl] 要用它们反推一个选项槽的宽度，两处必须一致。
+const double _kSegmentPadding = 2;
+const double _kSegmentSpacing = 2;
+
 /// 统一分段控件：中文/文字标签浮在一条中性轨道上，选中项由滑动的胶囊指示。
 ///
 /// 取代此前散落各页的手写分段条（记账页类型切换、账户详情日/月、统计口径、
@@ -718,71 +725,93 @@ class VeriSegmentedControl<T> extends StatelessWidget {
     final height = compact ? 30.0 : 40.0;
     final radius = BorderRadius.circular(compact ? veriRadiusSm : veriRadiusMd);
 
-    return Semantics(
-      label: semanticLabel,
-      value: labelOf(selected),
-      container: true,
-      child: AnimatedToggleSwitch<T>.rolling(
-        current: selected,
-        values: values,
-        onChanged: onChanged,
-        // onChanged 为 null 时整组禁用（如管理页排序期间）。
-        active: onChanged != null,
-        height: height,
-        borderWidth: 0,
-        spacing: 2,
-        padding: const EdgeInsets.all(2),
-        indicatorSize: Size.fromWidth(compact ? 58 : 92),
-        animationDuration: const Duration(milliseconds: 260),
-        animationCurve: Curves.easeOutCubic,
-        iconOpacity: 1,
-        style: ToggleStyle(
-          backgroundColor: track,
-          indicatorColor: indicator,
-          borderRadius: radius,
-          indicatorBorderRadius: BorderRadius.circular(
-            (compact ? veriRadiusSm : veriRadiusMd) - 2,
-          ),
-          borderColor: Colors.transparent,
-          indicatorBorder: Border.all(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.10)
-                : Colors.black.withValues(alpha: 0.06),
-          ),
-          boxShadow: const <BoxShadow>[],
-          indicatorBoxShadow: const <BoxShadow>[],
-        ),
-        iconBuilder: (value, foreground) {
-          final selectedNow = value == selected;
-          final enabled = onChanged != null;
-          final accent = accentOf?.call(value);
-          final color = selectedNow
-              ? (accent ?? scheme.onSurface.withValues(alpha: 0.94))
-              : scheme.onSurface.withValues(alpha: foreground ? 0.94 : 0.48);
-          return Opacity(
-            opacity: enabled ? 1 : 0.5,
-            child: Text(
-              labelOf(value),
-              // rolling 会把选中项额外渲染一份用于滑动动画；Key 只挂前景副本，
-              // 否则同一 Key 在一帧里出现两次（调用点的 findsOneWidget 会失败）。
-              key: foreground ? keyOf?.call(value) : null,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style:
-                  (compact
-                          ? Theme.of(context).textTheme.labelSmall
-                          : Theme.of(context).textTheme.labelLarge)
-                      ?.copyWith(
-                        color: color,
-                        fontWeight: selectedNow
-                            ? FontWeight.w800
-                            : FontWeight.w600,
-                      ),
+    return LayoutBuilder(
+      builder: (context, constraints) => Semantics(
+        label: semanticLabel,
+        value: labelOf(selected),
+        container: true,
+        child: AnimatedToggleSwitch<T>.rolling(
+          current: selected,
+          values: values,
+          onChanged: onChanged,
+          // onChanged 为 null 时整组禁用（如管理页排序期间）。
+          active: onChanged != null,
+          height: height,
+          borderWidth: 0,
+          spacing: _kSegmentSpacing,
+          padding: const EdgeInsets.all(_kSegmentPadding),
+          indicatorSize: Size.fromWidth(_indicatorWidth(constraints.maxWidth)),
+          animationDuration: const Duration(milliseconds: 260),
+          animationCurve: Curves.easeOutCubic,
+          iconOpacity: 1,
+          style: ToggleStyle(
+            backgroundColor: track,
+            indicatorColor: indicator,
+            borderRadius: radius,
+            indicatorBorderRadius: BorderRadius.circular(
+              (compact ? veriRadiusSm : veriRadiusMd) - 2,
             ),
-          );
-        },
+            borderColor: Colors.transparent,
+            indicatorBorder: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.10)
+                  : Colors.black.withValues(alpha: 0.06),
+            ),
+            boxShadow: const <BoxShadow>[],
+            indicatorBoxShadow: const <BoxShadow>[],
+          ),
+          iconBuilder: (value, foreground) {
+            final selectedNow = value == selected;
+            final enabled = onChanged != null;
+            final accent = accentOf?.call(value);
+            final color = selectedNow
+                ? (accent ?? scheme.onSurface.withValues(alpha: 0.94))
+                : scheme.onSurface.withValues(alpha: foreground ? 0.94 : 0.48);
+            return Opacity(
+              opacity: enabled ? 1 : 0.5,
+              child: Text(
+                labelOf(value),
+                // rolling 会把选中项额外渲染一份用于滑动动画；Key 只挂前景副本，
+                // 否则同一 Key 在一帧里出现两次（调用点的 findsOneWidget 会失败）。
+                key: foreground ? keyOf?.call(value) : null,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style:
+                    (compact
+                            ? Theme.of(context).textTheme.labelSmall
+                            : Theme.of(context).textTheme.labelLarge)
+                        ?.copyWith(
+                          color: color,
+                          fontWeight: selectedNow
+                              ? FontWeight.w800
+                              : FontWeight.w600,
+                        ),
+              ),
+            );
+          },
+        ),
       ),
     );
+  }
+
+  /// 选中胶囊的宽度。
+  ///
+  /// 胶囊必须等于**一个选项槽的宽度**。`animated_toggle_switch` 只在「选项总宽超过
+  /// 可用宽度」时把胶囊一起等比缩小；可用宽度有富余时，它把余量全部摊进选项之间的
+  /// 间隙，胶囊本身仍停在传入的固定宽度上。旧实现写死 58 / 92，于是**选项越少胶囊
+  /// 越窄**：两项的分段条里胶囊只覆盖约三分之一的槽位，四项的总宽已经超出、走了等比
+  /// 缩小那条路径，看起来反而是正常的——所以只有一部分分段条显得不对。
+  ///
+  /// 宽度受限（放在 `ListView`、拉伸的列或卡片里）时按槽位均分；宽度不受限（`Row`
+  /// 里没有 `Expanded`）时退回原先的紧凑 / 常规宽度。
+  double _indicatorWidth(double availableWidth) {
+    if (!availableWidth.isFinite) {
+      return compact ? 58 : 92;
+    }
+    final track = availableWidth - _kSegmentPadding * 2;
+    final slot =
+        (track - _kSegmentSpacing * (values.length - 1)) / values.length;
+    return slot.clamp(1.0, track);
   }
 }

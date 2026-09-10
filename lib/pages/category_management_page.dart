@@ -80,11 +80,12 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
                   values: EntryType.userSelectable,
                   selected: _type,
                   labelOf: (type) => type.label(AppLocalizations.of(context)),
+                  // 支出/收入/转账各用各的语义色，与记账页的分段条保持一致。
                   accentOf: (type) => type == EntryType.expense
                       ? veriSemantic(context, veriExpense)
                       : type == EntryType.income
                       ? veriSemantic(context, veriIncome)
-                      : null,
+                      : veriSemantic(context, veriBlue),
                   // 排序期间不接受切换口径。
                   onChanged: _sorting
                       ? null
