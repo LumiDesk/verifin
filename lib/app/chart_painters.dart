@@ -1,10 +1,12 @@
 import 'dart:math' as math;
 
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import 'app_theme.dart';
+import 'series_math.dart';
 
 /// 数值只画到图表高度的这个比例,顶部留白;网格线和纵轴刻度按同一比例
 /// 定位,保证刻度读数与曲线/柱高一致。
@@ -27,7 +29,7 @@ class ChartTooltipLine {
   final Color? color;
 }
 
-/// 曲线图绘图区(与 [TrendLinePainter] 的内边距保持一致)。
+/// 曲线图绘图区（与预算趋势图共用的内边距约定）。
 Rect trendChartRect(
   Size size, {
   required bool hasXLabels,
@@ -44,7 +46,7 @@ Rect trendChartRect(
   );
 }
 
-/// 柱状图绘图区(与 [BarChartPainter] 的内边距保持一致)。
+/// 柱状图绘图区（与预算趋势图共用的内边距约定）。
 Rect barChartRect(
   Size size, {
   required bool hasXLabels,
@@ -187,291 +189,6 @@ void drawChartTooltip(
   }
 }
 
-class TrendLinePainter extends CustomPainter {
-  const TrendLinePainter({
-    required this.color,
-    required this.values,
-    this.xLabels = const <String>[],
-    this.yLabels = const <String>[],
-    this.labelColor,
-    this.glow = false,
-    this.selectedIndex,
-    this.tooltip,
-    this.textScaler = TextScaler.noScaling,
-  });
-
-  final Color color;
-  final List<double> values;
-  final List<String> xLabels;
-  final List<String> yLabels;
-  final Color? labelColor;
-  final bool glow;
-  final int? selectedIndex;
-  final ChartTooltip? tooltip;
-
-  /// 画布文字不经过 Theme 的 textTheme,系统字号缩放必须显式传入。
-  final TextScaler textScaler;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final chartRect = trendChartRect(
-      size,
-      hasXLabels: xLabels.isNotEmpty,
-      hasYLabels: yLabels.isNotEmpty,
-    );
-    // 兜底用中性灰（在深浅背景上都可辨），避免调用方漏传 labelColor 时浅色下白轴看不见。
-    final axisColor = labelColor ?? Colors.grey.withValues(alpha: 0.45);
-    final gridPaint = Paint()
-      ..color = axisColor.withValues(alpha: 0.16)
-      ..strokeWidth = 1;
-    final glowPaint = Paint()
-      ..color = color.withValues(alpha: 0.20)
-      ..strokeWidth = 8
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
-    final linePaint = Paint()
-      ..color = color
-      ..strokeWidth = 2.8
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    final pointPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-    final fillPaint = Paint()
-      ..shader = LinearGradient(
-        colors: <Color>[
-          color.withValues(alpha: 0.30),
-          color.withValues(alpha: 0),
-        ],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ).createShader(Offset.zero & size);
-
-    // 空数据不画曲线,也不再用 [0,0,0,0] 补一条假的平线:调用方在无数据时渲染 EmptyState。
-    if (values.isEmpty) {
-      _drawGrid(canvas, chartRect, yLabels.length, gridPaint, axisColor);
-      _drawLabels(canvas, chartRect, xLabels, yLabels, axisColor, textScaler);
-      return;
-    }
-
-    // 序列可能包含负值(如负债账户余额),按 [min, max] 区间归一化;
-    // 全为非负时与按最大值归一化完全一致。
-    final maxValue = math.max(values.reduce(math.max), 0.0);
-    final minValue = math.min(values.reduce(math.min), 0.0);
-    final range = math.max(maxValue - minValue, 1.0);
-    double yFor(double value) =>
-        chartRect.bottom -
-        ((value - minValue) / range * chartRect.height * chartValueScale);
-    // 网格线与纵轴刻度共用同一组高度分数(见 _drawLabels):分数 0 与 1 就是本序列的
-    // min 与 max,中间的刻度按同一区间线性取值,读数因此始终落在对应网格线上。
-    _drawGrid(canvas, chartRect, yLabels.length, gridPaint, axisColor);
-    final path = Path();
-    final fillPath = Path();
-
-    for (var i = 0; i < values.length; i += 1) {
-      final x = values.length == 1
-          ? chartRect.left
-          : chartRect.left + chartRect.width * i / (values.length - 1);
-      final y = yFor(values[i]);
-      if (i == 0) {
-        path.moveTo(x, y);
-        fillPath.moveTo(x, chartRect.bottom);
-        fillPath.lineTo(x, y);
-      } else {
-        final previousX =
-            chartRect.left + chartRect.width * (i - 1) / (values.length - 1);
-        final previousY = yFor(values[i - 1]);
-        final dx = (x - previousX) / 2;
-        path.cubicTo(previousX + dx, previousY, x - dx, y, x, y);
-        fillPath.lineTo(x, y);
-      }
-    }
-
-    fillPath
-      ..lineTo(chartRect.right, chartRect.bottom)
-      ..close();
-    canvas.drawPath(fillPath, fillPaint);
-    if (glow) {
-      canvas.drawPath(path, glowPaint);
-    }
-    canvas.drawPath(path, linePaint);
-    for (var i = 0; i < values.length; i += 1) {
-      if (minValue >= 0 && values[i] <= 0) {
-        continue;
-      }
-      final x = values.length == 1
-          ? chartRect.left
-          : chartRect.left + chartRect.width * i / (values.length - 1);
-      canvas.drawCircle(Offset(x, yFor(values[i])), 2.2, pointPaint);
-    }
-
-    _drawLabels(canvas, chartRect, xLabels, yLabels, axisColor, textScaler);
-
-    final selected = selectedIndex;
-    if (selected != null && selected >= 0 && selected < values.length) {
-      final x = values.length == 1
-          ? chartRect.left
-          : chartRect.left + chartRect.width * selected / (values.length - 1);
-      final y = yFor(values[selected]);
-      canvas.drawLine(
-        Offset(x, chartRect.top),
-        Offset(x, chartRect.bottom),
-        Paint()
-          ..color = color.withValues(alpha: 0.38)
-          ..strokeWidth = 1,
-      );
-      canvas.drawCircle(Offset(x, y), 5, Paint()..color = color);
-      canvas.drawCircle(Offset(x, y), 2.3, Paint()..color = Colors.white);
-      if (tooltip != null) {
-        drawChartTooltip(
-          canvas,
-          size,
-          Offset(x, y),
-          tooltip!,
-          textScaler: textScaler,
-        );
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant TrendLinePainter oldDelegate) {
-    // values/xLabels/yLabels 由调用方每帧新建，用 listEquals 做按元素比较，
-    // 避免内容不变时因列表实例不同而误判为「变了」触发无谓重绘。
-    return oldDelegate.color != color ||
-        !listEquals(oldDelegate.values, values) ||
-        !listEquals(oldDelegate.xLabels, xLabels) ||
-        !listEquals(oldDelegate.yLabels, yLabels) ||
-        oldDelegate.labelColor != labelColor ||
-        oldDelegate.glow != glow ||
-        oldDelegate.selectedIndex != selectedIndex ||
-        oldDelegate.tooltip != tooltip ||
-        oldDelegate.textScaler != textScaler;
-  }
-}
-
-class BarChartPainter extends CustomPainter {
-  const BarChartPainter({
-    required this.values,
-    this.xLabels = const <String>[],
-    this.yLabels = const <String>[],
-    this.labelColor,
-    this.selectedIndex,
-    this.tooltip,
-    this.textScaler = TextScaler.noScaling,
-    required this.brightness,
-  });
-
-  final List<double> values;
-  final List<String> xLabels;
-  final List<String> yLabels;
-  final Color? labelColor;
-  final int? selectedIndex;
-  final ChartTooltip? tooltip;
-
-  /// 画布文字不经过 Theme 的 textTheme,系统字号缩放必须显式传入。
-  final TextScaler textScaler;
-
-  /// 画布不经过 Theme,语义色需按当前明暗取实际值,必须由调用方显式传入。
-  final Brightness brightness;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final chartRect = barChartRect(
-      size,
-      hasXLabels: xLabels.isNotEmpty,
-      hasYLabels: yLabels.isNotEmpty,
-    );
-    // 兜底用中性灰（在深浅背景上都可辨），避免调用方漏传 labelColor 时浅色下白轴看不见。
-    final axisColor = labelColor ?? Colors.grey.withValues(alpha: 0.45);
-    final axisPaint = Paint()
-      ..color = axisColor.withValues(alpha: 0.18)
-      ..strokeWidth = 1;
-    final barPaint = Paint()
-      ..shader = LinearGradient(
-        colors: <Color>[veriRoyal, veriSemanticFor(brightness, veriBlue)],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ).createShader(Offset.zero & size);
-    // 有选中柱子时,其余柱子弱化,突出当前数据。
-    final dimmedBarPaint = Paint()
-      ..color = veriSemanticFor(brightness, veriBlue).withValues(alpha: 0.30);
-
-    canvas.drawLine(
-      Offset(chartRect.left, chartRect.bottom),
-      Offset(chartRect.right, chartRect.bottom),
-      axisPaint,
-    );
-    // 网格线与纵轴刻度共用同一组高度分数(见 _drawLabels),刻度读数落在对应网格线上;
-    // 底边已有轴线,故从 i=1 起画。
-    final gridCount = yLabels.length >= 2 ? yLabels.length : 4;
-    for (var i = 1; i < gridCount; i += 1) {
-      final y = _yAtFraction(chartRect, _axisFraction(i, gridCount));
-      canvas.drawLine(
-        Offset(chartRect.left, y),
-        Offset(chartRect.right, y),
-        axisPaint..color = axisColor.withValues(alpha: 0.10),
-      );
-    }
-
-    // 空数据只画坐标轴与标签、不画柱子（reduce/除以 length 对空列表会抛异常），
-    // 与折线图对空数据的处理对齐。
-    if (values.isEmpty) {
-      _drawLabels(canvas, chartRect, xLabels, yLabels, axisColor, textScaler);
-      return;
-    }
-
-    final maxValue = math.max(values.reduce(math.max), 1);
-    final gap = chartRect.width / values.length;
-    for (var i = 0; i < values.length; i += 1) {
-      final barHeight =
-          values[i] / maxValue * chartRect.height * chartValueScale;
-      final rect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          chartRect.left + i * gap + gap * 0.25,
-          chartRect.bottom - barHeight,
-          gap * 0.5,
-          barHeight,
-        ),
-        const Radius.circular(8),
-      );
-      canvas.drawRRect(
-        rect,
-        selectedIndex == null || selectedIndex == i ? barPaint : dimmedBarPaint,
-      );
-    }
-    _drawLabels(canvas, chartRect, xLabels, yLabels, axisColor, textScaler);
-
-    final selected = selectedIndex;
-    if (selected != null &&
-        selected >= 0 &&
-        selected < values.length &&
-        tooltip != null) {
-      final barHeight =
-          values[selected] / maxValue * chartRect.height * chartValueScale;
-      final anchor = Offset(
-        chartRect.left + selected * gap + gap / 2,
-        chartRect.bottom - barHeight,
-      );
-      drawChartTooltip(canvas, size, anchor, tooltip!, textScaler: textScaler);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant BarChartPainter oldDelegate) {
-    // 同 TrendLinePainter：列表按元素比较，内容不变则不重绘。
-    return !listEquals(oldDelegate.values, values) ||
-        !listEquals(oldDelegate.xLabels, xLabels) ||
-        !listEquals(oldDelegate.yLabels, yLabels) ||
-        oldDelegate.labelColor != labelColor ||
-        oldDelegate.selectedIndex != selectedIndex ||
-        oldDelegate.tooltip != tooltip ||
-        oldDelegate.textScaler != textScaler ||
-        oldDelegate.brightness != brightness;
-  }
-}
-
 class BudgetRingPainter extends CustomPainter {
   const BudgetRingPainter({
     required this.value,
@@ -529,6 +246,10 @@ class BudgetRingPainter extends CustomPainter {
 /// 可交互曲线图:点击或横向滑动选中数据点,弹出数据气泡;
 /// 再次点击同一点或点击图表区外取消。图表区域会拦截点击,
 /// 不会触发外层卡片的跳转。
+///
+/// 绘制由 `fl_chart` 承担（原自绘画布已移除）；对外 API 保持不变，
+/// 因此各页面调用点无需改动。触摸回调把 fl_chart 的响应换算回数据点下标，
+/// 气泡文案仍由 [tooltipOf] 决定。
 class InteractiveTrendChart extends StatefulWidget {
   const InteractiveTrendChart({
     super.key,
@@ -565,72 +286,209 @@ class _InteractiveTrendChartState extends State<InteractiveTrendChart> {
   @override
   void didUpdateWidget(covariant InteractiveTrendChart oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!listEquals(oldWidget.values, widget.values)) {
+    if (!listEquals(oldWidget.values, widget.values) &&
+        _selectedIndex != null &&
+        _selectedIndex! >= widget.values.length) {
       _selectedIndex = null;
+    }
+  }
+
+  void _handleTouch(FlTouchEvent event, LineTouchResponse? response) {
+    final index = response?.lineBarSpots?.firstOrNull?.spotIndex;
+    if (index == null) {
+      if (event is FlTapUpEvent && _selectedIndex != null) {
+        setState(() => _selectedIndex = null);
+      }
+      return;
+    }
+    // 再次点按同一个点取消选中，与旧画布版一致。
+    if (event is FlTapUpEvent && index == _selectedIndex) {
+      setState(() => _selectedIndex = null);
+      return;
+    }
+    if (index != _selectedIndex) {
+      setState(() => _selectedIndex = index);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // 画布文字不经过 Theme,系统字号缩放必须显式读取 MediaQuery。
-    final textScaler = MediaQuery.textScalerOf(context);
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final size = Size(constraints.maxWidth, constraints.maxHeight);
-        Rect chartRect() => trendChartRect(
-          size,
-          hasXLabels: widget.xLabels.isNotEmpty,
-          hasYLabels: widget.yLabels.isNotEmpty,
-        );
-        final tooltip = _selectedIndex == null
-            ? null
-            : widget.tooltipOf(_selectedIndex!);
-        final chart = GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapDown: (details) {
-            final index = chartNearestIndex(
-              details.localPosition,
-              chartRect(),
-              widget.values.length,
-            );
-            setState(() {
-              _selectedIndex = index == _selectedIndex ? null : index;
-            });
-          },
-          onHorizontalDragUpdate: (details) {
-            final index = chartNearestIndex(
-              details.localPosition,
-              chartRect(),
-              widget.values.length,
-            );
-            if (index != null && index != _selectedIndex) {
-              setState(() => _selectedIndex = index);
-            }
-          },
-          child: CustomPaint(
-            painter: TrendLinePainter(
-              color: widget.color,
-              values: widget.values,
-              xLabels: widget.xLabels,
-              yLabels: widget.yLabels,
-              labelColor: widget.labelColor,
-              glow: widget.glow,
-              selectedIndex: _selectedIndex,
-              tooltip: tooltip,
-              textScaler: textScaler,
+    final values = widget.values;
+    final scheme = Theme.of(context).colorScheme;
+    final labelColor =
+        widget.labelColor ?? scheme.onSurface.withValues(alpha: 0.45);
+    final semantics =
+        widget.semanticsLabel ??
+        AppLocalizations.of(context).chartTrendSemantics(values.length);
+
+    if (values.isEmpty) {
+      return Semantics(label: semantics, child: const SizedBox.expand());
+    }
+
+    // 与旧画布一致：零基线参与缩放，负值（负债）也能正确显示。
+    final minValue = values.reduce(math.min);
+    final maxValue = values.reduce(math.max);
+    final rawMin = math.min(0, minValue).toDouble();
+    final rawMax = math.max(0, maxValue).toDouble();
+    final span = (rawMax - rawMin).abs() < 1e-9 ? 1.0 : (rawMax - rawMin);
+    final interval = span / 2;
+    final yLabels = widget.yLabels.isNotEmpty
+        ? widget.yLabels
+        : reportAxisLabels(rawMax);
+
+    final spots = <FlSpot>[
+      for (var i = 0; i < values.length; i++) FlSpot(i.toDouble(), values[i]),
+    ];
+
+    return Semantics(
+      label: semantics,
+      container: true,
+      child: LineChart(
+        LineChartData(
+          minX: 0,
+          maxX: (values.length - 1).toDouble(),
+          minY: rawMin - span * 0.06,
+          maxY: rawMax + span * 0.10,
+          clipData: const FlClipData.all(),
+          gridData: FlGridData(
+            drawVerticalLine: true,
+            horizontalInterval: interval,
+            verticalInterval: values.length > 1
+                ? (values.length - 1) / 5
+                : null,
+            getDrawingHorizontalLine: (_) => FlLine(
+              color: labelColor.withValues(alpha: 0.16),
+              strokeWidth: 1,
             ),
-            child: const SizedBox.expand(),
+            getDrawingVerticalLine: (_) => FlLine(
+              color: labelColor.withValues(alpha: 0.07),
+              strokeWidth: 1,
+            ),
           ),
-        );
-        // 无障碍摘要：选中数据点时用气泡里已本地化的文字，否则给出整图概览。
-        final label = tooltip == null
-            ? widget.semanticsLabel ??
-                  AppLocalizations.of(
-                    context,
-                  ).chartTrendSemantics(widget.values.length)
-            : _tooltipSemanticsLabel(tooltip);
-        return Semantics(container: true, label: label, child: chart);
-      },
+          borderData: FlBorderData(show: false),
+          titlesData: FlTitlesData(
+            topTitles: const AxisTitles(),
+            rightTitles: const AxisTitles(),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 32,
+                interval: interval,
+                getTitlesWidget: (value, meta) {
+                  final index = ((value - rawMin) / interval).round();
+                  if (index < 0 || index >= yLabels.length) {
+                    return const SizedBox.shrink();
+                  }
+                  return SideTitleWidget(
+                    meta: meta,
+                    space: 4,
+                    child: Text(
+                      yLabels[index],
+                      style: TextStyle(fontSize: 10, color: labelColor),
+                    ),
+                  );
+                },
+              ),
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 22,
+                interval: 1,
+                getTitlesWidget: (value, meta) {
+                  final index = value.round();
+                  if (index < 0 || index >= widget.xLabels.length) {
+                    return const SizedBox.shrink();
+                  }
+                  return SideTitleWidget(
+                    meta: meta,
+                    space: 6,
+                    child: Text(
+                      widget.xLabels[index],
+                      style: TextStyle(fontSize: 10, color: labelColor),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          lineTouchData: LineTouchData(
+            enabled: true,
+            handleBuiltInTouches: true,
+            touchCallback: _handleTouch,
+            getTouchedSpotIndicator: (barData, spotIndexes) => spotIndexes
+                .map(
+                  (_) => TouchedSpotIndicatorData(
+                    FlLine(
+                      color: widget.color.withValues(alpha: 0.38),
+                      strokeWidth: 1,
+                    ),
+                    FlDotData(
+                      show: true,
+                      getDotPainter: (spot, percent, bar, index) =>
+                          FlDotCirclePainter(
+                            radius: 5,
+                            color: widget.color,
+                            strokeWidth: 2.3,
+                            strokeColor: scheme.surface,
+                          ),
+                    ),
+                  ),
+                )
+                .toList(),
+            touchTooltipData: LineTouchTooltipData(
+              tooltipBorder: BorderSide(
+                color: Colors.white.withValues(alpha: 0.10),
+              ),
+              getTooltipColor: (_) => veriInk.withValues(alpha: 0.92),
+              getTooltipItems: (spots) => spots
+                  .map(
+                    (spot) => tooltipItemOf(widget.tooltipOf(spot.spotIndex)),
+                  )
+                  .toList(),
+            ),
+          ),
+          lineBarsData: <LineChartBarData>[
+            LineChartBarData(
+              spots: spots,
+              isCurved: true,
+              curveSmoothness: 0.28,
+              preventCurveOverShooting: true,
+              color: widget.color,
+              barWidth: 2.8,
+              isStrokeCapRound: true,
+              dotData: FlDotData(
+                show: true,
+                checkToShowDot: (spot, barData) => spot.y > 0,
+                getDotPainter: (spot, percent, bar, index) =>
+                    FlDotCirclePainter(
+                      radius: 2.2,
+                      color: widget.color,
+                      strokeWidth: 0,
+                    ),
+              ),
+              shadow: widget.glow
+                  ? Shadow(
+                      color: widget.color.withValues(alpha: 0.20),
+                      blurRadius: 5,
+                    )
+                  : const Shadow(),
+              belowBarData: BarAreaData(
+                show: true,
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: <Color>[
+                    widget.color.withValues(alpha: 0.30),
+                    widget.color.withValues(alpha: 0),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        duration: Duration.zero,
+      ),
     );
   }
 }
@@ -666,148 +524,209 @@ class _InteractiveBarChartState extends State<InteractiveBarChart> {
   @override
   void didUpdateWidget(covariant InteractiveBarChart oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!listEquals(oldWidget.values, widget.values)) {
+    if (!listEquals(oldWidget.values, widget.values) &&
+        _selectedIndex != null &&
+        _selectedIndex! >= widget.values.length) {
       _selectedIndex = null;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // 画布文字不经过 Theme,系统字号缩放必须显式读取 MediaQuery。
-    final textScaler = MediaQuery.textScalerOf(context);
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final size = Size(constraints.maxWidth, constraints.maxHeight);
-        Rect chartRect() => barChartRect(
-          size,
-          hasXLabels: widget.xLabels.isNotEmpty,
-          hasYLabels: widget.yLabels.isNotEmpty,
-        );
-        final tooltip = _selectedIndex == null
-            ? null
-            : widget.tooltipOf(_selectedIndex!);
-        final chart = GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapDown: (details) {
-            final index = chartSlotIndex(
-              details.localPosition,
-              chartRect(),
-              widget.values.length,
-            );
-            setState(() {
-              _selectedIndex = index == _selectedIndex ? null : index;
-            });
-          },
-          onHorizontalDragUpdate: (details) {
-            final index = chartSlotIndex(
-              details.localPosition,
-              chartRect(),
-              widget.values.length,
-            );
-            if (index != null && index != _selectedIndex) {
-              setState(() => _selectedIndex = index);
-            }
-          },
-          child: CustomPaint(
-            painter: BarChartPainter(
-              values: widget.values,
-              xLabels: widget.xLabels,
-              yLabels: widget.yLabels,
-              labelColor: widget.labelColor,
-              selectedIndex: _selectedIndex,
-              tooltip: tooltip,
-              textScaler: textScaler,
-              brightness: Theme.of(context).brightness,
+    final brightness = Theme.of(context).brightness;
+    final values = widget.values;
+    final scheme = Theme.of(context).colorScheme;
+    final labelColor =
+        widget.labelColor ?? scheme.onSurface.withValues(alpha: 0.45);
+    final semantics =
+        widget.semanticsLabel ??
+        AppLocalizations.of(context).chartBarSemantics(values.length);
+
+    if (values.isEmpty) {
+      return Semantics(label: semantics, child: const SizedBox.expand());
+    }
+
+    final maxValue = math.max(values.reduce(math.max), 1.0);
+    final interval = maxValue / 2;
+    final yLabels = widget.yLabels.isNotEmpty
+        ? widget.yLabels
+        : reportAxisLabels(maxValue);
+    final gradientBottom = veriSemanticFor(brightness, veriBlue);
+
+    return Semantics(
+      label: semantics,
+      container: true,
+      child: BarChart(
+        BarChartData(
+          minY: 0,
+          maxY: maxValue * 1.14,
+          alignment: BarChartAlignment.spaceAround,
+          gridData: FlGridData(
+            drawVerticalLine: false,
+            horizontalInterval: interval,
+            getDrawingHorizontalLine: (_) => FlLine(
+              color: labelColor.withValues(alpha: 0.16),
+              strokeWidth: 1,
             ),
-            child: const SizedBox.expand(),
           ),
-        );
-        // 无障碍摘要：选中柱子时用气泡里已本地化的文字，否则给出整图概览。
-        final label = tooltip == null
-            ? widget.semanticsLabel ??
-                  AppLocalizations.of(
-                    context,
-                  ).chartBarSemantics(widget.values.length)
-            : _tooltipSemanticsLabel(tooltip);
-        return Semantics(container: true, label: label, child: chart);
-      },
+          borderData: FlBorderData(
+            show: true,
+            border: Border(
+              bottom: BorderSide(
+                color: labelColor.withValues(alpha: 0.28),
+                width: 1,
+              ),
+            ),
+          ),
+          titlesData: FlTitlesData(
+            topTitles: const AxisTitles(),
+            rightTitles: const AxisTitles(),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 32,
+                interval: interval,
+                getTitlesWidget: (value, meta) {
+                  final index = (value / interval).round();
+                  if (index < 0 || index >= yLabels.length) {
+                    return const SizedBox.shrink();
+                  }
+                  return SideTitleWidget(
+                    meta: meta,
+                    space: 4,
+                    child: Text(
+                      yLabels[index],
+                      style: TextStyle(fontSize: 10, color: labelColor),
+                    ),
+                  );
+                },
+              ),
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 22,
+                getTitlesWidget: (value, meta) {
+                  final index = value.round();
+                  if (index < 0 || index >= widget.xLabels.length) {
+                    return const SizedBox.shrink();
+                  }
+                  return SideTitleWidget(
+                    meta: meta,
+                    space: 6,
+                    child: Text(
+                      widget.xLabels[index],
+                      style: TextStyle(fontSize: 10, color: labelColor),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          barTouchData: BarTouchData(
+            enabled: true,
+            handleBuiltInTouches: true,
+            touchCallback: (event, response) {
+              final index = response?.spot?.touchedBarGroupIndex;
+              if (index == null) {
+                if (event is FlTapUpEvent && _selectedIndex != null) {
+                  setState(() => _selectedIndex = null);
+                }
+                return;
+              }
+              if (event is FlTapUpEvent && index == _selectedIndex) {
+                setState(() => _selectedIndex = null);
+                return;
+              }
+              if (index != _selectedIndex) {
+                setState(() => _selectedIndex = index);
+              }
+            },
+            touchTooltipData: BarTouchTooltipData(
+              tooltipBorder: BorderSide(
+                color: Colors.white.withValues(alpha: 0.10),
+              ),
+              getTooltipColor: (_) => veriInk.withValues(alpha: 0.92),
+              getTooltipItem: (group, groupIndex, rod, rodIndex) =>
+                  barTooltipItemOf(widget.tooltipOf(group.x)),
+            ),
+          ),
+          barGroups: <BarChartGroupData>[
+            for (var i = 0; i < values.length; i++)
+              BarChartGroupData(
+                x: i,
+                barRods: <BarChartRodData>[
+                  BarChartRodData(
+                    toY: values[i],
+                    width: 14,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(8),
+                    ),
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: <Color>[
+                        i == _selectedIndex
+                            ? gradientBottom
+                            : gradientBottom.withValues(alpha: 0.30),
+                        i == _selectedIndex
+                            ? veriRoyal
+                            : veriRoyal.withValues(alpha: 0.30),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+        duration: Duration.zero,
+      ),
     );
   }
 }
 
-/// 纵轴网格线与刻度共用的高度分数:第 [index] 条位于 index/(count-1);
-/// 只有一条(或没有刻度)时贴在底边。
-double _axisFraction(int index, int count) =>
-    count <= 1 ? 0.0 : index / (count - 1);
+/// 气泡正文：标题一行 + 各数值行，配色固定（深色底浅色字，任何背景都可读）。
+List<TextSpan> _tooltipSpans(ChartTooltip tooltip) => <TextSpan>[
+  TextSpan(
+    text: '${tooltip.title}\n',
+    style: TextStyle(
+      fontSize: 10,
+      fontWeight: FontWeight.w700,
+      color: Colors.white.withValues(alpha: 0.70),
+    ),
+  ),
+  for (final line in tooltip.lines)
+    TextSpan(
+      text: '${line.text}\n',
+      style: const TextStyle(
+        fontSize: 11.5,
+        fontWeight: FontWeight.w800,
+        color: Colors.white,
+      ),
+    ),
+];
 
-/// 按高度分数求纵坐标,分数 1 是数值区顶部。
-double _yAtFraction(Rect chartRect, double fraction) =>
-    chartRect.bottom - chartRect.height * chartValueScale * fraction;
+TextStyle get _tooltipTextStyle => const TextStyle(
+  fontSize: 11.5,
+  fontWeight: FontWeight.w800,
+  color: Colors.white,
+);
 
-/// 水平网格线与竖向参考网格:水平线数量与纵轴刻度一致,
-/// 保证刻度读数落在对应的网格线上。
-void _drawGrid(
-  Canvas canvas,
-  Rect chartRect,
-  int labelCount,
-  Paint gridPaint,
-  Color axisColor,
-) {
-  final horizontalCount = labelCount >= 2 ? labelCount : 4;
-  for (var i = 0; i < horizontalCount; i += 1) {
-    final y = _yAtFraction(chartRect, _axisFraction(i, horizontalCount));
-    canvas.drawLine(
-      Offset(chartRect.left, y),
-      Offset(chartRect.right, y),
-      gridPaint,
-    );
-  }
-  for (var i = 0; i < 6; i += 1) {
-    final x = chartRect.left + chartRect.width * i / 5;
-    canvas.drawLine(
-      Offset(x, chartRect.top),
-      Offset(x, chartRect.bottom),
-      gridPaint..color = axisColor.withValues(alpha: 0.06),
-    );
-  }
-}
+String _tooltipHeadline(ChartTooltip tooltip) =>
+    tooltip.lines.isEmpty ? tooltip.title : tooltip.lines.first.text;
 
-/// 选中数据点的无障碍摘要:直接复用气泡里已本地化的标题与数值文本。
-String _tooltipSemanticsLabel(ChartTooltip tooltip) => <String>[
-  tooltip.title,
-  ...tooltip.lines.map((line) => line.text),
-].join(', ');
+/// 把站点自带的 [ChartTooltip] 转成折线图气泡内容，保持文案与配色不变。
+LineTooltipItem tooltipItemOf(ChartTooltip tooltip) => LineTooltipItem(
+  _tooltipHeadline(tooltip),
+  _tooltipTextStyle,
+  textAlign: TextAlign.left,
+  children: _tooltipSpans(tooltip),
+);
 
-void _drawLabels(
-  Canvas canvas,
-  Rect chartRect,
-  List<String> xLabels,
-  List<String> yLabels,
-  Color labelColor,
-  TextScaler textScaler,
-) {
-  final textStyle = TextStyle(color: labelColor, fontSize: 10);
-  for (var i = 0; i < xLabels.length; i += 1) {
-    final x =
-        chartRect.left + chartRect.width * _axisFraction(i, xLabels.length);
-    final painter = TextPainter(
-      text: TextSpan(text: xLabels[i], style: textStyle),
-      textDirection: TextDirection.ltr,
-      textScaler: textScaler,
-    )..layout();
-    painter.paint(canvas, Offset(x - painter.width / 2, chartRect.bottom + 6));
-  }
-
-  for (var i = 0; i < yLabels.length; i += 1) {
-    final y = _yAtFraction(chartRect, _axisFraction(i, yLabels.length));
-    final painter = TextPainter(
-      text: TextSpan(text: yLabels[i], style: textStyle),
-      textDirection: TextDirection.ltr,
-      textScaler: textScaler,
-    )..layout();
-    painter.paint(
-      canvas,
-      Offset(chartRect.left - painter.width - 6, y - painter.height / 2),
-    );
-  }
-}
+/// 柱状图版本的转换：fl_chart 对柱状与折线使用不同的气泡类型。
+BarTooltipItem barTooltipItemOf(ChartTooltip tooltip) => BarTooltipItem(
+  '',
+  _tooltipTextStyle,
+  textAlign: TextAlign.left,
+  children: _tooltipSpans(tooltip),
+);

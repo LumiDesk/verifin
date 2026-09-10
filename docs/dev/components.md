@@ -149,8 +149,10 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 
 | 名称 | 类型 | 位置 | 用途 |
 |---|---|---|---|
-| `InteractiveTrendChart` | Widget | `chart_painters.dart` | 可交互折线图；`values, xLabels, yLabels, glow, tooltipOf` |
-| `InteractiveBarChart` | Widget | `chart_painters.dart` | 可交互柱状图；`values, xLabels, yLabels, tooltipOf` |
+| `InteractiveTrendChart` | Widget | `chart_painters.dart` | 可交互折线图（绘制由 `fl_chart` 承担）；`values, xLabels, yLabels, glow, tooltipOf`。点击/横向滑动选中数据点，再点同一点或点图表外取消；自带 `Semantics` 摘要；位于可跳转卡片内时会拦截点击 |
+| `InteractiveBarChart` | Widget | `chart_painters.dart` | 可交互柱状图（绘制由 `fl_chart` 承担）；`values, xLabels, yLabels, tooltipOf`。交互与无障碍同上 |
+| `BudgetRingPainter` | CustomPainter | `chart_painters.dart` | 预算进度圆环，**保持自研**：`SweepGradient` + `GradientRotation(-π/2)` 的接缝处理是规范硬要求，有像素级回归测试（`budget_ring_test.dart`）。不要换成通用进度环组件 |
+| `trendChartRect` / `barChartRect` / `chartNearestIndex` / `chartSlotIndex` / `drawChartTooltip` | 纯函数 | `chart_painters.dart` | 预算趋势组合图（`budget_trend_chart.dart`，自绘画布）仍在用的几何与命中计算；有 `chart_hit_test.dart` 覆盖 |
 | `TrendLinePainter` / `BarChartPainter` / `BudgetRingPainter` | CustomPainter | `chart_painters.dart` | 底层绘制（预算环等） |
 | `ChartTooltip` / `ChartTooltipLine` | 值类 | `chart_painters.dart` | 气泡数据模型 |
 | `trendChartRect` / `barChartRect` / `chartNearestIndex` / `chartSlotIndex` / `drawChartTooltip` | 纯函数 | `chart_painters.dart` | 绘图区计算 / 命中测试 / 气泡绘制 |
