@@ -58,16 +58,15 @@ class _VeriRootNavigationLayout extends InheritedWidget {
   }
 }
 
-/// 根页面列表在浮动导航后方绘制时所需的内容留白。
+/// 根页面列表的默认内边距（横向页边距 14、顶部 8、底部留白）。
+///
+/// 底栏已改为停靠式：`Scaffold` 会为它让出空间，列表末项不再需要按底栏高度避让，
+/// 底部只需一点呼吸空间。[VeriRootNavigationBody] 仍负责把 Scaffold 注入的
+/// bottom padding 从页面子树里移除（否则未显式给 padding 的 GridView 会被撑高）。
 EdgeInsets veriRootPageListPadding(BuildContext context) {
   final layout = context
       .dependOnInheritedWidgetOfExactType<_VeriRootNavigationLayout>();
-  return EdgeInsets.fromLTRB(
-    14,
-    8,
-    14,
-    layout?.listBottomPadding ?? MediaQuery.paddingOf(context).bottom + 12,
-  );
+  return EdgeInsets.fromLTRB(14, 8, 14, layout?.listBottomPadding ?? 12);
 }
 
 /// Veri Fin 根页面的停靠底栏。
@@ -93,8 +92,6 @@ class VeriRootNavigation extends StatefulWidget {
 }
 
 class _VeriRootNavigationState extends State<VeriRootNavigation> {
-  bool _suppressNextDestinationTap = false;
-
   Key _key(String suffix) => ValueKey('${widget.keyPrefix}_$suffix');
 
   @override
@@ -106,10 +103,6 @@ class _VeriRootNavigationState extends State<VeriRootNavigation> {
   }
 
   void _handleDestinationTap(int index) {
-    if (_suppressNextDestinationTap) {
-      _suppressNextDestinationTap = false;
-      return;
-    }
     // bottom_bar_matu 会在 didUpdateWidget 里同步回调 onSelect，也就是在整个构建
     // 过程中；此时切页会重建整棵树，抛「setState() called during build」。
     // 因此只记下意图，等这一帧结束再统一处理。
@@ -125,85 +118,44 @@ class _VeriRootNavigationState extends State<VeriRootNavigation> {
 
   int? _pendingSelection;
 
-  /// 处理一次原始指针点击。
-  ///
-  /// 不能只靠条目自身的 InkWell：底栏是自身的 Stack，条目上的点击与底栏的
-  /// 命中区域会重叠，这里统一按点击位置换算成条目下标，并用
-  /// [_suppressNextDestinationTap] 吞掉随后到来的那次条目点击，避免一次点按
-  /// 切两次页。
-  void _handleTapUp(TapUpDetails details) {
-    final width = context.size?.width ?? 0;
-    if (width <= 0) return;
-    final slot = width / widget.destinations.length;
-    final index = (details.localPosition.dx / slot).floor().clamp(
-      0,
-      widget.destinations.length - 1,
-    );
-    _suppressNextDestinationTap = true;
-    _handleDestinationTap(index);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _suppressNextDestinationTap = false;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    // 停靠底栏自带不透明背景，必须让出系统手势条，否则最下面会被系统导航盖住。
-    // 再加一层实色底衬：`extendBody` 下滚动内容会画到这一层里，只靠库自身的
-    // 背景色会透出下面的日历/列表。
+    // 表面色要一直铺到屏幕最底（含系统手势条背后），否则手势条区域会露出页面
+    // 底色、和底栏分成两块。因此底衬在 SafeArea 之外，条目内容在 SafeArea 之内。
     final surface = veriElevatedSurfaceColor(Theme.of(context).brightness);
-    return SafeArea(
-      top: false,
-      child: Stack(
-        key: _key('bottom_nav'),
-        clipBehavior: Clip.none,
-        alignment: Alignment.bottomCenter,
-        children: <Widget>[
-          // 实色底衬：`extendBody` 下滚动内容会画到这一层，只靠库自身的背景色
-          // 会透出下面的日历/列表。放在底栏之下，不参与它的动画绘制。
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: surface,
-                border: Border(
-                  top: BorderSide(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white.withValues(alpha: 0.07)
-                        : Colors.black.withValues(alpha: 0.07),
-                  ),
+    final outline = Theme.of(context).brightness == Brightness.dark
+        ? Colors.white.withValues(alpha: 0.07)
+        : Colors.black.withValues(alpha: 0.07);
+
+    return DecoratedBox(
+      key: _key('bottom_nav'),
+      decoration: BoxDecoration(
+        color: surface,
+        border: Border(top: BorderSide(color: outline)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: BottomBarDoubleBullet(
+          key: _key('nav_bar'),
+          selectedIndex: widget.currentIndex,
+          height: VeriRootNavigationBody.barHeight,
+          items: <BottomBarItem>[
+            for (var index = 0; index < widget.destinations.length; index++)
+              BottomBarItem(
+                iconData: widget.destinations[index].icon,
+                iconSize: 24,
+                label: widget.destinations[index].label,
+                labelMarginTop: 2,
+                labelTextStyle: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-            ),
-          ),
-          // 停靠底栏：整宽、贴底，条目动画由 bottom_bar_matu 提供。
-          // 不覆盖 circle1/2Color：库用它们画选中时的小圆点，强制成同一个亮色会
-          // 在条目上糊出一条色块。
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTapUp: _handleTapUp,
-            child: BottomBarDoubleBullet(
-              key: _key('nav_bar'),
-              selectedIndex: widget.currentIndex,
-              height: VeriRootNavigationBody.barHeight,
-              items: <BottomBarItem>[
-                for (var index = 0; index < widget.destinations.length; index++)
-                  BottomBarItem(
-                    iconData: widget.destinations[index].icon,
-                    iconSize: 24,
-                    label: widget.destinations[index].label,
-                    labelMarginTop: 2,
-                    labelTextStyle: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-              ],
-              color: veriRoyal,
-              backgroundColor: Colors.transparent,
-              onSelect: _handleDestinationTap,
-            ),
-          ),
-        ],
+          ],
+          color: veriRoyal,
+          backgroundColor: Colors.transparent,
+          onSelect: _handleDestinationTap,
+        ),
       ),
     );
   }

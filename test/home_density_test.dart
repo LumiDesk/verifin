@@ -46,9 +46,7 @@ void main() {
     }
     final transactions = find.byType(TransactionTile);
     expect(transactions, findsNWidgets(5));
-    final navTop = tester
-        .getRect(find.byKey(const Key('main_nav_capsule')))
-        .top;
+    final navTop = tester.getRect(find.byKey(const Key('main_bottom_nav'))).top;
     expect(tester.getRect(transactions.last).bottom, lessThan(navTop));
     final budget = find.byType(BudgetPanel);
     expect(

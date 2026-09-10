@@ -22,9 +22,12 @@ void main() {
     final navRect = tester.getRect(find.byKey(const Key('main_bottom_nav')));
     expect(navRect.left, 0, reason: '停靠底栏应整宽，不再留浮动外边距');
     expect(navRect.right, 360);
-    // 让出系统手势条：底栏内容不贴到 800 的最底。
-    expect(navRect.bottom, lessThanOrEqualTo(800));
-    expect(navRect.height, lessThanOrEqualTo(VeriRootNavigationBody.barHeight));
+    // 表面一直铺到屏幕最底（盖住系统手势条），否则手势条区域会露出页面底色。
+    expect(navRect.bottom, 800);
+    // 条目内容在 SafeArea 之内，不压到手势条上。
+    final barRect = tester.getRect(find.byKey(const Key('main_nav_bar')));
+    expect(barRect.bottom, lessThanOrEqualTo(800 - 20));
+    expect(barRect.height, lessThanOrEqualTo(VeriRootNavigationBody.barHeight));
   });
 
   testWidgets('四个中文标签常显在底栏内', (tester) async {
