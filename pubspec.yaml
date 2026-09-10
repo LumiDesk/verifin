@@ -64,6 +64,7 @@ dependencies:
   google_mlkit_text_recognition: ^0.15.1
   # AI 对话查询的助手答复按 Markdown 渲染（表格/列表/加粗）；纯 Dart、为 LLM 输出设计。
   gpt_markdown: ^1.1.7
+  animated_toggle_switch: ^0.8.7
 
 dev_dependencies:
   integration_test:

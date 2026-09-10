@@ -942,65 +942,13 @@ class _MiniSegmentedToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(veriRadiusSm),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          _MiniSegmentButton(
-            label: leftLabel,
-            selected: !value,
-            onTap: () => onChanged(false),
-          ),
-          _MiniSegmentButton(
-            label: rightLabel,
-            selected: value,
-            onTap: () => onChanged(true),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MiniSegmentButton extends StatelessWidget {
-  const _MiniSegmentButton({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: selected
-          ? Theme.of(context).colorScheme.surface
-          : Colors.transparent,
-      borderRadius: BorderRadius.circular(veriRadiusSm - 2),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(veriRadiusSm - 2),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: selected ? 0.88 : 0.48),
-            ),
-          ),
-        ),
-      ),
+    // 卡片标题行内的小切换：走统一分段控件的紧凑档（false=左项，true=右项）。
+    return VeriSegmentedControl<bool>(
+      values: const <bool>[false, true],
+      selected: value,
+      compact: true,
+      labelOf: (selected) => selected ? rightLabel : leftLabel,
+      onChanged: onChanged,
     );
   }
 }

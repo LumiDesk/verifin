@@ -1,6 +1,7 @@
 {
   "@@locale": "en",
   "appTitle": "Veri Fin",
+  "statRangeLabel": "Range",
   "backupInvalidFile": "The backup file is invalid or corrupted.",
   "fileEmptyError": "The file is empty.",
   "dbErrorTitle": "Couldn't open your data",

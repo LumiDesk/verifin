@@ -1,6 +1,7 @@
 {
   "@@locale": "zh",
   "appTitle": "Veri Fin",
+  "statRangeLabel": "统计区间",
   "@appTitle": {
     "description": "应用名称"
   },

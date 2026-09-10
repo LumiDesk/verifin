@@ -12,6 +12,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'Veri Fin';
 
   @override
+  String get statRangeLabel => 'Range';
+
+  @override
   String get backupInvalidFile => 'The backup file is invalid or corrupted.';
 
   @override

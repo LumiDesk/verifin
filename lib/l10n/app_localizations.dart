@@ -104,6 +104,12 @@ abstract class AppLocalizations {
   /// **'Veri Fin'**
   String get appTitle;
 
+  /// No description provided for @statRangeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'统计区间'**
+  String get statRangeLabel;
+
   /// 导入的备份文件格式无效/为空时的提示
   ///
   /// In zh, this message translates to:

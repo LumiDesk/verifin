@@ -523,19 +523,18 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
                   ],
                 ),
                 const SizedBox(height: 10),
-                SegmentedButton<EntryType>(
-                  segments: EntryType.userSelectable
-                      .map(
-                        (type) => ButtonSegment<EntryType>(
-                          value: type,
-                          label: Text(type.label(AppLocalizations.of(context))),
-                        ),
-                      )
-                      .toList(),
-                  selected: <EntryType>{_type},
-                  onSelectionChanged: (selection) {
+                VeriSegmentedControl<EntryType>(
+                  values: EntryType.userSelectable,
+                  selected: _type,
+                  labelOf: (type) => type.label(AppLocalizations.of(context)),
+                  accentOf: (type) => type == EntryType.expense
+                      ? veriSemantic(context, veriExpense)
+                      : type == EntryType.income
+                      ? veriSemantic(context, veriIncome)
+                      : null,
+                  onChanged: (type) {
                     setState(() {
-                      _type = selection.first;
+                      _type = type;
                       _categoryId = controller
                           .categoriesForType(_type)
                           .first

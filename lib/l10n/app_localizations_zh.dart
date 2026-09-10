@@ -12,6 +12,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appTitle => 'Veri Fin';
 
   @override
+  String get statRangeLabel => '统计区间';
+
+  @override
   String get backupInvalidFile => '备份文件无效或已损坏';
 
   @override

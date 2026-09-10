@@ -964,30 +964,16 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
                 ],
               ),
               const SizedBox(height: 8),
-              SegmentedButton<_StatPeriod>(
-                showSelectedIcon: false,
-                segments: <ButtonSegment<_StatPeriod>>[
-                  ButtonSegment<_StatPeriod>(
-                    value: _StatPeriod.week,
-                    label: Text(l10n.statPeriodWeek),
-                  ),
-                  ButtonSegment<_StatPeriod>(
-                    value: _StatPeriod.month,
-                    label: Text(l10n.statPeriodMonth),
-                  ),
-                  ButtonSegment<_StatPeriod>(
-                    value: _StatPeriod.quarter,
-                    label: Text(l10n.statPeriodQuarter),
-                  ),
-                  ButtonSegment<_StatPeriod>(
-                    value: _StatPeriod.year,
-                    label: Text(l10n.statPeriodYear),
-                  ),
-                ],
-                selected: <_StatPeriod>{_period},
-                onSelectionChanged: (selection) {
-                  setState(() => _period = selection.first);
+              VeriSegmentedControl<_StatPeriod>(
+                values: _StatPeriod.values,
+                selected: _period,
+                labelOf: (period) => switch (period) {
+                  _StatPeriod.week => l10n.statPeriodWeek,
+                  _StatPeriod.month => l10n.statPeriodMonth,
+                  _StatPeriod.quarter => l10n.statPeriodQuarter,
+                  _StatPeriod.year => l10n.statPeriodYear,
                 },
+                onChanged: (period) => setState(() => _period = period),
               ),
               const SizedBox(height: 8),
               Row(

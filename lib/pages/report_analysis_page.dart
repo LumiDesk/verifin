@@ -282,99 +282,22 @@ class _RangeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        _RangeChip(
-          label: AppLocalizations.of(context).thisMonth,
-          selected: range.mode == ReportRangeMode.month,
-          onTap: onMonth,
-        ),
-        const SizedBox(width: 8),
-        _RangeChip(
-          label: AppLocalizations.of(context).timeYear,
-          selected: range.mode == ReportRangeMode.year,
-          onTap: onYear,
-        ),
-        const SizedBox(width: 8),
-        _RangeChip(
-          label: range.mode == ReportRangeMode.custom
-              ? range.label(AppLocalizations.of(context))
-              : AppLocalizations.of(context).customRange,
-          selected: range.mode == ReportRangeMode.custom,
-          icon: Icons.date_range_outlined,
-          onTap: onCustom,
-        ),
-      ],
-    );
-  }
-}
-
-class _RangeChip extends StatelessWidget {
-  const _RangeChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-    this.icon,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  final IconData? icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(999),
-        onTap: onTap,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 36),
-          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
-          decoration: BoxDecoration(
-            color: selected
-                ? veriRoyal
-                : (isDark ? veriSurfaceAltDark : veriSurfaceLight),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: selected
-                  ? veriRoyal
-                  : (isDark ? Colors.white.withValues(alpha: 0.10) : veriLine),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              if (icon != null) ...<Widget>[
-                Icon(
-                  icon,
-                  size: 15,
-                  color: selected
-                      ? Colors.white
-                      : scheme.onSurface.withValues(alpha: 0.72),
-                ),
-                const SizedBox(width: 5),
-              ],
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: selected
-                        ? Colors.white
-                        : scheme.onSurface.withValues(alpha: 0.78),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    final l10n = AppLocalizations.of(context);
+    return VeriSegmentedControl<ReportRangeMode>(
+      values: ReportRangeMode.values,
+      selected: range.mode,
+      semanticLabel: l10n.statRangeLabel,
+      labelOf: (mode) => switch (mode) {
+        ReportRangeMode.month => l10n.thisMonth,
+        ReportRangeMode.year => l10n.timeYear,
+        ReportRangeMode.custom => l10n.customRange,
+      },
+      // 具体区间已显示在页首副标题里，分段条只区分口径，不放长文案与图标。
+      onChanged: (mode) => switch (mode) {
+        ReportRangeMode.month => onMonth(),
+        ReportRangeMode.year => onYear(),
+        ReportRangeMode.custom => onCustom(),
+      },
     );
   }
 }
@@ -658,61 +581,18 @@ class _DimensionToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    Widget segment(String label, EntryType type, Color color) {
-      final selected = dimension == type;
-      return Expanded(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => onChanged(type),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 160),
-            height: 36,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: selected ? color : Colors.transparent,
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: selected
-                    ? Colors.white
-                    : Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.62),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: isDark ? veriSurfaceAltDark : veriSurfaceAltLight,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.08) : veriLine,
-        ),
-      ),
-      child: Row(
-        children: <Widget>[
-          segment(
-            AppLocalizations.of(context).entryTypeExpense,
-            EntryType.expense,
-            veriSemantic(context, veriExpense),
-          ),
-          const SizedBox(width: 4),
-          segment(
-            AppLocalizations.of(context).entryTypeIncome,
-            EntryType.income,
-            veriSemantic(context, veriIncome),
-          ),
-        ],
-      ),
+    final l10n = AppLocalizations.of(context);
+    return VeriSegmentedControl<EntryType>(
+      values: const <EntryType>[EntryType.expense, EntryType.income],
+      selected: dimension,
+      semanticLabel: l10n.statTypeTitle,
+      labelOf: (type) => type == EntryType.expense
+          ? l10n.entryTypeExpense
+          : l10n.entryTypeIncome,
+      accentOf: (type) => type == EntryType.expense
+          ? veriSemantic(context, veriExpense)
+          : veriSemantic(context, veriIncome),
+      onChanged: onChanged,
     );
   }
 }
@@ -805,24 +685,16 @@ class _GroupingSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return SegmentedButton<_ReportGrouping>(
-      showSelectedIcon: false,
-      segments: <ButtonSegment<_ReportGrouping>>[
-        ButtonSegment<_ReportGrouping>(
-          value: _ReportGrouping.topCategory,
-          label: Text(l10n.rankGroupCategory),
-        ),
-        ButtonSegment<_ReportGrouping>(
-          value: _ReportGrouping.subCategory,
-          label: Text(l10n.rankGroupSubCategory),
-        ),
-        ButtonSegment<_ReportGrouping>(
-          value: _ReportGrouping.tag,
-          label: Text(l10n.rankGroupTag),
-        ),
-      ],
-      selected: <_ReportGrouping>{grouping},
-      onSelectionChanged: (selection) => onChanged(selection.first),
+    return VeriSegmentedControl<_ReportGrouping>(
+      values: _ReportGrouping.values,
+      selected: grouping,
+      semanticLabel: l10n.statTypeTitle,
+      labelOf: (value) => switch (value) {
+        _ReportGrouping.topCategory => l10n.rankGroupCategory,
+        _ReportGrouping.subCategory => l10n.rankGroupSubCategory,
+        _ReportGrouping.tag => l10n.rankGroupTag,
+      },
+      onChanged: onChanged,
     );
   }
 }
