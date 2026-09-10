@@ -4,7 +4,7 @@
 
 v1.16.0 发布说明：CI Android 两渠道显式带 `--dart-define=UNIFIED_DESIGN_PREVIEW=true`，保证手机包含已评审外观。该参数现在**只控制布局密度与排版**，与材质无关。本地与发布包对照时必须使用相同参数；无参数构建保留旧外观用于回归。
 
-界面调整必读 [统一设计与交互规范](docs/design-system.md)：集中记录已确认布局、两档材质、深浅色光照、设置持久化与验收约定；历史研究稿不得覆盖该规范。候选统一排版现覆盖全部页面；导航静止必须显示实时文字，预算环禁止内外白线。
+界面调整必读 [统一设计与交互规范](docs/design-system.md)：集中记录已确认布局、表面材质（不透明实色，无玻璃）、设置持久化与验收约定；历史研究稿不得覆盖该规范。候选统一排版现覆盖全部页面；导航静止必须显示实时文字，预算环禁止内外白线。
 
 ## 文档作用与工作语言
 
@@ -18,7 +18,7 @@ v1.16.0 发布说明：CI Android 两渠道显式带 `--dart-define=UNIFIED_DESI
 ### 文档阅读路线
 
 - `docs/dev/architecture.md`：架构与源码导航。`CLAUDE.md` 仅链接本文件，不维护第二份规范。
-- `docs/dev/components.md`：组件、弹窗、格式化与纯函数注册表；写相关代码前必读。
+- `docs/dev/components.md`：组件、弹窗、格式化与纯函数注册表；写相关代码前必读。根导航（停靠底栏）的当前约定与 `bottom_bar_matu` 的三条约束见其中 `VeriRootNavigation` 条目。`docs/dev/liquid-glass-navigation.md` 已是历史留档（浮动胶囊与拖动状态机已废弃）。
 - `docs/ui-guidelines.md`：页面骨架、交互、图表和视觉规范。
 - `docs/dev/tech-decisions.md`：数据口径、备份范围和关键技术取舍；个别历史背景可能已被新实现取代，仍需与代码和测试核对。
 - `docs/dev/known-limitations.md`：已接受技术债及触发整改的阈值。
@@ -28,8 +28,8 @@ v1.16.0 发布说明：CI Android 两渠道显式带 `--dart-define=UNIFIED_DESI
 - `docs/dev/refund-design.md`、`docs/dev/auto-capture-plan.md`、`docs/dev/i18n-verification.md`、`docs/automation.md`：对应领域的设计与验收资料。`refund-design.md` 含历史方案，退款当前行为以源码、测试和 `docs/dev/known-limitations.md` 为准。
 - `docs/dev/android-development.md`：真机开发、工具链检测和缺失时自动安装、日志、隔离验收及测试应用清理。
 - `docs/dev/unified-design-preview.md`：默认关闭的统一设计候选方案；用户确认前不得把 `UNIFIED_DESIGN_PREVIEW` 默认开启或移除旧外观路径。
-- `docs/dev/liquid-glass-navigation.md`：浮动根导航的指针拖动状态机、窄屏适配、真实 Android 应用验证；材质部分已随玻璃移除作废，仅状态机与布局约定仍有效。修改根导航前必读。
 - `docs/dev/feedback-system.md`：根级轻提示 Host 的调用、时长、操作结果、去重、优先级队列与迁移规范；新增或替换短反馈前必读。
+- `docs/dev/ui-library-adoption-plan.md`：第三方 UI 组件库的评估与落地结果（哪些采用、哪些否决、为什么）。**打算引入新组件库前先读它**，避免重复评估已被否决的库；注意开头「实际落地结果」一节以源码与规范为准，下文分析是评估过程记录。
 - `README.md`、`docs/product.md`、`docs/acceptance-checklist.md`：用于理解产品和验收范围；其中少量历史描述可能落后，必须与当前实现交叉核对。
 
 ## 产品原则

@@ -12,15 +12,15 @@
 
 ## 浮动根导航
 
-四个根页面统一使用 `VeriRootNavigation`。导航是浮动胶囊，快捷记账是同材质圆形按钮且只在首页显示；非首页隐藏按钮后胶囊居中。选中图标/文字在深色模式使用白色、浅色模式使用黑色，未选中为灰色；Hover 只增强图标/文字，不绘制背景。
+四个根页面统一使用 `VeriRootNavigation`。底栏是**停靠式**：整宽、不透明、贴底，条目由 `bottom_bar_matu` 绘制（未选中线框图标、选中填充图标，中文标签常显）；右下角的记账按钮是独立的浮动圆角方形，只在首页显示。选中项用中性强调，不给整条导航染品牌蓝。
 
-承载根导航的 Shell 必须启用 `Scaffold.extendBody` 并关闭 body 外层 `SafeArea` 的 bottom 裁切，页面内容需延伸到导航背后，不得留下整宽底栏底色。PageView 外必须套 `VeriRootNavigationBody`，隔离 Scaffold 注入的 bottom padding，避免页面内未显式 padding 的 GridView（日历、功能宫格等）被底栏高度撑大。导航在系统安全区之外再保留左右、底部各 24dp 外边距；四个根页面列表使用 `veriRootPageListPadding(context)` 按保存的实际底栏高度避让末项。
+承载根导航的 Shell 必须关闭 `Scaffold.extendBody`（停靠底栏不透明，内容延伸到它背后会被盖住半截），并关闭 body 外层 `SafeArea` 的 bottom 裁切。PageView 外必须套 `VeriRootNavigationBody`，隔离 Scaffold 注入的 bottom padding，避免页面内未显式 padding 的 GridView（日历、功能宫格等）被底栏高度撑大。底栏内容用 `SafeArea(minimum: 12, maintainBottomViewPadding: true)` 让开系统导航条；根页面列表用 `veriRootPageListPadding(context)` 取统一内边距。
 
-导航胶囊使用不透明表面色、单一描边和阴影，不绘制渐变、不做背景模糊或折射。品牌蓝只用于圆形快捷记账的加号等明确主操作，不用于选中 Tab。
+底栏只响应点击。点击后底栏动画与页面过渡必须同时起步、同时结束——库的 `onSelect` 要等 200ms 才回调，因此底栏自己用 `Listener` 立刻派发，切页时长取 `VeriRootNavigation.switchDuration`。完整时序与第三方约束见 `docs/dev/components.md` 的组件条目。
 
-滑块按下缩放到 94%，按住非当前 Tab 时以 280ms 柔顺追向手指，移动超过 2px 后连续跟随，松手以 240ms 吸附最近目的地，缩放回弹 160ms。不得退回到 `GestureDetector` 默认水平拖动阈值，否则会重现“起步卡一下”和远距离按下直接跳转。完整状态机、研究记录和测试范围见 `docs/dev/liquid-glass-navigation.md`。
+底栏与记账按钮都使用不透明表面色加一条顶部描边，不绘制渐变、不做背景模糊或折射。品牌蓝只用于记账按钮等明确主操作，不用于选中 Tab。
 
-导航触发 PageView 跨页动画时，Shell 只认最终目的地，不得用 `onPageChanged` 途经的中间页覆盖导航状态；用户直接左右滑动 PageView 时才逐页同步。否则松手吸附会被中间页重启，看起来像滑块从原 Tab 重新出发。
+导航触发 PageView 跨页动画时，Shell 只认最终目的地，不得用 `onPageChanged` 途经的中间页覆盖导航状态；用户直接左右滑动 PageView 时才逐页同步。否则跨页动画会被中间页重启，看起来像选中态从原 Tab 重新出发。
 
 ## 顶部 Header 与页面骨架
 所有页面顶部统一使用 `VeriHeader` 或 `PageHeader`。Header 固定高度（`veriHeaderHeight`），支持返回、标题、副标题和右侧操作。不要在页面内手写顶部 `Row + IconButton + Text`，避免不同页面高度和对齐不一致。
