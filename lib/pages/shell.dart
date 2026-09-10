@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
@@ -28,8 +29,6 @@ class VeriFinShell extends StatefulWidget {
 }
 
 class _VeriFinShellState extends State<VeriFinShell> {
-  static const _rootPageCount = 4;
-
   int _index = 0;
   int? _programmaticPageTarget;
   DateTime? _lastBackPressedAt;
@@ -42,6 +41,20 @@ class _VeriFinShellState extends State<VeriFinShell> {
   double? _lastScrollPixels;
   Duration? _lastScrollAt;
   double _scrollVelocity = 0;
+
+  /// 切页动画的弹簧。
+  ///
+  /// 刻意**不用固定时长**：固定时长的动画每次改目标都得从头重新计时，连点时页面被
+  /// 反复「重新起步」，看起来就像没动。弹簧只由「当前位置 + 当前速度 + 目标」决定，
+  /// 改目标时顺着当前速度接着跑，所以连点是连续的。
+  ///
+  /// 用感知时长描述（语义同 SwiftUI 的 `spring(duration:bounce:)`）：250ms、无回弹。
+  /// 弹簧的收敛时间与距离无关，跨 1 页和跨 3 页手感一致；底栏那段扫过动效取同一个
+  /// 数值（`VeriBottomBar.switchDuration`），两者因此自然同时收住。
+  static final SpringDescription _kTabSwitchSpring =
+      SpringDescription.withDurationAndBounce(
+        duration: VeriRootNavigation.switchDuration,
+      );
 
   @override
   void initState() {
@@ -71,7 +84,7 @@ class _VeriFinShellState extends State<VeriFinShell> {
     super.dispose();
   }
 
-  /// 按帧差分滚动速度，供 [_switchCurve] 在改点目标时接上初速度。
+  /// 按帧差分滚动速度，作为切页弹簧的初速度：改点目标时顺着当前速度接着跑。
   void _trackScrollVelocity() {
     final binding = SchedulerBinding.instance;
     // `currentFrameTimeStamp` 只在 `handleBeginFrame` 到 `handleDrawFrame` 之间有效，
@@ -120,81 +133,60 @@ class _VeriFinShellState extends State<VeriFinShell> {
     _animateToTab(index);
   }
 
-  /// 把页面送到 [index]，并保证「点了就一定到」。
+  /// 把页面平滑地送到 [index]。
   ///
-  /// `PageController.animateToPage` 在滚动位置还没就绪时（位置缓存着待用页、或还没有
-  /// viewport 尺寸）会**一步都不走、直接返回一个已完成的 future**。此时若在完成回调里
-  /// 把底栏下标改回页面实际所在的页，这次点击就被悄悄吞掉了——用户看到的是「点了没反
-  /// 应、卡在原来的 Tab 上」。这里检测「动画已经结束但页面没到位」就重来一次，仍不成功
-  /// 再用 `jumpToPage` 兜底，任何情况下点击都有结果。
-  void _animateToTab(int index, {bool retried = false}) {
-    unawaited(
-      _pageController
-          .animateToPage(
-            index,
-            // 与底栏的选中动画同时长：点击后两者同时起步、同时结束。
-            duration: VeriRootNavigation.switchDuration,
-            curve: _switchCurve(index),
-          )
-          .whenComplete(() {
-            // `hasClients` 之外还要看 `mounted`：子树被拆掉后 `_pageController.page`
-            // 会直接断言失败。
-            if (!mounted || !_pageController.hasClients) {
-              return;
-            }
-            // 已被更晚的一次点击顶掉，交给那一次收尾。
-            if (_programmaticPageTarget != index) {
-              return;
-            }
-            final settled = (_pageController.page ?? index.toDouble())
-                .round()
-                .clamp(0, _rootPageCount - 1);
-            if (settled != index) {
-              if (!retried) {
-                _animateToTab(index, retried: true);
-                return;
-              }
-              _pageController.jumpToPage(index);
-            }
-            setState(() {
-              _index = index;
-              _programmaticPageTarget = null;
-            });
-          }),
+  /// 用弹簧驱动，而不是 `PageController.animateToPage`：后者是固定时长的曲线插值，
+  /// 每次调用都从头计时，动画没播完就改目标会「先刹停再重新加速」；弹簧以当前速度
+  /// 接着跑，没有这个问题。另外 `animateToPage` 在滚动位置还没就绪时会一步都不走地
+  /// 直接返回，点击会被悄悄吞掉——这里真遇上拿不到滚动位置的情况就退回一次性跳转，
+  /// 保证点击一定有结果。
+  void _animateToTab(int index) {
+    if (!_pageController.hasClients) {
+      return;
+    }
+    final position = _pageController.position;
+    if (position is! ScrollPositionWithSingleContext ||
+        !position.hasPixels ||
+        !position.hasViewportDimension) {
+      _pageController.jumpToPage(index);
+      _finishTabSwitch(index);
+      return;
+    }
+    final activity = DrivenScrollActivity.simulation(
+      position,
+      SpringSimulation(
+          _kTabSwitchSpring,
+          position.pixels,
+          // 弹簧结束时精确落到目标（`snapToEnd`），页面正好停在一页的边界上。
+          index * position.viewportDimension,
+          _scrollVelocity,
+          snapToEnd: true,
+        )
+        // 默认容差里速度阈值极严（0.02 px/s），弹簧会拖着一条近一秒的亚像素尾巴，
+        // 期间 `DrivenScrollActivity` 一直占着滚动状态、页面区域不收点击。收紧到
+        // 「1px 以内且慢于 80px/s」就收工，剩下的不到 1px 由 `snapToEnd` 直接落位。
+        ..tolerance = const Tolerance(distance: 1, velocity: 80),
+      vsync: position.context.vsync,
     );
+    position.beginActivity(activity);
+    unawaited(activity.done.whenComplete(() => _finishTabSwitch(index)));
   }
 
-  /// 切换 Tab 用的曲线。
-  ///
-  /// 直接传 `Curves.easeInOutCubic` 时，`animateToPage` 每次都按这条曲线从 0 重新
-  /// 插值，而它起步斜率只有 0.07：动画没播完就改点别的 Tab，页面会先「刹停」再重新
-  /// 加速。实测（`test/navigation_settings_test.dart` 的连点回归）改点目标的那一帧，
-  /// 每帧位移会从 0.0279 页掉到 0.0086 页——速度一帧掉到三成，看起来就是一顿。
-  ///
-  /// 这里按当前滚动速度反推一条起点斜率匹配的曲线，速度不断档。终点斜率仍为 0
-  /// （平滑收住），时长与终点都不变，底栏的选中动效依旧和页面同时起步、同时结束。
-  Curve _switchCurve(int targetPage) {
-    final position = _pageController.position;
-    if (!position.hasPixels ||
-        !position.hasViewportDimension ||
-        !position.hasContentDimensions) {
-      return Curves.easeInOutCubic;
+  /// 一次切页收尾：确认它仍是当前目标，再把底栏定到目标页。
+  void _finishTabSwitch(int index) {
+    // `hasClients` 之外还要看 `mounted`：子树被拆掉后 `_pageController`
+    // 会直接断言失败。
+    if (!mounted || !_pageController.hasClients) {
+      return;
     }
-    final distance = targetPage * position.viewportDimension - position.pixels;
-    // 速度不可用或接近 0（上一次切换已停稳、或这是全新的一次点击）时按原曲线走。
-    // `isFinite` 不能省：NaN 参与比较恒为 false，会漏过这道阈值直接算出 NaN 曲线。
-    final velocity = _scrollVelocity;
-    if (distance.abs() < 1 || !velocity.isFinite || velocity.abs() < 20) {
-      return Curves.easeInOutCubic;
+    // 已被更晚的一次点击接管，交给那一次收尾。
+    if (_programmaticPageTarget != index) {
+      return;
     }
-    final seconds =
-        VeriRootNavigation.switchDuration.inMicroseconds /
-        Duration.microsecondsPerSecond;
-    // 三次贝塞尔 `Cubic(a, b, c, d)` 的起点斜率是 b/a、终点斜率是 (1-d)/(1-c)：
-    // 取 d = 1 让终点平滑收住，b 由需要的起点斜率反推。斜率夹在区间内，避免剩余
-    // 距离很小时反推出极大的 b 造成明显过冲。
-    final slope = (velocity * seconds / distance).clamp(-0.9, 1.5);
-    return Cubic(0.645, 0.645 * slope, 0.355, 1);
+    setState(() {
+      _index = index;
+      _programmaticPageTarget = null;
+    });
   }
 
   void _handlePageChanged(int value) {
