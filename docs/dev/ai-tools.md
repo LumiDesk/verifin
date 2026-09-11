@@ -22,7 +22,7 @@
   - `summary`：紧凑的结构化文本，**回喂模型**继续推理（含关键数字）。
   - `display`：给聊天页渲染的规格（`AiResultDisplay` 的子类），可为 null。
 - **数据范围**：仅当前活动账本（与 App 内其它数据工具一致）。
-- **金额口径**：收支统计、金额筛选和工具摘要使用交易保存时冻结的账本本位币金额；转账不计收支且 `baseAmount == 0`，其金额筛选/排序按交易日有效汇率临时折算转出端真实金额，摘要对**跨币种**转账展示转出/转入两端原币（同币种两端金额相同，只报一次）。金额里的币种标识跟随 `AiToolContext.currencyDisplay`（见上条），也就是跟随设置里的「单位样式」：多币种账本、或单币种账本未开「隐藏单位」时摘要按样式输出 `100 ¥` 或 `CNY 100`；单币种 + 隐藏单位时值为 `MoneyCodeDisplay.none`，摘要与表格都不写币种，给模型的系统提示词也不再告知币种代码。具体交易列表仍以交易原币为主金额展示。
+- **金额口径**：收支统计、金额筛选和工具摘要使用交易保存时冻结的账本本位币金额；转账不计收支且 `baseAmount == 0`，其金额筛选/排序按交易日有效汇率临时折算转出端真实金额，摘要对**跨币种**转账展示转出/转入两端原币（同币种两端金额相同，只报一次）。金额里的币种标识跟随 `AiToolContext.currencyDisplay`（见上条），也就是跟随设置里的「单位样式」：多币种账本、或单币种账本未开「隐藏单位」时摘要按样式输出 `100 ¥` 或 `CNY 100`；单币种 + 隐藏单位时值为 `MoneyCodeDisplay.none`，摘要与表格都不写币种，给模型的系统提示词也不再告知币种代码。多币种表格必须保留币种列或直接在金额中带单位；具体交易列表仍以交易原币为主金额展示。
 - **边界**：对话主循环最多 5 轮、累计 10 次工具调用；单次回喂结果与历史上下文都有限额。传输层校验 `finish_reason` / `[DONE]`，网络失败至多重试一次，且只有尚未执行工具时才允许非流式回退。
 
 ## 新增一个工具（三步）
@@ -64,7 +64,7 @@
 | `compare` | 指定月份与上月、去年同月的收支环比 / 同比 | `month` | `reportMonthlyComparison` | Stat |
 | `accountsOverview` | 各账户名称、币种与余额一览（不含隐藏账户；隐藏单位时整列不输出「币种」） | — | `ctx.balanceOf` + `convertAccountBalancesToBase` | Table |
 | `netWorth` | 总资产 / 总负债 / 净资产（本位币口径） | — | `convertAccountBalancesToBase` | Stat |
-| `creditCardBill` | 信用类账户的欠款、可用额度、本期账单与还款日 | — | `credit_card.dart` | Table |
+| `creditCardBill` | 信用类账户的欠款、可用额度、本期账单与还款日；多币种时表格保留币种列 | — | `credit_card.dart` | Table |
 | `budgetStatus` | 某预算期的预算、已花、剩余、剩余日均与需要关注的分类 | `month` | `budget_status.dart` | Stat |
 
 **时间窗参数 `range` 预设**：`thisMonth` / `lastMonth` / `thisYear` / `lastYear` / `last7Days` / `last30Days` / `last3Months` / `last6Months` / `last12Months` / `all`；或用 `start`+`end`（`YYYY-MM-DD`）指定显式区间。

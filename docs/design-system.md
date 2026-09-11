@@ -41,7 +41,7 @@
 | 内容卡片 | `veriContentSurfaceColor(brightness)` 实色 + 圆角 + 细描边；深色 `veriPreviewSurfaceDark`，浅色 `veriSurfaceLight` |
 | 页面背景 | `scaffoldBackgroundColor` 取画布纯色（`veriPreviewCanvasLight` / `veriPreviewCanvasDark`），不用渐变 |
 | 底部导航（停靠底栏） | 不透明表面色 + 顶部细描边；表面色一直铺到屏幕最底（含系统导航条背后） |
-| 快捷记账按钮 | 不透明圆形表面 + `veriRoyal` 加号 |
+| 快捷记账按钮 | `veriRoyal` 实色圆角方形 + 白色加号，只在首页右下角显示 |
 | 菜单 / 弹层 | 实色面板（`veriSurfaceLight` / `veriSurfaceAltDark`）+ 圆角描边；进出为淡入淡出 + 0.96→1 缩放 |
 | 预算圆环 | 保持原常规 SweepGradient 进度环，颜色、比例与无接缝处理不变 |
 
