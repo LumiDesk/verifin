@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/app_theme.dart';
+import 'package:verifin/app/common_widgets.dart';
 import 'package:verifin/pages/home_page.dart';
 
 void main() {
@@ -18,6 +19,26 @@ void main() {
         reason: '页面背景必须自带不透明底色，不能依赖外部玻璃层补底',
       );
     }
+  });
+
+  testWidgets('页面背景在默认与统一布局中都使用实色', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildVeriFinTheme(Brightness.light),
+        home: const Scaffold(body: VeriPage(child: Text('content'))),
+      ),
+    );
+    final container = tester.widget<Container>(
+      find
+          .descendant(
+            of: find.byType(VeriPage),
+            matching: find.byType(Container),
+          )
+          .first,
+    );
+    final decoration = container.decoration! as BoxDecoration;
+    expect(decoration.gradient, isNull);
+    expect(decoration.color?.a, 1);
   });
 
   test('深色输入默认无白边，聚焦和错误保留语义边框', () {
