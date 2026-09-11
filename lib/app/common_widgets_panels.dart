@@ -372,69 +372,75 @@ class _CalendarPreviewState extends State<CalendarPreview> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Expanded(
-                child: Text(
-                  AppLocalizations.of(context).calendarTitle,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
+                child: SectionTitle(
+                  title: AppLocalizations.of(context).calendarTitle,
+                ),
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  IconButton(
+                    constraints: const BoxConstraints.tightFor(
+                      width: 32,
+                      height: 32,
+                    ),
+                    padding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                    tooltip: AppLocalizations.of(context).calendarPrevMonth,
+                    onPressed: () => setState(() {
+                      _visibleMonth = DateTime(
+                        _visibleMonth.year,
+                        _visibleMonth.month - 1,
+                      );
+                    }),
+                    icon: const Icon(Icons.chevron_left, size: 20),
                   ),
-                ),
-              ),
-              IconButton(
-                constraints: const BoxConstraints.tightFor(
-                  width: 32,
-                  height: 32,
-                ),
-                padding: EdgeInsets.zero,
-                visualDensity: VisualDensity.compact,
-                tooltip: AppLocalizations.of(context).calendarPrevMonth,
-                onPressed: () => setState(() {
-                  _visibleMonth = DateTime(
-                    _visibleMonth.year,
-                    _visibleMonth.month - 1,
-                  );
-                }),
-                icon: const Icon(Icons.chevron_left, size: 20),
-              ),
-              Container(
-                constraints: const BoxConstraints(minWidth: 64),
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? veriSurfaceAltDark
-                      : veriSurfaceAltLight,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white.withValues(alpha: 0.08)
-                        : veriLine,
+                  Container(
+                    constraints: const BoxConstraints(minWidth: 64),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? veriSurfaceAltDark
+                          : veriSurfaceAltLight,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white.withValues(alpha: 0.08)
+                            : veriLine,
+                      ),
+                    ),
+                    child: Text(
+                      '${_visibleMonth.year}.${_visibleMonth.month.toString().padLeft(2, '0')}',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
-                ),
-                child: Text(
-                  '${_visibleMonth.year}.${_visibleMonth.month.toString().padLeft(2, '0')}',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
-                ),
-              ),
-              IconButton(
-                constraints: const BoxConstraints.tightFor(
-                  width: 32,
-                  height: 32,
-                ),
-                padding: EdgeInsets.zero,
-                visualDensity: VisualDensity.compact,
-                tooltip: AppLocalizations.of(context).calendarNextMonth,
-                onPressed: () => setState(() {
-                  _visibleMonth = DateTime(
-                    _visibleMonth.year,
-                    _visibleMonth.month + 1,
-                  );
-                }),
-                icon: const Icon(Icons.chevron_right, size: 20),
+                  IconButton(
+                    constraints: const BoxConstraints.tightFor(
+                      width: 32,
+                      height: 32,
+                    ),
+                    padding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                    tooltip: AppLocalizations.of(context).calendarNextMonth,
+                    onPressed: () => setState(() {
+                      _visibleMonth = DateTime(
+                        _visibleMonth.year,
+                        _visibleMonth.month + 1,
+                      );
+                    }),
+                    icon: const Icon(Icons.chevron_right, size: 20),
+                  ),
+                ],
               ),
             ],
           ),
