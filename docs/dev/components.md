@@ -38,10 +38,10 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `VeriPage` | Widget | `common_widgets.dart` | 渐变背景 + 居中 + `maxWidth` 约束的页根容器 |
 | `VeriCard` | Widget | `common_widgets.dart` | 统一圆角/描边/阴影卡片，可点击（`quietTap` 长按吞噬变体） |
 | `VeriHeader` | Widget | `common_widgets.dart` | 页眉（标题+副标题+返回+actions，最小高度 52、候选构建 56；用最小高度而非固定高度，系统字号放大时两行标题不会被裁掉） |
-| `PageHeader` | Widget | `common_widgets.dart` | `VeriHeader` 的薄封装（单 trailing） |
+| `PageHeader` | Widget | `common_widgets.dart` | `VeriHeader` 的薄封装（单 trailing）；`subtitle` 为 `String?`，`null` 时整行不渲染；副标题里带「单位：x」必须用 `currencyUnitSubtitle`（族 7）——隐藏单位且无上下文时它返回 `null`，直接传进去即可整段省略 |
 | `VeriRootNavigation` / `VeriRootNavigationBody` / `VeriNavigationDestination` / `veriRootPageListPadding` | Widget / 值类 / 布局 helper | `root_navigation.dart` | 四个根页面的**停靠底栏**：整宽、不透明、贴底，底色铺到屏幕最底（含系统导航条背后，否则会分成两块）。条目由 `VeriBottomBar`（`veri_bottom_bar.dart`）绘制，**未选中用 `destination.icon`（线框）、选中用 `selectedIcon`（填充）**，中文标签常显。**记账按钮不在底栏内**——由 `shell.dart` 放在 body 右下角浮动（自绘 `Material`+`InkWell`，因为 `FloatingActionButton` 会吞掉长按，而长按要走 AI 记账）。**安全区**用 `SafeArea(minimum: 12, maintainBottomViewPadding: true)` 取 `max(系统留白, 12)`：系统留白可能是 0，不给下限条目会贴边；`maintainBottomViewPadding` 让键盘弹起时底栏不跳 |
 | `VeriBottomBar` / `VeriBottomBarItem` | Widget / 值类 | `veri_bottom_bar.dart` | 底栏条目绘制：切换时两条圆弧扫过、两枚圆点飞过，图标由灰渐变为品牌色并轻微摆动。**抄写自 `bottom_bar_matu` 1.5.0 并在本项目内修复后自持**（依赖已移除）；原库的四处缺陷——父级每次重建都重置图标 State、进度 forward/reverse 往返断档、旋转方向判断恒为 false、延迟 200ms 才回调 `onSelect`——逐条记在源文件头注释里。选中态完全由 `selectedIndex` 驱动并同步更新，`onSelect` 每次点击恰好一次 |
-| `VeriFeedbackHost` / `VeriFeedbackController` / `VeriFeedbackRequest` / `VeriFeedbackResult` | 根级 Widget / Controller / 模型 | `feedback.dart` | 跨路由应用内轻提示：内容自适应宽高与三行正文、四条可见栈、优先级等待队列、2/4/8 秒与常驻、单操作 Future 结果、显式去重、前后台暂停；完整规范见 `feedback-system.md` |
+| `VeriFeedbackHost` / `VeriFeedbackController` / `VeriFeedbackRequest` / `VeriFeedbackResult` | 根级 Widget / Controller / 模型 | `feedback.dart` | 跨路由应用内轻提示：内容自适应宽高与三行正文（`error` 六行）、四条可见栈、优先级等待队列、2/4/8 秒与常驻、单操作 Future 结果、显式去重、前后台暂停；完整规范见 `feedback-system.md` |
 | `SectionTitle` | Widget | `common_widgets.dart` | 区块标题 + 可选 trailing |
 | `EmptyState` | Widget | `common_widgets.dart` | 空状态（图标+标题+描述+可选 `action` 操作入口） |
 | `HeaderAction` / `HeaderTextAction` / `HeaderInline` / `VeriSectionAction` | Widget | `common_widgets.dart` | 页眉动作族（图标钮/文字钮/宽度约束/填充色小图标钮）；需要弹出操作菜单时使用 `VeriAnchoredMenuButton` |
@@ -95,8 +95,8 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `showCurrencyPickerSheet` | Sheet 函数 | `sheets.dart` | 可搜索的离线 ISO 4217 法定货币选择器（代码/中英文名/符号，支持常用/业务优先币种与排除项）；取消返回 `null` |
 | `evaluateAmountExpression` / `amountExpressionHasOperator` | 纯函数 | `calc_expression.dart` | 算式求值（不完整返回 null，结果已规整到分）/ 是否含运算符 |
 | `CurrencyCatalog` | 静态目录 | `currency_catalog.dart` | 离线 ISO 4217 法定货币定义、常用币种排序与中英文搜索；业务层不得另建货币清单 |
-| `normalizeCurrencyAmount` / `formatCurrencyNumber` / `formatMoney` / `formatUserMoney` / `formatSignedUserMoney` / `formatRateValue` / `formatRateValueExact` | 纯函数 | `currency_math.dart` | 按币种 minor unit 规整与格式化；**用户界面一律用 `formatUserMoney` 族**，它自动遵循符号/代码与单币种隐藏偏好；`formatMoney` 的 `display` 默认 `MoneyCodeDisplay.code`（恒带单位），只适合 AI 摘要等显式要求代码的场景。`formatRateValue` 是 4/6/8 位自适应的界面文本，CSV 等精确往返必须用 `formatRateValueExact` |
-| `textCurrencyUnitHidden` / `optionalCurrencyUnit` | 纯函数 | `currency_math.dart` | **「单独占一个位置的单位文字」的唯一入口**：单币种账本 + 开启隐藏时返回 `true` / `null`。`displayCurrencyUnit` 不读闸门（它只解析符号/代码样式），只允许在币种选择器、汇率等式这类「界面主题就是币种」的地方直接用；页头副标题、卡片角标一律走下面这对 helper |
+| `normalizeCurrencyAmount` / `formatCurrencyNumber` / `formatMoney` / `formatUserMoney` / `formatSignedUserMoney` / `formatRateValue` / `formatRateValueExact` | 纯函数 | `currency_math.dart` | 按币种 minor unit 规整与格式化；**用户界面一律用 `formatUserMoney` 族**，它自动遵循符号/代码与单币种隐藏偏好；`formatMoney` 的 `display` 默认 `MoneyCodeDisplay.code`（恒带单位），界面金额不得吃这个默认值——AI 工具摘要也已改走 `AiToolContext.currencyDisplay`（见族 10）。`formatRateValue` 是 4/6/8 位自适应的界面文本，CSV 等精确往返必须用 `formatRateValueExact` |
+| `textCurrencyUnitHidden` / `optionalCurrencyUnit` | getter / 纯函数 | `currency_math.dart` | **单位文字的闸门读取入口**：闸门是 `amount_format.activeMoneyCodeDisplay`（`none` 即隐藏），单币种账本 + 开启隐藏时返回 `true` / `null`。`displayCurrencyUnit` 不读闸门（它只解析符号/代码样式），只允许在币种选择器、汇率等式这类「界面主题就是币种」的地方直接用；页头/卡片副标题走 `currencyUnitSubtitle`、卡片角标走 `MoneyUnitLabel`（族 7）。**唯一例外**：「我的」→「货币与汇率」入口用 `optionalCurrencyUnit(...) ?? ''` 占位保宫格行高（`profile_pages.dart`）；别处拿到 null 一律整段省略，不要渲染空串 |
 | `exchangeRateAt` / `rateToBaseAt` / `convertCurrencyAmount` | 纯函数 | `currency_math.dart` | 按交易日取最近历史汇率（不使用未来值）/ 经本位币交叉换算；缺汇率返回强类型结果 |
 | `convertAccountBalancesToBase` / `ConvertedAccountBalances` | 纯函数 / 结果类型 | `currency_math.dart` | 把账户原币余额完整折算到本位币；任一账户缺率时 `completeTotal == null`，并返回缺失币种和受影响账户，禁止展示部分总额 |
 
@@ -104,11 +104,11 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 
 | 名称 | 类型 | 位置 | 用途 |
 |---|---|---|---|
-| `TransactionTile` | Widget | `common_widgets.dart` | 单条交易行（图标+分类+时间/备注+金额+账户 pill+待报销/已退款徽标，多选态内建） |
+| `TransactionTile` | Widget | `common_widgets.dart` | 单条交易行（图标+分类+时间/备注+金额+账户 pill+待报销/已退款徽标，多选态内建）；副行的跨币种换算**只在两端币种不同时**渲染（同币种两端的换算整条是重复信息），`forceUnit: true` 只留给真正同屏出现第二个币种的换算字段，「显示逐笔结余」的余额走 `formatUserMoney` 不带单位 |
 | `TransactionListCard` | Widget | `common_widgets.dart` | 交易列表卡（多条 `TransactionTile` + 分隔线） |
 | `DateGroupHeader` | Widget | `common_widgets.dart` | 日期分组小标题（日期+今天/昨天+当日合计） |
 | `groupEntriesByDate` / `relativeDay` | 纯函数 | `common_widgets.dart` | 按日分组、日期倒序 / 相对今天；`DateEntryGroup` 分组模型 |
-| `CalendarPreview` | Widget | `common_widgets.dart` | 月历预览（内建月份切换 + 日收支）；必传 `currencyCode`，卡片右下角显示轻量单位提示 |
+| `CalendarPreview` | Widget | `common_widgets.dart` | 月历预览（内建月份切换 + 日收支）；必传 `currencyCode`；单币种账本隐藏单位时右下角不再显示轻量单位提示，并**连同前置 6dp 间距整块不构建**（`if (!textCurrencyUnitHidden)`，见维护约定），多币种账本照常显示 |
 | `EntryTagField` | Widget | `common_widgets.dart` | 记账表单标签行 |
 | `AttachmentsEditor` | Widget | `attachments_editor.dart` | 多图片附件横向缩略图、全屏查看和逐张删除；默认自带标题与拍照/相册添加入口，记账页的轻量元数据布局通过 `showHeader:false` / `showAddButton:false` 只复用缩略图条，添加入口由页面标签触发 |
 | `TagSelectorSheet` / `pickEntryTags` | Widget / Sheet 函数 | `entry_sheets.dart` / `sheets.dart` | 交易标签多选（即时新建）/ 接 controller 的弹窗封装 |
@@ -126,7 +126,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `VeriSegmentedControl<T>` | Widget | `common_widgets.dart` | **统一分段控件**（文字标签 + 滑动胶囊指示，基于 `animated_toggle_switch`）。所有「N 选一的横向口径切换」一律用它，不要再手写 Row+InkWell 分段条或裸用 Material `SegmentedButton`。颜色只走设计令牌，调用方仅可通过 `accentOf` 指定选中项的语义强调色；`compact: true` 用于卡片标题行内的小切换；`onChanged: null` 整组禁用；自带 `Semantics`（第三方控件本身无语义）。**不用它**：图标型开关（走 `CompactSwitchRow`）、超过 4 项或需要分区的单选（走 `showOptionSheet` / `VeriAnchoredChoice`）、菜单触发器（走 `FilterPill`）、左右步进器（走 `MonthSwitcher`） |
 | `DetailInfoRow` | Widget | `common_widgets.dart` | 详情页 label/value 行（可点击带 chevron） |
 | `CurrencyAmountField` | Widget | `common_widgets.dart` | 交易/退款/周期编辑器统一的货币金额行；按 ISO minor unit 格式化；`amount == null` 时显示明确缺失态。`forceUnit` **默认 `true` 且不要改**：编辑器允许临时选一个账本里还没有的币种，那一刻闸门还关着但同屏已出现两个币种，单位必须保留。只有两端币种被锁死、不可能出现第二币种的地方（退款表单）才显式传 `false` |
-| `MoneyUnitLabel` | Widget | `common_widgets.dart` | 聚合卡片/页面的轻量「单位：¥/CNY」提示（概览、预算、日历、走势、AI 结果卡）；单币种账本隐藏单位时**整块不渲染**（返回 `SizedBox.shrink`，widget 仍在树上，测试可用它当渲染探针） |
+| `MoneyUnitLabel` | Widget | `common_widgets.dart` | 聚合卡片的轻量「单位：¥/CNY」提示（首页支出走势卡——**仅未开启 `UNIFIED_DESIGN_PREVIEW` 的旧外观**，正式外观这里渲染的是「周／月／季／年」标签、首页预算卡、日历卡、AI 结果卡；走势设置页预览复用同一张卡）；单币种账本隐藏单位时组件自身返回 `SizedBox.shrink`——**只表示看不见，不能拿它判断单位是否显示**；把容器一起收掉的调用点（日历卡）隐藏时根本不构建，`find.byType` 是 `findsNothing`。要断言隐藏用 `find.textContaining('单位：')` |
 | `currencyUnitSubtitle` | 纯函数 | `common_widgets.dart` | **页头 / 卡片副标题拼「单位：x」的唯一入口**：传 `l10n`、上下文前缀（书名/账户类型/日期范围，可空）与币种代码。隐藏单位时返回前缀本身（**不会把书名一起丢掉**），无前缀时返回 `null`——调用方必须据此整段省略副标题，不要渲染只剩分隔符的残句 |
 | `SummaryMetric` | Widget | `common_widgets.dart` | **指标块**（label+value+color+detail）。各类统计小块一律用它，勿新造 `_XxxMetric`/`_XxxTile` |
 | `FilterPill` | Widget | `common_widgets.dart` | 筛选胶囊（标签+可选图标+chevron） |
@@ -168,7 +168,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | 日历日算术 | `calendar_days.dart`（经 `ledger_math.dart` re-export） | `calendarDaysBetween` `addCalendarDays`——**「相隔几天」「往后推 N 天」一律走这两个，禁止裸用 `difference().inDays` / `add(Duration(days:))`**：那是绝对时间，跨夏令时会差一小时→错一天（CI 在 UTC 恒绿，只在欧美时区暴露） |
 | 账目数学 | `ledger_math.dart` | `signedAmount` `accountDeltaForEntry` `entryTouchesAccount` `colorForType` `sumByType` `isZeroAmount` `normalizeAmount`（金额按分规整）；`dateOnly` `cumulativeWeekWindowFor` `monthWindowFor` `weekWindowFor` `quarterWindowFor` `quarterOfMonth` `entriesInWindow` `valuesForTypeInWindow` `dailyExpenseValues` `dayExpenseTotal` `monthlyExpenseValues` `monthlyNetValuesForType`；`DateWindow` |
 | 金额/时间格式化 | `ledger_math.dart` | `formatAmount` `formatExpenseAmount` `formatIncomeAmount` `formatSignedAmount` `formatCompactAmount` `formatTime`（**金额文本只走这些**，勿内联手拼） |
-| 全局金额偏好 | `amount_format.dart` | 顶层量 `currencyFractionStyle`（紧凑/货币标准小数位）、`moneyUnitStyle`（符号后置/代码前置）、`hideUnitInSingleCurrency` 与 `activeBookUsesMultipleCurrencies`；Controller 单向同步，界面不直接修改顶层状态；`amountForceTwoDecimals` 仅为旧设置兼容入口 |
+| 全局金额偏好 | `amount_format.dart` | 顶层量 `currencyFractionStyle`（紧凑/货币标准小数位）、`moneyUnitStyle`（符号后置/代码前置）、`hideUnitInSingleCurrency` 与 `activeBookUsesMultipleCurrencies`；**派生闸门 `activeMoneyCodeDisplay`（`none` 即隐藏单位）是唯一判断依据**，`formatUserMoney` 族与 `textCurrencyUnitHidden`（族 5）都读它，界面不要另写判断条件；Controller 单向同步，界面不直接修改顶层状态；`amountForceTwoDecimals` 仅为旧设置兼容入口 |
 | 序列/坐标轴 | `series_math.dart` | `isInMonth` `monthAxisLabels` `reportAxisLabels` `isoWeekNumber` `accountBalanceSeries` `accountMonthlyBalanceSeries` `accountMonthlyBalanceSeriesBatch` `monthlyNetAssetSeries` `balanceAxisLabels` `bookkeepingDays` |
 | 统计分析 | `report_analysis.dart` | `reportSummary` `reportMonthlyComparison` `formatChangeRatio` `reportCategoryStats` `reportCategoryStatsByOwn` `reportCategoryChildStats` `reportTagStats` `reportTrend`；`ReportRange` `ReportSummary` `ReportCategoryStat` `ReportTagStat` `ReportTrend` |
 | 首页指标 | `home_metrics.dart` | `computeHomeMetric` `homeMetricLabel` `homeMetricGroups` `formatHomeMetric` `homeMetricColor`；`HomeMetric` `HomeMetricContext` `HomeTrendConfig` |
@@ -177,7 +177,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | 记账自动识别 | `category_suggest.dart` | `suggestEntry`（推断类型/分类/标签/备注）；`EntrySuggestion`；`lastUsedAccountIdForCategory`（该分类上次用过的账户，记账页在自动识别开启时用它预选账户） |
 | 多币种草稿缩放 | `entry_currency_draft.dart` | `scaleDependentCurrencyAmount`——手工/导入/旧数据或固定周期规则改原币金额时保持既有结算比例，并按目标币种规整 |
 | 账目数据校验 | `ledger_data_validation.dart` | `validateLedgerEntries` `LedgerDataValidationIssue`——交易聚合、账单导入和备份恢复共用的三层金额/退款/引用校验 |
-| AI 对话查询工具 | `ai/ledger_query.dart`、`ai/ai_query_tool.dart`、`ai/ai_tool_schema.dart` | 通用交易筛选 `queryLedgerEntries`（`LedgerQuery`）；只读工具协议 `AiQueryTool` + `AiToolContext` + `AiToolResult` + `AiResultDisplay`（sealed）+ typed Schema + 注册表 `buildAiQueryTools`（**新增分析工具在此登记，并更新 `ai-tools.md`**） |
+| AI 对话查询工具 | `ai/ledger_query.dart`、`ai/ai_query_tool.dart`、`ai/ai_tool_schema.dart` | 通用交易筛选 `queryLedgerEntries`（`LedgerQuery`）；只读工具协议 `AiQueryTool` + `AiToolContext`（含 `currencyDisplay`：单位口径由聊天页注入，**工具层不读 `amount_format` 全局闸门**）+ `AiToolResult` + `AiResultDisplay`（sealed）+ typed Schema + 注册表 `buildAiQueryTools`（**新增分析工具在此登记，并更新 `ai-tools.md`**） |
 | AI Agent 引擎 | `ai/ai_agent_engine.dart`、`ai/ai_native_tool_protocol.dart`、`ai/ai_prompt_tool_protocol.dart` | 双协议只读 Agent 状态机（结构化 `AiAgentMessage` / `AiAgentEvent`）；原生 Tool Calls 与兼容标记协议共用工具执行、轮次和重试边界；结构化传输入口为 `aiAgentStream` / `aiAgentComplete` |
 | 设计令牌 | `app_theme.dart` | 色 `veriRoyal`(主 #346edb) `veriBlue` `veriIncome` `veriExpense` `veriWarning` 等；圆角 `veriRadiusSm/Md/Lg/Xl`；`veriHeaderHeight` `veriPageMaxWidth` |
 
@@ -197,6 +197,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 
 - 新增可复用件 → 归入对应族、加进本表、放对的文件（通用叶子组件→`common_widgets.dart`，跨路由反馈 Host→`feedback.dart`，弹窗 helper→`sheets.dart`，记账相关 widget→`entry_sheets.dart`，纯计算→对应 `*_math`/`*_tree` 模块）。
 - **收起单位要连间距一起收**：调用方为「单位：x」单独加的 `SizedBox`／`Padding` 必须与单位同时消失。只让组件自己渲染为空会把那段间距留在版面里，看起来像空了一块（2026-09-10 日历卡底部就是这个症状）。判断条件用 `textCurrencyUnitHidden`。
-- **新增任何显示货币的位置**：先判断它是「金额自带单位」（走 `formatUserMoney` 族，已自动跟随偏好）还是「单位单独占位」（走 `currencyUnitSubtitle` / `MoneyUnitLabel`）。不要直接调 `displayCurrencyUnit` 或裸拼 model 的 `currencyCode`——那是 2026-09-10 那轮 17 处泄漏的成因，见 [单币种隐藏单位失效点审查](../reviews/2026-09-10-single-currency-unit-leak-audit.md)。
+- **新增任何显示货币的位置**：先判断它是「金额自带单位」（走 `formatUserMoney` 族，已自动跟随偏好）还是「单位单独占位」（走 `currencyUnitSubtitle` / `MoneyUnitLabel`）。不要直接调 `displayCurrencyUnit` 或裸拼 model 的 `currencyCode`——那是 2026-09-10 那轮 17 处泄漏里 14 处的成因（其余 3 处是 `forceUnit: true` 误用与漏币种守卫），见 [单币种隐藏单位失效点审查](../reviews/2026-09-10-single-currency-unit-leak-audit.md)。
+- **改货币显示口径要补双向测试**：单币种 + 开关打开断言该处不出现单位（`find.textContaining('单位：')`），多币种账本断言单位仍在，见 `test/single_currency_unit_test.dart`；只测一侧会把收口做成隐藏过度。
 - 同一 UI 片段或逻辑在 **≥2 个文件**出现 → 立即抽共享件，变体用参数表达。
 - 删除/重命名可复用件 → 同步改本表与所有调用点。

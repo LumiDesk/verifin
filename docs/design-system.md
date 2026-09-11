@@ -24,7 +24,7 @@
 | 我的 | 工具入口保持四列宫格，长文案和大字号不得溢出；不改成列表 |
 | 信息密度 | 通过间距和排版优化，不能删除业务指标、原有方块或改变预算结构 |
 
-**货币单位的显示口径**：金额旁的重复单位由 `formatUserMoney` 族自动处理（单币种账本 + 用户开启「单币种隐藏单位」时不显示）。页头副标题、卡片角标这类「单位单独占一个位置」的文字必须走 `currencyUnitSubtitle` / `MoneyUnitLabel`，不要直接调 `displayCurrencyUnit` 或裸拼 `currencyCode`；隐藏时副标题只保留上下文（书名、日期范围），没有上下文就整条省略。**多币种账本（任一账户/交易/周期规则/汇率非本位币）下单位必须照常显示**，收口不得把该显示的地方一起隐藏。豁免：记账/交易详情/周期规则里的「交易币种」行、汇率等式、货币选择器、导入列名——它们的主题就是币种。
+**货币单位的显示口径**：金额旁的重复单位由 `formatUserMoney` 族自动处理（单币种账本且「单币种隐藏单位」开启时不显示；**该开关默认开启**，所以这是单币种账本的默认形态，不是边界情况）。页头副标题、卡片角标这类「单位单独占一个位置」的文字必须走 `currencyUnitSubtitle` / `MoneyUnitLabel`；底层判空入口是 `optionalCurrencyUnit` / `textCurrencyUnitHidden`，需要别的措辞（如「本位币 ¥」）或需要在空串与省略之间取舍时可以自行拼接，但必须先判空。不要直接调 `displayCurrencyUnit`（它只解析符号/代码样式、不读闸门），也不要裸拼 model 的 `currencyCode`。隐藏时副标题只保留上下文（书名、日期范围），没有上下文就整条省略；调用方为「单位：x」单独加的 `SizedBox`／`Padding` 必须与单位同时消失（判断条件用 `textCurrencyUnitHidden`）——只让组件自己渲染为空会把那段间距留在版面里，看起来像卡片底部空了一块（首页日历卡 2026-09-10 就是这个症状）。**多币种账本（任一账户/交易/周期规则/汇率非本位币）下单位必须照常显示**，收口不得把该显示的地方一起隐藏。唯一例外是「我的 → 账本」列表行尾的币种：它按「账本多于一个」判断（`ledgerBooks.length > 1`），单一账本没有可比较对象、多账本才用它区分口径，因此不受单币种闸门约束，也不适用上面「不要裸拼 `currencyCode`」的禁令。豁免：记账/交易详情/周期规则里的「交易币种」行、汇率等式、货币选择器、导入列名——它们的主题就是币种。
 
 页面继续使用 `Scaffold > SafeArea > VeriPage` 与 `VeriHeader` / `PageHeader`。默认页面和固定页脚的头部对齐规则见 [页面骨架](ui-guidelines.md)。颜色、字号和圆角使用主题令牌，不在各页复制样式。语义色（收入 / 支出 / 转账 / 提醒）必须经 `veriSemantic(context, veriX)` 取用，无 `BuildContext` 的纯取色函数用 `veriSemanticFor(brightness, veriX)`：浅色底取加深变体（`veri*OnLight`，对比度 ≥ 4.5:1），深色底取原亮色；不要直接使用 `veriIncome` / `veriExpense` / `veriBlue` / `veriWarning` 渲染。
 
