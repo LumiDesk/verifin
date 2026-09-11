@@ -597,7 +597,7 @@ class _CategoryBudgetAlertCard extends StatelessWidget {
     return VeriCard(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
           VeriIconBox(icon: icon, color: color, size: 32),
           const SizedBox(width: 10),
@@ -689,34 +689,8 @@ class _CategoryBudgetRow extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.fromLTRB(depth * 22.0, 8, 0, 8),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
-              SizedBox(
-                width: 24,
-                child: onToggle == null
-                    ? (depth > 0
-                          ? Icon(
-                              Icons.subdirectory_arrow_right,
-                              size: 16,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withValues(alpha: 0.3),
-                            )
-                          : null)
-                    : IconButton(
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        iconSize: 22,
-                        onPressed: onToggle,
-                        icon: Icon(
-                          collapsed ? Icons.chevron_right : Icons.expand_more,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.55),
-                        ),
-                      ),
-              ),
-              const SizedBox(width: 4),
               CategoryIconBox(
                 iconCode: snapshot.category.iconCode,
                 color: color,
@@ -738,32 +712,6 @@ class _CategoryBudgetRow extends StatelessWidget {
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          snapshot.budget <= 0
-                              ? (onTap == null
-                                    ? '—'
-                                    : AppLocalizations.of(context).setLabel)
-                              : formatAmount(snapshot.budget),
-                          style: Theme.of(context).textTheme.labelLarge
-                              ?.copyWith(
-                                color: snapshot.budget <= 0
-                                    ? Theme.of(context).colorScheme.onSurface
-                                          .withValues(alpha: 0.52)
-                                    : Theme.of(context).colorScheme.onSurface,
-                                fontWeight: FontWeight.w800,
-                              ),
-                        ),
-                        if (onTap != null) ...<Widget>[
-                          const SizedBox(width: 2),
-                          Icon(
-                            Icons.chevron_right,
-                            size: 17,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withValues(alpha: 0.36),
-                          ),
-                        ],
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -806,6 +754,31 @@ class _CategoryBudgetRow extends StatelessWidget {
                   ],
                 ),
               ),
+              if (onToggle != null) ...<Widget>[
+                const SizedBox(width: 2),
+                IconButton(
+                  key: ValueKey<String>(
+                    'category_budget_toggle_${snapshot.category.id}',
+                  ),
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 40,
+                    height: 40,
+                  ),
+                  iconSize: 22,
+                  onPressed: onToggle,
+                  icon: Transform.rotate(
+                    angle: collapsed ? -math.pi / 2 : 0,
+                    child: Icon(
+                      Icons.expand_more,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.55),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -848,7 +821,7 @@ class _BudgetInsightCard extends StatelessWidget {
 
     return VeriCard(
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
           VeriIconBox(icon: icon, color: color, size: 32),
           const SizedBox(width: 10),

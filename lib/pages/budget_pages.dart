@@ -146,10 +146,7 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
               ),
               const SizedBox(height: 10),
               VeriCard(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
+                padding: const EdgeInsets.fromLTRB(14, 4, 14, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/chart_painters.dart';
-import 'package:verifin/app/common_widgets.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/app/veri_fin_scope.dart';
 import 'package:verifin/local_storage/local_storage.dart';
@@ -90,7 +89,8 @@ void main() {
     }
     await tester.tap(find.byKey(const Key('number_pad_ok')));
     await tester.pumpAndSettle();
-    expect(find.text('600'), findsWidgets);
+    // 分类行不再在右上角重复展示预算数字；数值仍保留在设置草稿中。
+    expect(find.text('600'), findsNothing);
 
     // 保存前只更新设置页草稿。
     expect(controller.defaultMonthlyBudget, 0);
@@ -143,10 +143,9 @@ void main() {
     expect(find.text('午餐'), findsNothing);
 
     // 展开父分类后子分类进入组件树（展开后可能在视口外，用 skipOffstage 断言存在）。
-    // 分类卡内的 chevron_right 才是折叠开关（MonthSwitcher 的下一月箭头也用该图标）。
-    final toggle = find.descendant(
-      of: find.ancestor(of: find.text('餐饮'), matching: find.byType(VeriCard)),
-      matching: find.byIcon(Icons.chevron_right),
+    // 展开按钮位于父分类行尾，且与整行编辑预算的点击区域独立。
+    final toggle = find.byKey(
+      const ValueKey<String>('category_budget_toggle_dining'),
     );
     await tester.ensureVisible(toggle.first);
     await tester.pumpAndSettle();

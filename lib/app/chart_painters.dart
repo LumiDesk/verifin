@@ -34,12 +34,12 @@ Rect trendChartRect(
   required bool hasYLabels,
   double yLabelWidth = 30,
 }) {
-  final rightInset = hasYLabels ? 8.0 : 0.0;
+  // 纵轴标签只占左侧空间，右边界与卡片内容对齐，避免趋势线末端少一截。
   const bottomInset = 22.0;
   return Rect.fromLTWH(
     hasYLabels ? yLabelWidth : 0,
     0,
-    size.width - (hasYLabels ? yLabelWidth + rightInset : rightInset),
+    size.width - (hasYLabels ? yLabelWidth : 0),
     size.height - (hasXLabels ? bottomInset : 0),
   );
 }
@@ -51,6 +51,7 @@ Rect barChartRect(
   required bool hasYLabels,
   double yLabelWidth = 30,
 }) {
+  // 柱状图末端标签需要少量缓冲，避免最后一个标签贴边裁切。
   const rightInset = 4.0;
   return Rect.fromLTWH(
     hasYLabels ? yLabelWidth : 0,

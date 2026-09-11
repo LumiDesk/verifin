@@ -6,9 +6,9 @@ void main() {
   group('trendChartRect 绘图区内边距', () {
     const size = Size(100, 50);
 
-    test('有 X/Y 轴标签：默认左留 30、右留 8、底留 22', () {
+    test('有 X/Y 轴标签：左留标签宽度、右侧不额外留白、底留 22', () {
       final rect = trendChartRect(size, hasXLabels: true, hasYLabels: true);
-      expect(rect, const Rect.fromLTWH(30, 0, 62, 28));
+      expect(rect, const Rect.fromLTWH(30, 0, 70, 28));
     });
 
     test('无轴标签：不额外留右侧空白，占满宽度', () {
@@ -16,9 +16,9 @@ void main() {
       expect(rect, const Rect.fromLTWH(0, 0, 100, 50));
     });
 
-    test('仅 Y 轴标签：默认左留 30、底不缩', () {
+    test('仅 Y 轴标签：左留标签宽度、右侧不额外留白、底不缩', () {
       final rect = trendChartRect(size, hasXLabels: false, hasYLabels: true);
-      expect(rect, const Rect.fromLTWH(30, 0, 62, 50));
+      expect(rect, const Rect.fromLTWH(30, 0, 70, 50));
     });
 
     test('长金额标签可按实际宽度扩大左侧留白', () {
@@ -28,14 +28,14 @@ void main() {
         hasYLabels: true,
         yLabelWidth: 46,
       );
-      expect(rect, const Rect.fromLTWH(46, 0, 46, 28));
+      expect(rect, const Rect.fromLTWH(46, 0, 54, 28));
     });
   });
 
   group('barChartRect 绘图区内边距', () {
     const size = Size(100, 50);
 
-    test('有 X/Y 轴标签：默认左留 30、右留 4、底留 22', () {
+    test('有 X/Y 轴标签：左留 30、右留 4、底留 22', () {
       final rect = barChartRect(size, hasXLabels: true, hasYLabels: true);
       expect(rect, const Rect.fromLTWH(30, 0, 66, 28));
     });
