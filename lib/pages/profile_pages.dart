@@ -390,11 +390,12 @@ class _FeatureGridCard extends StatelessWidget {
                     (data) => measuredHeight(data.subtitle, subtitleStyle, 1),
                   )
                   .fold<double>(0, math.max);
-              // Padding、图标、间距和文字高度，再留 8dp 的字体度量余量。
+              // Padding、图标、间距和文字高度，只保留 2dp 的字体度量余量，
+              // 避免短标签卡在最后一行留下明显空洞。
               final rowExtent = math
                   .max(
                     90,
-                    16 + 42 + 7 + maxLabelHeight + 1 + maxSubtitleHeight + 8,
+                    16 + 42 + 7 + maxLabelHeight + 1 + maxSubtitleHeight + 2,
                   )
                   .toDouble();
               return GridView.count(
