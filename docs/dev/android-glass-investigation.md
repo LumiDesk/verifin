@@ -84,11 +84,11 @@ CI 两个工作流固定 Flutter 3.47.2，并在普通 CI 增加发布材质参�
 ```powershell
 # 旧三场景入口已删除；历史复现请从 8ebe552 建立独立临时工作树。
 
-# 真正的应用入口、独立数据目录；不是复制的演示页面。
-& C:/Dev/flutter-3.47.2/bin/flutter.bat build apk --release --flavor diagnostic --target-platform android-arm64 --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
+# 真正的应用入口、独立数据目录；不是复制的演示页面。玻璃参数已删除，以下命令仅保留当前可运行的统一排版参数。
+& C:/Dev/flutter-3.47.2/bin/flutter.bat build apk --release --flavor diagnostic --target-platform android-arm64 --dart-define=UNIFIED_DESIGN_PREVIEW=true
 
-# 原机 Shader 集成验收入口；断言必须实际就绪，不能以 fallback 通过。
-& C:/Dev/flutter-3.47.2/bin/flutter.bat build apk --release --flavor diagnostic --target-platform android-arm64 -t integration_test/glass_navigation_test.dart --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true
+# 原机 Shader 集成验收入口已随玻璃实现移除；该历史 target 不再可复现，以下命令仅保留作路径记录。
+& C:/Dev/flutter-3.47.2/bin/flutter.bat build apk --release --flavor diagnostic --target-platform android-arm64 -t integration_test/glass_navigation_test.dart --dart-define=UNIFIED_DESIGN_PREVIEW=true
 ```
 
 旧绘制基线可从 `03b31e4:lib/app/glass_lighting.dart` 取出，用诊断 target 的 import

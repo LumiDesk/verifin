@@ -56,7 +56,7 @@
 **已做（模拟器冒烟，仅作定性参考）**
 
 - 环境：`verifin_menu_api36` AVD（API 36、x86_64、1179×2556@480dpi，即 393×852dp）、宿主机 GPU 加速（RTX 4060）、Impeller/OpenGLES。
-- 以 `--flavor diagnostic --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=GLASS_DESIGN_PREVIEW=true` 运行正式入口，完成冷启动、四页切换、快速记账弹层、设置页「高级材质」开/关的走查。
+- 以 `--flavor diagnostic --dart-define=UNIFIED_DESIGN_PREVIEW=true` 运行当时的正式入口，完成冷启动、四页切换和快速记账弹层走查；「高级材质」已在后续版本移除。
 
 **未做（不能替代，也不能由本文件断言）**
 

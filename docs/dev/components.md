@@ -35,7 +35,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 
 | 名称 | 类型 | 位置 | 用途 |
 |---|---|---|---|
-| `VeriPage` | Widget | `common_widgets.dart` | 渐变背景 + 居中 + `maxWidth` 约束的页根容器 |
+| `VeriPage` | Widget | `common_widgets.dart` | 纯色背景 + 居中 + `maxWidth` 约束的页根容器 |
 | `VeriCard` | Widget | `common_widgets.dart` | 统一圆角/描边/阴影卡片，可点击（`quietTap` 长按吞噬变体） |
 | `VeriHeader` | Widget | `common_widgets.dart` | 页眉（标题+副标题+返回+actions，最小高度 52、候选构建 56；用最小高度而非固定高度，系统字号放大时两行标题不会被裁掉） |
 | `PageHeader` | Widget | `common_widgets.dart` | `VeriHeader` 的薄封装（单 trailing）；`subtitle` 为 `String?`，`null` 时整行不渲染；副标题里带「单位：x」必须用 `currencyUnitSubtitle`（族 7）——隐藏单位且无上下文时它返回 `null`，直接传进去即可整段省略 |
@@ -157,9 +157,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `TrendLinePainter` / `BarChartPainter` | CustomPainter | `chart_painters.dart` | 上面两个控件的绘制实现。**自绘保留**：曾评估改用 `fl_chart`，实测其坐标轴刻度与既有内边距约定对不齐（出现重复刻度与刻度/线错位），故维持自绘；不要为「换库」而替换，除非同时解决刻度对齐 |
 | `BudgetRingPainter` | CustomPainter | `chart_painters.dart` | 预算进度圆环，**保持自研**：`SweepGradient` + `GradientRotation(-π/2)` 的接缝处理是规范硬要求，有像素级回归测试（`budget_ring_test.dart`）。不要换成通用进度环组件 |
 | `trendChartRect` / `barChartRect` / `chartNearestIndex` / `chartSlotIndex` / `drawChartTooltip` | 纯函数 | `chart_painters.dart` | 预算趋势组合图（`budget_trend_chart.dart`，自绘画布）仍在用的几何与命中计算；有 `chart_hit_test.dart` 覆盖 |
-| `TrendLinePainter` / `BarChartPainter` / `BudgetRingPainter` | CustomPainter | `chart_painters.dart` | 底层绘制（预算环等） |
 | `ChartTooltip` / `ChartTooltipLine` | 值类 | `chart_painters.dart` | 气泡数据模型 |
-| `trendChartRect` / `barChartRect` / `chartNearestIndex` / `chartSlotIndex` / `drawChartTooltip` | 纯函数 | `chart_painters.dart` | 绘图区计算 / 命中测试 / 气泡绘制 |
 
 ## 族 10 — 纯计算（领域逻辑，无 Flutter 依赖或仅叶子级）
 
@@ -193,7 +191,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 
 ## 维护约定
 
-- `app_theme.dart` 新增候选材质令牌与纯函数 `veriContentSurfaceColor(Brightness)`，供 `VeriCard` 和资产封面共用；`veriUnifiedDesignPreview` 默认关闭。既有组件的候选行为见 [统一设计候选方案](unified-design-preview.md)。
+- `app_theme.dart` 维护内容表面令牌与纯函数 `veriContentSurfaceColor(Brightness)`，供 `VeriCard` 和资产封面共用；`veriUnifiedDesignPreview` 默认关闭，只控制布局密度与排版。既有组件的布局分支见 [统一设计候选方案](unified-design-preview.md)。
 
 - 新增可复用件 → 归入对应族、加进本表、放对的文件（通用叶子组件→`common_widgets.dart`，跨路由反馈 Host→`feedback.dart`，弹窗 helper→`sheets.dart`，记账相关 widget→`entry_sheets.dart`，纯计算→对应 `*_math`/`*_tree` 模块）。
 - **收起单位要连间距一起收**：调用方为「单位：x」单独加的 `SizedBox`／`Padding` 必须与单位同时消失。只让组件自己渲染为空会把那段间距留在版面里，看起来像空了一块（2026-09-10 日历卡底部就是这个症状）。判断条件用 `textCurrencyUnitHidden`。

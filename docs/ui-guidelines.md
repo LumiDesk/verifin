@@ -32,7 +32,7 @@
 ```
 Scaffold(
   body: SafeArea(               // SafeArea 在外、VeriPage 在内（顺序固定）
-    child: VeriPage(            // 渐变背景 + 居中 + maxWidth 约束
+    child: VeriPage(            // 纯色背景 + 居中 + maxWidth 约束
       child: ListView(
         padding: const EdgeInsets.fromLTRB(14, 8, 14, 40),  // ← 头部对齐的关键
         children: [

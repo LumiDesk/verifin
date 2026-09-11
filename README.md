@@ -57,7 +57,7 @@
 
 ### 📊 报表
 
-- **预算**：月度总预算、分类预算，以及**按日预算**（每日花销上限 + 今日进度）；预算支持**默认值（每月自动沿用，设一次不必逐月改）+ 单月覆盖**（个别月份可单独调整、一键恢复默认）；支持自定义**预算周期起始日**（如发薪日 22 日～次月 21 日为一期，每账本独立设置，默认自然月）；预算页拆分为「预算」总览（只读）与「预算设置」（默认预算/按日上限/周期/分类默认预算集中配置）；
+- **预算**：月度总预算、分类预算，以及**按日预算**（每日花销上限 + 今日进度）；预算支持**默认值（每月自动沿用，设一次不必逐月改）+ 单月覆盖**（个别月份可单独调整、一键恢复默认）；支持自定义**预算周期起始日**（如发薪日 22 日～次月 21 日为一期，每账本独立设置，默认自然月）；预算页拆分为「预算」总览（查看状态并管理所选月份/周期的覆盖）与「预算设置」（默认预算/按日上限/周期/分类默认预算集中配置）；
 - 看板：本月收支摘要、预算执行、分类环形图、分类明细、标签统计、日趋势、月度趋势，面板可开关排序；
 - **统计分析**：本月 / 本年 / 自定义范围 × 支出 / 收入维度，趋势曲线 + 分类排行 + **同比 · 环比**；
 - **AI 财务 Agent**（可选，需先配置 AI）：看板页「问 AI」进入聊天页，用自然语言问账目（「这个月花最多的是哪些分类」「最近三个月的大额支出」等）；Agent 自主调用只读工具查询你**当前账本**的真实数据，以柱状图 / 折线 / 可点击交易列表 + Markdown（含表格）流式作答，调用步骤可展开查看；支持原生 Tool Calls 并可自动降级到兼容模式。聊天记录只存本机、可清空，Agent 全程**只读**不改数据；
@@ -113,14 +113,14 @@ flutter analyze && flutter test      # 静态检查 + 全部测试
 ```
 
 真机调试、缺失工具自动安装和隔离验收见 [Android 开发说明](docs/dev/android-development.md)。
-整体样式评审的显式预览开关与验证方式见 [统一设计候选方案](docs/dev/unified-design-preview.md)，默认构建仍使用已发布外观。
+整体样式评审的显式预览开关与验证方式见 [统一设计候选方案](docs/dev/unified-design-preview.md)；无参数构建保留旧布局用于回归，发布和验收构建显式开启统一排版。
 
 Android 包名 `top.talyra42.verifin`。本地不构建交付 APK——正式安装包由 GitHub CI 生成。
 
 ## 📦 构建与发布
 
 - 质量 CI（`.github/workflows/ci.yml`）在每个 PR 和每次 push 到 `main` 时执行格式检查、静态分析、全量测试、统一设计专项测试，并构建一个不交付的 `github` debug APK 作为 Kotlin / Manifest / 原生桥编译门禁。`integration_test/` 需要真实引擎，不在 CI 跑，按 [Android 开发](docs/dev/android-development.md) 在真机或本地模拟器手动执行。
-X→ `flutter build apk --release --target-platform android-arm64 --flavor github` + `flutter build appbundle --release --flavor play --dart-define=SELF_UPDATE=false` → 创建 GitHub **预发布**（APK 命名 `verifin-vX.Y.Z-arm64-短提交号.apk`，AAB 命名 `verifin-vX.Y.Z-短提交号.aab`；真机验收通过后由维护者手动提升为正式版与 Latest）。自建分发的**安装包只出 arm64-v8a 单架构 APK**（覆盖 2019 年后绝大多数机型、比 universal 约减半；极老 32 位设备装不了）；AAB 含全部 ABI，供 Google Play 上架用（由 Play 按设备分发）。release 开启 R8 代码/资源裁剪，反射依赖点由 `android/app/proguard-rules.pro` 的 keep 规则保护。
+`flutter build apk --release --target-platform android-arm64 --flavor github --dart-define=UNIFIED_DESIGN_PREVIEW=true` + `flutter build appbundle --release --flavor play --dart-define=UNIFIED_DESIGN_PREVIEW=true --dart-define=SELF_UPDATE=false` → 创建 GitHub **预发布**（APK 命名 `verifin-vX.Y.Z-arm64-短提交号.apk`，AAB 命名 `verifin-vX.Y.Z-短提交号.aab`；真机验收通过后由维护者手动提升为正式版与 Latest）。自建分发的**安装包只出 arm64-v8a 单架构 APK**（覆盖 2019 年后绝大多数机型、比 universal 约减半；极老 32 位设备装不了）；AAB 含全部 ABI，供 Google Play 上架用（由 Play 按设备分发）。release 开启 R8 代码/资源裁剪，反射依赖点由 `android/app/proguard-rules.pro` 的 keep 规则保护。
 - **分发渠道 flavor（`github` / `play`）**：应用内自更新（下载 GitHub Release 安装包自动更新）只用于 GitHub 自分发的 `github` flavor；Google Play 政策禁止应用自下载 APK 更新，故 `play` flavor 移除 `REQUEST_INSTALL_PACKAGES` 权限并隐藏「检查更新」入口。**本地 Android 构建/运行需带 `--flavor github`。**
 - 发版前先提升并提交 `CHANGELOG.md` 的 `Unreleased`，确认位于 `main` 且工作树完全干净；随后运行版本发布脚本：
 
