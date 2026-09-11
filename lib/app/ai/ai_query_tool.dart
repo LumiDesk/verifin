@@ -1241,6 +1241,7 @@ class CreditCardBillTool extends AiQueryTool {
           : billingCycleExpense(ctx.entries, card.id, cycle);
       rows.add(<String>[
         card.name,
+        if (ctx.currencyDisplay != MoneyCodeDisplay.none) card.currencyCode,
         formatCurrencyNumber(used, card.currencyCode),
         available == null
             ? '—'
@@ -1280,6 +1281,9 @@ class CreditCardBillTool extends AiQueryTool {
         title: l10n.aiTitleCreditCards,
         headers: <String>[
           l10n.accountLabel,
+          // 多币种账本需要保留币种列；单币种隐藏单位时整列省略。
+          if (ctx.currencyDisplay != MoneyCodeDisplay.none)
+            l10n.aiHeaderCurrency,
           l10n.aiHeaderCurrentDebt,
           l10n.creditAvailableLabel,
           l10n.currentBillLabel,

@@ -443,6 +443,43 @@ void main() {
     expect(result.summary, contains('300'));
   });
 
+  test('多币种信用卡表格保留币种列，避免金额无法辨认', () {
+    final cny = Account(
+      id: 'cny-card',
+      bookId: 'b',
+      name: '人民币卡',
+      type: AccountType.creditCard,
+      groupId: null,
+      initialBalance: 0,
+      iconCode: 'bank',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+      currencyCode: 'CNY',
+      creditLimit: 10000,
+    );
+    final usd = cny.copyWith(id: 'usd-card', name: '美元卡', currencyCode: 'USD');
+    final result = _tool('creditCardBill').run(
+      AiToolContext(
+        entries: const <LedgerEntry>[],
+        accounts: <Account>[cny, usd],
+        categories: const <Category>[],
+        tags: const <Tag>[],
+        balanceOf: (account) => account.id == usd.id ? -200 : -100,
+        baseCurrencyCode: 'CNY',
+        now: DateTime(2026, 6, 20),
+        l10n: lookupAppLocalizations(const Locale('zh')),
+      ),
+      const <String, Object?>{},
+    );
+    final display = result.display! as AiTableDisplay;
+    expect(display.headers, <String>['账户', '币种', '当前欠款', '可用额度', '本期账单']);
+    expect(
+      display.rows.map((row) => row[1]),
+      containsAll(<String>['CNY', 'USD']),
+    );
+  });
+
   test('budgetStatus 汇总预算执行并列出需要关注的分类', () {
     final ctx = AiToolContext(
       entries: <LedgerEntry>[
