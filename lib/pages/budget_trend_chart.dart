@@ -80,8 +80,15 @@ class _BudgetTrendCardState extends State<_BudgetTrendCard> {
                     constraints.maxWidth,
                     constraints.maxHeight,
                   );
-                  Rect chartRect() =>
-                      trendChartRect(size, hasXLabels: true, hasYLabels: true);
+                  Rect chartRect() => trendChartRect(
+                    size,
+                    hasXLabels: true,
+                    hasYLabels: true,
+                    yLabelWidth: chartYAxisLabelWidth(
+                      reportAxisLabels(maxValue),
+                      TextScaler.noScaling,
+                    ),
+                  );
                   return GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTapDown: (details) {
@@ -207,7 +214,12 @@ class _BudgetTrendPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final chartRect = trendChartRect(size, hasXLabels: true, hasYLabels: true);
+    final chartRect = trendChartRect(
+      size,
+      hasXLabels: true,
+      hasYLabels: true,
+      yLabelWidth: chartYAxisLabelWidth(yLabels, TextScaler.noScaling),
+    );
     final axisPaint = Paint()
       ..color = labelColor.withValues(alpha: 0.14)
       ..strokeWidth = 1;

@@ -360,19 +360,20 @@ class _FeatureGridCard extends StatelessWidget {
                 4,
                 math.max(2, (constraints.maxWidth / needed).floor()),
               );
+              // 两个功能卡共用同一行高，避免上下卡片的网格节奏不一致；高度
+              // 随系统字号增加，但不再给短中文标签预留固定的大块空白。
+              final rowExtent = math
+                  .max(
+                    110,
+                    66 + textScaler.scale(32) + textScaler.scale(12) + 4,
+                  )
+                  .toDouble();
               return GridView.count(
                 crossAxisCount: columns,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 padding: EdgeInsets.zero,
-                // 图标 42 + 间距 7 + 标签两行 + 间距 1 + 副标题一行 + 上下内边距 16；
-                // 高度随系统字号放大，不能把文案挤到格子外面。
-                mainAxisExtent: math.max(
-                  126,
-                  // 预留两行标题 + 一行副标题的真实排版高度，避免长英文在
-                  // 四列宫格中被裁切，同时比旧的固定高度减少多余上下空白。
-                  66 + textScaler.scale(32) + textScaler.scale(12) + 8,
-                ),
+                mainAxisExtent: rowExtent,
                 mainAxisSpacing: 4,
                 crossAxisSpacing: 4,
                 children: tiles

@@ -32,16 +32,14 @@ Rect trendChartRect(
   Size size, {
   required bool hasXLabels,
   required bool hasYLabels,
+  double yLabelWidth = 30,
 }) {
-  // 纵轴标签可能包含千位分组和两位小数（如 3,800.36），为文字留出完整
-  // 的绘制空间，避免首字符贴边或被画布裁掉。
-  const leftInset = 52.0;
   const rightInset = 8.0;
   const bottomInset = 22.0;
   return Rect.fromLTWH(
-    hasYLabels ? leftInset : 0,
+    hasYLabels ? yLabelWidth : 0,
     0,
-    size.width - (hasYLabels ? leftInset + rightInset : rightInset),
+    size.width - (hasYLabels ? yLabelWidth + rightInset : rightInset),
     size.height - (hasXLabels ? bottomInset : 0),
   );
 }
@@ -51,13 +49,13 @@ Rect barChartRect(
   Size size, {
   required bool hasXLabels,
   required bool hasYLabels,
+  double yLabelWidth = 30,
 }) {
-  const leftInset = 52.0;
   const rightInset = 4.0;
   return Rect.fromLTWH(
-    hasYLabels ? leftInset : 0,
+    hasYLabels ? yLabelWidth : 0,
     0,
-    size.width - (hasYLabels ? leftInset + rightInset : 0),
+    size.width - (hasYLabels ? yLabelWidth + rightInset : 0),
     size.height - (hasXLabels ? 22 : 0),
   );
 }
@@ -220,6 +218,7 @@ class TrendLinePainter extends CustomPainter {
       size,
       hasXLabels: xLabels.isNotEmpty,
       hasYLabels: yLabels.isNotEmpty,
+      yLabelWidth: chartYAxisLabelWidth(yLabels, textScaler),
     );
     // 兜底用中性灰（在深浅背景上都可辨），避免调用方漏传 labelColor 时浅色下白轴看不见。
     final axisColor = labelColor ?? Colors.grey.withValues(alpha: 0.45);
@@ -384,6 +383,7 @@ class BarChartPainter extends CustomPainter {
       size,
       hasXLabels: xLabels.isNotEmpty,
       hasYLabels: yLabels.isNotEmpty,
+      yLabelWidth: chartYAxisLabelWidth(yLabels, textScaler),
     );
     // 兜底用中性灰（在深浅背景上都可辨），避免调用方漏传 labelColor 时浅色下白轴看不见。
     final axisColor = labelColor ?? Colors.grey.withValues(alpha: 0.45);
@@ -583,6 +583,7 @@ class _InteractiveTrendChartState extends State<InteractiveTrendChart> {
           size,
           hasXLabels: widget.xLabels.isNotEmpty,
           hasYLabels: widget.yLabels.isNotEmpty,
+          yLabelWidth: chartYAxisLabelWidth(widget.yLabels, textScaler),
         );
         final tooltip = _selectedIndex == null
             ? null
@@ -684,6 +685,7 @@ class _InteractiveBarChartState extends State<InteractiveBarChart> {
           size,
           hasXLabels: widget.xLabels.isNotEmpty,
           hasYLabels: widget.yLabels.isNotEmpty,
+          yLabelWidth: chartYAxisLabelWidth(widget.yLabels, textScaler),
         );
         final tooltip = _selectedIndex == null
             ? null
@@ -779,6 +781,24 @@ String _tooltipSemanticsLabel(ChartTooltip tooltip) => <String>[
   tooltip.title,
   ...tooltip.lines.map((line) => line.text),
 ].join(', ');
+
+/// 根据纵轴实际标签宽度预留左侧空间，短标签保持紧凑，长金额才扩大绘图区边距。
+double chartYAxisLabelWidth(List<String> labels, TextScaler textScaler) {
+  if (labels.isEmpty) {
+    return 0;
+  }
+  final style = const TextStyle(fontSize: 10);
+  var maxWidth = 0.0;
+  for (final label in labels) {
+    final painter = TextPainter(
+      text: TextSpan(text: label, style: style),
+      textDirection: TextDirection.ltr,
+      textScaler: textScaler,
+    )..layout();
+    maxWidth = math.max(maxWidth, painter.width);
+  }
+  return math.max(30, maxWidth + 6);
+}
 
 void _drawLabels(
   Canvas canvas,
