@@ -360,18 +360,18 @@ class _FeatureGridCard extends StatelessWidget {
                 4,
                 math.max(2, (constraints.maxWidth / needed).floor()),
               );
-              final cellWidth =
-                  (constraints.maxWidth - (columns - 1) * 4) / columns;
               return GridView.count(
                 crossAxisCount: columns,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                childAspectRatio: 0.82,
+                padding: EdgeInsets.zero,
                 // 图标 42 + 间距 7 + 标签两行 + 间距 1 + 副标题一行 + 上下内边距 16；
                 // 高度随系统字号放大，不能把文案挤到格子外面。
                 mainAxisExtent: math.max(
-                  cellWidth / 0.82,
-                  66 + textScaler.scale(20) * 2 + textScaler.scale(16),
+                  126,
+                  // 预留两行标题 + 一行副标题的真实排版高度，避免长英文在
+                  // 四列宫格中被裁切，同时比旧的固定高度减少多余上下空白。
+                  66 + textScaler.scale(32) + textScaler.scale(12) + 8,
                 ),
                 mainAxisSpacing: 4,
                 crossAxisSpacing: 4,
@@ -416,7 +416,7 @@ class _FeatureTile extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: <Widget>[
             VeriIconBox(icon: data.icon, color: data.color, size: 42),
             const SizedBox(height: 7),

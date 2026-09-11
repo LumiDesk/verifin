@@ -284,6 +284,8 @@ class _BudgetHistoryCard extends StatelessWidget {
 
     return VeriCard(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      onTap: onHistoryTap,
+      quietTap: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -297,19 +299,19 @@ class _BudgetHistoryCard extends StatelessWidget {
                   ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
                 ),
               ),
-              TextButton.icon(
-                onPressed: onHistoryTap,
-                icon: const Icon(Icons.history, size: 15),
-                label: Text(
-                  '${AppLocalizations.of(context).monthNumber(previousMonth.month)} → ${AppLocalizations.of(context).monthNumber(currentMonth.month)}',
-                ),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  minimumSize: const Size(44, 32),
-                  textStyle: Theme.of(
-                    context,
-                  ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w800),
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const Icon(Icons.history, size: 15, color: veriRoyal),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${AppLocalizations.of(context).monthNumber(previousMonth.month)} → ${AppLocalizations.of(context).monthNumber(currentMonth.month)}',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: veriRoyal,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
