@@ -825,7 +825,7 @@ class BudgetPanel extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 10),
           Center(
             child: Text(
               AppLocalizations.of(

@@ -290,7 +290,6 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
                     const SizedBox(height: 12),
                     LayoutBuilder(
                       builder: (context, constraints) {
-                        final cellWidth = (constraints.maxWidth - 8) / 2;
                         return GridView.count(
                           crossAxisCount: 2,
                           shrinkWrap: true,
@@ -300,8 +299,8 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
                           // 固定宽高比在字号放大时会把标签和数值挤出格子，按内容
                           // 高度兜底；常规字号下高度与原设计一致。
                           mainAxisExtent: math.max(
-                            cellWidth / 2.45,
-                            16 + MediaQuery.textScalerOf(context).scale(38),
+                            60,
+                            16 + MediaQuery.textScalerOf(context).scale(36),
                           ),
                           children: <Widget>[
                             _BudgetMetricTile(

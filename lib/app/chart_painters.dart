@@ -34,7 +34,7 @@ Rect trendChartRect(
   required bool hasYLabels,
   double yLabelWidth = 30,
 }) {
-  const rightInset = 8.0;
+  final rightInset = hasYLabels ? 8.0 : 0.0;
   const bottomInset = 22.0;
   return Rect.fromLTWH(
     hasYLabels ? yLabelWidth : 0,

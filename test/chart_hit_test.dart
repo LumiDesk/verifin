@@ -11,9 +11,9 @@ void main() {
       expect(rect, const Rect.fromLTWH(30, 0, 62, 28));
     });
 
-    test('无轴标签：仅右留 8，占满高度', () {
+    test('无轴标签：不额外留右侧空白，占满宽度', () {
       final rect = trendChartRect(size, hasXLabels: false, hasYLabels: false);
-      expect(rect, const Rect.fromLTWH(0, 0, 92, 50));
+      expect(rect, const Rect.fromLTWH(0, 0, 100, 50));
     });
 
     test('仅 Y 轴标签：默认左留 30、底不缩', () {
