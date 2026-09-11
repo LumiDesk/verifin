@@ -153,7 +153,7 @@ class _VeriRootNavigationState extends State<VeriRootNavigation> {
                 iconSize: 24,
                 label: widget.destinations[index].label,
                 labelTextStyle: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
               ),
