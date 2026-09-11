@@ -34,6 +34,7 @@ const Color veriMint = Color(0xFF34DBCB);
 const Color veriCyan = Color(0xFF34C2DB);
 const Color veriBlue = Color(0xFF3498DB);
 const Color veriRoyal = Color(0xFF346EDB);
+const Color veriNavigationUnselected = Color(0xFFADADAD);
 const Color veriIndigo = Color(0xFF3445DB);
 const Color veriInk = Color(0xFF151922);
 const Color veriLine = Color(0xFFE1E8F1);

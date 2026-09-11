@@ -108,7 +108,7 @@
 git clone git@github.com:LumiDesk/verifin.git
 cd verifin
 flutter pub get                      # 安装依赖（自动生成 l10n）
-flutter run -d <android-device-id> --flavor github  # Android 模拟器或真机预览
+flutter run -d <android-device-id> --flavor github --dart-define=UNIFIED_DESIGN_PREVIEW=true  # Android 模拟器或真机预览
 flutter analyze && flutter test      # 静态检查 + 全部测试
 ```
 

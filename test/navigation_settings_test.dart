@@ -77,6 +77,35 @@ void main() {
     expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
   });
 
+  testWidgets('页面挂载前的导航点击在挂载后继续执行', (tester) async {
+    await pumpApp(tester);
+    final controller = tester
+        .widget<PageView>(find.byType(PageView))
+        .controller!;
+    final position = controller.position;
+    final navigation = tester.widget<VeriRootNavigation>(
+      find.byType(VeriRootNavigation),
+    );
+
+    // 模拟 PageView 暂未 attach 的生命周期窗口，随后恢复同一个滚动位置。
+    controller.detach(position);
+    try {
+      navigation.onDestinationSelected(1);
+      navigation.onDestinationSelected(2);
+    } finally {
+      controller.attach(position);
+    }
+    await tester.pumpAndSettle();
+
+    expect(controller.page, closeTo(2, 0.001));
+    expect(
+      tester
+          .widget<VeriRootNavigation>(find.byType(VeriRootNavigation))
+          .currentIndex,
+      2,
+    );
+  });
+
   testWidgets('floating navigation inset does not inflate nested grids', (
     WidgetTester tester,
   ) async {

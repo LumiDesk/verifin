@@ -32,9 +32,11 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import 'app_theme.dart';
+
 /// 底栏条目的未选中灰阶。沿用 `bottom_bar_matu` 的 `colorGrey5`；改这个值会改变
 /// 底栏观感，不属于本次修复范围，故原样保留并集中在此处。
-const Color _kUnselectedGrey = Color(0xFFADADAD);
+const Color _kUnselectedGrey = veriNavigationUnselected;
 
 /// 飞过的圆点在进度过了这个值后淡出（原库的 `value * 1.5 >= 0.9`）。
 const double _kDotFadeAt = 0.6;
@@ -65,9 +67,9 @@ class VeriBottomBar extends StatefulWidget {
     required this.selectedIndex,
     this.onSelect,
     this.height = 71,
-    this.color = const Color(0xFF279656),
-    this.circle1Color = Colors.blue,
-    this.circle2Color = Colors.red,
+    this.color = veriRoyal,
+    this.circle1Color = veriRoyal,
+    this.circle2Color = veriRoyal,
     this.backgroundColor = Colors.transparent,
   });
 
@@ -249,10 +251,7 @@ class _VeriBottomBarState extends State<VeriBottomBar>
               child: Container(
                 width: 5,
                 height: 5,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
               ),
             ),
           );

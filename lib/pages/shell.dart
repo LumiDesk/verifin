@@ -142,6 +142,15 @@ class _VeriFinShellState extends State<VeriFinShell> {
   /// 保证点击一定有结果。
   void _animateToTab(int index) {
     if (!_pageController.hasClients) {
+      // A bottom-bar tap can arrive in the first frame before PageView attaches
+      // its position. Keep the optimistic navigation state, then retry once the
+      // frame has attached the controller instead of silently dropping the tap.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _programmaticPageTarget != index) {
+          return;
+        }
+        _animateToTab(index);
+      });
       return;
     }
     final position = _pageController.position;

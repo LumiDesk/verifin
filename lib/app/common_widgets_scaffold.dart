@@ -19,18 +19,7 @@ class VeriPage extends StatelessWidget {
         horizontal: veriUnifiedDesignPreview ? (compact ? 2 : 6) : 0,
       ),
       decoration: BoxDecoration(
-        color: veriUnifiedDesignPreview
-            ? Theme.of(context).scaffoldBackgroundColor
-            : null,
-        gradient: veriUnifiedDesignPreview
-            ? null
-            : LinearGradient(
-                colors: Theme.of(context).brightness == Brightness.dark
-                    ? const <Color>[Color(0xFF0B0F15), Color(0xFF111722)]
-                    : const <Color>[Color(0xFFF5F8FC), Color(0xFFEFF4FB)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
+        color: Theme.of(context).scaffoldBackgroundColor,
       ),
       child: Center(
         child: ConstrainedBox(
