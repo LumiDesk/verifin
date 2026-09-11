@@ -7244,6 +7244,12 @@ abstract class AppLocalizations {
   /// **'设置{category}默认预算'**
   String setDefaultCategoryBudgetTitle(String category);
 
+  /// No description provided for @budgetClearAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'清空预算'**
+  String get budgetClearAction;
+
   /// No description provided for @budgetOverrideSheetTitle.
   ///
   /// In zh, this message translates to:

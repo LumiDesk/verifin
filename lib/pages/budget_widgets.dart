@@ -640,6 +640,7 @@ class _CategoryBudgetRow extends StatelessWidget {
     this.childCount = 0,
     this.collapsed = false,
     this.onToggle,
+    this.onActions,
   });
 
   final CategoryBudgetSnapshot snapshot;
@@ -657,6 +658,9 @@ class _CategoryBudgetRow extends StatelessWidget {
 
   /// 展开/收起子分类；无子分类时为 null（不显示折叠箭头）。
   final VoidCallback? onToggle;
+
+  /// 打开当前分类预算的操作菜单；无菜单时为 null。
+  final VoidCallback? onActions;
 
   @override
   Widget build(BuildContext context) {
@@ -779,12 +783,52 @@ class _CategoryBudgetRow extends StatelessWidget {
                   ),
                 ),
               ],
+              if (onActions != null)
+                IconButton(
+                  key: ValueKey<String>(
+                    'category_budget_actions_${snapshot.category.id}',
+                  ),
+                  tooltip: snapshot.category.label,
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 40,
+                    height: 40,
+                  ),
+                  onPressed: onActions,
+                  icon: const Icon(Icons.more_vert),
+                ),
             ],
           ),
         ),
       ),
     );
   }
+}
+
+List<VeriMenuEntry> _categoryBudgetActionEntries({
+  required BuildContext context,
+  required bool hasBudget,
+  required VoidCallback onSet,
+  required VoidCallback onClear,
+}) {
+  final l10n = AppLocalizations.of(context);
+  return <VeriMenuEntry>[
+    VeriMenuItem(
+      id: 'category_budget_set',
+      icon: Icons.edit_outlined,
+      title: l10n.setLabel,
+      onPressed: onSet,
+    ),
+    if (hasBudget)
+      VeriMenuItem(
+        id: 'category_budget_clear',
+        icon: Icons.delete_outline,
+        title: l10n.budgetClearAction,
+        foregroundColor: Theme.of(context).colorScheme.error,
+        onPressed: onClear,
+      ),
+  ];
 }
 
 class _BudgetInsightCard extends StatelessWidget {

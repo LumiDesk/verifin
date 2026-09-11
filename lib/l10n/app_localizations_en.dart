@@ -4056,6 +4056,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get budgetClearAction => 'Clear budget';
+
+  @override
   String budgetOverrideSheetTitle(String subject, String period) {
     return '$subject · $period';
   }

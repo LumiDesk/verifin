@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show listEquals;
@@ -479,25 +480,33 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
       }
       final children = controller.childCategories(category.id);
       final collapsed = _collapsedCategories.contains(category.id);
+      final actionEntries = _categoryBudgetActionEntries(
+        context: context,
+        hasBudget: controller.categoryBudgetIsOverride(_month, category.id),
+        onSet: () => unawaited(_editCategoryBudget(category)),
+        onClear: () =>
+            controller.clearCategoryBudgetOverride(_month, category.id),
+      );
       rows.add(
-        _CategoryBudgetRow(
-          snapshot: snapshot,
-          depth: depth,
-          childCount: children.length,
-          collapsed: collapsed,
-          onToggle: children.isEmpty
-              ? null
-              : () => setState(() {
-                  if (collapsed) {
-                    _collapsedCategories.remove(category.id);
-                  } else {
-                    _collapsedCategories.add(category.id);
-                  }
-                }),
-          onTap: () => showCategoryBudgetOverrideSheet(
-            context: context,
-            month: _month,
-            category: category,
+        VeriAnchoredMenuAnchor(
+          entries: actionEntries,
+          semanticLabel: category.label,
+          builder: (context, openMenu, menuOpen) => _CategoryBudgetRow(
+            snapshot: snapshot,
+            depth: depth,
+            childCount: children.length,
+            collapsed: collapsed,
+            onToggle: children.isEmpty
+                ? null
+                : () => setState(() {
+                    if (collapsed) {
+                      _collapsedCategories.remove(category.id);
+                    } else {
+                      _collapsedCategories.add(category.id);
+                    }
+                  }),
+            onTap: openMenu,
+            onActions: openMenu,
           ),
         ),
       );
@@ -508,6 +517,25 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
       }
     }
     return rows;
+  }
+
+  Future<void> _editCategoryBudget(Category category) async {
+    final controller = VeriFinScope.of(context);
+    final l10n = AppLocalizations.of(context);
+    final scope = controller.budgetCycleIsCustom
+        ? l10n.budgetOverrideScopePeriod
+        : l10n.budgetOverrideScopeMonth;
+    final amount = await showNumberPadSheet(
+      context,
+      title: l10n.budgetOverrideAmountTitle(scope),
+      initialAmount: controller.categoryBudget(_month, category.id),
+      allowZero: true,
+      currencyCode: controller.activeBook.baseCurrencyCode,
+    );
+    if (!mounted || amount == null) {
+      return;
+    }
+    controller.setCategoryBudget(_month, category.id, amount);
   }
 
   /// 进入预算设置页（默认预算、按日上限、周期起始日、分类默认预算）。

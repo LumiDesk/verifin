@@ -128,31 +128,19 @@ v1.11.1 的 `1e14bd0` 把预算页拆成：
 
 分类行已有 `onTap` 和尾部展开控件能力，不新增同构行组件。总览页和设置页的分类行均不显示独立预算数字；有子分类时仅在整行最右侧垂直居中显示旋转展开箭头，行主体仍负责打开对应预算编辑。
 
-### 5.2 动作弹窗
+### 5.2 行尾操作菜单
 
-新增领域 helper：
-
-```dart
-showCategoryBudgetOverrideSheet({
-  required BuildContext context,
-  required DateTime month,
-  required Category category,
-})
-```
-
-弹窗标题应同时说明分类和目标周期，例如：
-
-- 自然月：`食材 · 2026年7月`
-- 自定义周期：`食材 · 7月22日 至 8月21日`
+分类行点击主体或行尾三点按钮打开锚点操作菜单，菜单贴近触发位置展开，不再为单个
+选项先弹出底部动作窗口。菜单使用 `VeriAnchoredMenuAnchor`，并按当前状态显示操作：
 
 动作按状态变化：
 
 | 当前状态 | 显示动作 | 结果 |
 |---|---|---|
-| 无单期覆盖 | 单独设置本月/本期额度 | 打开数字键盘，写入单期覆盖 |
-| 有单期覆盖 | 调整本月/本期额度 | 打开数字键盘，更新单期覆盖 |
-| 有单期覆盖且有默认值 | 恢复默认（沿用 X） | 删除单期覆盖，立即显示默认值 |
-| 有单期覆盖且无默认值 | 清除本月/本期单独设置 | 删除单期覆盖，回到未设置 |
+| 无单期覆盖 | 设置 | 打开数字键盘，写入单期覆盖 |
+| 有单期覆盖 | 设置、清空预算 | 设置打开数字键盘；清空删除单期覆盖并回到默认值 |
+
+“清空预算”使用错误色显示。取消菜单或数字键盘统一不写数据。
 
 取消动作弹窗或数字键盘统一返回 `null`，不得写数据。
 
@@ -177,7 +165,7 @@ showCategoryBudgetOverrideSheet({
 
 - 2026-07 继续显示 800；
 - 其他无覆盖月份显示 600；
-- 用户回到 2026-07，在分类行弹窗中选择“恢复默认”，才会显示 600。
+- 用户回到 2026-07，在分类行操作菜单中选择“清空预算”，才会显示 600。
 
 ## 6. 组件与代码设计
 
@@ -198,35 +186,23 @@ void clearCategoryBudgetOverride(DateTime month, String categoryId)
 - `setCategoryBudget` 继续负责设置正数覆盖，并保留 0=清除的兼容语义；
 - 不暴露 repository，不让 UI 拼接预算键。
 
-### 6.2 Sheet helper 收口
+### 6.2 预算行操作菜单
 
-当前 `showMonthlyBudgetOverrideSheet` 在预算页面 part 中直接封装
-`showModalBottomSheet`。实现本需求时将它和新的分类 helper 一并移入 `lib/pages/sheets.dart`：
-
-- 对外提供类型明确的 `showMonthlyBudgetOverrideSheet` 与
-  `showCategoryBudgetOverrideSheet`；
-- 两者复用一个私有动作流程，避免两套状态判断、文案和数字键盘逻辑漂移；
-- 动作菜单复用 `showOptionSheet(..., showSelectedMarker: false)`；
-- 金额继续复用 `showNumberPadSheet`；
-- `BuildContext` 按仓库新 helper 规范使用具名 `context:`；
-- helper 内部读取 `VeriFinScope`，调用方不传 Controller；
-- 删除页面内裸写的 `showModalBottomSheet`。
-
-新增/迁移 helper 后同步更新 `docs/dev/components.md`。
+预算分类行的锚点菜单由 `VeriAnchoredMenuAnchor` 承载，菜单项回调分别调用
+`showNumberPadSheet` 和 `clearCategoryBudgetOverride`；总预算的
+`showMonthlyBudgetOverrideSheet` 继续保留底部动作流程。菜单内部读取当前 Controller 状态，
+调用方不传 repository。
 
 ### 6.3 预算总览接线
 
-在 `_buildCategoryBudgetTree` 创建 `_CategoryBudgetRow` 时增加：
+在 `_buildCategoryBudgetTree` 创建 `_CategoryBudgetRow` 时接入锚点菜单：
 
 ```dart
-onTap: () => showCategoryBudgetOverrideSheet(
-  context: context,
-  month: _month,
-  category: category,
-),
+onTap: openMenu,
+onActions: openMenu,
 ```
 
-父分类的 `onToggle` 保持独立。需要 Widget 测试锁定“点箭头只展开，点行主体才编辑”，
+父分类的 `onToggle` 保持独立。Widget 测试锁定“点箭头只展开，点行主体或三点才打开菜单”，
 避免嵌套点击区域互相触发。
 
 ### 6.4 分类预算行

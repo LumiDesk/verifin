@@ -2460,6 +2460,7 @@
       }
     }
   },
+  "budgetClearAction": "清空预算",
   "budgetOverrideSheetTitle": "{subject} · {period}",
   "@budgetOverrideSheetTitle": {
     "placeholders": {

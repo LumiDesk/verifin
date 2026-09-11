@@ -609,28 +609,6 @@ Future<void> showMonthlyBudgetOverrideSheet({
   );
 }
 
-/// 分类预算的单期覆盖入口。用于预算总览的分类行；分类默认预算仍由预算设置页
-/// 管理，清除覆盖后回落默认值（没有默认值时回落 0）。
-Future<void> showCategoryBudgetOverrideSheet({
-  required BuildContext context,
-  required DateTime month,
-  required Category category,
-}) async {
-  final controller = VeriFinScope.of(context);
-  await _showBudgetOverrideSheet(
-    context: context,
-    month: month,
-    subject: category.label,
-    isOverride: controller.categoryBudgetIsOverride(month, category.id),
-    defaultBudget: controller.defaultCategoryBudget(category.id),
-    currentBudget: controller.categoryBudget(month, category.id),
-    setOverride: (amount) =>
-        controller.setCategoryBudget(month, category.id, amount),
-    clearOverride: () =>
-        controller.clearCategoryBudgetOverride(month, category.id),
-  );
-}
-
 /// 总预算与分类预算共用的单期覆盖流程，统一动作菜单、周期文案和数字键盘。
 Future<void> _showBudgetOverrideSheet({
   required BuildContext context,

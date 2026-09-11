@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
@@ -651,34 +652,8 @@ class _CategoryManageRow extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.fromLTRB(14 + depth * 22, 10, 8, 10),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
-              SizedBox(
-                width: 24,
-                child: onToggle == null
-                    ? (depth > 0
-                          ? Icon(
-                              Icons.subdirectory_arrow_right,
-                              size: 16,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withValues(alpha: 0.3),
-                            )
-                          : null)
-                    : IconButton(
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        iconSize: 22,
-                        onPressed: onToggle,
-                        icon: Icon(
-                          collapsed ? Icons.chevron_right : Icons.expand_more,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.55),
-                        ),
-                      ),
-              ),
-              const SizedBox(width: 4),
               CategoryIconBox(
                 iconCode: category.iconCode,
                 color: colorForType(context, category.type),
@@ -708,6 +683,31 @@ class _CategoryManageRow extends StatelessWidget {
                   ],
                 ),
               ),
+              if (onToggle != null)
+                IconButton(
+                  key: ValueKey<String>(
+                    'category_manage_toggle_${category.id}',
+                  ),
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 40,
+                    height: 40,
+                  ),
+                  iconSize: 22,
+                  onPressed: onToggle,
+                  icon: Transform.rotate(
+                    angle: collapsed ? -math.pi / 2 : 0,
+                    child: Icon(
+                      Icons.expand_more,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.55),
+                    ),
+                  ),
+                )
+              else
+                const SizedBox(width: 40),
               if (sorting)
                 ReorderableDragStartListener(
                   index: index,

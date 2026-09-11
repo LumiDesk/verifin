@@ -1507,6 +1507,7 @@
       }
     }
   },
+  "budgetClearAction": "Clear budget",
   "budgetOverrideSheetTitle": "{subject} · {period}",
   "@budgetOverrideSheetTitle": {
     "placeholders": {

@@ -220,22 +220,35 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
       }
       final children = controller.childCategories(category.id);
       final collapsed = _collapsedCategories.contains(category.id);
+      final actionEntries = _categoryBudgetActionEntries(
+        context: context,
+        hasBudget: (_draftCategoryBudgets[category.id] ?? 0) > 0,
+        onSet: () => unawaited(_editDefaultCategoryBudget(category)),
+        onClear: () => setState(() {
+          _draftCategoryBudgets[category.id] = 0;
+        }),
+      );
       rows.add(
-        _CategoryBudgetRow(
-          snapshot: snapshot,
-          depth: depth,
-          childCount: children.length,
-          collapsed: collapsed,
-          onToggle: children.isEmpty
-              ? null
-              : () => setState(() {
-                  if (collapsed) {
-                    _collapsedCategories.remove(category.id);
-                  } else {
-                    _collapsedCategories.add(category.id);
-                  }
-                }),
-          onTap: () => _editDefaultCategoryBudget(category),
+        VeriAnchoredMenuAnchor(
+          entries: actionEntries,
+          semanticLabel: category.label,
+          builder: (context, openMenu, menuOpen) => _CategoryBudgetRow(
+            snapshot: snapshot,
+            depth: depth,
+            childCount: children.length,
+            collapsed: collapsed,
+            onToggle: children.isEmpty
+                ? null
+                : () => setState(() {
+                    if (collapsed) {
+                      _collapsedCategories.remove(category.id);
+                    } else {
+                      _collapsedCategories.add(category.id);
+                    }
+                  }),
+            onTap: openMenu,
+            onActions: openMenu,
+          ),
         ),
       );
       if (children.isNotEmpty && !collapsed) {

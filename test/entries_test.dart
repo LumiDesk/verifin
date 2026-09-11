@@ -579,6 +579,35 @@ void main() {
     expect(find.textContaining('个子分类'), findsWidgets);
   });
 
+  testWidgets('分类管理父分类在行尾展开且点击不打开菜单', (WidgetTester tester) async {
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store);
+    controller
+      ..addCategory(
+        type: EntryType.expense,
+        label: '早餐',
+        iconCode: 'category',
+        parentId: 'dining',
+      )
+      ..dispose();
+
+    await pumpApp(tester, store);
+    await tapBottomTab(tester, 3);
+    await tester.tap(find.text('分类管理'));
+    await tester.pumpAndSettle();
+
+    // 父分类默认收起，展开控件在行尾且与操作菜单分开。
+    expect(find.text('早餐'), findsNothing);
+    final toggle = find.byKey(
+      const ValueKey<String>('category_manage_toggle_dining'),
+    );
+    expect(toggle, findsOneWidget);
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    expect(find.text('早餐'), findsOneWidget);
+    expect(find.text('编辑'), findsNothing);
+  });
+
   testWidgets('merges a category into another via the hierarchical picker', (
     WidgetTester tester,
   ) async {

@@ -83,6 +83,8 @@ void main() {
     );
     await tester.tap(find.text('餐饮'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('设置').last);
+    await tester.pumpAndSettle();
     expect(find.text('设置餐饮默认预算'), findsOneWidget);
     for (final key in <String>['6', '00']) {
       await tester.tap(find.byKey(Key('number_key_$key')));
@@ -183,11 +185,10 @@ void main() {
 
     await tester.tap(find.text('餐饮'));
     await tester.pumpAndSettle();
-    expect(find.text('餐饮 · 2026年7月'), findsOneWidget);
-    expect(find.text('调整本月额度'), findsOneWidget);
-    expect(find.text('清除本月单独设置'), findsOneWidget);
+    expect(find.text('设置'), findsOneWidget);
+    expect(find.text('清空预算'), findsOneWidget);
 
-    await tester.tap(find.text('调整本月额度'));
+    await tester.tap(find.text('设置'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('number_key_C')));
     for (final key in <String>['9', '00']) {
@@ -202,7 +203,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('餐饮'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('清除本月单独设置'));
+    await tester.tap(find.text('清空预算'));
     await tester.pumpAndSettle();
     expect(controller.categoryBudgetIsOverride(july, 'dining'), isFalse);
     expect(controller.categoryBudget(july, 'dining'), 0);
@@ -238,11 +239,10 @@ void main() {
 
     await tester.tap(find.text('餐饮'));
     await tester.pumpAndSettle();
-    expect(find.text('餐饮 · 7月22日 至 8月21日'), findsOneWidget);
-    expect(find.text('调整本期额度'), findsOneWidget);
-    expect(find.text('恢复默认（沿用 600）'), findsOneWidget);
+    expect(find.text('设置'), findsOneWidget);
+    expect(find.text('清空预算'), findsOneWidget);
 
-    await tester.tap(find.text('恢复默认（沿用 600）'));
+    await tester.tap(find.text('清空预算'));
     await tester.pumpAndSettle();
     expect(controller.categoryBudgetIsOverride(july, 'dining'), isFalse);
     expect(controller.categoryBudget(july, 'dining'), 600);

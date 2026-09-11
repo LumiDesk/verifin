@@ -3943,6 +3943,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get budgetClearAction => '清空预算';
+
+  @override
   String budgetOverrideSheetTitle(String subject, String period) {
     return '$subject · $period';
   }
