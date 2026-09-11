@@ -31,13 +31,22 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
   List<Category> _draftCategories = <Category>[];
   List<String> _initialOrder = <String>[];
 
-  // 收起的父分类 id（默认全部展开，收起后隐藏其子树）。
+  // 收起的父分类 id；首次进入时默认收起所有有子分类的父节点。
   final Set<String> _collapsed = <String>{};
+  bool _collapseDefaultsInitialized = false;
 
   @override
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
     final categories = _sorting ? _draftCategories : controller.categories;
+    if (!_collapseDefaultsInitialized) {
+      _collapsed.addAll(
+        categories
+            .where((category) => childrenOf(categories, category.id).isNotEmpty)
+            .map((category) => category.id),
+      );
+      _collapseDefaultsInitialized = true;
+    }
     final roots = rootCategories(categories, _type);
 
     return UnsavedChangesGuard(

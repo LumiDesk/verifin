@@ -50,6 +50,14 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
               .map((account) => account.id)
               .toList(),
       };
+      for (final section in definitions) {
+        if (controller.isAssetSectionCollapsed(
+          mode: mode,
+          sectionId: section.id,
+        )) {
+          _collapsedSections.add('${mode.name}:${section.id}');
+        }
+      }
     }
     _initialFingerprint = _fingerprint;
   }
@@ -134,6 +142,7 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
             sectionEntry.key: sectionEntry.value,
         },
     },
+    'collapsedSections': _collapsedSections.toList()..sort(),
   });
 
   bool get _isDirty => _initialized && _fingerprint != _initialFingerprint;
@@ -246,13 +255,16 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
                             baseCurrencyCode:
                                 controller.activeBook.baseCurrencyCode,
                           ),
-                          collapsed: _collapsedSections.contains(section.id),
+                          collapsed: _collapsedSections.contains(
+                            '${_viewMode.name}:${section.id}',
+                          ),
                           sectionDragIndex: index,
                           sectionDragImmediate: true,
                           hapticsEnabled: controller.hapticsEnabled,
                           onToggleCollapsed: () => setState(() {
-                            if (!_collapsedSections.add(section.id)) {
-                              _collapsedSections.remove(section.id);
+                            final key = '${_viewMode.name}:${section.id}';
+                            if (!_collapsedSections.add(key)) {
+                              _collapsedSections.remove(key);
                             }
                           }),
                           onReorderAccounts: (oldIndex, newIndex) =>
@@ -425,6 +437,7 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
       coverUrl: _coverUrl,
       sectionOrders: _sectionOrders,
       accountOrders: _accountOrders,
+      collapsedSections: _collapsedSections,
     );
     if (mounted) {
       _saving = false;

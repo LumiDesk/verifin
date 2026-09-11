@@ -910,7 +910,11 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
       chartValues = valuesForTypeInWindow(rangeEntries, window, _type);
       chartXLabels = _period == _StatPeriod.week
           ? labelsForWindow(window)
-          : sparseLabelsForWindow(window);
+          : sparseLabelsForWindow(
+              window,
+              interval: _period == _StatPeriod.quarter ? 15 : 5,
+              anchorToWindowStart: _period == _StatPeriod.quarter,
+            );
     }
 
     final total = sumByType(rangeEntries, _type);
@@ -1317,7 +1321,10 @@ List<_DailyStatRow> _periodDayRows(
     if (dayEntries.isEmpty) {
       continue;
     }
-    final amount = sumByType(dayEntries, dayEntries.first.type);
+    final amount = dayEntries.fold<double>(
+      0,
+      (sum, entry) => sum + statAmountForEntry(entry),
+    );
     rows.add(
       _DailyStatRow(
         date: day,
@@ -1344,7 +1351,10 @@ List<_DailyStatRow> _monthlyStatRows(
     if (monthEntries.isEmpty) {
       continue;
     }
-    final amount = sumByType(monthEntries, monthEntries.first.type);
+    final amount = monthEntries.fold<double>(
+      0,
+      (sum, entry) => sum + statAmountForEntry(entry),
+    );
     rows.add(
       _DailyStatRow(
         date: DateTime(year, month, 1),

@@ -79,14 +79,17 @@ double sumByType(Iterable<LedgerEntry> entries, EntryType type) {
   return entries
       .where((entry) => entry.type == type)
       // 支出按净额（扣除退款/报销回款）统计。
-      .fold<double>(
-        0,
-        (sum, entry) =>
-            sum +
-            (entry.type == EntryType.expense
-                ? entry.netBaseAmount
-                : entry.baseAmount),
-      );
+      .fold<double>(0, (sum, entry) => sum + statAmountForEntry(entry));
+}
+
+/// 统计图中单笔条目的金额。转账的本位币金额按设计恒为 0，展示统计时使用
+/// 原始转出金额，否则“转账”筛选会出现全 0 的图表和列表。
+double statAmountForEntry(LedgerEntry entry) {
+  return switch (entry.type) {
+    EntryType.expense => entry.netBaseAmount,
+    EntryType.income || EntryType.refund => entry.baseAmount,
+    EntryType.transfer => entry.amount,
+  };
 }
 
 bool isZeroAmount(num value) =>
@@ -183,9 +186,7 @@ List<double> monthlyNetValuesForType(
   final values = List<double>.filled(12, 0);
   for (final entry in entries) {
     if (entry.type == type && entry.occurredAt.year == year) {
-      values[entry.occurredAt.month - 1] += entry.type == EntryType.expense
-          ? entry.netBaseAmount
-          : entry.baseAmount;
+      values[entry.occurredAt.month - 1] += statAmountForEntry(entry);
     }
   }
   return values;
@@ -216,9 +217,7 @@ List<double> valuesForTypeInWindow(
     }
     for (var i = 0; i < days.length; i += 1) {
       if (DateUtils.isSameDay(entry.occurredAt, days[i])) {
-        values[i] += entry.type == EntryType.expense
-            ? entry.netBaseAmount
-            : entry.baseAmount;
+        values[i] += statAmountForEntry(entry);
         break;
       }
     }
@@ -230,16 +229,25 @@ List<String> labelsForWindow(DateWindow window) {
   return window.days.map((date) => '${date.month}.${date.day}').toList();
 }
 
-/// 稀疏的日期标签：天数不多（≤8）时全部展示；否则只在 1 号与每 5 天（5/10/15…）
-/// 标注，其余留空，避免整月日期挤成一团（滑动时数据气泡仍显示具体某天）。
-List<String> sparseLabelsForWindow(DateWindow window) {
+/// 稀疏的日期标签：天数不多（≤8）时全部展示；否则只在 1 号与每 [interval] 天
+/// 标注，其余留空，避免日期挤成一团（滑动时数据气泡仍显示具体某天）。季度等
+/// 跨月窗口可用 [anchorToWindowStart] 让间隔从窗口起点连续计算。
+List<String> sparseLabelsForWindow(
+  DateWindow window, {
+  int interval = 5,
+  bool anchorToWindowStart = false,
+}) {
+  assert(interval > 0);
   final days = window.days;
   if (days.length <= 8) {
     return labelsForWindow(window);
   }
   return days
       .map(
-        (date) => (date.day == 1 || date.day % 5 == 0)
+        (date) =>
+            (anchorToWindowStart
+                ? calendarDaysBetween(window.start, date) % interval == 0
+                : date.day == 1 || date.day % interval == 0)
             ? '${date.month}.${date.day}'
             : '',
       )

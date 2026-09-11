@@ -146,7 +146,10 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
               ),
               const SizedBox(height: 10),
               VeriCard(
-                padding: const EdgeInsets.fromLTRB(13, 12, 13, 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
@@ -388,7 +391,10 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
               ],
               const SizedBox(height: 10),
               VeriCard(
-                padding: const EdgeInsets.fromLTRB(13, 12, 13, 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
@@ -603,7 +609,10 @@ class BudgetHistoryPage extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               VeriCard(
-                padding: const EdgeInsets.fromLTRB(13, 12, 13, 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[

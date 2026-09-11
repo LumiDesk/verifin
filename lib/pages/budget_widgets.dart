@@ -66,7 +66,7 @@ class _DailyBudgetCard extends StatelessWidget {
       Theme.of(context).brightness,
     );
     return VeriCard(
-      padding: const EdgeInsets.fromLTRB(13, 12, 13, 14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -283,7 +283,7 @@ class _BudgetHistoryCard extends StatelessWidget {
         : veriSemantic(context, veriIncome);
 
     return VeriCard(
-      padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -593,7 +593,7 @@ class _CategoryBudgetAlertCard extends StatelessWidget {
           );
 
     return VeriCard(
-      padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[

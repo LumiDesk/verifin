@@ -65,9 +65,6 @@ class _AssetsPageState extends State<AssetsPage> {
     ),
   ];
 
-  // 普通浏览时的展开/折叠仅是临时 UI 状态，不再静默持久化。
-  final Set<String> _collapsedSections = <String>{};
-
   @override
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
@@ -244,23 +241,6 @@ class _AssetsPageState extends State<AssetsPage> {
                             child: Text(
                               AppLocalizations.of(context).netAssets,
                               style: TextStyle(color: assetCardMutedColor),
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: AppLocalizations.of(
-                              context,
-                            ).assetsChangeCover,
-                            onPressed: () => _openDisplaySettings(context),
-                            style: IconButton.styleFrom(
-                              fixedSize: const Size(32, 32),
-                              minimumSize: const Size(32, 32),
-                              padding: EdgeInsets.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            icon: Icon(
-                              Icons.photo_size_select_actual_outlined,
-                              color: assetCardMutedColor,
-                              size: 18,
                             ),
                           ),
                         ],
@@ -464,16 +444,16 @@ class _AssetsPageState extends State<AssetsPage> {
                     valuation: valuation,
                     baseCurrencyCode: baseCurrencyCode,
                   ),
-                  collapsed: _collapsedSections.contains(
-                    '${viewMode.name}:${section.id}',
+                  collapsed: controller.isAssetSectionCollapsed(
+                    mode: viewMode,
+                    sectionId: section.id,
                   ),
                   hapticsEnabled: controller.hapticsEnabled,
-                  onToggleCollapsed: () => setState(() {
-                    final key = '${viewMode.name}:${section.id}';
-                    if (!_collapsedSections.add(key)) {
-                      _collapsedSections.remove(key);
-                    }
-                  }),
+                  onToggleCollapsed: () =>
+                      controller.toggleAssetSectionCollapsed(
+                        mode: viewMode,
+                        sectionId: section.id,
+                      ),
                   onAccountTap: (account) {
                     Navigator.of(context).push<void>(
                       MaterialPageRoute<void>(

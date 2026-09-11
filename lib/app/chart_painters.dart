@@ -33,7 +33,9 @@ Rect trendChartRect(
   required bool hasXLabels,
   required bool hasYLabels,
 }) {
-  const leftInset = 30.0;
+  // 纵轴标签可能包含千位分组和两位小数（如 3,800.36），为文字留出完整
+  // 的绘制空间，避免首字符贴边或被画布裁掉。
+  const leftInset = 52.0;
   const rightInset = 8.0;
   const bottomInset = 22.0;
   return Rect.fromLTWH(
@@ -50,7 +52,7 @@ Rect barChartRect(
   required bool hasXLabels,
   required bool hasYLabels,
 }) {
-  const leftInset = 30.0;
+  const leftInset = 52.0;
   const rightInset = 4.0;
   return Rect.fromLTWH(
     hasYLabels ? leftInset : 0,

@@ -33,7 +33,7 @@ class _BudgetTrendCardState extends State<_BudgetTrendCard> {
       (max, item) => math.max(max, math.max(item.expense, item.budget)),
     );
     return VeriCard(
-      padding: const EdgeInsets.fromLTRB(13, 12, 13, 13),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[

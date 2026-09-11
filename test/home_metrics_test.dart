@@ -70,6 +70,24 @@ void main() {
     });
   });
 
+  test('转账统计使用原始转账金额而不是恒为 0 的本位币缓存', () {
+    final transfer = _entry(
+      id: 'transfer',
+      type: EntryType.transfer,
+      amount: 3800.36,
+      occurredAt: DateTime(2026, 7, 12),
+    );
+    expect(sumByType(<LedgerEntry>[transfer], EntryType.transfer), 3800.36);
+    expect(
+      valuesForTypeInWindow(
+        <LedgerEntry>[transfer],
+        monthWindowFor(DateTime(2026, 7, 1)),
+        EntryType.transfer,
+      )[11],
+      3800.36,
+    );
+  });
+
   group('monthWindowFor（整月窗口）', () {
     test('1 号至当月最后一天', () {
       final w = monthWindowFor(DateTime(2026, 7, 15));
@@ -94,6 +112,19 @@ void main() {
           if (labels[i].isNotEmpty) i + 1,
       ];
       expect(labeledDays, <int>[1, 5, 10, 15, 20, 25, 30]);
+    });
+
+    test('季度窗口按每 15 天标注，避免日期过密', () {
+      final labels = sparseLabelsForWindow(
+        quarterWindowFor(DateTime(2026, 7, 1)),
+        interval: 15,
+        anchorToWindowStart: true,
+      );
+      final labeledDays = <int>[
+        for (var i = 0; i < labels.length; i++)
+          if (labels[i].isNotEmpty) i + 1,
+      ];
+      expect(labeledDays, <int>[1, 16, 31, 46, 61, 76, 91]);
     });
   });
 

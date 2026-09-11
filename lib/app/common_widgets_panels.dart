@@ -367,7 +367,7 @@ class _CalendarPreviewState extends State<CalendarPreview> {
     }
 
     return VeriCard(
-      padding: const EdgeInsets.fromLTRB(13, 12, 13, 13),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -382,6 +382,12 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                 ),
               ),
               IconButton(
+                constraints: const BoxConstraints.tightFor(
+                  width: 32,
+                  height: 32,
+                ),
+                padding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
                 tooltip: AppLocalizations.of(context).calendarPrevMonth,
                 onPressed: () => setState(() {
                   _visibleMonth = DateTime(
@@ -414,6 +420,12 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                 ),
               ),
               IconButton(
+                constraints: const BoxConstraints.tightFor(
+                  width: 32,
+                  height: 32,
+                ),
+                padding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
                 tooltip: AppLocalizations.of(context).calendarNextMonth,
                 onPressed: () => setState(() {
                   _visibleMonth = DateTime(

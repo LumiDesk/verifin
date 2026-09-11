@@ -341,7 +341,7 @@ class _MonthSummaryCard extends StatelessWidget {
       context,
     ).colorScheme.onSurface.withValues(alpha: 0.48);
     return VeriCard(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: <Widget>[
           SummaryMetric(
@@ -413,7 +413,7 @@ class _BudgetExecutionCard extends StatelessWidget {
         : veriRoyal;
 
     return VeriCard(
-      padding: const EdgeInsets.fromLTRB(13, 12, 13, 13),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       // 首页预算面板可被用户在面板管理里关闭，此卡是关掉后进入预算总览的唯一入口。
       onTap: () => Navigator.of(context).push<void>(
         MaterialPageRoute<void>(

@@ -179,11 +179,13 @@ void main() {
     );
   });
 
-  testWidgets('资产背景入口先进入显式保存的显示设置页', (WidgetTester tester) async {
+  testWidgets('资产背景入口位于资产操作菜单的显示设置中', (WidgetTester tester) async {
     await pumpApp(tester);
 
     await tapBottomTab(tester, 1);
-    await tester.tap(find.byTooltip('更换资产卡片背景'));
+    await tester.tap(find.byTooltip('资产操作'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('资产显示设置'));
     await tester.pumpAndSettle();
 
     expect(find.text('资产显示设置'), findsOneWidget);
@@ -557,7 +559,7 @@ void main() {
     expect(saved.dueDay, isNull);
   });
 
-  testWidgets('资产视图保存前不生效，普通折叠不再持久化', (WidgetTester tester) async {
+  testWidgets('资产视图保存前不生效，普通折叠状态持久化', (WidgetTester tester) async {
     final store = LocalKeyValueStore();
     final seed = await makeController(store);
     seed.addAccount(
@@ -605,7 +607,7 @@ void main() {
     await tapBottomTab(tester, 1);
 
     expect(find.text('未分组'), findsOneWidget);
-    expect(find.text('支付宝账户'), findsOneWidget);
+    expect(find.text('支付宝账户'), findsNothing);
   });
 
   testWidgets('资产显示设置返回时可放弃草稿', (tester) async {

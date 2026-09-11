@@ -1466,6 +1466,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     required String coverUrl,
     required Map<AssetAccountViewMode, List<String>> sectionOrders,
     required Map<AssetAccountViewMode, Map<String, List<String>>> accountOrders,
+    required Set<String> collapsedSections,
   }) async {
     final activeAccountIds = accounts.map((account) => account.id).toSet();
     for (final mode in AssetAccountViewMode.values) {
@@ -1482,6 +1483,20 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
           return false;
         }
       }
+    }
+
+    final nextCollapsedSections = <String>{..._collapsedAssetSections}
+      ..removeWhere((key) => key.startsWith('$_activeBookId:'));
+    for (final key in collapsedSections) {
+      final separator = key.indexOf(':');
+      if (separator <= 0 || separator == key.length - 1) {
+        return false;
+      }
+      final mode = key.substring(0, separator);
+      if (!AssetAccountViewMode.values.any((item) => item.name == mode)) {
+        return false;
+      }
+      nextCollapsedSections.add('$_activeBookId:$key');
     }
 
     final nextSectionOrders = Map<String, List<String>>.fromEntries(
@@ -1511,6 +1526,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       _assetViewModeKey: _store.read(_assetViewModeKey),
       _assetAccountOrderKey: _store.read(_assetAccountOrderKey),
       _assetSectionOrderKey: _store.read(_assetSectionOrderKey),
+      _assetSectionCollapsedKey: _store.read(_assetSectionCollapsedKey),
     };
     try {
       if (normalizedCover.isEmpty) {
@@ -1526,6 +1542,10 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       await _store.writeAndFlush(
         _assetSectionOrderKey,
         jsonEncode(nextSectionOrders),
+      );
+      await _store.writeAndFlush(
+        _assetSectionCollapsedKey,
+        jsonEncode(nextCollapsedSections.toList()),
       );
     } catch (error, stackTrace) {
       for (final entry in previous.entries) {
@@ -1551,6 +1571,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _assetSectionOrders
       ..clear()
       ..addAll(nextSectionOrders);
+    _collapsedAssetSections
+      ..clear()
+      ..addAll(nextCollapsedSections);
     notifyListeners();
     return true;
   }

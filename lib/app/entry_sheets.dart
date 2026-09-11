@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -62,165 +64,163 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Align(
-        alignment: Alignment.bottomCenter,
-        heightFactor: 1,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: veriPageMaxWidth),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              14,
-              14,
-              14,
-              14 + MediaQuery.viewInsetsOf(context).bottom,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                if (widget.showTitle) ...[
-                  Text(
-                    widget.title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                ],
-                // 数字显示行单独成层：按键只重绘这一行，不带动整块毛玻璃背景
-                // 重算模糊（弹层越大越贵）。
-                RepaintBoundary(
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(veriRadiusMd),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: <Widget>[
-                        Text(
-                          key: const Key('number_pad_display'),
-                          _input.isEmpty ? '0' : _input,
-                          textAlign: TextAlign.end,
-                          style: Theme.of(context).textTheme.displaySmall
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                        // 算式模式在右下角展示浅色结果预览；不完整则提示。
-                        if (_hasOperator) ...<Widget>[
-                          const SizedBox(height: 2),
-                          Text(
-                            _result == null
-                                ? AppLocalizations.of(context).calcIncomplete
-                                : '= ${_formatResult(_result!)}',
-                            textAlign: TextAlign.end,
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurface
-                                      .withValues(alpha: 0.45),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                          ),
-                        ],
-                      ],
-                    ),
+    final mediaQuery = MediaQuery.of(context);
+    final bottomInset = math.max(
+      mediaQuery.padding.bottom,
+      mediaQuery.viewInsets.bottom,
+    );
+    return Align(
+      alignment: Alignment.bottomCenter,
+      heightFactor: 1,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: veriPageMaxWidth),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(14, 14, 14, 14 + bottomInset),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              if (widget.showTitle) ...[
+                Text(
+                  widget.title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                if (widget.maxAmount != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6, left: 4),
-                    child: Text(
-                      AppLocalizations.of(context).numberPadMax(
-                        widget.currencyCode == null
-                            ? formatAmount(widget.maxAmount!)
-                            : formatCurrencyNumber(
-                                widget.maxAmount!,
-                                widget.currencyCode!,
-                              ),
-                      ),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: _amount > widget.maxAmount! + _maxTolerance
-                            ? veriSemantic(context, veriExpense)
-                            : Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withValues(alpha: 0.55),
-                        fontWeight: _amount > widget.maxAmount! + _maxTolerance
-                            ? FontWeight.w700
-                            : FontWeight.w400,
-                      ),
-                    ),
-                  ),
                 const SizedBox(height: 10),
-                // 5 行键盘：前 3 行满 4 列，最后两行左侧为 2×3 数字区
-                // （1 2 3 / 00 0 .，小数点落在 0 右边），右下角 OK 占竖两格。
-                // 用固定网格无法跨格，故手写布局。
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    const spacing = 8.0;
-                    final cellW = (constraints.maxWidth - spacing * 3) / 4;
-                    final cellH = cellW * 3 / 4;
-                    Widget cell(String v) => SizedBox(
-                      width: cellW,
-                      height: cellH,
-                      child: _buildKey(context, v),
-                    );
-                    Widget keyRow(List<String> values) => Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        for (var i = 0; i < values.length; i++) ...<Widget>[
-                          if (i > 0) const SizedBox(width: spacing),
-                          cell(values[i]),
-                        ],
-                      ],
-                    );
-                    final leftBottom = Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        keyRow(<String>['1', '2', '3']),
-                        const SizedBox(height: spacing),
-                        keyRow(<String>['00', '0', '.']),
-                      ],
-                    );
-                    final rightBottom = SizedBox(
-                      width: cellW,
-                      height: cellH * 2 + spacing,
-                      child: _buildKey(context, 'OK'),
-                    );
-                    // 按键区单独成层：按键只重绘按键，不触发外层毛玻璃重算模糊。
-                    return RepaintBoundary(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          keyRow(<String>['C', '⌫', '÷', '×']),
-                          const SizedBox(height: spacing),
-                          keyRow(<String>['7', '8', '9', '-']),
-                          const SizedBox(height: spacing),
-                          keyRow(<String>['4', '5', '6', '+']),
-                          const SizedBox(height: spacing),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              leftBottom,
-                              const SizedBox(width: spacing),
-                              rightBottom,
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
               ],
-            ),
+              // 数字显示行单独成层：按键只重绘这一行，不带动整块毛玻璃背景
+              // 重算模糊（弹层越大越贵）。
+              RepaintBoundary(
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(veriRadiusMd),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      Text(
+                        key: const Key('number_pad_display'),
+                        _input.isEmpty ? '0' : _input,
+                        textAlign: TextAlign.end,
+                        style: Theme.of(context).textTheme.displaySmall
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      // 算式模式在右下角展示浅色结果预览；不完整则提示。
+                      if (_hasOperator) ...<Widget>[
+                        const SizedBox(height: 2),
+                        Text(
+                          _result == null
+                              ? AppLocalizations.of(context).calcIncomplete
+                              : '= ${_formatResult(_result!)}',
+                          textAlign: TextAlign.end,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.45),
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              if (widget.maxAmount != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6, left: 4),
+                  child: Text(
+                    AppLocalizations.of(context).numberPadMax(
+                      widget.currencyCode == null
+                          ? formatAmount(widget.maxAmount!)
+                          : formatCurrencyNumber(
+                              widget.maxAmount!,
+                              widget.currencyCode!,
+                            ),
+                    ),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: _amount > widget.maxAmount! + _maxTolerance
+                          ? veriSemantic(context, veriExpense)
+                          : Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.55),
+                      fontWeight: _amount > widget.maxAmount! + _maxTolerance
+                          ? FontWeight.w700
+                          : FontWeight.w400,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 10),
+              // 5 行键盘：前 3 行满 4 列，最后两行左侧为 2×3 数字区
+              // （1 2 3 / 00 0 .，小数点落在 0 右边），右下角 OK 占竖两格。
+              // 用固定网格无法跨格，故手写布局。
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  const spacing = 8.0;
+                  final cellW = (constraints.maxWidth - spacing * 3) / 4;
+                  final cellH = cellW * 3 / 4;
+                  Widget cell(String v) => SizedBox(
+                    width: cellW,
+                    height: cellH,
+                    child: _buildKey(context, v),
+                  );
+                  Widget keyRow(List<String> values) => Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      for (var i = 0; i < values.length; i++) ...<Widget>[
+                        if (i > 0) const SizedBox(width: spacing),
+                        cell(values[i]),
+                      ],
+                    ],
+                  );
+                  final leftBottom = Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      keyRow(<String>['1', '2', '3']),
+                      const SizedBox(height: spacing),
+                      keyRow(<String>['00', '0', '.']),
+                    ],
+                  );
+                  final rightBottom = SizedBox(
+                    width: cellW,
+                    height: cellH * 2 + spacing,
+                    child: _buildKey(context, 'OK'),
+                  );
+                  // 按键区单独成层：按键只重绘按键，不触发外层毛玻璃重算模糊。
+                  return RepaintBoundary(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        keyRow(<String>['C', '⌫', '÷', '×']),
+                        const SizedBox(height: spacing),
+                        keyRow(<String>['7', '8', '9', '-']),
+                        const SizedBox(height: spacing),
+                        keyRow(<String>['4', '5', '6', '+']),
+                        const SizedBox(height: spacing),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            leftBottom,
+                            const SizedBox(width: spacing),
+                            rightBottom,
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
         ),
       ),

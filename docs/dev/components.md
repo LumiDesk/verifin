@@ -71,7 +71,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `CardNumberFields` | Widget | `common_widgets.dart` | 完整卡号 + 后四位输入组，含「后四位跟随卡号」开关（信用卡/储蓄卡录入用）；**受控**：`follows`/`onFollowsChanged` 由调用方持久化（`Account.cardLast4Follows`），组件不自行反推 |
 | `showCardNumberDialog` | Dialog 函数 | `sheets.dart` | 编辑完整卡号+后四位+跟随开关，返回 `({number, last4, follows})?`（内部用 `CardNumberFields`，后四位以 `cardLast4Of` 归一化） |
 | `CreditRepaymentPage` | 页面 Widget | `credit_repayment_page.dart` | 信用卡/信用账户还款页；预填欠款、扣款账户可选/可代还，落一笔转账 |
-| `AccountSectionCard` | Widget | `common_widgets.dart` | 资产页账户分区卡（可折叠 + 分区合计）；同时服务类型、文件夹分组和隐藏账户等分区，拖拽只由 `sectionDragIndex != null` 开启，`sectionDragImmediate` 控制即时/延迟拖拽 |
+| `AccountSectionCard` | Widget | `common_widgets.dart` | 资产页账户分区卡（可折叠 + 分区合计）；普通资产页折叠状态由 Controller 按账本/视图模式持久化，设置页可在草稿中调整；同时服务类型、文件夹分组和隐藏账户等分区，拖拽只由 `sectionDragIndex != null` 开启，`sectionDragImmediate` 控制即时/延迟拖拽 |
 | `accountBalanceColor` | 纯函数 | `common_widgets.dart` | **账户余额上色**（不计入资产=弱化，负=红，正=青绿） |
 | `accountDisplayName` | 纯函数 | `model_lookup.dart` | 按 id 取账户名，空 id→noneLabel（**展示层用它**，避免误回退首个账户） |
 | `accountById` | 纯函数 | `model_lookup.dart` | 按 id 取账户（会回退首个，展示层慎用） |
