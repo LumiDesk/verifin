@@ -360,12 +360,41 @@ class _FeatureGridCard extends StatelessWidget {
                 4,
                 math.max(2, (constraints.maxWidth / needed).floor()),
               );
-              // 两个功能卡共用同一行高，避免上下卡片的网格节奏不一致；高度
-              // 随系统字号增加，但不再给短中文标签预留固定的大块空白。
+              final cellWidth =
+                  (constraints.maxWidth - (columns - 1) * 4) / columns;
+              final tileTextWidth = math.max(0.0, cellWidth - 4);
+              final subtitleStyle =
+                  Theme.of(context).textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w400,
+                  ) ??
+                  const TextStyle();
+              double measuredHeight(
+                String text,
+                TextStyle style,
+                int maxLines,
+              ) {
+                return (TextPainter(
+                  text: TextSpan(text: text, style: style),
+                  textScaler: textScaler,
+                  textDirection: Directionality.of(context),
+                  maxLines: maxLines,
+                  ellipsis: '…',
+                )..layout(maxWidth: tileTextWidth)).size.height;
+              }
+
+              final maxLabelHeight = tiles
+                  .map((data) => measuredHeight(data.label, labelStyle, 2))
+                  .fold<double>(0, math.max);
+              final maxSubtitleHeight = tiles
+                  .map(
+                    (data) => measuredHeight(data.subtitle, subtitleStyle, 1),
+                  )
+                  .fold<double>(0, math.max);
+              // Padding、图标、间距和文字高度，再留 8dp 的字体度量余量。
               final rowExtent = math
                   .max(
-                    110,
-                    66 + textScaler.scale(32) + textScaler.scale(12) + 4,
+                    90,
+                    16 + 42 + 7 + maxLabelHeight + 1 + maxSubtitleHeight + 8,
                   )
                   .toDouble();
               return GridView.count(

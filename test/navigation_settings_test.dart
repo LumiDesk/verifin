@@ -159,9 +159,15 @@ void main() {
         firstDelegate.mainAxisExtent ??
         cellWidth / firstDelegate.childAspectRatio;
     expect(tester.getSize(firstGrid).height, closeTo(rowHeight, 0.1));
+    final secondDelegate =
+        tester.widget<GridView>(secondGrid).gridDelegate
+            as SliverGridDelegateWithFixedCrossAxisCount;
+    final secondRowHeight =
+        secondDelegate.mainAxisExtent ??
+        cellWidth / secondDelegate.childAspectRatio;
     expect(
       tester.getSize(secondGrid).height,
-      closeTo(rowHeight * 2 + firstDelegate.mainAxisSpacing, 0.1),
+      closeTo(secondRowHeight * 2 + secondDelegate.mainAxisSpacing, 0.1),
     );
   });
 
