@@ -4535,7 +4535,7 @@ abstract class AppLocalizations {
   /// No description provided for @hideSingleCurrencyUnitDesc.
   ///
   /// In zh, this message translates to:
-  /// **'账本只使用一种货币时，不在每个金额旁重复显示单位'**
+  /// **'账本只使用一种货币时，不再标出币种（金额旁、页头、卡片角标与 AI 回答）'**
   String get hideSingleCurrencyUnitDesc;
 
   /// No description provided for @runningBalanceLabel.

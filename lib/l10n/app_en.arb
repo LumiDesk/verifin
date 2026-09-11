@@ -898,7 +898,7 @@
   "moneyUnitStyleSymbol": "Symbol after (100 $)",
   "moneyUnitStyleCode": "Code before (USD 100)",
   "hideSingleCurrencyUnitLabel": "Hide unit for one currency",
-  "hideSingleCurrencyUnitDesc": "Do not repeat the unit beside every amount when a ledger uses only one currency",
+  "hideSingleCurrencyUnitDesc": "Hide the currency unit when a ledger uses only one currency (amounts, headers, card badges, AI answers)",
   "runningBalanceLabel": "Show running balance",
   "runningBalanceDesc": "Show the account balance after each entry in the transaction list",
   "runningBalancePrefix": "Balance {amount}",

@@ -2467,7 +2467,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get hideSingleCurrencyUnitLabel => '单币种隐藏单位';
 
   @override
-  String get hideSingleCurrencyUnitDesc => '账本只使用一种货币时，不在每个金额旁重复显示单位';
+  String get hideSingleCurrencyUnitDesc =>
+      '账本只使用一种货币时，不再标出币种（金额旁、页头、卡片角标与 AI 回答）';
 
   @override
   String get runningBalanceLabel => '显示逐笔结余';

@@ -2517,7 +2517,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hideSingleCurrencyUnitDesc =>
-      'Do not repeat the unit beside every amount when a ledger uses only one currency';
+      'Hide the currency unit when a ledger uses only one currency (amounts, headers, card badges, AI answers)';
 
   @override
   String get runningBalanceLabel => 'Show running balance';
