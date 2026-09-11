@@ -7,7 +7,6 @@ import 'package:verifin/app/root_navigation.dart';
 import 'package:verifin/local_storage/local_storage.dart';
 import 'package:verifin/pages/budget_pages.dart';
 import 'package:verifin/pages/home_page.dart';
-import 'package:verifin/pages/profile_pages.dart';
 
 import 'support/test_harness.dart';
 
@@ -135,39 +134,18 @@ void main() {
     );
 
     await tapBottomTab(tester, 3);
-    final featureGrids = find.descendant(
-      of: find.byType(ProfilePage),
-      matching: find.byType(GridView),
-    );
-    expect(featureGrids, findsNWidgets(2));
-    for (final grid in <Finder>[featureGrids.at(0), featureGrids.at(1)]) {
-      expect(MediaQuery.paddingOf(tester.element(grid)).bottom, 0);
+    final featureCards = <Finder>[
+      find.byKey(const ValueKey<String>('profile_feature_grid_bookkeeping')),
+      find.byKey(const ValueKey<String>('profile_feature_grid_tools')),
+    ];
+    for (final card in featureCards) {
+      expect(tester.getSize(card).height, greaterThan(0));
     }
-
-    final firstGrid = featureGrids.at(0);
-    final secondGrid = featureGrids.at(1);
-    final firstDelegate =
-        tester.widget<GridView>(firstGrid).gridDelegate
-            as SliverGridDelegateWithFixedCrossAxisCount;
-    final cellWidth =
-        (tester.getSize(firstGrid).width -
-            firstDelegate.crossAxisSpacing *
-                (firstDelegate.crossAxisCount - 1)) /
-        firstDelegate.crossAxisCount;
-    // 宫格显式给了 mainAxisExtent（随系统字号放大），此时 childAspectRatio 不生效。
-    final rowHeight =
-        firstDelegate.mainAxisExtent ??
-        cellWidth / firstDelegate.childAspectRatio;
-    expect(tester.getSize(firstGrid).height, closeTo(rowHeight, 0.1));
-    final secondDelegate =
-        tester.widget<GridView>(secondGrid).gridDelegate
-            as SliverGridDelegateWithFixedCrossAxisCount;
-    final secondRowHeight =
-        secondDelegate.mainAxisExtent ??
-        cellWidth / secondDelegate.childAspectRatio;
+    // 数据与工具有两行入口，卡片应比一行的记账管理卡更高，但不能再
+    // 依赖 GridView 的固定行高实现细节。
     expect(
-      tester.getSize(secondGrid).height,
-      closeTo(secondRowHeight * 2 + secondDelegate.mainAxisSpacing, 0.1),
+      tester.getSize(featureCards[1]).height,
+      greaterThan(tester.getSize(featureCards[0]).height),
     );
   });
 

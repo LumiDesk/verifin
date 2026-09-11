@@ -85,12 +85,9 @@ void main() {
     await tester.pumpAndSettle();
     await tapBottomTab(tester, 3);
 
-    final grid = find
-        .descendant(
-          of: find.byType(ProfilePage),
-          matching: find.byType(GridView),
-        )
-        .first;
+    final grid = find.byKey(
+      const ValueKey<String>('profile_feature_grid_bookkeeping'),
+    );
     for (final element
         in find.descendant(of: grid, matching: find.byType(Text)).evaluate()) {
       final paragraph = element.renderObject;

@@ -164,6 +164,7 @@ class ProfilePage extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           _FeatureGridCard(
+            key: const ValueKey<String>('profile_feature_grid_bookkeeping'),
             title: AppLocalizations.of(context).bookkeepingMgmt,
             tiles: <_FeatureTileData>[
               _FeatureTileData(
@@ -220,6 +221,7 @@ class ProfilePage extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           _FeatureGridCard(
+            key: const ValueKey<String>('profile_feature_grid_tools'),
             title: AppLocalizations.of(context).dataAndTools,
             tiles: <_FeatureTileData>[
               _FeatureTileData(
@@ -322,7 +324,7 @@ class ProfilePage extends StatelessWidget {
 
 /// 我的页功能宫格卡：标题 + 4 列图标宫格。
 class _FeatureGridCard extends StatelessWidget {
-  const _FeatureGridCard({required this.title, required this.tiles});
+  const _FeatureGridCard({super.key, required this.title, required this.tiles});
 
   final String title;
   final List<_FeatureTileData> tiles;
@@ -360,55 +362,40 @@ class _FeatureGridCard extends StatelessWidget {
                 4,
                 math.max(2, (constraints.maxWidth / needed).floor()),
               );
-              final cellWidth =
-                  (constraints.maxWidth - (columns - 1) * 4) / columns;
-              final tileTextWidth = math.max(0.0, cellWidth - 4);
-              final subtitleStyle =
-                  Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w400,
-                  ) ??
-                  const TextStyle();
-              double measuredHeight(
-                String text,
-                TextStyle style,
-                int maxLines,
-              ) {
-                return (TextPainter(
-                  text: TextSpan(text: text, style: style),
-                  textScaler: textScaler,
-                  textDirection: Directionality.of(context),
-                  maxLines: maxLines,
-                  ellipsis: '…',
-                )..layout(maxWidth: tileTextWidth)).size.height;
-              }
-
-              final maxLabelHeight = tiles
-                  .map((data) => measuredHeight(data.label, labelStyle, 2))
-                  .fold<double>(0, math.max);
-              final maxSubtitleHeight = tiles
-                  .map(
-                    (data) => measuredHeight(data.subtitle, subtitleStyle, 1),
-                  )
-                  .fold<double>(0, math.max);
-              // Padding、图标、间距和文字高度，只保留 2dp 的字体度量余量，
-              // 避免短标签卡在最后一行留下明显空洞。
-              final rowExtent = math
-                  .max(
-                    90,
-                    16 + 42 + 7 + maxLabelHeight + 1 + maxSubtitleHeight + 2,
-                  )
-                  .toDouble();
-              return GridView.count(
-                crossAxisCount: columns,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: EdgeInsets.zero,
-                mainAxisExtent: rowExtent,
-                mainAxisSpacing: 4,
-                crossAxisSpacing: 4,
-                children: tiles
-                    .map((data) => _FeatureTile(data: data))
-                    .toList(growable: false),
+              final rows = <List<_FeatureTileData>>[
+                for (var start = 0; start < tiles.length; start += columns)
+                  tiles.sublist(start, math.min(start + columns, tiles.length)),
+              ];
+              return Column(
+                children: <Widget>[
+                  for (
+                    var rowIndex = 0;
+                    rowIndex < rows.length;
+                    rowIndex++
+                  ) ...<Widget>[
+                    if (rowIndex > 0) const SizedBox(height: 4),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        for (final tile in rows[rowIndex])
+                          Expanded(
+                            child: _FeatureTile(
+                              key: ValueKey<String>(
+                                'profile_tile_${tile.label}',
+                              ),
+                              data: tile,
+                            ),
+                          ),
+                        for (
+                          var index = rows[rowIndex].length;
+                          index < columns;
+                          index++
+                        )
+                          const Expanded(child: SizedBox.shrink()),
+                      ],
+                    ),
+                  ],
+                ],
               );
             },
           ),
@@ -435,7 +422,7 @@ class _FeatureTileData {
 }
 
 class _FeatureTile extends StatelessWidget {
-  const _FeatureTile({required this.data});
+  const _FeatureTile({super.key, required this.data});
 
   final _FeatureTileData data;
 
@@ -444,37 +431,40 @@ class _FeatureTile extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(veriRadiusMd),
       onTap: data.onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: <Widget>[
-            VeriIconBox(icon: data.icon, color: data.color, size: 42),
-            const SizedBox(height: 7),
-            Text(
-              data.label,
-              // 允许两行：英文标签（Currencies & rates 等）在四列宽度里一行放不下。
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 1),
-            Text(
-              data.subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Theme.of(
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              VeriIconBox(icon: data.icon, color: data.color, size: 42),
+              const SizedBox(height: 7),
+              Text(
+                data.label,
+                // 允许两行：英文标签（Currencies & rates 等）在四列宽度里一行放不下。
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: Theme.of(
                   context,
-                ).colorScheme.onSurface.withValues(alpha: 0.46),
-                fontWeight: FontWeight.w400,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
-            ),
-          ],
+              const SizedBox(height: 1),
+              Text(
+                data.subtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.46),
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

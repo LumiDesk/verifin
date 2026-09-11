@@ -448,7 +448,7 @@ class HomeTrendPanel extends StatelessWidget {
                 const _CircleArrow(),
               ],
             ),
-            const SizedBox(height: veriUnifiedDesignPreview ? 8 : 12),
+            const SizedBox(height: 10),
             Row(
               key: const Key('home_primary_metrics'),
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -514,7 +514,7 @@ class HomeTrendPanel extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: veriUnifiedDesignPreview ? 12 : 10),
+            const SizedBox(height: 10),
             Row(
               children: <Widget>[
                 Expanded(
@@ -548,7 +548,7 @@ class HomeTrendPanel extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: veriUnifiedDesignPreview ? 8 : 12),
+            const SizedBox(height: 10),
             SizedBox(
               height: veriUnifiedDesignPreview ? 96 : 138,
               child: Padding(
@@ -658,7 +658,7 @@ class _TrendMetric extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 10),
           Text(
             value,
             maxLines: 1,

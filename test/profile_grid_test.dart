@@ -18,7 +18,14 @@ void main() {
     expect(find.text('数据与工具'), findsOneWidget);
     expect(find.text('分类管理'), findsOneWidget);
     expect(find.text('周期记账'), findsOneWidget);
-    expect(find.byType(GridView), findsNWidgets(2));
+    expect(
+      find.byKey(const ValueKey<String>('profile_feature_grid_bookkeeping')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('profile_feature_grid_tools')),
+      findsOneWidget,
+    );
     expect(find.textContaining('Web 开发预览'), findsNothing);
 
     final scrollable = firstVerticalScrollable();

@@ -365,7 +365,7 @@ class _BudgetHistoryCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 7),
+          const SizedBox(height: 10),
           Text(
             cyclic
                 ? AppLocalizations.of(context).budgetUsageLinePeriod(
