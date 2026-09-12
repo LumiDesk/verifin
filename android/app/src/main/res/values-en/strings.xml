@@ -9,4 +9,7 @@
     <string name="widget_budget_available">Budget left this month</string>
     <string name="widget_net_worth">Net worth</string>
     <string name="widget_refresh_required">Open app to refresh</string>
+    <string name="trend_widget_description">Income and spending trend with configurable metrics</string>
+    <string name="widget_trend">Income and spending trend</string>
+    <string name="widget_chart_content_description">Trend chart</string>
 </resources>

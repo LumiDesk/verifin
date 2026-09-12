@@ -21,6 +21,11 @@ class QuickEntryWidgetProvider : AppWidgetProvider() {
         WidgetRefreshScheduler.scheduleNextMidnight(context)
     }
 
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+        appWidgetIds.forEach { WidgetData.clearInstanceConfig(context, it) }
+        super.onDeleted(context, appWidgetIds)
+    }
+
     companion object {
         private fun renderWidget(
             context: Context,
@@ -28,7 +33,12 @@ class QuickEntryWidgetProvider : AppWidgetProvider() {
             widgetId: Int,
         ) {
             // 跨天自愈：已过午夜则展示归零值，不必等应用打开重新推送。
-            val (amount, label) = WidgetData.todayForToday(context)
+            val config = WidgetData.readInstanceConfig(context, widgetId)
+            val defaults = WidgetData.todayForToday(context)
+            val selected = if (config.primaryMetric.isBlank()) defaults else
+                WidgetData.metric(context, config.primaryMetric, defaults.first, defaults.second)
+            val amount = if (config.hideAmounts) "••••" else selected.first
+            val label = selected.second
             val quickEntryLabel = WidgetData.read(
                 context,
                 WidgetData.KEY_QUICK_ENTRY_LABEL,
@@ -45,6 +55,8 @@ class QuickEntryWidgetProvider : AppWidgetProvider() {
             // 「记一笔」按钮：走快速记账 intent。
             val quickIntent = Intent(context, MainActivity::class.java).apply {
                 action = MainActivity.ACTION_QUICK_ENTRY
+                putExtra("widgetId", widgetId)
+                putExtra("widgetBookId", config.bookId)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
                 addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -59,6 +71,10 @@ class QuickEntryWidgetProvider : AppWidgetProvider() {
                 .getLaunchIntentForPackage(context.packageName)
                 ?.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
             if (openIntent != null) {
+                openIntent.action = "top.talyra42.verifin.action.WIDGET_ROUTE"
+                openIntent.putExtra("widgetRoute", config.action)
+                openIntent.putExtra("widgetBookId", config.bookId)
+                openIntent.putExtra("widgetId", widgetId)
                 views.setOnClickPendingIntent(
                     R.id.widget_root,
                     PendingIntent.getActivity(context, 2, openIntent, flags),

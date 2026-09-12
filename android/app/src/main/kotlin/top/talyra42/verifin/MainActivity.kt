@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 class MainActivity : FlutterFragmentActivity() {
     private var channel: MethodChannel? = null
     private var pendingQuickEntryIntent = false
+    private var pendingWidgetRoute: Map<String, String>? = null
     private var pendingCaptureImageUri: Uri? = null
     private var pendingCaptureText: String? = null
     private var pendingDownloadsWrite: PendingDownloadsWrite? = null
@@ -42,6 +43,7 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         rememberQuickEntryIntent(intent)
+        rememberWidgetRouteIntent(intent)
         rememberCaptureIntent(intent)
         super.onCreate(savedInstanceState)
     }
@@ -56,6 +58,11 @@ class MainActivity : FlutterFragmentActivity() {
                     pendingQuickEntryIntent = false
                     result.success(shouldOpen)
                 }
+                "consumeWidgetRoute" -> {
+                    val route = pendingWidgetRoute
+                    pendingWidgetRoute = null
+                    result.success(route)
+                }
                 "consumeCaptureImage" -> consumeCaptureImage(result)
                 "consumeCaptureText" -> {
                     val text = pendingCaptureText
@@ -65,6 +72,9 @@ class MainActivity : FlutterFragmentActivity() {
                 "updateWidgetData" -> {
                     updateWidgetData(call)
                     result.success(true)
+                }
+                "updateWidgetConfig" -> {
+                    updateWidgetConfig(call, result)
                 }
                 "setSecureFlag" -> {
                     setSecureFlag(call.argument<Boolean>("secure") ?: false)
@@ -137,6 +147,10 @@ class MainActivity : FlutterFragmentActivity() {
             } else {
                 channel?.invokeMethod("openQuickEntry", null)
             }
+        }
+        if (intent.action == ACTION_WIDGET_ROUTE) {
+            rememberWidgetRouteIntent(intent)
+            channel?.invokeMethod("openWidgetRoute", pendingWidgetRoute)
         }
         if (intent.action == ACTION_CAPTURE_IMAGE || intent.action == ACTION_CAPTURE_TEXT) {
             rememberCaptureIntent(intent)
@@ -237,6 +251,11 @@ class MainActivity : FlutterFragmentActivity() {
             WidgetData.KEY_BUDGET_LABEL to (call.argument<String>("budgetLabel") ?: "本月可用预算"),
             WidgetData.KEY_NET_WORTH_AMOUNT to (call.argument<String>("netWorthAmount") ?: "0"),
             WidgetData.KEY_NET_WORTH_LABEL to (call.argument<String>("netWorthLabel") ?: "资产总额"),
+            WidgetData.KEY_TREND_AMOUNT to (call.argument<String>("trendAmount") ?: "0"),
+            WidgetData.KEY_TREND_LABEL to
+                (call.argument<String>("trendLabel") ?: getString(R.string.widget_trend)),
+            WidgetData.KEY_TREND_POINTS to (call.argument<String>("trendPoints") ?: ""),
+            WidgetData.KEY_TREND_RANGE_LABEL to (call.argument<String>("trendRangeLabel") ?: ""),
             // 跨天/跨期自愈锚点（预算锚点为周期截止日 yyyy-MM-dd，支持自定义预算周期）。
             WidgetData.KEY_TODAY_DATE to (call.argument<String>("todayDate") ?: ""),
             WidgetData.KEY_TODAY_ZERO to (call.argument<String>("todayZeroAmount") ?: "0"),
@@ -261,8 +280,42 @@ class MainActivity : FlutterFragmentActivity() {
         WidgetData.refresh(this, QuickEntryWidgetProvider::class.java)
         WidgetData.refresh(this, BudgetWidgetProvider::class.java)
         WidgetData.refresh(this, NetWorthWidgetProvider::class.java)
+        WidgetData.refresh(this, TrendWidgetProvider::class.java)
         // 推送新数据后对齐下一次午夜刷新闹钟。
         WidgetRefreshScheduler.scheduleNextMidnight(this)
+    }
+
+    private fun rememberWidgetRouteIntent(intent: Intent?) {
+        if (intent?.action != ACTION_WIDGET_ROUTE) return
+        pendingWidgetRoute = mapOf(
+            "route" to (intent.getStringExtra("widgetRoute") ?: "app"),
+            "bookId" to (intent.getStringExtra("widgetBookId") ?: ""),
+            "widgetId" to intent.getIntExtra("widgetId", 0).toString(),
+        )
+    }
+
+    /** Persist one appWidgetId's template/filter choices and redraw that instance. */
+    private fun updateWidgetConfig(call: io.flutter.plugin.common.MethodCall, result: MethodChannel.Result) {
+        val widgetId = call.argument<Int>("widgetId")
+        if (widgetId == null || widgetId <= 0) {
+            result.success(false)
+            return
+        }
+        val values = mutableMapOf<String, String>()
+        listOf("template", "bookId", "primaryMetric", "secondaryMetric", "chartMetric", "chartDays", "action", "hideAmounts")
+            .forEach { key -> call.argument<Any>(key)?.let { values[key] = it.toString() } }
+        WidgetData.writeInstanceConfig(this, widgetId, values)
+        val manager = AppWidgetManager.getInstance(this)
+        listOf(
+            QuickEntryWidgetProvider::class.java,
+            BudgetWidgetProvider::class.java,
+            NetWorthWidgetProvider::class.java,
+            TrendWidgetProvider::class.java,
+        ).forEach { provider ->
+            val ids = manager.getAppWidgetIds(ComponentName(this, provider))
+            if (ids.contains(widgetId)) WidgetData.refresh(this, provider)
+        }
+        result.success(true)
     }
 
     /// 请求把指定小组件固定到桌面（API 26+ 且启动器支持时弹系统添加弹窗）。
@@ -272,6 +325,7 @@ class MainActivity : FlutterFragmentActivity() {
             "quick_entry" -> QuickEntryWidgetProvider::class.java
             "budget" -> BudgetWidgetProvider::class.java
             "net_worth" -> NetWorthWidgetProvider::class.java
+            "trend" -> TrendWidgetProvider::class.java
             else -> null
         }
         if (provider == null) {
@@ -1335,6 +1389,7 @@ class MainActivity : FlutterFragmentActivity() {
 
     companion object {
         const val ACTION_QUICK_ENTRY = "top.talyra42.verifin.action.QUICK_ENTRY"
+        const val ACTION_WIDGET_ROUTE = "top.talyra42.verifin.action.WIDGET_ROUTE"
 
         /// 外部采集：自动化工具（Tasker 等）可显式发起，extra `text` 带账单原文；
         /// 分享文本/图片经 ShareReceiverActivity 归一到同两个内部 action。

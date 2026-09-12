@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<include xmlns:android="http://schemas.android.com/apk/res/android"
+    layout="@layout/stat_widget" />

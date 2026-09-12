@@ -4,6 +4,7 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import org.json.JSONObject
 import java.util.Calendar
 
 /// 桌面小组件的共享数据与刷新工具。
@@ -26,6 +27,88 @@ object WidgetData {
     // 资产总额小组件。
     const val KEY_NET_WORTH_AMOUNT = "net_worth"
     const val KEY_NET_WORTH_LABEL = "net_worth_label"
+
+    // 趋势小组件（可选，由 Flutter 推送聚合后的 sparkline 点位）。
+    const val KEY_TREND_AMOUNT = "trend_amount"
+    const val KEY_TREND_LABEL = "trend_label"
+    const val KEY_TREND_POINTS = "trend_points"
+    const val KEY_TREND_RANGE_LABEL = "trend_range_label"
+
+    /** Per-instance configuration is kept separately so multiple widgets can target
+     * different books, metrics or date ranges without changing the global snapshot. */
+    private const val INSTANCE_CONFIG_PREFIX = "instance_config_"
+
+    data class InstanceConfig(
+        val template: String = "default",
+        val bookId: String = "",
+        val primaryMetric: String = "",
+        val secondaryMetric: String = "",
+        val chartMetric: String = "",
+        val chartDays: Int = 30,
+        val action: String = "app",
+        val hideAmounts: Boolean = false,
+    )
+
+    fun readInstanceConfig(context: Context, widgetId: Int): InstanceConfig {
+        val raw = read(context, instanceConfigKey(widgetId), "")
+        if (raw.isBlank()) return InstanceConfig()
+        return try {
+            val json = JSONObject(raw)
+            InstanceConfig(
+                template = json.optString("template", "default"),
+                bookId = json.optString("bookId", ""),
+                primaryMetric = json.optString("primaryMetric", ""),
+                secondaryMetric = json.optString("secondaryMetric", ""),
+                chartMetric = json.optString("chartMetric", ""),
+                chartDays = json.optInt("chartDays", 30).coerceIn(7, 365),
+                action = json.optString("action", "app"),
+                hideAmounts = json.optBoolean("hideAmounts", false),
+            )
+        } catch (_: Exception) {
+            InstanceConfig()
+        }
+    }
+
+    /** Accepts string values from the Flutter bridge; unknown fields are ignored. */
+    fun writeInstanceConfig(context: Context, widgetId: Int, values: Map<String, String>) {
+        val current = readInstanceConfig(context, widgetId)
+        val json = JSONObject().apply {
+            put("template", values["template"] ?: current.template)
+            put("bookId", values["bookId"] ?: current.bookId)
+            put("primaryMetric", values["primaryMetric"] ?: current.primaryMetric)
+            put("secondaryMetric", values["secondaryMetric"] ?: current.secondaryMetric)
+            put("chartMetric", values["chartMetric"] ?: current.chartMetric)
+            put("chartDays", values["chartDays"]?.toIntOrNull() ?: current.chartDays)
+            put("action", values["action"] ?: current.action)
+            put("hideAmounts", values["hideAmounts"]?.toBoolean() ?: current.hideAmounts)
+        }
+        write(context, mapOf(instanceConfigKey(widgetId) to json.toString()))
+    }
+
+    fun clearInstanceConfig(context: Context, widgetId: Int) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+            .remove(instanceConfigKey(widgetId)).apply()
+    }
+
+    private fun instanceConfigKey(widgetId: Int) = "$INSTANCE_CONFIG_PREFIX$widgetId"
+
+    /** Resolve a metric from the global Flutter snapshot. This keeps native rendering
+     * deterministic while allowing new metrics to be added without changing providers. */
+    fun metric(context: Context, metric: String, fallbackAmount: String, fallbackLabel: String): Pair<String, String> {
+        val normalized = metric.trim().lowercase()
+        return when (normalized) {
+            "today", "today_expense", "daily_expense" -> todayForToday(context)
+            "budget", "budget_remaining", "month_budget" -> budgetForMonth(context)
+            "net_worth", "assets", "asset_total" -> read(context, KEY_NET_WORTH_AMOUNT, fallbackAmount) to
+                read(context, KEY_NET_WORTH_LABEL, fallbackLabel)
+            "trend", "trend_amount", "spending" -> read(context, KEY_TREND_AMOUNT, fallbackAmount) to
+                read(context, KEY_TREND_LABEL, fallbackLabel)
+            else -> fallbackAmount to fallbackLabel
+        }
+    }
+
+    fun trendPoints(context: Context): List<Float> = read(context, KEY_TREND_POINTS, "")
+        .split(',').mapNotNull { it.trim().toFloatOrNull() }.take(120)
 
     // ── 跨天/跨期自愈锚点（Flutter 每次推送时写入）──────────────────────
     // 今日支出所对应的日期（yyyy-MM-dd）；若与当前日期不同，说明已跨天，展示归零值。
@@ -143,5 +226,12 @@ object WidgetData {
             putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
         }
         context.sendBroadcast(intent)
+    }
+
+    fun refreshAll(context: Context) {
+        refresh(context, QuickEntryWidgetProvider::class.java)
+        refresh(context, BudgetWidgetProvider::class.java)
+        refresh(context, NetWorthWidgetProvider::class.java)
+        refresh(context, TrendWidgetProvider::class.java)
     }
 }
