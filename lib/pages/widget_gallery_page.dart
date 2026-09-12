@@ -309,6 +309,9 @@ class _MasonryCanvas extends StatelessWidget {
                 width: item.width,
                 height: item.height,
                 child: _MasonryTile(
+                  key: ValueKey(
+                    'widget_tile_wrapper_${definitions[item.index].id}',
+                  ),
                   definition: definitions[item.index],
                   sourceIndex: item.index,
                   editing: editing,
@@ -375,6 +378,7 @@ class _MasonryPlacement {
 
 class _MasonryTile extends StatelessWidget {
   const _MasonryTile({
+    super.key,
     required this.definition,
     required this.sourceIndex,
     required this.editing,
@@ -398,7 +402,6 @@ class _MasonryTile extends StatelessWidget {
     final tile = GestureDetector(
       key: ValueKey('widget_tile_${definition.id}'),
       onTap: editing ? null : onTap,
-      onLongPress: editing ? null : onLongPress,
       child: WidgetDesignPreview(
         definition: definition,
         width: double.infinity,
@@ -420,7 +423,7 @@ class _MasonryTile extends StatelessWidget {
       ),
       child: _WobblingTile(enabled: editing, child: tile),
     );
-    return Stack(
+    final stack = Stack(
       clipBehavior: Clip.none,
       fit: StackFit.expand,
       children: [
@@ -448,12 +451,70 @@ class _MasonryTile extends StatelessWidget {
           ),
       ],
     );
+    return _TileLongPressTrigger(
+      enabled: !editing,
+      onTriggered: onLongPress,
+      child: stack,
+    );
   }
 
   double _feedbackWidth(BuildContext context) {
     final size = supportedWidgetSize(definition.size);
     return size == WidgetSize.twoByFour ? 320 : 160;
   }
+}
+
+/// Starts the edit affordance at the long-press boundary while leaving the
+/// same pointer available to [LongPressDraggable] for the following movement.
+class _TileLongPressTrigger extends StatefulWidget {
+  const _TileLongPressTrigger({
+    required this.enabled,
+    required this.onTriggered,
+    required this.child,
+  });
+  final bool enabled;
+  final VoidCallback onTriggered;
+  final Widget child;
+
+  @override
+  State<_TileLongPressTrigger> createState() => _TileLongPressTriggerState();
+}
+
+class _TileLongPressTriggerState extends State<_TileLongPressTrigger> {
+  Timer? _timer;
+
+  void _start(PointerDownEvent event) {
+    if (!widget.enabled) return;
+    _timer?.cancel();
+    _timer = Timer(const Duration(milliseconds: 500), () {
+      if (mounted && widget.enabled) widget.onTriggered();
+    });
+  }
+
+  void _cancel(PointerEvent event) {
+    _timer?.cancel();
+    _timer = null;
+  }
+
+  @override
+  void didUpdateWidget(covariant _TileLongPressTrigger oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.enabled) _timer?.cancel();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Listener(
+    onPointerDown: _start,
+    onPointerUp: _cancel,
+    onPointerCancel: _cancel,
+    child: widget.child,
+  );
 }
 
 class _WobblingTile extends StatefulWidget {
