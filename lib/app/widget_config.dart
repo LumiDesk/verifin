@@ -26,6 +26,201 @@ enum WidgetAction { app, entry, budget, trend, assets, profile }
 
 enum WidgetDateRange { sevenDays, thirtyDays, ninetyDays, budgetCycle, year }
 
+/// 桌面尺寸（Android 启动器以 cell 为单位）。
+enum WidgetSize { oneByOne, twoByTwo, fourByOne, fourByTwo, twoByFour }
+
+enum WidgetBackgroundKind { theme, solid, asset }
+
+class WidgetBackground {
+  const WidgetBackground({
+    this.kind = WidgetBackgroundKind.theme,
+    this.value,
+    this.overlayOpacity = 0.0,
+  });
+
+  final WidgetBackgroundKind kind;
+
+  /// theme 为主题 id，solid 为色值（#AARRGGBB），asset 为本地 asset id。
+  final String? value;
+  final double overlayOpacity;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'kind': _enumName(kind),
+    if (value != null) 'value': value,
+    'overlayOpacity': overlayOpacity,
+  };
+
+  static WidgetBackground fromJson(Map<String, Object?> json) {
+    final opacity = (json['overlayOpacity'] as num?)?.toDouble() ?? 0.0;
+    return WidgetBackground(
+      kind: _enumFromName(
+        WidgetBackgroundKind.values,
+        json['kind'] as String?,
+        WidgetBackgroundKind.theme,
+      ),
+      value: json['value'] as String?,
+      overlayOpacity: opacity.clamp(0.0, 1.0),
+    );
+  }
+}
+
+/// 用户保存的组件设计。它不包含 Android 的 appWidgetId，因此可跨设备备份。
+class UserWidgetDefinition {
+  const UserWidgetDefinition({
+    required this.id,
+    required this.name,
+    required this.template,
+    this.size = WidgetSize.twoByTwo,
+    this.bookId,
+    this.primaryMetric,
+    this.secondaryMetrics = const <WidgetMetric>[],
+    this.chartMetric,
+    this.dateRange = WidgetDateRange.thirtyDays,
+    this.accountId,
+    this.categoryId,
+    this.tagId,
+    this.hideAmounts = false,
+    this.action = WidgetAction.app,
+    this.background = const WidgetBackground(),
+  });
+
+  final String id;
+  final String name;
+  final WidgetTemplate template;
+  final WidgetSize size;
+  final String? bookId;
+  final WidgetMetric? primaryMetric;
+  final List<WidgetMetric> secondaryMetrics;
+  final WidgetChartMetric? chartMetric;
+  final WidgetDateRange dateRange;
+  final String? accountId;
+  final String? categoryId;
+  final String? tagId;
+  final bool hideAmounts;
+  final WidgetAction action;
+  final WidgetBackground background;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'id': id,
+    'name': name,
+    'template': _enumName(template),
+    'size': _enumName(size),
+    if (bookId != null) 'bookId': bookId,
+    if (primaryMetric != null) 'primaryMetric': _enumName(primaryMetric!),
+    'secondaryMetrics': secondaryMetrics.map(_enumName).toList(),
+    if (chartMetric != null) 'chartMetric': _enumName(chartMetric!),
+    'dateRange': _enumName(dateRange),
+    if (accountId != null) 'accountId': accountId,
+    if (categoryId != null) 'categoryId': categoryId,
+    if (tagId != null) 'tagId': tagId,
+    'hideAmounts': hideAmounts,
+    'action': _enumName(action),
+    'background': background.toJson(),
+  };
+
+  static UserWidgetDefinition fromJson(Map<String, Object?> json) {
+    final secondary = (json['secondaryMetrics'] as List<Object?>? ?? const [])
+        .whereType<String>()
+        .map(
+          (name) => _enumFromName(
+            WidgetMetric.values,
+            name,
+            WidgetMetric.periodExpense,
+          ),
+        )
+        .toList(growable: false);
+    final rawBackground = json['background'];
+    return UserWidgetDefinition(
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '我的小组件',
+      template: _enumFromName(
+        WidgetTemplate.values,
+        json['template'] as String?,
+        WidgetTemplate.quickEntry,
+      ),
+      size: _enumFromName(
+        WidgetSize.values,
+        json['size'] as String?,
+        WidgetSize.twoByTwo,
+      ),
+      bookId: json['bookId'] as String?,
+      primaryMetric: json['primaryMetric'] == null
+          ? null
+          : _enumFromName(
+              WidgetMetric.values,
+              json['primaryMetric'] as String?,
+              WidgetMetric.periodExpense,
+            ),
+      secondaryMetrics: secondary,
+      chartMetric: json['chartMetric'] == null
+          ? null
+          : _enumFromName(
+              WidgetChartMetric.values,
+              json['chartMetric'] as String?,
+              WidgetChartMetric.expense,
+            ),
+      dateRange: _enumFromName(
+        WidgetDateRange.values,
+        json['dateRange'] as String?,
+        WidgetDateRange.thirtyDays,
+      ),
+      accountId: json['accountId'] as String?,
+      categoryId: json['categoryId'] as String?,
+      tagId: json['tagId'] as String?,
+      hideAmounts: json['hideAmounts'] as bool? ?? false,
+      action: _enumFromName(
+        WidgetAction.values,
+        json['action'] as String?,
+        WidgetAction.app,
+      ),
+      background: rawBackground is Map
+          ? WidgetBackground.fromJson(Map<String, Object?>.from(rawBackground))
+          : const WidgetBackground(),
+    );
+  }
+
+  factory UserWidgetDefinition.fromInstance(
+    WidgetInstanceConfig config, {
+    String? id,
+    String? name,
+  }) {
+    return UserWidgetDefinition(
+      id: id ?? 'legacy_${config.appWidgetId}',
+      name: name ?? config.template.name,
+      template: config.template,
+      bookId: config.bookId,
+      primaryMetric: config.primaryMetric,
+      secondaryMetrics: config.secondaryMetrics,
+      chartMetric: config.chartMetric,
+      dateRange: config.dateRange,
+      accountId: config.accountId,
+      categoryId: config.categoryId,
+      tagId: config.tagId,
+      hideAmounts: config.hideAmounts,
+      action: config.action,
+    );
+  }
+}
+
+class WidgetPlacement {
+  const WidgetPlacement({
+    required this.appWidgetId,
+    required this.definitionId,
+  });
+  final int appWidgetId;
+  final String definitionId;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'appWidgetId': appWidgetId,
+    'definitionId': definitionId,
+  };
+
+  static WidgetPlacement fromJson(Map<String, Object?> json) => WidgetPlacement(
+    appWidgetId: (json['appWidgetId'] as num?)?.toInt() ?? 0,
+    definitionId: json['definitionId'] as String? ?? '',
+  );
+}
+
 String _enumName(Object value) => (value as Enum).name;
 
 T _enumFromName<T extends Enum>(Iterable<T> values, String? name, T fallback) {
@@ -177,6 +372,8 @@ const Object _unset = Object();
 /// 小组件配置的本地 KV 适配层。仅保存配置元数据，不保存账目数据。
 class WidgetConfigStore {
   static const String storageKey = 'verifin.widget_instances.v1';
+  static const String definitionsKey = 'verifin.widget_definitions.v1';
+  static const String placementsKey = 'verifin.widget_placements.v1';
 
   static List<WidgetInstanceConfig> load(LocalKeyValueStore store) {
     final raw = store.read(storageKey);
@@ -204,4 +401,95 @@ class WidgetConfigStore {
     final encoded = jsonEncode(configs.map((item) => item.toJson()).toList());
     await store.writeAndFlush(storageKey, encoded);
   }
+
+  static List<UserWidgetDefinition> loadDefinitions(LocalKeyValueStore store) {
+    final raw = store.read(definitionsKey);
+    if (raw != null && raw.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          return decoded
+              .whereType<Map>()
+              .map(
+                (item) => UserWidgetDefinition.fromJson(
+                  Map<String, Object?>.from(item),
+                ),
+              )
+              .where((item) => item.id.isNotEmpty)
+              .toList(growable: false);
+        }
+      } on Object {
+        // Fall through to migration below.
+      }
+    }
+    final legacy = load(store);
+    if (legacy.isEmpty) return const <UserWidgetDefinition>[];
+    return legacy
+        .map((item) => UserWidgetDefinition.fromInstance(item))
+        .toList(growable: false);
+  }
+
+  static List<WidgetPlacement> loadPlacements(LocalKeyValueStore store) {
+    final raw = store.read(placementsKey);
+    if (raw != null && raw.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          return decoded
+              .whereType<Map>()
+              .map(
+                (item) =>
+                    WidgetPlacement.fromJson(Map<String, Object?>.from(item)),
+              )
+              .where(
+                (item) => item.appWidgetId > 0 && item.definitionId.isNotEmpty,
+              )
+              .toList(growable: false);
+        }
+      } on Object {
+        // Ignore malformed local preference.
+      }
+    }
+    return load(store)
+        .where((item) => item.appWidgetId > 0)
+        .map(
+          (item) => WidgetPlacement(
+            appWidgetId: item.appWidgetId,
+            definitionId: 'legacy_${item.appWidgetId}',
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  static void saveDefinitionsSync(
+    LocalKeyValueStore store,
+    Iterable<UserWidgetDefinition> definitions,
+  ) => store.write(
+    definitionsKey,
+    jsonEncode(definitions.map((item) => item.toJson()).toList()),
+  );
+
+  static Future<void> saveDefinitions(
+    LocalKeyValueStore store,
+    Iterable<UserWidgetDefinition> definitions,
+  ) => store.writeAndFlush(
+    definitionsKey,
+    jsonEncode(definitions.map((item) => item.toJson()).toList()),
+  );
+
+  static void savePlacementsSync(
+    LocalKeyValueStore store,
+    Iterable<WidgetPlacement> placements,
+  ) => store.write(
+    placementsKey,
+    jsonEncode(placements.map((item) => item.toJson()).toList()),
+  );
+
+  static Future<void> savePlacements(
+    LocalKeyValueStore store,
+    Iterable<WidgetPlacement> placements,
+  ) => store.writeAndFlush(
+    placementsKey,
+    jsonEncode(placements.map((item) => item.toJson()).toList()),
+  );
 }

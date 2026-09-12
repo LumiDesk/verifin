@@ -63,6 +63,8 @@ Veri Fin 关键技术选型与理由。变更相关实现时同步更新本表�
 
 **导出/导入必须与此表保持一致**（`exportDataJson`/`importDataJson`）。改动任一偏好的归属时同步更新这里、`CLAUDE.md`、`README.md`。
 
+桌面小组件设计属于用户可迁移数据：备份 JSON v3 的 `data.userWidgetDefinitions` 保存用户创建的模板、尺寸、指标、筛选、图表范围、交互及背景元数据；Android `appWidgetId` 仅为本机运行时绑定，不进入备份。v1/v2 备份缺少该字段时导入为空，设备上旧的 `widget_instances.v1` 配置由读取层惰性迁移为 `legacy_<appWidgetId>` 设计与绑定。
+
 **进备份**（随 JSON v2 `exportDataJson` 的 `data` 导出、可跨设备还原）：全部账目数据（账本及本位币确认状态、交易三层金额与转换来源、账户币种、账户分组名称/顺序（分组仅为文件夹，无自定义图标）、分类、标签、附件、周期规则及汇率策略、用户维护/明确选择保存的汇率表、月度·分类·按日预算）+ 个人资料 + 活动账本 + 主题、触感、资产封面、资产视图模式/排序、资产折叠历史兼容字段（普通浏览页已不再写入）、首页面板、看板面板 + **默认付款账户 `default_account`（`Map<bookId,accountId>`）、预算周期起始日 `budget_cycle`、FAB 行为 `fab_action`、金额小数风格 `amount_format`、货币单位样式 `money_unit_style`、单币种隐藏开关 `hide_single_currency_unit`、记账自动识别开关 `auto_suggest`、交易列表逐笔结余开关 `entry_running_balance`、首页概览卡配置 `home_metrics`**。v1/缺字段备份按 CNY 原值重解释并标为待确认，旧 `amountForceTwoDecimals` 映射到新显示风格；货币静态目录属于应用代码，不进备份。这些偏好与 theme/haptics 等使用同一套“备份内容覆盖本机状态”的语义。
 
 **设备本地、不进备份**（换机需重设）：

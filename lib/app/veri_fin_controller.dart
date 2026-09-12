@@ -52,6 +52,7 @@ const Set<String> _knownBackupDataKeys = <String>{
   'themePreference',
   'homePanels',
   'reportPanels',
+  'userWidgetDefinitions',
 };
 
 // 偏好类 KV 键（库级私有以便各 part 共享）。全部 `verifin.*.v1` 键集中在此，

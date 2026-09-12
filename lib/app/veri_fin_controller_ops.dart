@@ -11,6 +11,19 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     Iterable<WidgetInstanceConfig> configs,
   ) => WidgetConfigStore.save(_store, configs);
 
+  List<UserWidgetDefinition> get userWidgetDefinitions =>
+      WidgetConfigStore.loadDefinitions(_store);
+
+  List<WidgetPlacement> get widgetPlacements =>
+      WidgetConfigStore.loadPlacements(_store);
+
+  Future<void> saveUserWidgetDefinitions(
+    Iterable<UserWidgetDefinition> definitions,
+  ) => WidgetConfigStore.saveDefinitions(_store, definitions);
+
+  Future<void> saveWidgetPlacements(Iterable<WidgetPlacement> placements) =>
+      WidgetConfigStore.savePlacements(_store, placements);
+
   List<LedgerEntry> get entries =>
       _entriesView ??= List<LedgerEntry>.unmodifiable(
         _entries.where((entry) => entry.bookId == _activeBookId),
@@ -3879,6 +3892,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       _assetSectionOrderKey,
       _homePanelsKey,
       _reportPanelsKey,
+      WidgetConfigStore.definitionsKey,
+      WidgetConfigStore.placementsKey,
+      WidgetConfigStore.storageKey,
     ]) {
       _store.delete(key);
     }
@@ -3929,7 +3945,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   String exportDataJson() {
     final payload = <String, Object?>{
       'app': 'verifin',
-      'version': 2,
+      'version': 3,
       'exportedAt': DateTime.now().toIso8601String(),
       'data': <String, Object?>{
         'ledgerBooks': _ledgerBooks.map((book) => book.toJson()).toList(),
@@ -3969,6 +3985,10 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         'autoSuggestEnabled': _autoSuggestEnabled,
         'showRunningBalance': _showRunningBalance,
         'homeTrendConfig': _homeTrendConfig.toJson(),
+        // 用户小组件设计属于可迁移数据；Android appWidgetId 不进入备份。
+        'userWidgetDefinitions': userWidgetDefinitions
+            .map((definition) => definition.toJson())
+            .toList(),
       },
     };
     return const JsonEncoder.withIndent('  ').convert(payload);
@@ -3995,7 +4015,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       throw const FormatException('备份版本格式不正确');
     }
     final version = (rawVersion as num?)?.toInt() ?? 1;
-    if (version < 1 || version > 2) {
+    if (version < 1 || version > 3) {
       throw FormatException('不支持的备份版本：$version');
     }
 
@@ -4156,6 +4176,11 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         ? HomeTrendConfig.fromJson(Map<String, dynamic>.from(homeTrendValue))
         : HomeTrendConfig.defaults;
 
+    final nextWidgetDefinitions = _decodeModelList<UserWidgetDefinition>(
+      data['userWidgetDefinitions'],
+      UserWidgetDefinition.fromJson,
+    ).where((definition) => definition.id.isNotEmpty).toList(growable: false);
+
     _validateImportedCurrencyData(
       books: nextLedgerBooks,
       accounts: nextAccounts,
@@ -4245,6 +4270,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _autoSuggestEnabled = nextAutoSuggestEnabled;
     _showRunningBalance = nextShowRunningBalance;
     _homeTrendConfig = nextHomeTrendConfig;
+    // v1/v2 备份没有该字段，按空设计处理；旧设备上的实例配置仍可由
+    // WidgetConfigStore 在读取时按 legacy appWidgetId 惰性迁移。
+    WidgetConfigStore.saveDefinitionsSync(_store, nextWidgetDefinitions);
 
     // 备份恢复零参照完整性校验，是「幽灵同名分类」的唯一现实入口（内部不一致的外部/
     // 异构/手改备份）；覆盖后跑一遍自愈，堵住这个入口。落库统一由下方 _persistAllLedgerData。
