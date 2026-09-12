@@ -12,4 +12,8 @@
     <string name="trend_widget_description">收支趋势与可配置指标</string>
     <string name="widget_trend">收支趋势</string>
     <string name="widget_chart_content_description">趋势图</string>
+    <string name="user_widget_description">我的小组件：自定义财务数据与背景</string>
+    <string name="user_widget_choose_design">选择我的小组件</string>
+    <string name="user_widget_add">添加到桌面</string>
+    <string name="user_widget_default_name">我的财务概览</string>
 </resources>

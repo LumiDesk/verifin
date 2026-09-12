@@ -37,6 +37,102 @@ object WidgetData {
     /** Per-instance configuration is kept separately so multiple widgets can target
      * different books, metrics or date ranges without changing the global snapshot. */
     private const val INSTANCE_CONFIG_PREFIX = "instance_config_"
+    private const val DEFINITIONS_KEY = "user_widget_definitions"
+    private const val INSTANCE_DEFINITION_PREFIX = "user_widget_definition_"
+
+    /** A saved design owned by the user. Kept as JSON so Flutter can evolve the schema. */
+    data class UserDefinition(
+        val id: String,
+        val name: String = "我的小组件",
+        val template: String = "overview",
+        val primaryMetric: String = "today_expense",
+        val secondaryMetrics: List<String> = emptyList(),
+        val chartMetric: String = "",
+        val chartDays: Int = 30,
+        val bookId: String = "",
+        val action: String = "app",
+        val backgroundColor: Int = 0xFF1E293B.toInt(),
+        val backgroundPath: String = "",
+        val hideAmounts: Boolean = false,
+    )
+
+    fun readDefinition(context: Context, id: String): UserDefinition? {
+        if (id.isBlank()) return null
+        val raw = read(context, "${DEFINITIONS_KEY}_$id", "")
+        if (raw.isBlank()) return null
+        return try {
+            val json = JSONObject(raw)
+            val secondary = json.optJSONArray("secondaryMetrics")
+                ?.let { array -> (0 until array.length()).map { array.optString(it) } }
+                ?: emptyList()
+            UserDefinition(
+                id = json.optString("id", id),
+                name = json.optString("name", "我的小组件"),
+                template = json.optString("template", "overview"),
+                primaryMetric = json.optString("primaryMetric", "today_expense"),
+                secondaryMetrics = secondary,
+                chartMetric = json.optString("chartMetric", ""),
+                chartDays = json.optInt("chartDays", 30).coerceIn(7, 365),
+                bookId = json.optString("bookId", ""),
+                action = json.optString("action", "app"),
+                backgroundColor = json.optInt("backgroundColor", 0xFF1E293B.toInt()),
+                backgroundPath = json.optString("backgroundPath", ""),
+                hideAmounts = json.optBoolean("hideAmounts", false),
+            )
+        } catch (_: Exception) { null }
+    }
+
+    fun writeDefinition(context: Context, definition: UserDefinition) {
+        val json = JSONObject().apply {
+            put("id", definition.id)
+            put("name", definition.name)
+            put("template", definition.template)
+            put("primaryMetric", definition.primaryMetric)
+            put("secondaryMetrics", org.json.JSONArray(definition.secondaryMetrics))
+            put("chartMetric", definition.chartMetric)
+            put("chartDays", definition.chartDays)
+            put("bookId", definition.bookId)
+            put("action", definition.action)
+            put("backgroundColor", definition.backgroundColor)
+            put("backgroundPath", definition.backgroundPath)
+            put("hideAmounts", definition.hideAmounts)
+        }
+        write(context, mapOf("${DEFINITIONS_KEY}_${definition.id}" to json.toString()))
+        val ids = readDefinitionIds(context).toMutableSet().apply { add(definition.id) }
+        write(context, mapOf(DEFINITIONS_KEY to ids.joinToString("\n")))
+    }
+
+    fun readDefinitionIds(context: Context): List<String> = read(context, DEFINITIONS_KEY, "")
+        .split('\n').map { it.trim() }.filter { it.isNotBlank() }
+
+    fun deleteDefinition(context: Context, id: String) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+            .remove("${DEFINITIONS_KEY}_$id").putString(
+                DEFINITIONS_KEY,
+                readDefinitionIds(context).filterNot { it == id }.joinToString("\n"),
+            ).apply()
+    }
+
+    fun removeDefinitionsNotIn(context: Context, keep: List<String>) {
+        val keepSet = keep.toSet()
+        readDefinitionIds(context).filterNot(keepSet::contains).forEach { id ->
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit().remove("${DEFINITIONS_KEY}_$id").apply()
+        }
+        write(context, mapOf(DEFINITIONS_KEY to keep.joinToString("\n")))
+    }
+
+    fun readDefinitionId(context: Context, widgetId: Int): String =
+        read(context, "$INSTANCE_DEFINITION_PREFIX$widgetId", "")
+
+    fun bindDefinition(context: Context, widgetId: Int, definitionId: String) {
+        write(context, mapOf("$INSTANCE_DEFINITION_PREFIX$widgetId" to definitionId))
+    }
+
+    fun clearDefinitionBinding(context: Context, widgetId: Int) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+            .remove("$INSTANCE_DEFINITION_PREFIX$widgetId").apply()
+    }
 
     data class InstanceConfig(
         val template: String = "default",
@@ -87,7 +183,8 @@ object WidgetData {
 
     fun clearInstanceConfig(context: Context, widgetId: Int) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
-            .remove(instanceConfigKey(widgetId)).apply()
+            .remove(instanceConfigKey(widgetId))
+            .remove("$INSTANCE_DEFINITION_PREFIX$widgetId").apply()
     }
 
     private fun instanceConfigKey(widgetId: Int) = "$INSTANCE_CONFIG_PREFIX$widgetId"

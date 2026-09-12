@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/user_widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FF1E293B"
+    android:clipToOutline="true">
+
+    <ImageView
+        android:id="@+id/user_widget_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:visibility="gone" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#66000000" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="16dp">
+        <TextView
+            android:id="@+id/user_widget_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="我的小组件"
+            android:textColor="#CCFFFFFF"
+            android:textSize="12sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+        <TextView
+            android:id="@+id/user_widget_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="今日支出"
+            android:textColor="#CCFFFFFF"
+            android:textSize="12sp" />
+        <TextView
+            android:id="@+id/user_widget_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0"
+            android:textColor="#FFFFFFFF"
+            android:textSize="30sp"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <TextView android:id="@+id/user_widget_secondary_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#CCFFFFFF" android:textSize="11sp" android:visibility="gone" />
+            <TextView android:id="@+id/user_widget_secondary_2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#CCFFFFFF" android:textSize="11sp" android:visibility="gone" />
+            <TextView android:id="@+id/user_widget_secondary_3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#CCFFFFFF" android:textSize="11sp" android:visibility="gone" />
+        </LinearLayout>
+        <ImageView
+            android:id="@+id/user_widget_chart"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginTop="6dp"
+            android:scaleType="fitXY"
+            android:visibility="gone" />
+    </LinearLayout>
+</FrameLayout>

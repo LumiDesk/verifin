@@ -76,11 +76,15 @@ class MainActivity : FlutterFragmentActivity() {
                 "updateWidgetConfig" -> {
                     updateWidgetConfig(call, result)
                 }
+                "syncUserWidgetDefinitions" -> {
+                    syncUserWidgetDefinitions(call, result)
+                }
                 "setSecureFlag" -> {
                     setSecureFlag(call.argument<Boolean>("secure") ?: false)
                     result.success(true)
                 }
                 "pinWidget" -> pinWidget(call.argument<String>("widget") ?: "", result)
+                "pinUserWidget" -> pinUserWidget(call.argument<String>("definitionId") ?: "", result)
                 "checkLatestRelease" -> checkLatestRelease(
                     call.argument<Boolean>("includePrerelease") ?: false,
                     result,
@@ -240,6 +244,63 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     /// 一次写入三个小组件的全部字段并广播刷新各 Provider。字段由 Flutter 侧格式化。
+    private fun syncUserWidgetDefinitions(
+        call: io.flutter.plugin.common.MethodCall,
+        result: MethodChannel.Result,
+    ) {
+        val raw = call.argument<List<*>>("definitions") ?: emptyList<Any>()
+        val ids = mutableListOf<String>()
+        raw.forEach { item ->
+            val map = item as? Map<*, *> ?: return@forEach
+            val id = map["id"]?.toString()?.takeIf { it.isNotBlank() } ?: return@forEach
+            val background = map["background"] as? Map<*, *>
+            val kind = background?.get("kind")?.toString() ?: "theme"
+            val value = background?.get("value")?.toString().orEmpty()
+            val color = if (kind == "solid") {
+                value.removePrefix("#").toLongOrNull(16)?.let { parsed ->
+                    when (value.length) {
+                        6 -> (0xFF000000L or parsed).toInt()
+                        8 -> parsed.toInt()
+                        else -> null
+                    }
+                } ?: 0xFF1E293B.toInt()
+            } else {
+                0xFF1E293B.toInt()
+            }
+            val secondary = (map["secondaryMetrics"] as? List<*>)
+                ?.mapNotNull { it?.toString() }
+                ?.take(3)
+                ?: emptyList()
+            WidgetData.writeDefinition(
+                this,
+                WidgetData.UserDefinition(
+                    id = id,
+                    name = map["name"]?.toString() ?: getString(R.string.user_widget_default_name),
+                    template = map["template"]?.toString() ?: "overview",
+                    primaryMetric = map["primaryMetric"]?.toString() ?: "todayExpense",
+                    secondaryMetrics = secondary,
+                    chartMetric = map["chartMetric"]?.toString() ?: "",
+                    chartDays = (map["dateRange"]?.toString()?.let { rangeDays(it) } ?: 30),
+                    bookId = map["bookId"]?.toString() ?: "",
+                    action = map["action"]?.toString() ?: "app",
+                    backgroundColor = color,
+                    hideAmounts = map["hideAmounts"] as? Boolean ?: false,
+                ),
+            )
+            ids += id
+        }
+        WidgetData.removeDefinitionsNotIn(this, ids)
+        UserWidgetProvider.refresh(this)
+        result.success(true)
+    }
+
+    private fun rangeDays(value: String): Int = when (value) {
+        "sevenDays" -> 7
+        "ninetyDays" -> 90
+        "year" -> 365
+        else -> 30
+    }
+
     private fun updateWidgetData(call: io.flutter.plugin.common.MethodCall) {
         val values = mapOf(
             WidgetData.KEY_TODAY_AMOUNT to (call.argument<String>("todayAmount") ?: "0"),
@@ -340,6 +401,35 @@ class MainActivity : FlutterFragmentActivity() {
                 manager.isRequestPinAppWidgetSupported &&
                 manager.requestPinAppWidget(ComponentName(this, provider), null, null)
         } catch (e: Exception) {
+            false
+        }
+        result.success(ok)
+    }
+
+    private fun pinUserWidget(definitionId: String, result: MethodChannel.Result) {
+        val manager = AppWidgetManager.getInstance(this)
+        val ok = try {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+                !manager.isRequestPinAppWidgetSupported
+            ) {
+                false
+            } else {
+                val callback = PendingIntent.getBroadcast(
+                    this,
+                    definitionId.hashCode(),
+                    Intent(this, UserWidgetPinReceiver::class.java).putExtra(
+                        UserWidgetProvider.EXTRA_DEFINITION_ID,
+                        definitionId,
+                    ),
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                )
+                manager.requestPinAppWidget(
+                    ComponentName(this, UserWidgetProvider::class.java),
+                    null,
+                    callback,
+                )
+            }
+        } catch (_: Exception) {
             false
         }
         result.success(ok)
