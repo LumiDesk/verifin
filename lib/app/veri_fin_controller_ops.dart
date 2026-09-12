@@ -4273,6 +4273,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     // v1/v2 备份没有该字段，按空设计处理；旧设备上的实例配置仍可由
     // WidgetConfigStore 在读取时按 legacy appWidgetId 惰性迁移。
     WidgetConfigStore.saveDefinitionsSync(_store, nextWidgetDefinitions);
+    // 桌面 appWidgetId 是设备私有绑定，导入设计后必须解除旧设备实例，避免
+    // 旧实例继续引用已不存在的设计；用户可在“我的小组件”中重新添加。
+    WidgetConfigStore.savePlacementsSync(_store, const <WidgetPlacement>[]);
 
     // 备份恢复零参照完整性校验，是「幽灵同名分类」的唯一现实入口（内部不一致的外部/
     // 异构/手改备份）；覆盖后跑一遍自愈，堵住这个入口。落库统一由下方 _persistAllLedgerData。
