@@ -232,49 +232,99 @@ class _WidgetPreview extends StatelessWidget {
   const _WidgetPreview({required this.spec});
   final _WidgetSpec spec;
   @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.surface,
-      borderRadius: BorderRadius.circular(veriRadiusLg),
-      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-    ),
-    child: Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(veriRadiusLg),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Column(
+        children: [
+          Row(
             children: [
-              Text(
-                spec.previewLabel,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontSize: 12,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      spec.previewLabel,
+                      style: TextStyle(
+                        color: scheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      spec.previewValue,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 3),
-              Text(
-                spec.previewValue,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
+              if (spec.showEntryButton)
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: veriRoyal,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: const Icon(Icons.add, size: 18, color: Colors.white),
                 ),
-              ),
             ],
           ),
-        ),
-        if (spec.showEntryButton)
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: veriRoyal,
-              borderRadius: BorderRadius.circular(999),
+          if (spec.template == WidgetTemplate.trend) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 36,
+              width: double.infinity,
+              child: CustomPaint(
+                painter: _WidgetPreviewSparklinePainter(color: scheme.primary),
+              ),
             ),
-            child: const Icon(Icons.add, size: 18, color: Colors.white),
-          ),
-      ],
-    ),
-  );
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _WidgetPreviewSparklinePainter extends CustomPainter {
+  const _WidgetPreviewSparklinePainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path();
+    const points = <double>[0.72, 0.64, 0.7, 0.44, 0.51, 0.3, 0.39, 0.2];
+    for (var i = 0; i < points.length; i++) {
+      final x = i * size.width / (points.length - 1);
+      final y = points[i] * size.height;
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_WidgetPreviewSparklinePainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class WidgetConfigPage extends StatefulWidget {
