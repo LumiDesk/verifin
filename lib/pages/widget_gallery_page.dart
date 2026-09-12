@@ -7,7 +7,10 @@ import 'package:image_picker/image_picker.dart';
 
 import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
+import '../app/currency_math.dart';
 import '../app/feedback.dart';
+import '../app/ledger_math.dart';
+import '../app/models.dart';
 import '../app/platform_bridge.dart';
 import '../app/veri_fin_scope.dart';
 import '../app/widget_config.dart';
@@ -330,83 +333,129 @@ class _DefinitionPreview extends StatelessWidget {
         backgroundImage = FileImage(File(imageValue));
       }
     }
-    final size = switch (definition.size) {
-      WidgetSize.oneByOne => const Size(1, 1),
-      WidgetSize.twoByTwo => const Size(1.25, 1),
-      WidgetSize.fourByOne => const Size(2.4, 1),
-      WidgetSize.fourByTwo => const Size(2, 1),
-      WidgetSize.twoByFour => const Size(.72, 1),
+    final controller = VeriFinScope.of(context);
+    final book = definition.bookId == null
+        ? controller.activeBook
+        : controller.ledgerBooks.firstWhere(
+            (item) => item.id == definition.bookId,
+            orElse: () => controller.activeBook,
+          );
+    final entries = controller.entriesForBook(book.id);
+    final now = DateTime.now();
+    final periodEntries = entries.where(
+      (entry) =>
+          entry.occurredAt.year == now.year &&
+          entry.occurredAt.month == now.month,
+    );
+    final amount = switch (definition.primaryMetric) {
+      WidgetMetric.todayExpense => dayExpenseTotal(entries, dateOnly(now)),
+      WidgetMetric.periodIncome => sumByType(periodEntries, EntryType.income),
+      WidgetMetric.netWorth =>
+        book.id == controller.activeBook.id
+            ? controller
+                      .accountBalancesInBase(
+                        accounts: controller.accounts.where(
+                          (account) =>
+                              account.includeInAssets && !account.hidden,
+                        ),
+                        date: now,
+                      )
+                      .completeTotal ??
+                  0
+            : 0,
+      WidgetMetric.transactionCount => entries.length.toDouble(),
+      _ => sumByType(periodEntries, EntryType.expense),
     };
-    return AspectRatio(
-      aspectRatio: size.width / size.height,
-      child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(veriRadiusLg),
-        ),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (backgroundImage != null)
-              Image(
-                image: backgroundImage,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    ColoredBox(color: veriPreviewCanvasDark),
-              )
-            else
-              ColoredBox(
-                color: theme.brightness == Brightness.dark
-                    ? veriPreviewSurfaceDark
-                    : veriSurfaceLight,
-              ),
-            ColoredBox(color: Colors.black.withValues(alpha: .28)),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    definition.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    metricLabel,
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    definition.hideAmounts ? '••••' : '12,480',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  if (definition.chartMetric != null) ...[
-                    const SizedBox(height: 6),
-                    SizedBox(
-                      height: 24,
-                      child: CustomPaint(
-                        painter: _PreviewLinePainter(color: Colors.white),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+    final size = _previewSize(definition.size);
+    return Center(
+      child: SizedBox(
+        width: size.width,
+        child: AspectRatio(
+          aspectRatio: size.width / size.height,
+          child: ClipRRect(
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(veriRadiusLg),
             ),
-          ],
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (backgroundImage != null)
+                  Image(
+                    image: backgroundImage,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) =>
+                        ColoredBox(color: veriPreviewCanvasDark),
+                  )
+                else
+                  ColoredBox(
+                    color: theme.brightness == Brightness.dark
+                        ? veriPreviewSurfaceDark
+                        : veriSurfaceLight,
+                  ),
+                ColoredBox(color: Colors.black.withValues(alpha: .28)),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        definition.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        metricLabel,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        definition.hideAmounts
+                            ? '••••'
+                            : formatUserMoney(amount, book.baseCurrencyCode),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      if (definition.chartMetric != null) ...[
+                        const SizedBox(height: 6),
+                        SizedBox(
+                          height: 24,
+                          width: double.infinity,
+                          child: CustomPaint(
+                            painter: _PreviewLinePainter(color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 }
+
+Size _previewSize(WidgetSize size) => switch (size) {
+  WidgetSize.oneByOne => const Size(124, 124),
+  WidgetSize.twoByTwo => const Size(220, 176),
+  WidgetSize.fourByOne => const Size(320, 80),
+  WidgetSize.fourByTwo => const Size(320, 160),
+  WidgetSize.twoByFour => const Size(150, 300),
+};
 
 class _PreviewLinePainter extends CustomPainter {
   const _PreviewLinePainter({required this.color});

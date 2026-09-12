@@ -29,6 +29,12 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         _entries.where((entry) => entry.bookId == _activeBookId),
       );
 
+  /// Read-only entries for cross-book widget previews.
+  List<LedgerEntry> entriesForBook(String bookId) =>
+      List<LedgerEntry>.unmodifiable(
+        _entries.where((entry) => entry.bookId == bookId),
+      );
+
   List<LedgerBook> get ledgerBooks => List<LedgerBook>.unmodifiable(
     _ledgerBooks.isEmpty ? _seedLedgerBooks : _ledgerBooks,
   );
