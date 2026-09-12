@@ -6,7 +6,7 @@ import 'support/test_harness.dart';
 void main() {
   useTestDatabases();
 
-  testWidgets('widget gallery lists all widgets and reaches add-to-home', (
+  testWidgets('my widgets canvas opens the separate create page', (
     tester,
   ) async {
     await pumpApp(tester);
@@ -22,7 +22,10 @@ void main() {
 
     expect(find.text('我的小组件'), findsOneWidget);
     expect(find.text('还没有保存的小组件'), findsOneWidget);
-    expect(find.text('基础模板'), findsOneWidget);
+    expect(find.text('基础模板'), findsNothing);
+    await tester.tap(find.byTooltip('创建小组件'));
+    await tester.pumpAndSettle();
+    expect(find.text('创建小组件'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, '基于模板创建'), findsWidgets);
   });
 }

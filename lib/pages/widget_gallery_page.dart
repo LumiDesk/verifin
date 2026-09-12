@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -25,11 +26,12 @@ class WidgetGalleryPage extends StatefulWidget {
 }
 
 class _WidgetGalleryPageState extends State<WidgetGalleryPage> {
-  Future<void> _create(WidgetTemplate template) async {
+  bool _editing = false;
+  List<String> _order = const [];
+
+  Future<void> _create() async {
     final saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
-        builder: (_) => UserWidgetEditorPage(template: template),
-      ),
+      MaterialPageRoute<bool>(builder: (_) => const WidgetCreatePage()),
     );
     if (saved == true && mounted) setState(() {});
   }
@@ -41,6 +43,37 @@ class _WidgetGalleryPageState extends State<WidgetGalleryPage> {
       ),
     );
     if (saved == true && mounted) setState(() {});
+  }
+
+  void _syncOrder(List<UserWidgetDefinition> definitions) {
+    final ids = definitions.map((item) => item.id).toSet();
+    _order = [
+      ..._order.where(ids.contains),
+      ...definitions.map((item) => item.id).where((id) => !_order.contains(id)),
+    ];
+  }
+
+  Future<void> _reorder(
+    int from,
+    int to,
+    List<UserWidgetDefinition> definitions,
+  ) async {
+    final ids = definitions.map((item) => item.id).toList();
+    final moved = ids.removeAt(from);
+    ids.insert(to.clamp(0, ids.length), moved);
+    final byId = {for (final item in definitions) item.id: item};
+    await VeriFinScope.of(
+      context,
+    ).saveUserWidgetDefinitions(ids.map((id) => byId[id]!).toList());
+    if (mounted) setState(() => _order = ids);
+  }
+
+  Future<void> _deleteById(String id) async {
+    final controller = VeriFinScope.of(context);
+    final definition = controller.userWidgetDefinitions.firstWhere(
+      (item) => item.id == id,
+    );
+    await _delete(definition);
   }
 
   Future<void> _delete(UserWidgetDefinition definition) async {
@@ -68,26 +101,15 @@ class _WidgetGalleryPageState extends State<WidgetGalleryPage> {
     );
   }
 
-  Future<void> _addToHome(UserWidgetDefinition definition) async {
-    final ok = await AppWidgetBridge.pinUserWidget(definition.id);
-    if (!mounted) return;
-    final l10n = AppLocalizations.of(context);
-    unawaited(
-      VeriFeedbackHost.of(context).showMessage(
-        message: ok ? l10n.widgetPinRequested : l10n.widgetPinUnsupported,
-        tone: ok ? VeriFeedbackTone.success : VeriFeedbackTone.warning,
-        duration: ok
-            ? VeriFeedbackDuration.standard
-            : VeriFeedbackDuration.long,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final controller = VeriFinScope.of(context);
     final definitions = controller.userWidgetDefinitions;
+    _syncOrder(definitions);
+    final ordered = [
+      for (final id in _order) ...definitions.where((item) => item.id == id),
+    ];
     return Scaffold(
       body: SafeArea(
         child: VeriPage(
@@ -102,12 +124,22 @@ class _WidgetGalleryPageState extends State<WidgetGalleryPage> {
                   HeaderAction(
                     icon: Icons.add,
                     tooltip: l10n.widgetCreateNew,
-                    onPressed: () => _create(WidgetTemplate.trend),
+                    onPressed: _create,
                   ),
                 ],
               ),
               const SizedBox(height: 14),
-              _SectionTitle(title: l10n.myWidgetsSection),
+              Row(
+                children: [
+                  Expanded(child: _SectionTitle(title: l10n.myWidgetsSection)),
+                  if (ordered.isNotEmpty)
+                    TextButton.icon(
+                      onPressed: () => setState(() => _editing = !_editing),
+                      icon: Icon(_editing ? Icons.check : Icons.tune, size: 18),
+                      label: Text(_editing ? l10n.commonDone : l10n.widgetEdit),
+                    ),
+                ],
+              ),
               const SizedBox(height: 8),
               if (definitions.isEmpty)
                 VeriCard(
@@ -133,26 +165,51 @@ class _WidgetGalleryPageState extends State<WidgetGalleryPage> {
                   ),
                 )
               else
-                ...definitions.map(
-                  (definition) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _DefinitionCard(
-                      definition: definition,
-                      onEdit: () => _edit(definition),
-                      onDelete: () => _delete(definition),
-                      onAdd: () => _addToHome(definition),
-                    ),
-                  ),
+                _MasonryCanvas(
+                  definitions: ordered,
+                  editing: _editing,
+                  onTap: _edit,
+                  onLongPress: () => setState(() => _editing = true),
+                  onDelete: _deleteById,
+                  onReorder: (from, to) => _reorder(from, to, ordered),
                 ),
-              const SizedBox(height: 6),
-              _SectionTitle(title: l10n.widgetTemplatesSection),
-              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class WidgetCreatePage extends StatelessWidget {
+  const WidgetCreatePage({super.key});
+
+  Future<void> _open(BuildContext context, WidgetTemplate template) async {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => UserWidgetEditorPage(template: template),
+      ),
+    );
+    if (saved == true && context.mounted) Navigator.of(context).pop(true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Scaffold(
+      body: SafeArea(
+        child: VeriPage(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
+            children: [
+              VeriHeader(title: l10n.widgetCreateNew, showBack: true),
+              const SizedBox(height: 14),
               for (final template in WidgetTemplate.values)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: _TemplateCard(
                     template: template,
-                    onCreate: () => _create(template),
+                    onCreate: () => _open(context, template),
                   ),
                 ),
             ],
@@ -176,72 +233,173 @@ class _SectionTitle extends StatelessWidget {
   );
 }
 
-class _DefinitionCard extends StatelessWidget {
-  const _DefinitionCard({
-    required this.definition,
-    required this.onEdit,
+class _MasonryCanvas extends StatelessWidget {
+  const _MasonryCanvas({
+    required this.definitions,
+    required this.editing,
+    required this.onTap,
+    required this.onLongPress,
     required this.onDelete,
-    required this.onAdd,
+    required this.onReorder,
+  });
+  final List<UserWidgetDefinition> definitions;
+  final bool editing;
+  final ValueChanged<UserWidgetDefinition> onTap;
+  final VoidCallback onLongPress;
+  final ValueChanged<String> onDelete;
+  final void Function(int from, int to) onReorder;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final columns = constraints.maxWidth >= 560 ? 3 : 2;
+      final gap = 10.0;
+      final cellWidth = (constraints.maxWidth - gap * (columns - 1)) / columns;
+      final heights = List<double>.filled(columns, 0);
+      final placed = <_MasonryPlacement>[];
+      for (var index = 0; index < definitions.length; index++) {
+        final definition = definitions[index];
+        final wide =
+            definition.size == WidgetSize.fourByOne ||
+            definition.size == WidgetSize.fourByTwo;
+        final span = wide ? columns : 1;
+        final width = cellWidth * span + gap * (span - 1);
+        final ratio =
+            _previewSize(definition.size).height /
+            _previewSize(definition.size).width;
+        final height = width * ratio;
+        final start = span == columns
+            ? 0
+            : List.generate(
+                columns - span + 1,
+                (i) => i,
+              ).reduce((a, b) => heights[a] <= heights[b] ? a : b);
+        final top = span == columns
+            ? heights.reduce(math.max)
+            : heights.sublist(start, start + span).reduce(math.max);
+        placed.add(
+          _MasonryPlacement(
+            index: index,
+            left: start * (cellWidth + gap),
+            top: top,
+            width: width,
+            height: height,
+          ),
+        );
+        for (var column = start; column < start + span; column++) {
+          heights[column] = top + height + gap;
+        }
+      }
+      final totalHeight = heights.isEmpty
+          ? 0.0
+          : heights.reduce(math.max) - gap;
+      return SizedBox(
+        height: totalHeight,
+        child: Stack(
+          children: [
+            for (final item in placed)
+              Positioned(
+                left: item.left,
+                top: item.top,
+                width: item.width,
+                height: item.height,
+                child: _MasonryTile(
+                  definition: definitions[item.index],
+                  sourceIndex: item.index,
+                  editing: editing,
+                  onTap: () => onTap(definitions[item.index]),
+                  onLongPress: onLongPress,
+                  onDelete: () => onDelete(definitions[item.index].id),
+                  onReorder: (from) => onReorder(from, item.index),
+                ),
+              ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+class _MasonryPlacement {
+  const _MasonryPlacement({
+    required this.index,
+    required this.left,
+    required this.top,
+    required this.width,
+    required this.height,
+  });
+  final int index;
+  final double left;
+  final double top;
+  final double width;
+  final double height;
+}
+
+class _MasonryTile extends StatelessWidget {
+  const _MasonryTile({
+    required this.definition,
+    required this.sourceIndex,
+    required this.editing,
+    required this.onTap,
+    required this.onLongPress,
+    required this.onDelete,
+    required this.onReorder,
   });
   final UserWidgetDefinition definition;
-  final VoidCallback onEdit;
+  final int sourceIndex;
+  final bool editing;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
   final VoidCallback onDelete;
-  final VoidCallback onAdd;
+  final ValueChanged<int> onReorder;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return VeriCard(
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          _DefinitionPreview(definition: definition),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    definition.name,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
+    Widget child = GestureDetector(
+      onTap: editing ? null : onTap,
+      onLongPress: onLongPress,
+      child: _DefinitionPreview(definition: definition, width: double.infinity),
+    );
+    if (editing) {
+      child = LongPressDraggable<int>(
+        data: sourceIndex,
+        feedback: Material(
+          color: Colors.transparent,
+          child: SizedBox(
+            width: 160,
+            child: _DefinitionPreview(definition: definition),
+          ),
+        ),
+        child: DragTarget<int>(
+          onAcceptWithDetails: (details) => onReorder(details.data),
+          builder: (context, candidates, rejected) => child,
+        ),
+      );
+    }
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        child,
+        if (editing)
+          Positioned(
+            top: 4,
+            right: 4,
+            child: Material(
+              color: Colors.black.withValues(alpha: .55),
+              shape: const CircleBorder(),
+              child: IconButton(
+                tooltip: AppLocalizations.of(context).widgetDelete,
+                onPressed: onDelete,
+                icon: const Icon(Icons.close, color: Colors.white, size: 18),
+                constraints: const BoxConstraints.tightFor(
+                  width: 40,
+                  height: 40,
                 ),
-                Text(
-                  _sizeLabel(l10n, definition.size),
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
-              ],
+                padding: EdgeInsets.zero,
+              ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: onAdd,
-                    icon: const Icon(Icons.add_to_home_screen, size: 18),
-                    label: Text(l10n.widgetAddSaved),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                IconButton(
-                  tooltip: l10n.widgetEdit,
-                  onPressed: onEdit,
-                  icon: const Icon(Icons.edit_outlined),
-                ),
-                IconButton(
-                  tooltip: l10n.widgetDelete,
-                  onPressed: onDelete,
-                  icon: const Icon(Icons.delete_outline),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 }
@@ -294,8 +452,9 @@ class _TemplateCard extends StatelessWidget {
 }
 
 class _DefinitionPreview extends StatelessWidget {
-  const _DefinitionPreview({required this.definition});
+  const _DefinitionPreview({required this.definition, this.width});
   final UserWidgetDefinition definition;
+  final double? width;
 
   @override
   Widget build(BuildContext context) {
@@ -367,12 +526,14 @@ class _DefinitionPreview extends StatelessWidget {
       _ => sumByType(periodEntries, EntryType.expense),
     };
     final size = _previewSize(definition.size);
-    final compact = size.height < 120;
+    final aspect = _widgetAspect(definition.size);
+    final previewWidth = width ?? size.width;
+    final compact = previewWidth / aspect < 120;
     return Center(
       child: SizedBox(
-        width: size.width,
+        width: previewWidth,
         child: AspectRatio(
-          aspectRatio: size.width / size.height,
+          aspectRatio: aspect,
           child: ClipRRect(
             borderRadius: const BorderRadius.vertical(
               top: Radius.circular(veriRadiusLg),
@@ -457,6 +618,14 @@ Size _previewSize(WidgetSize size) => switch (size) {
   WidgetSize.fourByOne => const Size(320, 80),
   WidgetSize.fourByTwo => const Size(320, 160),
   WidgetSize.twoByFour => const Size(150, 300),
+};
+
+double _widgetAspect(WidgetSize size) => switch (size) {
+  WidgetSize.oneByOne => 1,
+  WidgetSize.twoByTwo => 1.25,
+  WidgetSize.fourByOne => 4,
+  WidgetSize.fourByTwo => 2,
+  WidgetSize.twoByFour => .5,
 };
 
 class _PreviewLinePainter extends CustomPainter {
@@ -644,6 +813,44 @@ class _UserWidgetEditorPageState extends State<UserWidgetEditorPage> {
     Navigator.of(context).pop(true);
   }
 
+  Future<void> _deleteDesign() async {
+    final definition = widget.definition;
+    if (definition == null) return;
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showConfirmDialog(
+      context,
+      title: l10n.widgetDelete,
+      message: definition.name,
+      confirmLabel: l10n.widgetDelete,
+      destructive: true,
+    );
+    if (!confirmed || !mounted) return;
+    final controller = VeriFinScope.of(context);
+    await controller.saveUserWidgetDefinitions(
+      controller.userWidgetDefinitions
+          .where((item) => item.id != definition.id)
+          .toList(),
+    );
+    if (mounted) Navigator.of(context).pop(true);
+  }
+
+  Future<void> _addDesignToHome() async {
+    final id = widget.definition?.id;
+    if (id == null) return;
+    final ok = await AppWidgetBridge.pinUserWidget(id);
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
+    unawaited(
+      VeriFeedbackHost.of(context).showMessage(
+        message: ok ? l10n.widgetPinRequested : l10n.widgetPinUnsupported,
+        tone: ok ? VeriFeedbackTone.success : VeriFeedbackTone.warning,
+        duration: ok
+            ? VeriFeedbackDuration.standard
+            : VeriFeedbackDuration.long,
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _name.dispose();
@@ -671,6 +878,12 @@ class _UserWidgetEditorPageState extends State<UserWidgetEditorPage> {
                     : l.widgetEdit,
                 showBack: true,
                 actions: [
+                  if (widget.definition != null)
+                    HeaderAction(
+                      icon: Icons.delete_outline,
+                      tooltip: l.widgetDelete,
+                      onPressed: _deleteDesign,
+                    ),
                   HeaderTextAction(label: l.widgetSaveDesign, onPressed: _save),
                 ],
               ),
@@ -857,6 +1070,17 @@ class _UserWidgetEditorPageState extends State<UserWidgetEditorPage> {
                   ],
                 ),
               ),
+              if (widget.definition != null) ...[
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _addDesignToHome,
+                    icon: const Icon(Icons.add_to_home_screen),
+                    label: Text(l.widgetAddSaved),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -864,11 +1088,3 @@ class _UserWidgetEditorPageState extends State<UserWidgetEditorPage> {
     );
   }
 }
-
-String _sizeLabel(AppLocalizations l10n, WidgetSize size) => switch (size) {
-  WidgetSize.oneByOne => '1 × 1',
-  WidgetSize.twoByTwo => '2 × 2',
-  WidgetSize.fourByOne => '4 × 1',
-  WidgetSize.fourByTwo => '4 × 2',
-  WidgetSize.twoByFour => '2 × 4',
-};
