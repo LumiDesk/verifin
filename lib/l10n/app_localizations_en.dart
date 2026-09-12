@@ -3982,6 +3982,80 @@ class AppLocalizationsEn extends AppLocalizations {
   String get widgetConfigSaved => 'Widget configuration saved';
 
   @override
+  String get myWidgetsTitle => 'My widgets';
+
+  @override
+  String get myWidgetsSubtitle =>
+      'Create and manage your desktop finance cards';
+
+  @override
+  String get myWidgetsSection => 'Saved widgets';
+
+  @override
+  String get widgetCreateNew => 'Create widget';
+
+  @override
+  String get widgetEmpty => 'No saved widgets yet';
+
+  @override
+  String get widgetEmptyHint =>
+      'Create your own finance card from a template below';
+
+  @override
+  String get widgetTemplatesSection => 'Base templates';
+
+  @override
+  String get widgetTemplateCreate => 'Create from template';
+
+  @override
+  String get widgetEdit => 'Edit';
+
+  @override
+  String get widgetDuplicate => 'Duplicate';
+
+  @override
+  String get widgetDelete => 'Delete';
+
+  @override
+  String get widgetAddSaved => 'Add to home screen';
+
+  @override
+  String get widgetName => 'Widget name';
+
+  @override
+  String get widgetSize => 'Desktop size';
+
+  @override
+  String get widgetBackground => 'Background';
+
+  @override
+  String get widgetThemeBackground => 'Theme background';
+
+  @override
+  String get widgetSolidBackground => 'Solid color';
+
+  @override
+  String get widgetPhotoBackground => 'Local image';
+
+  @override
+  String get widgetPickPhoto => 'Choose image';
+
+  @override
+  String get widgetSaveDesign => 'Save to my widgets';
+
+  @override
+  String get widgetDesignSaved => 'Saved to my widgets';
+
+  @override
+  String get widgetDesignDeleted => 'Widget deleted';
+
+  @override
+  String get widgetDesignNameDefault => 'My finance card';
+
+  @override
+  String get widgetPreview => 'Preview';
+
+  @override
   String get widgetSecondaryMetric => 'Secondary metric';
 
   @override

@@ -7142,6 +7142,150 @@ abstract class AppLocalizations {
   /// **'小组件配置已保存'**
   String get widgetConfigSaved;
 
+  /// No description provided for @myWidgetsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的小组件'**
+  String get myWidgetsTitle;
+
+  /// No description provided for @myWidgetsSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建并管理你的桌面财务卡片'**
+  String get myWidgetsSubtitle;
+
+  /// No description provided for @myWidgetsSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'已保存的小组件'**
+  String get myWidgetsSection;
+
+  /// No description provided for @widgetCreateNew.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建小组件'**
+  String get widgetCreateNew;
+
+  /// No description provided for @widgetEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有保存的小组件'**
+  String get widgetEmpty;
+
+  /// No description provided for @widgetEmptyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'从下方基础模板创建一张属于你的财务卡片'**
+  String get widgetEmptyHint;
+
+  /// No description provided for @widgetTemplatesSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'基础模板'**
+  String get widgetTemplatesSection;
+
+  /// No description provided for @widgetTemplateCreate.
+  ///
+  /// In zh, this message translates to:
+  /// **'基于模板创建'**
+  String get widgetTemplateCreate;
+
+  /// No description provided for @widgetEdit.
+  ///
+  /// In zh, this message translates to:
+  /// **'编辑'**
+  String get widgetEdit;
+
+  /// No description provided for @widgetDuplicate.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制'**
+  String get widgetDuplicate;
+
+  /// No description provided for @widgetDelete.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除'**
+  String get widgetDelete;
+
+  /// No description provided for @widgetAddSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加到桌面'**
+  String get widgetAddSaved;
+
+  /// No description provided for @widgetName.
+  ///
+  /// In zh, this message translates to:
+  /// **'小组件名称'**
+  String get widgetName;
+
+  /// No description provided for @widgetSize.
+  ///
+  /// In zh, this message translates to:
+  /// **'桌面尺寸'**
+  String get widgetSize;
+
+  /// No description provided for @widgetBackground.
+  ///
+  /// In zh, this message translates to:
+  /// **'背景'**
+  String get widgetBackground;
+
+  /// No description provided for @widgetThemeBackground.
+  ///
+  /// In zh, this message translates to:
+  /// **'主题背景'**
+  String get widgetThemeBackground;
+
+  /// No description provided for @widgetSolidBackground.
+  ///
+  /// In zh, this message translates to:
+  /// **'纯色背景'**
+  String get widgetSolidBackground;
+
+  /// No description provided for @widgetPhotoBackground.
+  ///
+  /// In zh, this message translates to:
+  /// **'本地图片'**
+  String get widgetPhotoBackground;
+
+  /// No description provided for @widgetPickPhoto.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择图片'**
+  String get widgetPickPhoto;
+
+  /// No description provided for @widgetSaveDesign.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存到我的小组件'**
+  String get widgetSaveDesign;
+
+  /// No description provided for @widgetDesignSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'已保存到我的小组件'**
+  String get widgetDesignSaved;
+
+  /// No description provided for @widgetDesignDeleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'小组件已删除'**
+  String get widgetDesignDeleted;
+
+  /// No description provided for @widgetDesignNameDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的财务卡片'**
+  String get widgetDesignNameDefault;
+
+  /// No description provided for @widgetPreview.
+  ///
+  /// In zh, this message translates to:
+  /// **'预览'**
+  String get widgetPreview;
+
   /// No description provided for @widgetSecondaryMetric.
   ///
   /// In zh, this message translates to:

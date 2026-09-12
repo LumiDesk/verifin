@@ -3880,6 +3880,78 @@ class AppLocalizationsZh extends AppLocalizations {
   String get widgetConfigSaved => '小组件配置已保存';
 
   @override
+  String get myWidgetsTitle => '我的小组件';
+
+  @override
+  String get myWidgetsSubtitle => '创建并管理你的桌面财务卡片';
+
+  @override
+  String get myWidgetsSection => '已保存的小组件';
+
+  @override
+  String get widgetCreateNew => '创建小组件';
+
+  @override
+  String get widgetEmpty => '还没有保存的小组件';
+
+  @override
+  String get widgetEmptyHint => '从下方基础模板创建一张属于你的财务卡片';
+
+  @override
+  String get widgetTemplatesSection => '基础模板';
+
+  @override
+  String get widgetTemplateCreate => '基于模板创建';
+
+  @override
+  String get widgetEdit => '编辑';
+
+  @override
+  String get widgetDuplicate => '复制';
+
+  @override
+  String get widgetDelete => '删除';
+
+  @override
+  String get widgetAddSaved => '添加到桌面';
+
+  @override
+  String get widgetName => '小组件名称';
+
+  @override
+  String get widgetSize => '桌面尺寸';
+
+  @override
+  String get widgetBackground => '背景';
+
+  @override
+  String get widgetThemeBackground => '主题背景';
+
+  @override
+  String get widgetSolidBackground => '纯色背景';
+
+  @override
+  String get widgetPhotoBackground => '本地图片';
+
+  @override
+  String get widgetPickPhoto => '选择图片';
+
+  @override
+  String get widgetSaveDesign => '保存到我的小组件';
+
+  @override
+  String get widgetDesignSaved => '已保存到我的小组件';
+
+  @override
+  String get widgetDesignDeleted => '小组件已删除';
+
+  @override
+  String get widgetDesignNameDefault => '我的财务卡片';
+
+  @override
+  String get widgetPreview => '预览';
+
+  @override
   String get widgetSecondaryMetric => '辅助指标';
 
   @override

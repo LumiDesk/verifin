@@ -1,13 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
-import '../app/currency_math.dart';
 import '../app/feedback.dart';
-import '../app/ledger_math.dart';
-import '../app/models.dart';
 import '../app/platform_bridge.dart';
 import '../app/veri_fin_scope.dart';
 import '../app/widget_config.dart';
@@ -16,163 +16,59 @@ import 'sheets.dart';
 
 class WidgetGalleryPage extends StatefulWidget {
   const WidgetGalleryPage({super.key});
+
   @override
   State<WidgetGalleryPage> createState() => _WidgetGalleryPageState();
 }
 
 class _WidgetGalleryPageState extends State<WidgetGalleryPage> {
-  @override
-  Widget build(BuildContext context) {
-    final c = VeriFinScope.of(context);
+  Future<void> _create(WidgetTemplate template) async {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => UserWidgetEditorPage(template: template),
+      ),
+    );
+    if (saved == true && mounted) setState(() {});
+  }
+
+  Future<void> _edit(UserWidgetDefinition definition) async {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => UserWidgetEditorPage(definition: definition),
+      ),
+    );
+    if (saved == true && mounted) setState(() {});
+  }
+
+  Future<void> _delete(UserWidgetDefinition definition) async {
     final l10n = AppLocalizations.of(context);
-    final now = DateTime.now();
-    final base = c.activeBook.baseCurrencyCode;
-    final today = formatUserMoney(
-      dayExpenseTotal(c.entries, dateOnly(now)),
-      base,
+    final ok = await showConfirmDialog(
+      context,
+      title: l10n.widgetDelete,
+      message: definition.name,
+      confirmLabel: l10n.widgetDelete,
+      destructive: true,
     );
-    final month = c.budgetKeyMonthFor(now);
-    final spent = sumByType(
-      entriesInWindow(c.entries, c.budgetWindow(month)),
-      EntryType.expense,
-    );
-    final remaining = c.monthlyBudget(month) - spent;
-    final valuation = c.accountBalancesInBase(
-      accounts: c.accounts.where((a) => a.includeInAssets && !a.hidden),
-    );
-    final netWorth = valuation.completeTotal == null
-        ? '—'
-        : formatUserMoney(valuation.completeTotal!, base);
-    final specs = <_WidgetSpec>[
-      _WidgetSpec(
-        'quick_entry',
-        l10n.widgetQuickEntryName,
-        l10n.widgetQuickEntryDesc,
-        l10n.widgetTodayExpense,
-        today,
-        true,
-        WidgetTemplate.quickEntry,
-      ),
-      _WidgetSpec(
-        'budget',
-        l10n.widgetBudgetName,
-        l10n.widgetBudgetDesc,
-        remaining < 0 ? l10n.widgetBudgetOverspent : l10n.widgetBudgetAvailable,
-        formatUserMoney(remaining.abs(), base),
-        false,
-        WidgetTemplate.budget,
-      ),
-      _WidgetSpec(
-        'trend',
-        l10n.widgetTrendName,
-        l10n.widgetTrendDesc,
-        l10n.widgetMetricPeriodExpense,
-        formatUserMoney(spent, base),
-        false,
-        WidgetTemplate.trend,
-      ),
-      _WidgetSpec(
-        'net_worth',
-        l10n.widgetNetWorthName,
-        l10n.widgetNetWorthDesc,
-        l10n.widgetNetWorth,
-        netWorth,
-        false,
-        WidgetTemplate.netWorth,
-      ),
-    ];
-    return Scaffold(
-      body: SafeArea(
-        child: VeriPage(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
-            children: [
-              VeriHeader(
-                title: l10n.widgetGalleryTitle,
-                subtitle: l10n.widgetGallerySubtitle,
-                showBack: true,
-              ),
-              const SizedBox(height: 10),
-              ...specs.map(
-                (s) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _WidgetCard(
-                    spec: s,
-                    onConfigure: () => _openConfig(context, s),
-                  ),
-                ),
-              ),
-              VeriCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.help_outline,
-                          size: 18,
-                          color: veriRoyal,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          l10n.widgetHowToAddTitle,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      l10n.widgetHowToAddDesc,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: .6),
-                        height: 1.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+    if (ok != true || !mounted) return;
+    final controller = VeriFinScope.of(context);
+    final definitions = controller.userWidgetDefinitions
+        .where((item) => item.id != definition.id)
+        .toList();
+    await controller.saveUserWidgetDefinitions(definitions);
+    if (!mounted) return;
+    setState(() {});
+    unawaited(
+      VeriFeedbackHost.of(context).showMessage(
+        message: l10n.widgetDesignDeleted,
+        tone: VeriFeedbackTone.success,
       ),
     );
   }
 
-  Future<void> _openConfig(BuildContext context, _WidgetSpec spec) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => WidgetConfigPage(template: spec.template),
-      ),
-    );
-  }
-}
-
-class _WidgetSpec {
-  const _WidgetSpec(
-    this.widgetKey,
-    this.name,
-    this.description,
-    this.previewLabel,
-    this.previewValue,
-    this.showEntryButton,
-    this.template,
-  );
-  final String widgetKey, name, description, previewLabel, previewValue;
-  final bool showEntryButton;
-  final WidgetTemplate template;
-}
-
-class _WidgetCard extends StatelessWidget {
-  const _WidgetCard({required this.spec, required this.onConfigure});
-  final _WidgetSpec spec;
-  final VoidCallback onConfigure;
-  Future<void> _add(BuildContext context) async {
+  Future<void> _addToHome(UserWidgetDefinition definition) async {
+    final ok = await AppWidgetBridge.pinUserWidget(definition.id);
+    if (!mounted) return;
     final l10n = AppLocalizations.of(context);
-    final ok = await AppWidgetBridge.pinWidget(spec.widgetKey);
-    if (!context.mounted) return;
     unawaited(
       VeriFeedbackHost.of(context).showMessage(
         message: ok ? l10n.widgetPinRequested : l10n.widgetPinUnsupported,
@@ -185,164 +81,377 @@ class _WidgetCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => VeriCard(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _WidgetPreview(spec: spec),
-        const SizedBox(height: 12),
-        Text(
-          spec.name,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          spec.description,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: .6),
-          ),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            OutlinedButton.icon(
-              onPressed: onConfigure,
-              icon: const Icon(Icons.tune, size: 18),
-              label: Text(AppLocalizations.of(context).widgetConfigure),
-            ),
-            const SizedBox(width: 8),
-            OutlinedButton.icon(
-              onPressed: () => _add(context),
-              icon: const Icon(Icons.add_to_home_screen, size: 18),
-              label: Text(AppLocalizations.of(context).widgetAddToHome),
-            ),
-          ],
-        ),
-      ],
-    ),
-  );
-}
-
-class _WidgetPreview extends StatelessWidget {
-  const _WidgetPreview({required this.spec});
-  final _WidgetSpec spec;
-  @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(veriRadiusLg),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Column(
-        children: [
-          Row(
+    final l10n = AppLocalizations.of(context);
+    final controller = VeriFinScope.of(context);
+    final definitions = controller.userWidgetDefinitions;
+    return Scaffold(
+      body: SafeArea(
+        child: VeriPage(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      spec.previewLabel,
-                      style: TextStyle(
-                        color: scheme.onSurfaceVariant,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      spec.previewValue,
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ),
-              if (spec.showEntryButton)
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: veriRoyal,
-                    borderRadius: BorderRadius.circular(999),
+              VeriHeader(
+                title: l10n.myWidgetsTitle,
+                subtitle: l10n.myWidgetsSubtitle,
+                showBack: true,
+                actions: [
+                  HeaderAction(
+                    icon: Icons.add,
+                    tooltip: l10n.widgetCreateNew,
+                    onPressed: () => _create(WidgetTemplate.trend),
                   ),
-                  child: const Icon(Icons.add, size: 18, color: Colors.white),
+                ],
+              ),
+              const SizedBox(height: 14),
+              _SectionTitle(title: l10n.myWidgetsSection),
+              const SizedBox(height: 8),
+              if (definitions.isEmpty)
+                VeriCard(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.dashboard_customize_outlined,
+                        size: 40,
+                        color: veriRoyal,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        l10n.widgetEmpty,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.widgetEmptyHint,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                )
+              else
+                ...definitions.map(
+                  (definition) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _DefinitionCard(
+                      definition: definition,
+                      onEdit: () => _edit(definition),
+                      onDelete: () => _delete(definition),
+                      onAdd: () => _addToHome(definition),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 6),
+              _SectionTitle(title: l10n.widgetTemplatesSection),
+              const SizedBox(height: 8),
+              for (final template in WidgetTemplate.values)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _TemplateCard(
+                    template: template,
+                    onCreate: () => _create(template),
+                  ),
                 ),
             ],
           ),
-          if (spec.template == WidgetTemplate.trend) ...[
-            const SizedBox(height: 10),
-            SizedBox(
-              height: 36,
-              width: double.infinity,
-              child: CustomPaint(
-                painter: _WidgetPreviewSparklinePainter(color: scheme.primary),
-              ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.title});
+  final String title;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    title,
+    style: Theme.of(
+      context,
+    ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+  );
+}
+
+class _DefinitionCard extends StatelessWidget {
+  const _DefinitionCard({
+    required this.definition,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onAdd,
+  });
+  final UserWidgetDefinition definition;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return VeriCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          _DefinitionPreview(definition: definition),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    definition.name,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                Text(
+                  _sizeLabel(l10n, definition.size),
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+              ],
             ),
-          ],
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: onAdd,
+                    icon: const Icon(Icons.add_to_home_screen, size: 18),
+                    label: Text(l10n.widgetAddSaved),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                IconButton(
+                  tooltip: l10n.widgetEdit,
+                  onPressed: onEdit,
+                  icon: const Icon(Icons.edit_outlined),
+                ),
+                IconButton(
+                  tooltip: l10n.widgetDelete,
+                  onPressed: onDelete,
+                  icon: const Icon(Icons.delete_outline),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _WidgetPreviewSparklinePainter extends CustomPainter {
-  const _WidgetPreviewSparklinePainter({required this.color});
+class _TemplateCard extends StatelessWidget {
+  const _TemplateCard({required this.template, required this.onCreate});
+  final WidgetTemplate template;
+  final VoidCallback onCreate;
 
+  String _label(AppLocalizations l10n) => switch (template) {
+    WidgetTemplate.quickEntry => l10n.widgetQuickEntryName,
+    WidgetTemplate.budget => l10n.widgetBudgetName,
+    WidgetTemplate.trend => l10n.widgetTrendName,
+    WidgetTemplate.netWorth => l10n.widgetNetWorthName,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return VeriCard(
+      child: Row(
+        children: [
+          Icon(
+            switch (template) {
+              WidgetTemplate.quickEntry => Icons.add_circle_outline,
+              WidgetTemplate.budget => Icons.donut_large,
+              WidgetTemplate.trend => Icons.show_chart,
+              WidgetTemplate.netWorth => Icons.insights_outlined,
+            },
+            color: veriRoyal,
+            size: 28,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              _label(l10n),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            ),
+          ),
+          FilledButton.tonal(
+            onPressed: onCreate,
+            child: Text(l10n.widgetTemplateCreate),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DefinitionPreview extends StatelessWidget {
+  const _DefinitionPreview({required this.definition});
+  final UserWidgetDefinition definition;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final imageValue = definition.background.kind == WidgetBackgroundKind.asset
+        ? definition.background.value
+        : null;
+    ImageProvider? backgroundImage;
+    if (imageValue != null && imageValue.isNotEmpty) {
+      if (imageValue.startsWith('data:')) {
+        try {
+          backgroundImage = MemoryImage(
+            base64Decode(imageValue.split(',').skip(1).join(',')),
+          );
+        } on Object {
+          backgroundImage = null;
+        }
+      } else {
+        backgroundImage = FileImage(File(imageValue));
+      }
+    }
+    final size = switch (definition.size) {
+      WidgetSize.oneByOne => const Size(1, 1),
+      WidgetSize.twoByTwo => const Size(1.25, 1),
+      WidgetSize.fourByOne => const Size(2.4, 1),
+      WidgetSize.fourByTwo => const Size(2, 1),
+      WidgetSize.twoByFour => const Size(.72, 1),
+    };
+    return AspectRatio(
+      aspectRatio: size.width / size.height,
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(veriRadiusLg),
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (backgroundImage != null)
+              Image(
+                image: backgroundImage,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) =>
+                    ColoredBox(color: veriPreviewCanvasDark),
+              )
+            else
+              ColoredBox(
+                color: theme.brightness == Brightness.dark
+                    ? veriPreviewSurfaceDark
+                    : veriSurfaceLight,
+              ),
+            ColoredBox(color: Colors.black.withValues(alpha: .28)),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    definition.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    definition.primaryMetric?.name ?? '—',
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    definition.hideAmounts ? '••••' : '12,480',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  if (definition.chartMetric != null) ...[
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      height: 24,
+                      child: CustomPaint(
+                        painter: _PreviewLinePainter(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PreviewLinePainter extends CustomPainter {
+  const _PreviewLinePainter({required this.color});
   final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final path = Path();
-    const points = <double>[0.72, 0.64, 0.7, 0.44, 0.51, 0.3, 0.39, 0.2];
-    for (var i = 0; i < points.length; i++) {
-      final x = i * size.width / (points.length - 1);
-      final y = points[i] * size.height;
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
+    final path = Path()
+      ..moveTo(0, size.height * .8)
+      ..lineTo(size.width * .7, size.height * .25)
+      ..lineTo(size.width, size.height * .48);
     canvas.drawPath(
       path,
       Paint()
         ..color = color
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.5
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
+        ..strokeCap = StrokeCap.round,
     );
   }
 
   @override
-  bool shouldRepaint(_WidgetPreviewSparklinePainter oldDelegate) =>
+  bool shouldRepaint(_PreviewLinePainter oldDelegate) =>
       oldDelegate.color != color;
 }
 
-class WidgetConfigPage extends StatefulWidget {
-  const WidgetConfigPage({super.key, required this.template});
+class UserWidgetEditorPage extends StatefulWidget {
+  const UserWidgetEditorPage({
+    super.key,
+    this.template = WidgetTemplate.trend,
+    this.definition,
+  });
   final WidgetTemplate template;
+  final UserWidgetDefinition? definition;
+
   @override
-  State<WidgetConfigPage> createState() => _WidgetConfigPageState();
+  State<UserWidgetEditorPage> createState() => _UserWidgetEditorPageState();
 }
 
-class _WidgetConfigPageState extends State<WidgetConfigPage> {
-  late WidgetTemplate _template = widget.template;
-  String? _bookId;
-  WidgetMetric _metric = WidgetMetric.periodExpense;
-  WidgetChartMetric? _chart = WidgetChartMetric.expense;
-  WidgetMetric? _secondary;
-  WidgetDateRange _range = WidgetDateRange.thirtyDays;
-  WidgetAction _action = WidgetAction.app;
-  bool _hideAmounts = false;
+class _UserWidgetEditorPageState extends State<UserWidgetEditorPage> {
+  late WidgetTemplate _template =
+      widget.definition?.template ?? widget.template;
+  late WidgetSize _size = widget.definition?.size ?? WidgetSize.twoByTwo;
+  late WidgetMetric _metric =
+      widget.definition?.primaryMetric ?? WidgetMetric.periodExpense;
+  late WidgetMetric? _secondary =
+      widget.definition == null || widget.definition!.secondaryMetrics.isEmpty
+      ? null
+      : widget.definition!.secondaryMetrics.first;
+  late String? _bookId = widget.definition?.bookId;
+  late WidgetChartMetric? _chart =
+      widget.definition?.chartMetric ?? WidgetChartMetric.expense;
+  late WidgetDateRange _range =
+      widget.definition?.dateRange ?? WidgetDateRange.thirtyDays;
+  late WidgetAction _action = widget.definition?.action ?? WidgetAction.app;
+  late bool _hideAmounts = widget.definition?.hideAmounts ?? false;
+  late WidgetBackground _background =
+      widget.definition?.background ?? const WidgetBackground();
+  late final TextEditingController _name = TextEditingController(
+    text: widget.definition?.name,
+  );
 
   String _templateLabel(AppLocalizations l, WidgetTemplate t) => switch (t) {
     WidgetTemplate.quickEntry => l.widgetQuickEntryName,
@@ -350,32 +459,16 @@ class _WidgetConfigPageState extends State<WidgetConfigPage> {
     WidgetTemplate.trend => l.widgetTrendName,
     WidgetTemplate.netWorth => l.widgetNetWorthName,
   };
-
-  String _metricLabel(AppLocalizations l, WidgetMetric m) => switch (m) {
-    WidgetMetric.todayExpense => l.widgetMetricTodayExpense,
-    WidgetMetric.periodExpense => l.widgetMetricPeriodExpense,
-    WidgetMetric.periodIncome => l.widgetMetricPeriodIncome,
-    WidgetMetric.budgetRemaining => l.widgetMetricBudgetRemaining,
-    WidgetMetric.budgetUsed => l.widgetMetricBudgetUsed,
-    WidgetMetric.budgetRate => l.widgetMetricBudgetRate,
-    WidgetMetric.netWorth => l.widgetMetricNetWorth,
-    WidgetMetric.totalAssets => l.widgetMetricTotalAssets,
-    WidgetMetric.totalLiabilities => l.widgetMetricTotalLiabilities,
-    WidgetMetric.balance => l.widgetMetricBalance,
-    WidgetMetric.transactionCount => l.widgetMetricTransactionCount,
-    WidgetMetric.savingsRate => l.widgetMetricSavingsRate,
+  String _metricLabel(AppLocalizations l, WidgetMetric m) => m.name;
+  String _sizeLabel(AppLocalizations l, WidgetSize s) => switch (s) {
+    WidgetSize.oneByOne => '1 × 1',
+    WidgetSize.twoByTwo => '2 × 2',
+    WidgetSize.fourByOne => '4 × 1',
+    WidgetSize.fourByTwo => '4 × 2',
+    WidgetSize.twoByFour => '2 × 4',
   };
-
-  String _chartLabel(AppLocalizations l, WidgetChartMetric? m) => m == null
-      ? l.widgetNoChart
-      : switch (m) {
-          WidgetChartMetric.expense => l.widgetChartExpense,
-          WidgetChartMetric.income => l.widgetChartIncome,
-          WidgetChartMetric.net => l.widgetChartNet,
-          WidgetChartMetric.budgetUsage => l.widgetChartBudgetUsage,
-          WidgetChartMetric.netWorth => l.widgetChartNetWorth,
-        };
-
+  String _chartLabel(AppLocalizations l, WidgetChartMetric? m) =>
+      m == null ? l.widgetNoChart : m.name;
   String _rangeLabel(AppLocalizations l, WidgetDateRange r) => switch (r) {
     WidgetDateRange.sevenDays => l.widgetRange7d,
     WidgetDateRange.thirtyDays => l.widgetRange30d,
@@ -383,16 +476,92 @@ class _WidgetConfigPageState extends State<WidgetConfigPage> {
     WidgetDateRange.budgetCycle => l.widgetRangeCycle,
     WidgetDateRange.year => l.widgetRangeYear,
   };
+  String _actionLabel(AppLocalizations l, WidgetAction a) => switch (a) {
+    WidgetAction.app => l.widgetActionApp,
+    WidgetAction.entry => l.widgetActionEntry,
+    WidgetAction.budget => l.widgetActionBudget,
+    WidgetAction.trend => l.widgetActionTrend,
+    WidgetAction.assets => l.widgetActionAssets,
+    WidgetAction.profile => l.widgetActionProfile,
+  };
 
-  String _actionLabel(AppLocalizations l, WidgetAction action) =>
-      switch (action) {
-        WidgetAction.app => l.widgetActionApp,
-        WidgetAction.entry => l.widgetActionEntry,
-        WidgetAction.budget => l.widgetActionBudget,
-        WidgetAction.trend => l.widgetActionTrend,
-        WidgetAction.assets => l.widgetActionAssets,
-        WidgetAction.profile => l.widgetActionProfile,
-      };
+  Future<T?> _choose<T>({
+    required String title,
+    required List<T> values,
+    required T selected,
+    required String Function(T) labelOf,
+  }) => showOptionSheet(
+    context: context,
+    title: title,
+    values: values,
+    selected: selected,
+    labelOf: labelOf,
+  );
+
+  Future<void> _pickBackground() async {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 82,
+      maxWidth: 1600,
+      maxHeight: 1600,
+    );
+    if (picked == null || !mounted) return;
+    final bytes = await picked.readAsBytes();
+    if (!mounted) return;
+    setState(
+      () => _background = WidgetBackground(
+        kind: WidgetBackgroundKind.asset,
+        value: 'data:image/jpeg;base64,${base64Encode(bytes)}',
+        overlayOpacity: .28,
+      ),
+    );
+  }
+
+  Future<void> _save() async {
+    final l10n = AppLocalizations.of(context);
+    final controller = VeriFinScope.of(context);
+    final name = _name.text.trim().isEmpty
+        ? l10n.widgetDesignNameDefault
+        : _name.text.trim();
+    final definition = UserWidgetDefinition(
+      id:
+          widget.definition?.id ??
+          'uw_${DateTime.now().microsecondsSinceEpoch}',
+      name: name,
+      template: _template,
+      size: _size,
+      bookId: _bookId,
+      primaryMetric: _metric,
+      secondaryMetrics: _secondary == null ? const [] : [_secondary!],
+      chartMetric: _chart,
+      dateRange: _range,
+      hideAmounts: _hideAmounts,
+      action: _action,
+      background: _background,
+    );
+    final definitions = [...controller.userWidgetDefinitions];
+    final index = definitions.indexWhere((item) => item.id == definition.id);
+    if (index >= 0) {
+      definitions[index] = definition;
+    } else {
+      definitions.add(definition);
+    }
+    await controller.saveUserWidgetDefinitions(definitions);
+    if (!mounted) return;
+    unawaited(
+      VeriFeedbackHost.of(context).showMessage(
+        message: l10n.widgetDesignSaved,
+        tone: VeriFeedbackTone.success,
+      ),
+    );
+    Navigator.of(context).pop(true);
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -410,49 +579,71 @@ class _WidgetConfigPageState extends State<WidgetConfigPage> {
             padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
             children: [
               VeriHeader(
-                title: l.widgetConfigTitle,
+                title: widget.definition == null
+                    ? l.widgetCreateNew
+                    : l.widgetEdit,
                 showBack: true,
                 actions: [
-                  HeaderTextAction(label: l.widgetSaveConfig, onPressed: _save),
+                  HeaderTextAction(label: l.widgetSaveDesign, onPressed: _save),
                 ],
               ),
               const SizedBox(height: 10),
+              _DefinitionPreview(
+                definition: UserWidgetDefinition(
+                  id: 'preview',
+                  name: _name.text.isEmpty
+                      ? l.widgetDesignNameDefault
+                      : _name.text,
+                  template: _template,
+                  size: _size,
+                  primaryMetric: _metric,
+                  secondaryMetrics: _secondary == null
+                      ? const []
+                      : [_secondary!],
+                  chartMetric: _chart,
+                  dateRange: _range,
+                  hideAmounts: _hideAmounts,
+                  action: _action,
+                  background: _background,
+                ),
+              ),
+              const SizedBox(height: 12),
               VeriCard(
                 child: Column(
                   children: [
+                    TextField(
+                      controller: _name,
+                      decoration: InputDecoration(labelText: l.widgetName),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    const SizedBox(height: 10),
                     SelectField(
                       label: l.widgetTemplate,
                       value: _templateLabel(l, _template),
                       icon: Icons.dashboard_outlined,
                       onTap: () async {
-                        final v = await showOptionSheet(
-                          context: context,
+                        final v = await _choose(
                           title: l.widgetTemplate,
                           values: WidgetTemplate.values,
                           selected: _template,
-                          labelOf: (t) => _templateLabel(l, t),
+                          labelOf: (x) => _templateLabel(l, x),
                         );
                         if (v != null) setState(() => _template = v);
                       },
                     ),
                     const SizedBox(height: 10),
                     SelectField(
-                      label: l.widgetSecondaryMetric,
-                      value: _secondary == null
-                          ? l.widgetNoSecondaryMetric
-                          : _metricLabel(l, _secondary!),
-                      icon: Icons.view_agenda_outlined,
+                      label: l.widgetSize,
+                      value: _sizeLabel(l, _size),
+                      icon: Icons.aspect_ratio,
                       onTap: () async {
-                        final v = await showOptionSheet<WidgetMetric?>(
-                          context: context,
-                          title: l.widgetSecondaryMetric,
-                          values: <WidgetMetric?>[null, ...WidgetMetric.values],
-                          selected: _secondary,
-                          labelOf: (m) => m == null
-                              ? l.widgetNoSecondaryMetric
-                              : _metricLabel(l, m),
+                        final v = await _choose(
+                          title: l.widgetSize,
+                          values: WidgetSize.values,
+                          selected: _size,
+                          labelOf: (x) => _sizeLabel(l, x),
                         );
-                        setState(() => _secondary = v);
+                        if (v != null) setState(() => _size = v);
                       },
                     ),
                     const SizedBox(height: 10),
@@ -461,13 +652,10 @@ class _WidgetConfigPageState extends State<WidgetConfigPage> {
                       value: bookName,
                       icon: Icons.book_outlined,
                       onTap: () async {
-                        final v = await showOptionSheet(
+                        final v = await showOptionSheet<String?>(
                           context: context,
                           title: l.widgetBook,
-                          values: <String?>[
-                            null,
-                            ...c.ledgerBooks.map((b) => b.id),
-                          ],
+                          values: [null, ...c.ledgerBooks.map((b) => b.id)],
                           selected: _bookId,
                           labelOf: (id) => id == null
                               ? l.widgetCurrentBook
@@ -486,14 +674,33 @@ class _WidgetConfigPageState extends State<WidgetConfigPage> {
                       value: _metricLabel(l, _metric),
                       icon: Icons.insights_outlined,
                       onTap: () async {
-                        final v = await showOptionSheet(
-                          context: context,
+                        final v = await _choose(
                           title: l.widgetPrimaryMetric,
                           values: WidgetMetric.values,
                           selected: _metric,
-                          labelOf: (m) => _metricLabel(l, m),
+                          labelOf: (x) => _metricLabel(l, x),
                         );
                         if (v != null) setState(() => _metric = v);
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    SelectField(
+                      label: l.widgetSecondaryMetric,
+                      value: _secondary == null
+                          ? l.widgetNoSecondaryMetric
+                          : _metricLabel(l, _secondary!),
+                      icon: Icons.view_agenda_outlined,
+                      onTap: () async {
+                        final v = await showOptionSheet<WidgetMetric?>(
+                          context: context,
+                          title: l.widgetSecondaryMetric,
+                          values: [null, ...WidgetMetric.values],
+                          selected: _secondary,
+                          labelOf: (x) => x == null
+                              ? l.widgetNoSecondaryMetric
+                              : _metricLabel(l, x),
+                        );
+                        setState(() => _secondary = v);
                       },
                     ),
                     const SizedBox(height: 10),
@@ -505,12 +712,9 @@ class _WidgetConfigPageState extends State<WidgetConfigPage> {
                         final v = await showOptionSheet<WidgetChartMetric?>(
                           context: context,
                           title: l.widgetChart,
-                          values: <WidgetChartMetric?>[
-                            null,
-                            ...WidgetChartMetric.values,
-                          ],
+                          values: [null, ...WidgetChartMetric.values],
                           selected: _chart,
-                          labelOf: (m) => _chartLabel(l, m),
+                          labelOf: (x) => _chartLabel(l, x),
                         );
                         setState(() => _chart = v);
                       },
@@ -522,12 +726,11 @@ class _WidgetConfigPageState extends State<WidgetConfigPage> {
                         value: _rangeLabel(l, _range),
                         icon: Icons.date_range,
                         onTap: () async {
-                          final v = await showOptionSheet(
-                            context: context,
+                          final v = await _choose(
                             title: l.widgetDateRange,
                             values: WidgetDateRange.values,
                             selected: _range,
-                            labelOf: (r) => _rangeLabel(l, r),
+                            labelOf: (x) => _rangeLabel(l, x),
                           );
                           if (v != null) setState(() => _range = v);
                         },
@@ -539,15 +742,23 @@ class _WidgetConfigPageState extends State<WidgetConfigPage> {
                       value: _actionLabel(l, _action),
                       icon: Icons.touch_app_outlined,
                       onTap: () async {
-                        final v = await showOptionSheet(
-                          context: context,
+                        final v = await _choose(
                           title: l.widgetTapAction,
                           values: WidgetAction.values,
                           selected: _action,
-                          labelOf: (a) => _actionLabel(l, a),
+                          labelOf: (x) => _actionLabel(l, x),
                         );
                         if (v != null) setState(() => _action = v);
                       },
+                    ),
+                    const SizedBox(height: 10),
+                    SelectField(
+                      label: l.widgetBackground,
+                      value: _background.kind == WidgetBackgroundKind.asset
+                          ? l.widgetPhotoBackground
+                          : l.widgetThemeBackground,
+                      icon: Icons.wallpaper_outlined,
+                      onTap: _pickBackground,
                     ),
                     const SizedBox(height: 4),
                     SwitchListTile(
@@ -565,33 +776,12 @@ class _WidgetConfigPageState extends State<WidgetConfigPage> {
       ),
     );
   }
-
-  Future<void> _save() async {
-    final c = VeriFinScope.of(context);
-    final existing = c.widgetInstanceConfigs;
-    final id = DateTime.now().millisecondsSinceEpoch;
-    final config = WidgetInstanceConfig(
-      appWidgetId: id,
-      template: _template,
-      bookId: _bookId,
-      primaryMetric: _metric,
-      chartMetric: _chart,
-      secondaryMetrics: _secondary == null ? const [] : [_secondary!],
-      dateRange: _range,
-      hideAmounts: _hideAmounts,
-      action: _action,
-    );
-    await c.saveWidgetInstanceConfigs([
-      ...existing.where((x) => x.appWidgetId != id),
-      config,
-    ]);
-    if (!mounted) return;
-    unawaited(
-      VeriFeedbackHost.of(context).showMessage(
-        message: AppLocalizations.of(context).widgetConfigSaved,
-        tone: VeriFeedbackTone.success,
-      ),
-    );
-    Navigator.of(context).pop();
-  }
 }
+
+String _sizeLabel(AppLocalizations l10n, WidgetSize size) => switch (size) {
+  WidgetSize.oneByOne => '1 × 1',
+  WidgetSize.twoByTwo => '2 × 2',
+  WidgetSize.fourByOne => '4 × 1',
+  WidgetSize.fourByTwo => '4 × 2',
+  WidgetSize.twoByFour => '2 × 4',
+};
