@@ -424,9 +424,12 @@ class WidgetConfigStore {
     }
     final legacy = load(store);
     if (legacy.isEmpty) return const <UserWidgetDefinition>[];
-    return legacy
+    final migrated = legacy
         .map((item) => UserWidgetDefinition.fromInstance(item))
         .toList(growable: false);
+    // 将旧 appWidgetId 配置一次性写入新设计键，后续读取不再依赖旧格式。
+    saveDefinitionsSync(store, migrated);
+    return migrated;
   }
 
   static List<WidgetPlacement> loadPlacements(LocalKeyValueStore store) {
@@ -450,7 +453,7 @@ class WidgetConfigStore {
         // Ignore malformed local preference.
       }
     }
-    return load(store)
+    final migrated = load(store)
         .where((item) => item.appWidgetId > 0)
         .map(
           (item) => WidgetPlacement(
@@ -459,6 +462,8 @@ class WidgetConfigStore {
           ),
         )
         .toList(growable: false);
+    if (migrated.isNotEmpty) savePlacementsSync(store, migrated);
+    return migrated;
   }
 
   static void saveDefinitionsSync(
