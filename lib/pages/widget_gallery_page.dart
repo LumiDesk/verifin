@@ -380,8 +380,18 @@ class _MasonryCanvasState extends State<_MasonryCanvas> {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
+            if (widget.editing)
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: widget.onTapBlank,
+                ),
+              ),
             if (movingPlacement != null)
-              Positioned(
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                key: ValueKey('widget_drop_position_${moving!.id}'),
                 left: movingPlacement.left,
                 top: movingPlacement.top,
                 width: movingPlacement.width,
@@ -393,7 +403,12 @@ class _MasonryCanvasState extends State<_MasonryCanvas> {
             for (final item in renderPlaced)
               if (moving == null ||
                   renderDefinitions[item.index].id != moving.id)
-                Positioned(
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutCubic,
+                  key: ValueKey(
+                    'widget_position_${renderDefinitions[item.index].id}',
+                  ),
                   left: item.left,
                   top: item.top,
                   width: item.width,
@@ -438,28 +453,24 @@ class _MasonryCanvasState extends State<_MasonryCanvas> {
           ],
         ),
       );
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: widget.onTapBlank,
-        child: DragTarget<int>(
-          onWillAcceptWithDetails: (details) => widget.editing,
-          onMove: (details) {
-            final renderObject = context.findRenderObject();
-            if (renderObject is! RenderBox) return;
-            final point = renderObject.globalToLocal(details.offset);
-            final next = _targetForPoint(point, basePlaced);
-            if (_dropIndex != next) setState(() => _dropIndex = next);
-          },
-          onAcceptWithDetails: (details) {
-            final renderObject = context.findRenderObject();
-            if (renderObject is! RenderBox) return;
-            final point = renderObject.globalToLocal(details.offset);
-            final target = _targetForPoint(point, basePlaced);
-            widget.onReorder(details.data, _dropIndex ?? target);
-            _finishDrag();
-          },
-          builder: (context, candidates, rejected) => canvas,
-        ),
+      return DragTarget<int>(
+        onWillAcceptWithDetails: (details) => widget.editing,
+        onMove: (details) {
+          final renderObject = context.findRenderObject();
+          if (renderObject is! RenderBox) return;
+          final point = renderObject.globalToLocal(details.offset);
+          final next = _targetForPoint(point, basePlaced);
+          if (_dropIndex != next) setState(() => _dropIndex = next);
+        },
+        onAcceptWithDetails: (details) {
+          final renderObject = context.findRenderObject();
+          if (renderObject is! RenderBox) return;
+          final point = renderObject.globalToLocal(details.offset);
+          final target = _targetForPoint(point, basePlaced);
+          widget.onReorder(details.data, _dropIndex ?? target);
+          _finishDrag();
+        },
+        builder: (context, candidates, rejected) => canvas,
       );
     },
   );
@@ -675,7 +686,9 @@ class _TileLongPressTriggerState extends State<_TileLongPressTrigger> {
   void _start(PointerDownEvent event) {
     if (!widget.enabled) return;
     _timer?.cancel();
-    _timer = Timer(const Duration(milliseconds: 500), () {
+    // Fire ahead of the platform long-press boundary so the edit affordance
+    // is visible while the finger is still down, including slower frames.
+    _timer = Timer(const Duration(milliseconds: 300), () {
       if (mounted && widget.enabled) {
         widget.onTriggered();
       }

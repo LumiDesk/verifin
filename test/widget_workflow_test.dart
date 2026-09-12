@@ -166,7 +166,7 @@ void main() {
     expect(c.userWidgetDefinitions.single.id, 'second');
     // Stop the continuous edit-state wobble before asserting the reflowed tile.
     await tester.tapAt(Offset(firstPosition.dx + 240, firstPosition.dy + 40));
-    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 240));
     expect(
       tester.getTopLeft(find.byKey(const ValueKey('widget_tile_second'))),
       firstPosition,
