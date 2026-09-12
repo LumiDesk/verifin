@@ -129,4 +129,34 @@ class AppWidgetBridge {
       return false;
     }
   }
+
+  static Future<bool> pinUserWidget(String definitionId) async {
+    try {
+      final ok = await _channel.invokeMethod<bool>('pinUserWidget', {
+        'definitionId': definitionId,
+      });
+      return ok ?? false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  /// Push saved user designs to the native widget process. Android keeps its
+  /// own compact copy because a launcher may render a widget while Flutter is
+  /// not running.
+  static Future<void> syncUserWidgetDefinitions(
+    List<Map<String, Object?>> definitions,
+  ) async {
+    try {
+      await _channel.invokeMethod<void>('syncUserWidgetDefinitions', {
+        'definitions': definitions,
+      });
+    } on MissingPluginException {
+      // Non-Android hosts have no widget provider.
+    } on PlatformException {
+      // A stale native snapshot must not block normal ledger use.
+    }
+  }
 }

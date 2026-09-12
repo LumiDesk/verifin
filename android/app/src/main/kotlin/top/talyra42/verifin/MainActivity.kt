@@ -1,6 +1,7 @@
 package top.talyra42.verifin
 
 import android.Manifest
+import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.ContentValues
@@ -12,6 +13,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import android.provider.Settings
+import android.util.Base64
 import android.view.WindowManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -284,6 +286,7 @@ class MainActivity : FlutterFragmentActivity() {
                     bookId = map["bookId"]?.toString() ?: "",
                     action = map["action"]?.toString() ?: "app",
                     backgroundColor = color,
+                    backgroundPath = if (kind == "asset") decodeWidgetBackground(id, value) else "",
                     hideAmounts = map["hideAmounts"] as? Boolean ?: false,
                 ),
             )
@@ -292,6 +295,19 @@ class MainActivity : FlutterFragmentActivity() {
         WidgetData.removeDefinitionsNotIn(this, ids)
         UserWidgetProvider.refresh(this)
         result.success(true)
+    }
+
+    private fun decodeWidgetBackground(id: String, value: String): String {
+        if (!value.startsWith("data:") || !value.contains(",")) return value
+        return try {
+            val bytes = Base64.decode(value.substringAfter(','), Base64.DEFAULT)
+            if (bytes.size > 6 * 1024 * 1024) return ""
+            val file = File(filesDir, "widget-background-$id.jpg")
+            FileOutputStream(file).use { it.write(bytes) }
+            file.absolutePath
+        } catch (_: Exception) {
+            ""
+        }
     }
 
     private fun rangeDays(value: String): Int = when (value) {

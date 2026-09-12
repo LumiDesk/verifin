@@ -55,6 +55,10 @@ Future<void> pushWidgetData(VeriFinController controller) async {
   }
   final trendTotal = trendPoints.fold<double>(0, (sum, value) => sum + value);
 
+  await AppWidgetBridge.syncUserWidgetDefinitions(
+    controller.userWidgetDefinitions.map((item) => item.toJson()).toList(),
+  );
+
   String two(int n) => n.toString().padLeft(2, '0');
 
   await AppWidgetBridge.updateWidgetData(
