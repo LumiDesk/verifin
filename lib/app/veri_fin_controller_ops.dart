@@ -19,7 +19,43 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
 
   Future<void> saveUserWidgetDefinitions(
     Iterable<UserWidgetDefinition> definitions,
-  ) => WidgetConfigStore.saveDefinitions(_store, definitions);
+  ) async {
+    try {
+      await WidgetConfigStore.saveDefinitions(_store, definitions);
+    } on Object catch (error) {
+      _logger?.error(
+        'Widget definitions save failed',
+        source: 'widgets',
+        error: error,
+      );
+      rethrow;
+    }
+    onWidgetProjectionInvalidated?.call();
+  }
+
+  WidgetLedgerSnapshot? widgetLedgerSnapshot(
+    String? selectedBookId,
+    DateTime now,
+  ) {
+    final id = selectedBookId ?? _activeBookId;
+    final book = ledgerBooks.where((item) => item.id == id).firstOrNull;
+    if (book == null) return null;
+    final startDay = _budgetCycleStartDays[id] ?? naturalMonthStartDay;
+    final keyMonth = budgetCycleKeyMonthFor(now, startDay);
+    return WidgetLedgerSnapshot(
+      book: book,
+      entries: entriesForBook(id),
+      accounts: List.unmodifiable(_accounts.where((item) => item.bookId == id)),
+      rates: List.unmodifiable(
+        _exchangeRates.where((item) => item.bookId == id),
+      ),
+      budgetWindow: budgetCycleOfKeyMonth(keyMonth, startDay),
+      budget:
+          _monthlyBudgets['$id:${_monthKey(keyMonth)}'] ??
+          _monthlyBudgets[_defaultMonthlyBudgetKey(id)] ??
+          0,
+    );
+  }
 
   Future<void> saveWidgetPlacements(Iterable<WidgetPlacement> placements) =>
       WidgetConfigStore.savePlacements(_store, placements);

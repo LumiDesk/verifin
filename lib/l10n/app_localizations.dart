@@ -7154,12 +7154,6 @@ abstract class AppLocalizations {
   /// **'创建并管理你的桌面财务卡片'**
   String get myWidgetsSubtitle;
 
-  /// No description provided for @myWidgetsSection.
-  ///
-  /// In zh, this message translates to:
-  /// **'已保存的小组件'**
-  String get myWidgetsSection;
-
   /// No description provided for @widgetCreateNew.
   ///
   /// In zh, this message translates to:
@@ -7175,7 +7169,7 @@ abstract class AppLocalizations {
   /// No description provided for @widgetEmptyHint.
   ///
   /// In zh, this message translates to:
-  /// **'从下方基础模板创建一张属于你的财务卡片'**
+  /// **'点击右上角加号，创建你的第一个财务小组件'**
   String get widgetEmptyHint;
 
   /// No description provided for @widgetTemplatesSection.

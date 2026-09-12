@@ -3989,9 +3989,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Create and manage your desktop finance cards';
 
   @override
-  String get myWidgetsSection => 'Saved widgets';
-
-  @override
   String get widgetCreateNew => 'Create widget';
 
   @override
@@ -3999,7 +3996,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get widgetEmptyHint =>
-      'Create your own finance card from a template below';
+      'Tap the plus button to create your first finance widget';
 
   @override
   String get widgetTemplatesSection => 'Base templates';

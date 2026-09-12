@@ -36,6 +36,25 @@ enum WidgetSize {
   fourByTwo,
 }
 
+/// Size labels are rows × columns: 1×2 is horizontal, 2×2 is square,
+/// and 2×4 is the wide card. Legacy draft sizes normalize without data loss.
+WidgetSize supportedWidgetSize(WidgetSize size) => switch (size) {
+  WidgetSize.oneByOne || WidgetSize.fourByOne => WidgetSize.oneByTwo,
+  WidgetSize.fourByTwo => WidgetSize.twoByFour,
+  _ => size,
+};
+
+const supportedWidgetSizes = [
+  WidgetSize.oneByTwo,
+  WidgetSize.twoByTwo,
+  WidgetSize.twoByFour,
+];
+
+double widgetSizeAspect(WidgetSize size) => switch (supportedWidgetSize(size)) {
+  WidgetSize.twoByTwo => 1,
+  _ => 2,
+};
+
 enum WidgetBackgroundKind { theme, solid, asset }
 
 class WidgetBackground {
@@ -111,7 +130,7 @@ class UserWidgetDefinition {
     'id': id,
     'name': name,
     'template': _enumName(template),
-    'size': _enumName(size),
+    'size': _enumName(supportedWidgetSize(size)),
     if (bookId != null) 'bookId': bookId,
     if (primaryMetric != null) 'primaryMetric': _enumName(primaryMetric!),
     'secondaryMetrics': secondaryMetrics.map(_enumName).toList(),
@@ -145,10 +164,12 @@ class UserWidgetDefinition {
         json['template'] as String?,
         WidgetTemplate.quickEntry,
       ),
-      size: _enumFromName(
-        WidgetSize.values,
-        json['size'] as String?,
-        WidgetSize.twoByTwo,
+      size: supportedWidgetSize(
+        _enumFromName(
+          WidgetSize.values,
+          json['size'] as String?,
+          WidgetSize.twoByTwo,
+        ),
       ),
       bookId: json['bookId'] as String?,
       primaryMetric: json['primaryMetric'] == null

@@ -71,7 +71,7 @@ void main() {
     expect(WidgetConfigStore.loadDefinitions(store).single.name, '本月趋势');
     expect(
       WidgetConfigStore.loadDefinitions(store).single.size,
-      WidgetSize.fourByTwo,
+      WidgetSize.twoByFour,
     );
     expect(
       WidgetConfigStore.loadPlacements(store).single.definitionId,

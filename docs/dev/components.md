@@ -181,6 +181,8 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 
 ## 族 11 — AI 对话查询 UI
 
+桌面小组件的应用内预览统一使用 `pages/widget_design_preview.dart` 的 `WidgetDesignPreview`；画布、编辑页与拖动反馈共用尺寸、文字对齐及圆角。`app/widget_presentation.dart` 的 `buildWidgetPresentation` 接收 Controller 提供的 `WidgetLedgerSnapshot`，按所选账本、日期和筛选生成真实指标、预算进度和趋势；禁止为预览另造假数值、假比例或假折线。
+
 | 名称 | 类型 | 位置 | 用途 |
 |---|---|---|---|
 | `AiChatPage` | 页面 Widget | `ai_chat_page.dart` | 全屏 AI 财务 Agent 对话页（气泡 + 工具步骤 + 输入框 + 清空历史，未配置引导去设置）；`debugTransport` / `debugCompleteTransport` 供测试注入结构化传输 |

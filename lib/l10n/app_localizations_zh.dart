@@ -3886,16 +3886,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get myWidgetsSubtitle => '创建并管理你的桌面财务卡片';
 
   @override
-  String get myWidgetsSection => '已保存的小组件';
-
-  @override
   String get widgetCreateNew => '创建小组件';
 
   @override
   String get widgetEmpty => '还没有保存的小组件';
 
   @override
-  String get widgetEmptyHint => '从下方基础模板创建一张属于你的财务卡片';
+  String get widgetEmptyHint => '点击右上角加号，创建你的第一个财务小组件';
 
   @override
   String get widgetTemplatesSection => '基础模板';
