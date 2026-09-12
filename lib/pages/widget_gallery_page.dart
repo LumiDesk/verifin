@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../app/app_theme.dart';
 import '../app/avatar_picker.dart';
 import '../app/common_widgets.dart';
@@ -237,7 +238,7 @@ class WidgetCreatePage extends StatelessWidget {
   }
 }
 
-class _MasonryCanvas extends StatelessWidget {
+class _MasonryCanvas extends StatefulWidget {
   const _MasonryCanvas({
     required this.definitions,
     required this.editing,
@@ -258,50 +259,121 @@ class _MasonryCanvas extends StatelessWidget {
   final void Function(int from, int to) onReorder;
 
   @override
+  State<_MasonryCanvas> createState() => _MasonryCanvasState();
+}
+
+class _MasonryCanvasState extends State<_MasonryCanvas> {
+  int? _draggingIndex;
+  int? _dropIndex;
+
+  void _startDrag(int index) {
+    if (widget.editing && _draggingIndex == index) return;
+    if (VeriFinScope.of(context).hapticsEnabled) {
+      unawaited(HapticFeedback.mediumImpact());
+    }
+    setState(() {
+      _draggingIndex = index;
+      _dropIndex = index;
+    });
+  }
+
+  void _finishDrag() {
+    if (!mounted) return;
+    setState(() {
+      _draggingIndex = null;
+      _dropIndex = null;
+    });
+  }
+
+  List<_MasonryPlacement> _placements(
+    List<UserWidgetDefinition> definitions,
+    double maxWidth,
+  ) {
+    final columns = maxWidth >= 560 ? 3 : 2;
+    const gap = 10.0;
+    final cellWidth = (maxWidth - gap * (columns - 1)) / columns;
+    final heights = List<double>.filled(columns, 0);
+    final placed = <_MasonryPlacement>[];
+    for (var index = 0; index < definitions.length; index++) {
+      final definition = definitions[index];
+      final wide = supportedWidgetSize(definition.size) == WidgetSize.twoByFour;
+      final span = wide ? columns : 1;
+      final width = cellWidth * span + gap * (span - 1);
+      final height = width / widgetSizeAspect(definition.size);
+      final start = span == columns
+          ? 0
+          : List.generate(
+              columns - span + 1,
+              (i) => i,
+            ).reduce((a, b) => heights[a] <= heights[b] ? a : b);
+      final top = span == columns
+          ? heights.reduce(math.max)
+          : heights.sublist(start, start + span).reduce(math.max);
+      placed.add(
+        _MasonryPlacement(
+          index: index,
+          left: start * (cellWidth + gap),
+          top: top,
+          width: width,
+          height: height,
+        ),
+      );
+      for (var column = start; column < start + span; column++) {
+        heights[column] = top + height + gap;
+      }
+    }
+    return placed;
+  }
+
+  int _targetForPoint(Offset point, List<_MasonryPlacement> placed) {
+    var target = placed.length;
+    for (final item in placed) {
+      final horizontal =
+          point.dx >= item.left && point.dx <= item.left + item.width;
+      final vertical =
+          point.dy >= item.top && point.dy <= item.top + item.height;
+      if (horizontal && vertical) return item.index;
+      if (vertical && point.dx > item.left + item.width) {
+        target = math.max(target, item.index + 1);
+      } else if (point.dy < item.top && target == placed.length) {
+        target = item.index;
+      }
+    }
+    return target.clamp(0, placed.length);
+  }
+
+  @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final columns = constraints.maxWidth >= 560 ? 3 : 2;
-      final gap = 10.0;
-      final cellWidth = (constraints.maxWidth - gap * (columns - 1)) / columns;
-      final heights = List<double>.filled(columns, 0);
-      final placed = <_MasonryPlacement>[];
-      for (var index = 0; index < definitions.length; index++) {
-        final definition = definitions[index];
-        final wide =
-            supportedWidgetSize(definition.size) == WidgetSize.twoByFour;
-        final span = wide ? columns : 1;
-        final width = cellWidth * span + gap * (span - 1);
-        final height = width / widgetSizeAspect(definition.size);
-        final start = span == columns
-            ? 0
-            : List.generate(
-                columns - span + 1,
-                (i) => i,
-              ).reduce((a, b) => heights[a] <= heights[b] ? a : b);
-        final top = span == columns
-            ? heights.reduce(math.max)
-            : heights.sublist(start, start + span).reduce(math.max);
-        placed.add(
-          _MasonryPlacement(
-            index: index,
-            left: start * (cellWidth + gap),
-            top: top,
-            width: width,
-            height: height,
-          ),
-        );
-        for (var column = start; column < start + span; column++) {
-          heights[column] = top + height + gap;
-        }
-      }
-      final totalHeight = heights.isEmpty
+      final definitions = widget.definitions;
+      final placed = _placements(definitions, constraints.maxWidth);
+      final totalHeight = placed.isEmpty
           ? 0.0
-          : heights.reduce(math.max) - gap;
+          : placed.map((item) => item.top + item.height).reduce(math.max);
+      final dragging = _draggingIndex;
+      _MasonryPlacement? dropPlacement;
+      if (dragging != null && _dropIndex != null) {
+        final moving = definitions[dragging];
+        final reordered = [...definitions]..removeAt(dragging);
+        reordered.insert(_dropIndex!.clamp(0, reordered.length), moving);
+        final preview = _placements(reordered, constraints.maxWidth);
+        dropPlacement = preview.firstWhere(
+          (item) => item.index == reordered.indexOf(moving),
+        );
+      }
       final canvas = SizedBox(
         height: totalHeight,
         child: Stack(
           clipBehavior: Clip.none,
           children: [
+            if (dropPlacement != null)
+              Positioned(
+                left: dropPlacement.left,
+                top: dropPlacement.top,
+                width: dropPlacement.width,
+                height: dropPlacement.height,
+                child: const _WidgetDropPlaceholder(),
+              ),
             for (final item in placed)
               Positioned(
                 left: item.left,
@@ -314,12 +386,20 @@ class _MasonryCanvas extends StatelessWidget {
                   ),
                   definition: definitions[item.index],
                   sourceIndex: item.index,
-                  editing: editing,
-                  deleteVisible: activeTileId == definitions[item.index].id,
-                  onTap: () => onTap(definitions[item.index]),
-                  onLongPress: () => onLongPress(definitions[item.index].id),
-                  onDelete: () => onDelete(definitions[item.index].id),
-                  onReorder: (from) => onReorder(from, item.index),
+                  tileWidth: item.width,
+                  tileHeight: item.height,
+                  editing: widget.editing,
+                  deleteVisible:
+                      widget.activeTileId == definitions[item.index].id,
+                  onTap: () => widget.onTap(definitions[item.index]),
+                  onLongPress: () {
+                    _startDrag(item.index);
+                    widget.onLongPress(definitions[item.index].id);
+                  },
+                  onDelete: () => widget.onDelete(definitions[item.index].id),
+                  onReorder: (from) => widget.onReorder(from, item.index),
+                  onDragStarted: () => _startDrag(item.index),
+                  onDragFinished: _finishDrag,
                 ),
               ),
           ],
@@ -327,38 +407,68 @@ class _MasonryCanvas extends StatelessWidget {
       );
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: onTapBlank,
+        onTap: widget.onTapBlank,
         child: DragTarget<int>(
-          onWillAcceptWithDetails: (details) => editing,
+          onWillAcceptWithDetails: (details) => widget.editing,
+          onMove: (details) {
+            final renderObject = context.findRenderObject();
+            if (renderObject is! RenderBox) return;
+            final point = renderObject.globalToLocal(details.offset);
+            final next = _targetForPoint(point, placed);
+            if (_dropIndex != next) setState(() => _dropIndex = next);
+          },
           onAcceptWithDetails: (details) {
             final renderObject = context.findRenderObject();
             if (renderObject is! RenderBox) return;
             final point = renderObject.globalToLocal(details.offset);
-            var target = placed.length;
-            for (final item in placed) {
-              final horizontal =
-                  point.dx >= item.left && point.dx <= item.left + item.width;
-              final vertical =
-                  point.dy >= item.top && point.dy <= item.top + item.height;
-              if (horizontal && vertical) {
-                target = item.index;
-                break;
-              }
-              // A blank cell beside a tile is still an insertion point. This
-              // lets a compact tile move into the open column beside a square.
-              if (vertical && point.dx > item.left + item.width) {
-                target = math.max(target, item.index + 1);
-              } else if (point.dy < item.top && target == placed.length) {
-                target = item.index;
-              }
-            }
-            onReorder(details.data, target);
+            final target = _targetForPoint(point, placed);
+            widget.onReorder(details.data, _dropIndex ?? target);
+            _finishDrag();
           },
           builder: (context, candidates, rejected) => canvas,
         ),
       );
     },
   );
+}
+
+class _WidgetDropPlaceholder extends StatelessWidget {
+  const _WidgetDropPlaceholder();
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+    painter: _WidgetDropPlaceholderPainter(
+      color: Theme.of(context).colorScheme.primary,
+    ),
+  );
+}
+
+class _WidgetDropPlaceholderPainter extends CustomPainter {
+  const _WidgetDropPlaceholderPainter({required this.color});
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = RRect.fromRectAndRadius(
+      (Offset.zero & size).deflate(1.5),
+      Radius.circular(veriRadiusLg),
+    );
+    final paint = Paint()
+      ..color = color.withValues(alpha: .78)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5;
+    final path = Path()..addRRect(rect);
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        canvas.drawPath(metric.extractPath(distance, distance + 8), paint);
+        distance += 14;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_WidgetDropPlaceholderPainter old) => old.color != color;
 }
 
 class _MasonryPlacement {
@@ -381,21 +491,29 @@ class _MasonryTile extends StatelessWidget {
     super.key,
     required this.definition,
     required this.sourceIndex,
+    required this.tileWidth,
+    required this.tileHeight,
     required this.editing,
     required this.deleteVisible,
     required this.onTap,
     required this.onLongPress,
     required this.onDelete,
     required this.onReorder,
+    required this.onDragStarted,
+    required this.onDragFinished,
   });
   final UserWidgetDefinition definition;
   final int sourceIndex;
+  final double tileWidth;
+  final double tileHeight;
   final bool editing;
   final bool deleteVisible;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
   final VoidCallback onDelete;
   final ValueChanged<int> onReorder;
+  final VoidCallback onDragStarted;
+  final VoidCallback onDragFinished;
 
   @override
   Widget build(BuildContext context) {
@@ -409,16 +527,15 @@ class _MasonryTile extends StatelessWidget {
     );
     final child = LongPressDraggable<int>(
       data: sourceIndex,
-      onDragStarted: () => onLongPress(),
-      childWhenDragging: tile,
+      onDragStarted: onDragStarted,
+      onDragEnd: (_) => onDragFinished(),
+      childWhenDragging: const _WidgetDropPlaceholder(),
       feedback: Material(
         color: Colors.transparent,
         child: SizedBox(
-          width: _feedbackWidth(context),
-          child: _WobblingTile(
-            enabled: false,
-            child: WidgetDesignPreview(definition: definition),
-          ),
+          width: tileWidth,
+          height: tileHeight,
+          child: WidgetDesignPreview(definition: definition, width: tileWidth),
         ),
       ),
       child: _WobblingTile(enabled: editing, child: tile),
@@ -432,20 +549,34 @@ class _MasonryTile extends StatelessWidget {
           Positioned(
             top: -14,
             right: -14,
-            child: Material(
-              color: Theme.of(context).colorScheme.error,
-              shape: const CircleBorder(),
-              elevation: 3,
-              child: IconButton(
-                tooltip: AppLocalizations.of(context).widgetDelete,
-                key: ValueKey('widget_delete_${definition.id}'),
-                onPressed: onDelete,
-                icon: const Icon(Icons.close, color: Colors.white, size: 18),
-                constraints: const BoxConstraints.tightFor(
-                  width: 38,
-                  height: 38,
+            child: SizedBox(
+              width: 44,
+              height: 44,
+              child: Center(
+                child: Material(
+                  color: veriSemantic(context, veriExpense),
+                  shape: CircleBorder(
+                    side: BorderSide(
+                      color: Theme.of(context).colorScheme.surface,
+                      width: 1.5,
+                    ),
+                  ),
+                  elevation: 2,
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: onDelete,
+                    child: Semantics(
+                      button: true,
+                      label: AppLocalizations.of(context).widgetDelete,
+                      child: SizedBox(
+                        key: ValueKey('widget_delete_${definition.id}'),
+                        width: 24,
+                        height: 24,
+                        child: CustomPaint(painter: _DeleteBadgePainter()),
+                      ),
+                    ),
+                  ),
                 ),
-                padding: EdgeInsets.zero,
               ),
             ),
           ),
@@ -457,11 +588,32 @@ class _MasonryTile extends StatelessWidget {
       child: stack,
     );
   }
+}
 
-  double _feedbackWidth(BuildContext context) {
-    final size = supportedWidgetSize(definition.size);
-    return size == WidgetSize.twoByFour ? 320 : 160;
+class _DeleteBadgePainter extends CustomPainter {
+  const _DeleteBadgePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 2.4
+      ..strokeCap = StrokeCap.round;
+    final inset = size.width * .31;
+    canvas.drawLine(
+      Offset(inset, inset),
+      Offset(size.width - inset, size.height - inset),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(size.width - inset, inset),
+      Offset(inset, size.height - inset),
+      paint,
+    );
   }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 /// Starts the edit affordance at the long-press boundary while leaving the
@@ -487,7 +639,9 @@ class _TileLongPressTriggerState extends State<_TileLongPressTrigger> {
     if (!widget.enabled) return;
     _timer?.cancel();
     _timer = Timer(const Duration(milliseconds: 500), () {
-      if (mounted && widget.enabled) widget.onTriggered();
+      if (mounted && widget.enabled) {
+        widget.onTriggered();
+      }
     });
   }
 
@@ -528,7 +682,6 @@ class _WobblingTile extends StatefulWidget {
 
 class _WobblingTileState extends State<_WobblingTile>
     with SingleTickerProviderStateMixin {
-  Timer? _stopTimer;
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 260),
@@ -537,11 +690,6 @@ class _WobblingTileState extends State<_WobblingTile>
   @override
   void initState() {
     super.initState();
-    _controller.addStatusListener((status) {
-      if (status == AnimationStatus.completed && mounted) {
-        _controller.value = .5;
-      }
-    });
     if (widget.enabled) _startWobble();
   }
 
@@ -551,7 +699,6 @@ class _WobblingTileState extends State<_WobblingTile>
     if (widget.enabled && !oldWidget.enabled) {
       _startWobble();
     } else if (!widget.enabled && oldWidget.enabled) {
-      _stopTimer?.cancel();
       _controller.stop();
       _controller.value = .5;
     }
@@ -559,21 +706,12 @@ class _WobblingTileState extends State<_WobblingTile>
 
   @override
   void dispose() {
-    _stopTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
   void _startWobble() {
-    _stopTimer?.cancel();
     _controller.repeat(reverse: true);
-    // Keep the edit-state affordance visible long enough to register without
-    // leaving an endless ticker running after the transition has settled.
-    _stopTimer = Timer(const Duration(milliseconds: 900), () {
-      if (!mounted) return;
-      _controller.stop();
-      _controller.value = .5;
-    });
   }
 
   @override

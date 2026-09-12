@@ -150,20 +150,23 @@ void main() {
       find.byKey(const ValueKey('widget_tile_first')),
     );
     await tester.longPress(find.byKey(const ValueKey('widget_tile_first')));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 100));
     expect(tester.takeException(), isNull);
     expect(find.byKey(const ValueKey('widget_delete_first')), findsOneWidget);
     expect(find.byKey(const ValueKey('widget_delete_second')), findsNothing);
     await tester.tap(find.byKey(const ValueKey('widget_delete_first')));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 100));
     await tester.tap(find.text('取消'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 100));
     expect(c.userWidgetDefinitions, hasLength(2));
     await tester.tap(find.byKey(const ValueKey('widget_delete_first')));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 100));
     await tester.tap(find.widgetWithText(FilledButton, '删除'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 100));
     expect(c.userWidgetDefinitions.single.id, 'second');
+    // Stop the continuous edit-state wobble before asserting the reflowed tile.
+    await tester.tapAt(Offset(firstPosition.dx + 240, firstPosition.dy + 40));
+    await tester.pump(const Duration(milliseconds: 100));
     expect(
       tester.getTopLeft(find.byKey(const ValueKey('widget_tile_second'))),
       firstPosition,
@@ -189,7 +192,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.longPress(find.byKey(const ValueKey('widget_tile_only')));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 100));
     expect(find.byKey(const ValueKey('widget_delete_only')), findsOneWidget);
     // The right half of a one-column tile is intentionally empty canvas.
     final tileRect = tester.getRect(
@@ -225,13 +228,13 @@ void main() {
     final a = find.byKey(const ValueKey('widget_tile_a'));
     final b = find.byKey(const ValueKey('widget_tile_b'));
     await tester.longPress(a);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 100));
     final gesture = await tester.startGesture(tester.getCenter(a));
     await tester.pump(const Duration(milliseconds: 600));
     await gesture.moveTo(tester.getCenter(b));
     await tester.pump(const Duration(milliseconds: 100));
     await gesture.up();
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 100));
     expect(c.userWidgetDefinitions.map((item) => item.id), ['b', 'a']);
     expect(tester.takeException(), isNull);
   });
