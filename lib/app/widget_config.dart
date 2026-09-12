@@ -27,7 +27,14 @@ enum WidgetAction { app, entry, budget, trend, assets, profile }
 enum WidgetDateRange { sevenDays, thirtyDays, ninetyDays, budgetCycle, year }
 
 /// 桌面尺寸（Android 启动器以 cell 为单位）。
-enum WidgetSize { oneByOne, twoByTwo, fourByOne, fourByTwo, twoByFour }
+enum WidgetSize {
+  oneByTwo,
+  twoByTwo,
+  twoByFour,
+  oneByOne,
+  fourByOne,
+  fourByTwo,
+}
 
 enum WidgetBackgroundKind { theme, solid, asset }
 

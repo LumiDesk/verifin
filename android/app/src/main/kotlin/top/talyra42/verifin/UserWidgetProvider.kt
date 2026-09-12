@@ -38,7 +38,6 @@ class UserWidgetProvider : AppWidgetProvider() {
             val definition = WidgetData.readDefinition(context, definitionId)
                 ?: WidgetData.UserDefinition(id = "fallback")
             val views = RemoteViews(context.packageName, R.layout.user_widget)
-            views.setInt(R.id.user_widget_root, "setBackgroundColor", definition.backgroundColor)
             val bitmap = definition.backgroundPath.takeIf { it.isNotBlank() }?.let {
                 runCatching { BitmapFactory.decodeFile(it) }.getOrNull()
             }

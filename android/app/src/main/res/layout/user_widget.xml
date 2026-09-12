@@ -3,7 +3,7 @@
     android:id="@+id/user_widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FF1E293B"
+    android:background="@drawable/widget_background"
     android:clipToOutline="true">
 
     <ImageView

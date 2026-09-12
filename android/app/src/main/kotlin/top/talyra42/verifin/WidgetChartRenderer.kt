@@ -5,6 +5,8 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Color
+import android.graphics.LinearGradient
+import android.graphics.Shader
 
 /** Small, allocation-light sparkline suitable for RemoteViews ImageView. */
 object WidgetChartRenderer {
@@ -22,6 +24,20 @@ object WidgetChartRenderer {
             val y = height - 8f - ((value - min) / (max - min)) * (height - 16f)
             if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
+        val area = Path(path)
+        area.lineTo(width.toFloat(), height.toFloat())
+        area.lineTo(0f, height.toFloat())
+        area.close()
+        val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            shader = LinearGradient(
+                0f, 0f, 0f, height.toFloat(),
+                Color.argb(100, 52, 110, 219),
+                Color.argb(0, 52, 110, 219),
+                Shader.TileMode.CLAMP,
+            )
+            style = Paint.Style.FILL
+        }
+        canvas.drawPath(area, fill)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.rgb(52, 110, 219)
             style = Paint.Style.STROKE

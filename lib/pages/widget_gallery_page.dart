@@ -4,12 +4,12 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-
 import '../app/app_theme.dart';
+import '../app/avatar_picker.dart';
 import '../app/common_widgets.dart';
 import '../app/currency_math.dart';
 import '../app/feedback.dart';
+import '../app/image_cropper.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
 import '../app/platform_bridge.dart';
@@ -129,17 +129,7 @@ class _WidgetGalleryPageState extends State<WidgetGalleryPage> {
                 ],
               ),
               const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(child: _SectionTitle(title: l10n.myWidgetsSection)),
-                  if (ordered.isNotEmpty)
-                    TextButton.icon(
-                      onPressed: () => setState(() => _editing = !_editing),
-                      icon: Icon(_editing ? Icons.check : Icons.tune, size: 18),
-                      label: Text(_editing ? l10n.commonDone : l10n.widgetEdit),
-                    ),
-                ],
-              ),
+              _SectionTitle(title: l10n.myWidgetsSection),
               const SizedBox(height: 8),
               if (definitions.isEmpty)
                 VeriCard(
@@ -534,9 +524,7 @@ class _DefinitionPreview extends StatelessWidget {
     final surface = AspectRatio(
       aspectRatio: aspect,
       child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(veriRadiusLg),
-        ),
+        borderRadius: BorderRadius.circular(veriRadiusLg),
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -554,6 +542,44 @@ class _DefinitionPreview extends StatelessWidget {
                     : veriSurfaceLight,
               ),
             ColoredBox(color: Colors.black.withValues(alpha: .28)),
+            if (definition.template == WidgetTemplate.quickEntry)
+              Positioned(
+                top: 12,
+                right: 12,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: veriRoyal,
+                    borderRadius: BorderRadius.circular(veriRadiusMd),
+                  ),
+                  child: const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Icon(Icons.add, color: Colors.white, size: 20),
+                  ),
+                ),
+              ),
+            if (definition.template == WidgetTemplate.budget)
+              const Positioned(
+                top: 14,
+                right: 14,
+                child: SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: CustomPaint(painter: _BudgetRingPreviewPainter()),
+                ),
+              ),
+            if (definition.template == WidgetTemplate.netWorth)
+              const Positioned(
+                right: 14,
+                bottom: 12,
+                child: Text(
+                  '+2.4%',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
             Padding(
               padding: EdgeInsets.all(compact ? 8 : 16),
               child: Column(
@@ -614,6 +640,7 @@ class _DefinitionPreview extends StatelessWidget {
 }
 
 Size _previewSize(WidgetSize size) => switch (size) {
+  WidgetSize.oneByTwo => const Size(220, 110),
   WidgetSize.oneByOne => const Size(124, 124),
   WidgetSize.twoByTwo => const Size(220, 176),
   WidgetSize.fourByOne => const Size(320, 80),
@@ -622,6 +649,7 @@ Size _previewSize(WidgetSize size) => switch (size) {
 };
 
 double _widgetAspect(WidgetSize size) => switch (size) {
+  WidgetSize.oneByTwo => 2,
   WidgetSize.oneByOne => 1,
   WidgetSize.twoByTwo => 1.25,
   WidgetSize.fourByOne => 4,
@@ -635,12 +663,28 @@ class _PreviewLinePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final path = Path()
+    final line = Path()
       ..moveTo(0, size.height * .8)
-      ..lineTo(size.width * .7, size.height * .25)
-      ..lineTo(size.width, size.height * .48);
+      ..lineTo(size.width * .24, size.height * .62)
+      ..lineTo(size.width * .5, size.height * .22)
+      ..lineTo(size.width * .72, size.height * .46)
+      ..lineTo(size.width, size.height * .34);
+    final area = Path.from(line)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
     canvas.drawPath(
-      path,
+      area,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [color.withValues(alpha: .34), color.withValues(alpha: 0)],
+        ).createShader(Offset.zero & size)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawPath(
+      line,
       Paint()
         ..color = color
         ..style = PaintingStyle.stroke
@@ -652,6 +696,29 @@ class _PreviewLinePainter extends CustomPainter {
   @override
   bool shouldRepaint(_PreviewLinePainter oldDelegate) =>
       oldDelegate.color != color;
+}
+
+class _BudgetRingPreviewPainter extends CustomPainter {
+  const _BudgetRingPreviewPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    canvas.drawArc(
+      rect.deflate(3),
+      -math.pi / 2,
+      math.pi * 1.45,
+      false,
+      Paint()
+        ..color = Colors.white.withValues(alpha: .92)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_BudgetRingPreviewPainter oldDelegate) => false;
 }
 
 class UserWidgetEditorPage extends StatefulWidget {
@@ -711,6 +778,7 @@ class _UserWidgetEditorPageState extends State<UserWidgetEditorPage> {
     WidgetMetric.savingsRate => l.widgetMetricSavingsRate,
   };
   String _sizeLabel(AppLocalizations l, WidgetSize s) => switch (s) {
+    WidgetSize.oneByTwo => '1 × 2',
     WidgetSize.oneByOne => '1 × 1',
     WidgetSize.twoByTwo => '2 × 2',
     WidgetSize.fourByOne => '4 × 1',
@@ -755,23 +823,67 @@ class _UserWidgetEditorPageState extends State<UserWidgetEditorPage> {
     labelOf: labelOf,
   );
 
+  List<VeriMenuEntry> _backgroundMenuEntries(AppLocalizations l) => [
+    VeriMenuItem(
+      id: 'widget_background_theme',
+      icon: Icons.palette_outlined,
+      title: l.widgetThemeBackground,
+      selected: _background.kind == WidgetBackgroundKind.theme,
+      onPressed: () => setState(() => _background = const WidgetBackground()),
+    ),
+    VeriMenuItem(
+      id: 'widget_background_local',
+      icon: Icons.photo_library_outlined,
+      title: l.widgetPickPhoto,
+      onPressed: _pickBackground,
+    ),
+    VeriMenuItem(
+      id: 'widget_background_clear',
+      icon: Icons.hide_image_outlined,
+      title: l.coverClear,
+      enabled: _background.kind == WidgetBackgroundKind.asset,
+      foregroundColor: Theme.of(context).colorScheme.error,
+      onPressed: () => setState(() => _background = const WidgetBackground()),
+    ),
+  ];
+
   Future<void> _pickBackground() async {
-    final picked = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 82,
-      maxWidth: 1600,
-      maxHeight: 1600,
+    final l = AppLocalizations.of(context);
+    final rawImage = await pickRawImageDataUrl();
+    if (rawImage == null || !mounted) return;
+    final crop = await showImageCropper(
+      context: context,
+      imageDataUrl: rawImage,
+      title: l.widgetBackground,
+      aspectRatio: _widgetAspect(_size),
     );
-    if (picked == null || !mounted) return;
-    final bytes = await picked.readAsBytes();
-    if (!mounted) return;
-    setState(
-      () => _background = WidgetBackground(
-        kind: WidgetBackgroundKind.asset,
-        value: 'data:image/jpeg;base64,${base64Encode(bytes)}',
-        overlayOpacity: .28,
+    if (crop == null || !mounted) return;
+    final targetWidth = 1200;
+    final targetHeight = (targetWidth / _widgetAspect(_size)).round().clamp(
+      300,
+      1800,
+    );
+    final dataUrl = await runWithLoadingDialog<String?>(
+      context: context,
+      message: l.widgetBackground,
+      task: () => cropImageDataUrl(
+        sourceDataUrl: rawImage,
+        targetWidth: targetWidth,
+        targetHeight: targetHeight,
+        zoom: crop.zoom,
+        offsetX: crop.offsetX,
+        offsetY: crop.offsetY,
       ),
     );
+    if (dataUrl != null && mounted) {
+      setState(
+        () => _background = WidgetBackground(
+          kind: WidgetBackgroundKind.asset,
+          value: dataUrl,
+          overlayOpacity: .38,
+        ),
+      );
+    }
   }
 
   Future<void> _save() async {
@@ -885,7 +997,7 @@ class _UserWidgetEditorPageState extends State<UserWidgetEditorPage> {
                       tooltip: l.widgetDelete,
                       onPressed: _deleteDesign,
                     ),
-                  HeaderTextAction(label: l.widgetSaveDesign, onPressed: _save),
+                  SaveHeaderAction(onPressed: _save),
                 ],
               ),
               const SizedBox(height: 10),
@@ -940,7 +1052,11 @@ class _UserWidgetEditorPageState extends State<UserWidgetEditorPage> {
                       onTap: () async {
                         final v = await _choose(
                           title: l.widgetSize,
-                          values: WidgetSize.values,
+                          values: const [
+                            WidgetSize.oneByTwo,
+                            WidgetSize.twoByTwo,
+                            WidgetSize.twoByFour,
+                          ],
                           selected: _size,
                           labelOf: (x) => _sizeLabel(l, x),
                         );
@@ -1053,13 +1169,19 @@ class _UserWidgetEditorPageState extends State<UserWidgetEditorPage> {
                       },
                     ),
                     const SizedBox(height: 10),
-                    SelectField(
-                      label: l.widgetBackground,
-                      value: _background.kind == WidgetBackgroundKind.asset
-                          ? l.widgetPhotoBackground
-                          : l.widgetThemeBackground,
-                      icon: Icons.wallpaper_outlined,
-                      onTap: _pickBackground,
+                    VeriAnchoredMenuAnchor(
+                      entries: _backgroundMenuEntries(l),
+                      semanticLabel: l.widgetBackground,
+                      width: 216,
+                      builder: (context, openMenu, menuOpen) => SettingsRow(
+                        icon: Icons.wallpaper_outlined,
+                        title: l.widgetBackground,
+                        trailing: _background.kind == WidgetBackgroundKind.asset
+                            ? l.widgetPhotoBackground
+                            : l.widgetThemeBackground,
+                        trailingIcon: Icons.keyboard_arrow_down,
+                        onTap: openMenu,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     SwitchListTile(
