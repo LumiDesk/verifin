@@ -296,7 +296,23 @@ class _DefinitionPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    final metricLabel = switch (definition.primaryMetric) {
+      WidgetMetric.todayExpense => l10n.widgetMetricTodayExpense,
+      WidgetMetric.periodExpense => l10n.widgetMetricPeriodExpense,
+      WidgetMetric.periodIncome => l10n.widgetMetricPeriodIncome,
+      WidgetMetric.budgetRemaining => l10n.widgetMetricBudgetRemaining,
+      WidgetMetric.budgetUsed => l10n.widgetMetricBudgetUsed,
+      WidgetMetric.budgetRate => l10n.widgetMetricBudgetRate,
+      WidgetMetric.netWorth => l10n.widgetMetricNetWorth,
+      WidgetMetric.totalAssets => l10n.widgetMetricTotalAssets,
+      WidgetMetric.totalLiabilities => l10n.widgetMetricTotalLiabilities,
+      WidgetMetric.balance => l10n.widgetMetricBalance,
+      WidgetMetric.transactionCount => l10n.widgetMetricTransactionCount,
+      WidgetMetric.savingsRate => l10n.widgetMetricSavingsRate,
+      null => '—',
+    };
     final imageValue = definition.background.kind == WidgetBackgroundKind.asset
         ? definition.background.value
         : null;
@@ -361,7 +377,7 @@ class _DefinitionPreview extends StatelessWidget {
                   ),
                   const Spacer(),
                   Text(
-                    definition.primaryMetric?.name ?? '—',
+                    metricLabel,
                     style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                   const SizedBox(height: 2),
