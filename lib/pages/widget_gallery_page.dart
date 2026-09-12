@@ -528,86 +528,87 @@ class _DefinitionPreview extends StatelessWidget {
     final size = _previewSize(definition.size);
     final aspect = _widgetAspect(definition.size);
     final previewWidth = width ?? size.width;
-    final compact = previewWidth / aspect < 120;
-    return Center(
-      child: SizedBox(
-        width: previewWidth,
-        child: AspectRatio(
-          aspectRatio: aspect,
-          child: ClipRRect(
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(veriRadiusLg),
-            ),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (backgroundImage != null)
-                  Image(
-                    image: backgroundImage,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) =>
-                        ColoredBox(color: veriPreviewCanvasDark),
-                  )
-                else
-                  ColoredBox(
-                    color: theme.brightness == Brightness.dark
-                        ? veriPreviewSurfaceDark
-                        : veriSurfaceLight,
+    final compact =
+        definition.size == WidgetSize.fourByOne ||
+        (previewWidth.isFinite && previewWidth / aspect < 120);
+    final surface = AspectRatio(
+      aspectRatio: aspect,
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(veriRadiusLg),
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (backgroundImage != null)
+              Image(
+                image: backgroundImage,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) =>
+                    ColoredBox(color: veriPreviewCanvasDark),
+              )
+            else
+              ColoredBox(
+                color: theme.brightness == Brightness.dark
+                    ? veriPreviewSurfaceDark
+                    : veriSurfaceLight,
+              ),
+            ColoredBox(color: Colors.black.withValues(alpha: .28)),
+            Padding(
+              padding: EdgeInsets.all(compact ? 8 : 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    definition.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ColoredBox(color: Colors.black.withValues(alpha: .28)),
-                Padding(
-                  padding: EdgeInsets.all(compact ? 8 : 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        definition.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
+                  const Spacer(),
+                  if (!compact)
+                    Text(
+                      metricLabel,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
                       ),
-                      const Spacer(),
-                      if (!compact)
-                        Text(
-                          metricLabel,
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                          ),
-                        ),
-                      if (!compact) const SizedBox(height: 2),
-                      Text(
-                        definition.hideAmounts
-                            ? '••••'
-                            : formatUserMoney(amount, book.baseCurrencyCode),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      if (!compact && definition.chartMetric != null) ...[
-                        const SizedBox(height: 6),
-                        SizedBox(
-                          height: 24,
-                          width: double.infinity,
-                          child: CustomPaint(
-                            painter: _PreviewLinePainter(color: Colors.white),
-                          ),
-                        ),
-                      ],
-                    ],
+                    ),
+                  if (!compact) const SizedBox(height: 2),
+                  Text(
+                    definition.hideAmounts
+                        ? '••••'
+                        : formatUserMoney(amount, book.baseCurrencyCode),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
-                ),
-              ],
+                  if (!compact && definition.chartMetric != null) ...[
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      height: 24,
+                      width: double.infinity,
+                      child: CustomPaint(
+                        painter: _PreviewLinePainter(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
+    );
+    if (width == double.infinity) return surface;
+    return Center(
+      child: SizedBox(width: previewWidth, child: surface),
     );
   }
 }
