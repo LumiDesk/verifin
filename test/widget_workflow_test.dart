@@ -233,9 +233,15 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
     await gesture.moveTo(tester.getCenter(b));
     await tester.pump(const Duration(milliseconds: 100));
+    expect(
+      find.byKey(const ValueKey('widget_drop_placeholder')),
+      findsOneWidget,
+    );
+    expect(a, findsNothing);
     await gesture.up();
     await tester.pump(const Duration(milliseconds: 100));
     expect(c.userWidgetDefinitions.map((item) => item.id), ['b', 'a']);
+    expect(a, findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
