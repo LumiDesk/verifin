@@ -21,6 +21,18 @@ class AppWidgetBridge {
     await _routeHandler?.call(args);
   }
 
+  /// Cold-start intents wait in Android until the consent/lock gates open.
+  static Future<Map<String, Object?>?> consumeInitialRoute() async {
+    try {
+      return await _channel.invokeMapMethod<String, Object?>(
+        'consumeWidgetRoute',
+      );
+    } on MissingPluginException {
+      // Widget tests and non-Android hosts have no pending Android intent.
+      return null;
+    }
+  }
+
   /// 一次推送三个桌面小组件（今日支出 / 本月预算 / 资产总额）的数据到 Android
   /// （非 Android 平台静默忽略）。金额均由调用方按用户偏好格式化好。
   static Future<void> updateWidgetData({

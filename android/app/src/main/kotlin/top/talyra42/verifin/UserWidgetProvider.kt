@@ -7,8 +7,11 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.os.Bundle
+import android.net.Uri
 import android.view.View
 import android.widget.RemoteViews
+import org.json.JSONObject
 
 /** Renders a saved user design. A desktop instance only stores the definition id. */
 class UserWidgetProvider : AppWidgetProvider() {
@@ -22,6 +25,10 @@ class UserWidgetProvider : AppWidgetProvider() {
         super.onDeleted(context, appWidgetIds)
     }
 
+    override fun onAppWidgetOptionsChanged(context: Context, manager: AppWidgetManager, id: Int, options: Bundle) {
+        render(context, manager, id)
+    }
+
     companion object {
         const val EXTRA_DEFINITION_ID = "userWidgetDefinitionId"
 
@@ -29,15 +36,17 @@ class UserWidgetProvider : AppWidgetProvider() {
             val manager = AppWidgetManager.getInstance(context)
             val provider = android.content.ComponentName(context, UserWidgetProvider::class.java)
             val ids = manager.getAppWidgetIds(provider)
-            if (ids.isNotEmpty()) manager.notifyAppWidgetViewDataChanged(ids, R.id.user_widget_root)
             ids.forEach { render(context, manager, it) }
         }
 
         private fun render(context: Context, manager: AppWidgetManager, widgetId: Int) {
             val definitionId = WidgetData.readDefinitionId(context, widgetId)
             val definition = WidgetData.readDefinition(context, definitionId)
-                ?: WidgetData.UserDefinition(id = "fallback")
+                ?: WidgetData.UserDefinition(id = "fallback", name = context.getString(R.string.user_widget_choose_design))
             val views = RemoteViews(context.packageName, R.layout.user_widget)
+            val presentation = try { JSONObject(definition.presentationJson) } catch (_: Exception) { JSONObject() }
+            val compact = definition.size == "oneByTwo" ||
+                manager.getAppWidgetOptions(widgetId).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 160) < 130
             val bitmap = definition.backgroundPath.takeIf { it.isNotBlank() }?.let {
                 runCatching { BitmapFactory.decodeFile(it) }.getOrNull()
             }
@@ -47,37 +56,45 @@ class UserWidgetProvider : AppWidgetProvider() {
             } else {
                 views.setViewVisibility(R.id.user_widget_background, View.GONE)
             }
+            views.setViewVisibility(R.id.user_widget_scrim, if (bitmap == null) View.GONE else View.VISIBLE)
+            val foreground = if (bitmap == null) context.getColor(R.color.widget_value) else Color.WHITE
+            val muted = if (bitmap == null) context.getColor(R.color.widget_label) else Color.LTGRAY
+            views.setTextColor(R.id.user_widget_title, muted)
+            views.setTextColor(R.id.user_widget_label, muted)
+            views.setTextColor(R.id.user_widget_value, foreground)
             views.setTextViewText(R.id.user_widget_title, definition.name)
-            val primary = WidgetData.metric(
-                context,
-                definition.primaryMetric,
-                WidgetData.read(context, WidgetData.KEY_TODAY_AMOUNT, "0"),
-                context.getString(R.string.widget_today_expense),
-            )
-            views.setTextViewText(R.id.user_widget_label, primary.second)
+            views.setTextViewText(R.id.user_widget_label, presentation.optString("label", context.getString(R.string.widget_refresh_required)))
+            views.setViewVisibility(R.id.user_widget_label, if (compact) View.GONE else View.VISIBLE)
             views.setTextViewText(
                 R.id.user_widget_value,
-                if (definition.hideAmounts) "••••" else primary.first,
+                presentation.optString("amount", "—"),
             )
-            val secondaries = definition.secondaryMetrics.take(3)
+            val secondaries = presentation.optJSONArray("secondary")
             val ids = intArrayOf(R.id.user_widget_secondary_1, R.id.user_widget_secondary_2, R.id.user_widget_secondary_3)
             ids.forEachIndexed { index, viewId ->
-                val metric = secondaries.getOrNull(index)
-                if (metric == null) {
+                val text = secondaries?.optString(index).orEmpty()
+                if (text.isBlank() || compact) {
                     views.setViewVisibility(viewId, View.GONE)
                 } else {
-                    val value = WidgetData.metric(context, metric, "0", "")
-                    views.setTextViewText(viewId, if (definition.hideAmounts) value.second else "${value.second}  ${value.first}")
+                    views.setTextViewText(viewId, text)
+                    views.setTextColor(viewId, muted)
                     views.setViewVisibility(viewId, View.VISIBLE)
                 }
             }
-            if (definition.chartMetric.isNotBlank()) {
-                val chart = WidgetChartRenderer.sparkline(WidgetData.trendPoints(context))
+            views.setViewVisibility(R.id.user_widget_chart, View.GONE)
+            if (definition.chartMetric.isNotBlank() && !compact && definition.template != "quickEntry") {
+                val points = presentation.optJSONArray("points")
+                val values = if (points == null) emptyList() else
+                    (0 until points.length()).map { points.optDouble(it, Double.NaN).toFloat() }.filter { it.isFinite() }
+                val chart = WidgetChartRenderer.sparkline(values)
                 if (chart != null) {
                     views.setImageViewBitmap(R.id.user_widget_chart, chart)
                     views.setViewVisibility(R.id.user_widget_chart, View.VISIBLE)
                 }
-            } else views.setViewVisibility(R.id.user_widget_chart, View.GONE)
+            }
+            val quickEntry = definition.template == "quickEntry"
+            views.setViewVisibility(R.id.user_widget_add, if (quickEntry) View.VISIBLE else View.GONE)
+            views.setContentDescription(R.id.user_widget_add, presentation.optString("quickEntryLabel", context.getString(R.string.quick_entry_button)))
 
             val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)
             if (launch != null) {
@@ -86,11 +103,21 @@ class UserWidgetProvider : AppWidgetProvider() {
                 launch.putExtra("widgetBookId", definition.bookId)
                 launch.putExtra("widgetId", widgetId)
                 launch.putExtra(EXTRA_DEFINITION_ID, definition.id)
+                launch.data = Uri.parse("verifin://widget/$widgetId/open")
                 val pending = PendingIntent.getActivity(
                     context, widgetId, launch,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                 )
                 views.setOnClickPendingIntent(R.id.user_widget_root, pending)
+                if (quickEntry) {
+                    val entry = Intent(launch).apply {
+                        putExtra("widgetRoute", "entry")
+                        data = Uri.parse("verifin://widget/$widgetId/entry")
+                    }
+                    views.setOnClickPendingIntent(R.id.user_widget_add, PendingIntent.getActivity(
+                        context, widgetId, entry, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                    ))
+                }
             }
             manager.updateAppWidget(widgetId, views)
         }
@@ -108,11 +135,7 @@ class UserWidgetConfigureActivity : android.app.Activity() {
         widgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
         if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) { finish(); return }
         val ids = WidgetData.readDefinitionIds(this)
-        if (ids.isEmpty()) {
-            val fallback = WidgetData.UserDefinition(id = "default", name = getString(R.string.user_widget_default_name))
-            WidgetData.writeDefinition(this, fallback)
-            selectedId = fallback.id
-        } else selectedId = ids.first()
+        selectedId = ids.firstOrNull().orEmpty()
 
         val root = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
@@ -128,6 +151,7 @@ class UserWidgetConfigureActivity : android.app.Activity() {
         ids.forEach { id ->
             val definition = WidgetData.readDefinition(this@UserWidgetConfigureActivity, id) ?: return@forEach
             val button = android.widget.RadioButton(this@UserWidgetConfigureActivity).apply {
+                this.id = View.generateViewId()
                 text = definition.name
                 textSize = 16f
                 isChecked = id == selectedId
@@ -139,8 +163,13 @@ class UserWidgetConfigureActivity : android.app.Activity() {
             selectedId = group.findViewById<android.widget.RadioButton>(checkedId)?.tag as? String ?: selectedId
         }
         root.addView(group, android.widget.LinearLayout.LayoutParams(-1, 0, 1f))
+        if (ids.isEmpty()) root.addView(android.widget.TextView(this).apply {
+            text = getString(R.string.user_widget_empty)
+            setPadding(0, 24, 0, 24)
+        })
         root.addView(android.widget.Button(this).apply {
             text = getString(R.string.user_widget_add)
+            isEnabled = ids.isNotEmpty()
             setOnClickListener {
                 WidgetData.bindDefinition(this@UserWidgetConfigureActivity, widgetId, selectedId)
                 val result = Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)

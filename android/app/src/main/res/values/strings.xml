@@ -16,4 +16,5 @@
     <string name="user_widget_choose_design">选择我的小组件</string>
     <string name="user_widget_add">添加到桌面</string>
     <string name="user_widget_default_name">我的财务概览</string>
+    <string name="user_widget_empty">请先打开应用，在“我的小组件”右上角点击加号创建小组件。</string>
 </resources>

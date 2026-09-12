@@ -156,7 +156,10 @@ class MainActivity : FlutterFragmentActivity() {
         }
         if (intent.action == ACTION_WIDGET_ROUTE) {
             rememberWidgetRouteIntent(intent)
-            channel?.invokeMethod("openWidgetRoute", pendingWidgetRoute)
+            if (channel != null) {
+                channel?.invokeMethod("openWidgetRoute", pendingWidgetRoute)
+                pendingWidgetRoute = null
+            }
         }
         if (intent.action == ACTION_CAPTURE_IMAGE || intent.action == ACTION_CAPTURE_TEXT) {
             rememberCaptureIntent(intent)
@@ -288,6 +291,8 @@ class MainActivity : FlutterFragmentActivity() {
                     backgroundColor = color,
                     backgroundPath = if (kind == "asset") decodeWidgetBackground(id, value) else "",
                     hideAmounts = map["hideAmounts"] as? Boolean ?: false,
+                    presentationJson = JSONObject(map["presentation"] as? Map<*, *> ?: emptyMap<String, Any>()).toString(),
+                    size = map["size"]?.toString() ?: "twoByTwo",
                 ),
             )
             ids += id
@@ -423,6 +428,10 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     private fun pinUserWidget(definitionId: String, result: MethodChannel.Result) {
+        if (WidgetData.readDefinition(this, definitionId) == null) {
+            result.success(false)
+            return
+        }
         val manager = AppWidgetManager.getInstance(this)
         val ok = try {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
@@ -437,7 +446,10 @@ class MainActivity : FlutterFragmentActivity() {
                         UserWidgetProvider.EXTRA_DEFINITION_ID,
                         definitionId,
                     ),
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                    // The launcher supplies EXTRA_APPWIDGET_ID in the callback.
+                    // This is an explicit broadcast to our own receiver only.
+                    PendingIntent.FLAG_UPDATE_CURRENT or
+                        (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0),
                 )
                 manager.requestPinAppWidget(
                     ComponentName(this, UserWidgetProvider::class.java),

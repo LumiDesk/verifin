@@ -54,6 +54,8 @@ object WidgetData {
         val backgroundColor: Int = 0xFF1E293B.toInt(),
         val backgroundPath: String = "",
         val hideAmounts: Boolean = false,
+        val presentationJson: String = "",
+        val size: String = "twoByTwo",
     )
 
     fun readDefinition(context: Context, id: String): UserDefinition? {
@@ -78,6 +80,8 @@ object WidgetData {
                 backgroundColor = json.optInt("backgroundColor", 0xFF1E293B.toInt()),
                 backgroundPath = json.optString("backgroundPath", ""),
                 hideAmounts = json.optBoolean("hideAmounts", false),
+                presentationJson = json.optString("presentationJson", ""),
+                size = json.optString("size", "twoByTwo"),
             )
         } catch (_: Exception) { null }
     }
@@ -96,6 +100,8 @@ object WidgetData {
             put("backgroundColor", definition.backgroundColor)
             put("backgroundPath", definition.backgroundPath)
             put("hideAmounts", definition.hideAmounts)
+            put("presentationJson", definition.presentationJson)
+            put("size", definition.size)
         }
         write(context, mapOf("${DEFINITIONS_KEY}_${definition.id}" to json.toString()))
         val ids = readDefinitionIds(context).toMutableSet().apply { add(definition.id) }

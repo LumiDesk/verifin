@@ -4,6 +4,7 @@ import 'ledger_math.dart';
 import 'models.dart';
 import 'platform_bridge.dart';
 import 'veri_fin_controller.dart';
+import 'widget_presentation.dart';
 
 /// 把当前账本的桌面小组件数据（今日支出 / 本月可用预算 / 资产总额）推送到 Android。
 /// 非 Android 平台由 [AppWidgetBridge] 静默忽略；在打开应用、回前台、记账后调用。
@@ -56,7 +57,41 @@ Future<void> pushWidgetData(VeriFinController controller) async {
   final trendTotal = trendPoints.fold<double>(0, (sum, value) => sum + value);
 
   await AppWidgetBridge.syncUserWidgetDefinitions(
-    controller.userWidgetDefinitions.map((item) => item.toJson()).toList(),
+    controller.userWidgetDefinitions.map((item) {
+      final snapshot = controller.widgetLedgerSnapshot(item.bookId, now);
+      final data = snapshot == null
+          ? null
+          : buildWidgetPresentation(
+              definition: item,
+              snapshot: snapshot,
+              now: now,
+            );
+      return <String, Object?>{
+        ...item.toJson(),
+        'bookId': snapshot?.book.id ?? item.bookId,
+        'presentation': {
+          'label': data == null
+              ? l10n.widgetRefreshRequired
+              : widgetMetricLabel(l10n, data.primary.metric),
+          'amount':
+              data?.primary.formatted(
+                data.currencyCode,
+                hidden: item.hideAmounts,
+              ) ??
+              '—',
+          'secondary': [
+            if (data != null)
+              for (final metric in data.secondary)
+                '${widgetMetricLabel(l10n, metric.metric)}  ${metric.formatted(data.currencyCode, hidden: item.hideAmounts)}',
+          ],
+          'points': data != null && data.hasChartData
+              ? data.series
+              : <double>[],
+          'budgetUsage': data?.budgetUsage,
+          'quickEntryLabel': l10n.addEntryTooltip,
+        },
+      };
+    }).toList(),
   );
 
   String two(int n) => n.toString().padLeft(2, '0');

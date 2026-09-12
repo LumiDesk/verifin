@@ -16,4 +16,5 @@
     <string name="user_widget_choose_design">Choose my widget</string>
     <string name="user_widget_add">Add to home screen</string>
     <string name="user_widget_default_name">My finance overview</string>
+    <string name="user_widget_empty">Open the app and tap + in My widgets to create a widget first.</string>
 </resources>

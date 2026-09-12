@@ -13,7 +13,8 @@
         android:scaleType="centerCrop"
         android:visibility="gone" />
 
-    <View
+    <ImageView
+        android:id="@+id/user_widget_scrim"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#66000000" />
@@ -22,13 +23,14 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="14dp">
         <TextView
             android:id="@+id/user_widget_title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="我的小组件"
-            android:textColor="#CCFFFFFF"
+            android:text="@string/user_widget_default_name"
+            android:textColor="@color/widget_label"
+            android:includeFontPadding="false"
             android:textSize="12sp"
             android:maxLines="1"
             android:ellipsize="end" />
@@ -37,15 +39,17 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="今日支出"
-            android:textColor="#CCFFFFFF"
+            android:text="@string/widget_today_expense"
+            android:textColor="@color/widget_label"
+            android:includeFontPadding="false"
             android:textSize="12sp" />
         <TextView
             android:id="@+id/user_widget_value"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="0"
-            android:textColor="#FFFFFFFF"
+            android:textColor="@color/widget_value"
+            android:includeFontPadding="false"
             android:textSize="30sp"
             android:textStyle="bold"
             android:maxLines="1"
@@ -66,4 +70,18 @@
             android:scaleType="fitXY"
             android:visibility="gone" />
     </LinearLayout>
+    <TextView
+        android:id="@+id/user_widget_add"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="12dp"
+        android:background="@drawable/widget_button_background"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:text="+"
+        android:textSize="26sp"
+        android:textColor="@color/widget_button_text"
+        android:contentDescription="@string/quick_entry_button"
+        android:visibility="gone" />
 </FrameLayout>

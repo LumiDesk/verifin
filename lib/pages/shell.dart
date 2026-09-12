@@ -71,6 +71,12 @@ class _VeriFinShellState extends State<VeriFinShell> {
       if (!mounted) {
         return;
       }
+      final widgetRoute = await AppWidgetBridge.consumeInitialRoute();
+      if (!mounted) return;
+      if (widgetRoute != null) {
+        await _openWidgetRouteFromPlatform(widgetRoute);
+      }
+      if (!mounted) return;
       // 冷启动带着分享/外部采集内容时（分享截图给 Veri Fin 等），开屏即识别。
       await startSharedCaptureEntry(context);
     });
@@ -434,6 +440,11 @@ class _VeriFinShellState extends State<VeriFinShell> {
 
   Future<void> _openWidgetRouteFromPlatform(Map<String, Object?> args) async {
     if (!mounted) return;
+    final controller = VeriFinScope.of(context);
+    final bookId = args['bookId'] as String?;
+    if (bookId != null && bookId.isNotEmpty) {
+      controller.switchLedgerBook(bookId);
+    }
     final route = args['route'] as String? ?? 'app';
     if (route == 'entry' || route == 'quick_entry') {
       await _openQuickEntryFromPlatform();
