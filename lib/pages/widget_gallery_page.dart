@@ -367,6 +367,7 @@ class _DefinitionPreview extends StatelessWidget {
       _ => sumByType(periodEntries, EntryType.expense),
     };
     final size = _previewSize(definition.size);
+    final compact = size.height < 120;
     return Center(
       child: SizedBox(
         width: size.width,
@@ -394,7 +395,7 @@ class _DefinitionPreview extends StatelessWidget {
                   ),
                 ColoredBox(color: Colors.black.withValues(alpha: .28)),
                 Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(compact ? 8 : 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -409,14 +410,15 @@ class _DefinitionPreview extends StatelessWidget {
                         ),
                       ),
                       const Spacer(),
-                      Text(
-                        metricLabel,
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
+                      if (!compact)
+                        Text(
+                          metricLabel,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
+                      if (!compact) const SizedBox(height: 2),
                       Text(
                         definition.hideAmounts
                             ? '••••'
@@ -427,7 +429,7 @@ class _DefinitionPreview extends StatelessWidget {
                           fontWeight: FontWeight.w900,
                         ),
                       ),
-                      if (definition.chartMetric != null) ...[
+                      if (!compact && definition.chartMetric != null) ...[
                         const SizedBox(height: 6),
                         SizedBox(
                           height: 24,
