@@ -227,8 +227,6 @@ void main() {
     await tester.pumpAndSettle();
     final a = find.byKey(const ValueKey('widget_tile_a'));
     final b = find.byKey(const ValueKey('widget_tile_b'));
-    await tester.longPress(a);
-    await tester.pump(const Duration(milliseconds: 100));
     final gesture = await tester.startGesture(tester.getCenter(a));
     await tester.pump(const Duration(milliseconds: 600));
     await gesture.moveTo(tester.getCenter(b));
@@ -237,7 +235,7 @@ void main() {
       find.byKey(const ValueKey('widget_drop_placeholder')),
       findsOneWidget,
     );
-    expect(a, findsNothing);
+    expect(a, findsOneWidget);
     await gesture.up();
     await tester.pump(const Duration(milliseconds: 100));
     expect(c.userWidgetDefinitions.map((item) => item.id), ['b', 'a']);

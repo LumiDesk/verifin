@@ -256,7 +256,7 @@ class _MasonryCanvas extends StatefulWidget {
   final ValueChanged<String> onLongPress;
   final VoidCallback onTapBlank;
   final ValueChanged<String> onDelete;
-  final void Function(int from, int to) onReorder;
+  final Future<void> Function(int from, int to) onReorder;
 
   @override
   State<_MasonryCanvas> createState() => _MasonryCanvasState();
@@ -265,6 +265,9 @@ class _MasonryCanvas extends StatefulWidget {
 class _MasonryCanvasState extends State<_MasonryCanvas> {
   int? _draggingIndex;
   int? _dropIndex;
+  Offset? _dragPosition;
+  Offset? _dragStartPosition;
+  bool _dragMoved = false;
 
   void _activateTile(int index) {
     if (VeriFinScope.of(context).hapticsEnabled) {
@@ -278,6 +281,9 @@ class _MasonryCanvasState extends State<_MasonryCanvas> {
     setState(() {
       _draggingIndex = index;
       _dropIndex = index;
+      _dragPosition = null;
+      _dragStartPosition = null;
+      _dragMoved = false;
     });
   }
 
@@ -287,7 +293,67 @@ class _MasonryCanvasState extends State<_MasonryCanvas> {
     setState(() {
       _draggingIndex = null;
       _dropIndex = null;
+      _dragPosition = null;
+      _dragStartPosition = null;
+      _dragMoved = false;
     });
+  }
+
+  void _startLongPress(int index, Offset position) {
+    if (_draggingIndex != null && _dragMoved && _draggingIndex != index) {
+      return;
+    }
+    _startDrag(index);
+    _dragStartPosition = position;
+    _updateLongPress(position);
+    widget.onLongPress(widget.definitions[index].id);
+  }
+
+  void _updateLongPress(Offset globalPosition) {
+    final dragging = _draggingIndex;
+    if (dragging == null) return;
+    final renderObject = context.findRenderObject();
+    if (renderObject is! RenderBox) return;
+    final point = renderObject.globalToLocal(globalPosition);
+    final moved =
+        _dragMoved ||
+        (_dragStartPosition != null &&
+            (globalPosition - _dragStartPosition!).distance > 8);
+    if (!moved) {
+      setState(() => _dragPosition = point);
+      return;
+    }
+    _dragMoved = true;
+    final placed = _placements(widget.definitions, renderObject.size.width);
+    final target = _targetForPoint(point, placed);
+    setState(() {
+      _dragPosition = point;
+      _dropIndex = target;
+    });
+  }
+
+  Future<void> _endLongPress(Offset finalPosition) async {
+    final from = _draggingIndex;
+    if (from == null) return;
+    if (finalPosition != Offset.zero) _updateLongPress(finalPosition);
+    if (!_dragMoved) {
+      _finishDrag();
+      return;
+    }
+    var target = _dropIndex ?? from;
+    final renderObject = context.findRenderObject();
+    final position = _dragPosition;
+    if (renderObject is RenderBox && position != null) {
+      target = _targetForPoint(
+        position,
+        _placements(widget.definitions, renderObject.size.width),
+      );
+    }
+    try {
+      await widget.onReorder(from, target);
+    } finally {
+      _finishDrag();
+    }
   }
 
   List<_MasonryPlacement> _placements(
@@ -339,7 +405,7 @@ class _MasonryCanvasState extends State<_MasonryCanvas> {
           point.dy >= item.top && point.dy <= item.top + item.height;
       if (horizontal && vertical) return item.index;
       if (vertical && point.dx > item.left + item.width) {
-        target = math.max(target, item.index + 1);
+        target = math.min(target, item.index + 1);
       } else if (point.dy < item.top && target == placed.length) {
         target = item.index;
       }
@@ -351,9 +417,10 @@ class _MasonryCanvasState extends State<_MasonryCanvas> {
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       final definitions = widget.definitions;
-      final basePlaced = _placements(definitions, constraints.maxWidth);
       final dragging = _draggingIndex;
-      final moving = dragging == null ? null : definitions[dragging];
+      final moving = dragging == null || !_dragMoved
+          ? null
+          : definitions[dragging];
       final renderDefinitions = <UserWidgetDefinition>[];
       if (moving == null) {
         renderDefinitions.addAll(definitions);
@@ -387,11 +454,11 @@ class _MasonryCanvasState extends State<_MasonryCanvas> {
                   onTap: widget.onTapBlank,
                 ),
               ),
-            if (movingPlacement != null)
+            if (moving != null && movingPlacement != null)
               AnimatedPositioned(
                 duration: const Duration(milliseconds: 180),
                 curve: Curves.easeOutCubic,
-                key: ValueKey('widget_drop_position_${moving!.id}'),
+                key: ValueKey('widget_drop_position_${moving.id}'),
                 left: movingPlacement.left,
                 top: movingPlacement.top,
                 width: movingPlacement.width,
@@ -401,77 +468,65 @@ class _MasonryCanvasState extends State<_MasonryCanvas> {
                 ),
               ),
             for (final item in renderPlaced)
-              if (moving == null ||
-                  renderDefinitions[item.index].id != moving.id)
-                AnimatedPositioned(
-                  duration: const Duration(milliseconds: 180),
-                  curve: Curves.easeOutCubic,
-                  key: ValueKey(
-                    'widget_position_${renderDefinitions[item.index].id}',
-                  ),
-                  left: item.left,
-                  top: item.top,
-                  width: item.width,
-                  height: item.height,
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                key: ValueKey(
+                  'widget_position_${renderDefinitions[item.index].id}',
+                ),
+                left: item.left,
+                top: item.top,
+                width: item.width,
+                height: item.height,
+                child: Opacity(
+                  opacity:
+                      moving != null &&
+                          renderDefinitions[item.index].id == moving.id
+                      ? 0
+                      : 1,
                   child: _MasonryTile(
                     key: ValueKey(
                       'widget_tile_wrapper_${renderDefinitions[item.index].id}',
                     ),
                     definition: renderDefinitions[item.index],
-                    sourceIndex: definitions.indexWhere(
-                      (definition) =>
-                          definition.id == renderDefinitions[item.index].id,
-                    ),
-                    tileWidth: item.width,
-                    tileHeight: item.height,
                     editing: widget.editing,
                     deleteVisible:
                         widget.activeTileId == renderDefinitions[item.index].id,
                     onTap: () => widget.onTap(renderDefinitions[item.index]),
-                    onLongPress: () {
+                    onLongPressStart: (position) {
                       final id = renderDefinitions[item.index].id;
                       final originalIndex = definitions.indexWhere(
                         (item) => item.id == id,
                       );
-                      _activateTile(originalIndex);
-                      widget.onLongPress(id);
+                      _startLongPress(originalIndex, position);
                     },
+                    onLongPressMove: _updateLongPress,
+                    onLongPressEnd: (position) => _endLongPress(position),
                     onDelete: () =>
                         widget.onDelete(renderDefinitions[item.index].id),
-                    onReorder: (from) => widget.onReorder(from, item.index),
-                    onDragStarted: () {
-                      final id = renderDefinitions[item.index].id;
-                      final originalIndex = definitions.indexWhere(
-                        (item) => item.id == id,
-                      );
-                      _startDrag(originalIndex);
-                      widget.onLongPress(id);
-                    },
-                    onDragFinished: _finishDrag,
                   ),
                 ),
+              ),
+            if (moving != null &&
+                movingPlacement != null &&
+                _dragPosition != null)
+              Positioned(
+                left: _dragPosition!.dx - movingPlacement.width / 2,
+                top: _dragPosition!.dy - movingPlacement.height / 2,
+                width: movingPlacement.width,
+                height: movingPlacement.height,
+                child: Material(
+                  color: Colors.transparent,
+                  child: WidgetDesignPreview(
+                    definition: moving,
+                    width: movingPlacement.width,
+                  ),
+                ),
+              ),
           ],
         ),
       );
-      return DragTarget<int>(
-        onWillAcceptWithDetails: (details) => widget.editing,
-        onMove: (details) {
-          final renderObject = context.findRenderObject();
-          if (renderObject is! RenderBox) return;
-          final point = renderObject.globalToLocal(details.offset);
-          final next = _targetForPoint(point, basePlaced);
-          if (_dropIndex != next) setState(() => _dropIndex = next);
-        },
-        onAcceptWithDetails: (details) {
-          final renderObject = context.findRenderObject();
-          if (renderObject is! RenderBox) return;
-          final point = renderObject.globalToLocal(details.offset);
-          final target = _targetForPoint(point, basePlaced);
-          widget.onReorder(details.data, _dropIndex ?? target);
-          _finishDrag();
-        },
-        builder: (context, candidates, rejected) => canvas,
-      );
+      return canvas;
     },
   );
 }
@@ -534,57 +589,38 @@ class _MasonryTile extends StatelessWidget {
   const _MasonryTile({
     super.key,
     required this.definition,
-    required this.sourceIndex,
-    required this.tileWidth,
-    required this.tileHeight,
     required this.editing,
     required this.deleteVisible,
     required this.onTap,
-    required this.onLongPress,
+    required this.onLongPressStart,
+    required this.onLongPressMove,
+    required this.onLongPressEnd,
     required this.onDelete,
-    required this.onReorder,
-    required this.onDragStarted,
-    required this.onDragFinished,
   });
   final UserWidgetDefinition definition;
-  final int sourceIndex;
-  final double tileWidth;
-  final double tileHeight;
   final bool editing;
   final bool deleteVisible;
   final VoidCallback onTap;
-  final VoidCallback onLongPress;
+  final ValueChanged<Offset> onLongPressStart;
+  final ValueChanged<Offset> onLongPressMove;
+  final ValueChanged<Offset> onLongPressEnd;
   final VoidCallback onDelete;
-  final ValueChanged<int> onReorder;
-  final VoidCallback onDragStarted;
-  final VoidCallback onDragFinished;
 
   @override
   Widget build(BuildContext context) {
     final tile = GestureDetector(
       key: ValueKey('widget_tile_${definition.id}'),
       onTap: editing ? null : onTap,
+      onLongPressStart: (details) => onLongPressStart(details.globalPosition),
+      onLongPressMoveUpdate: (details) =>
+          onLongPressMove(details.globalPosition),
+      onLongPressEnd: (details) => onLongPressEnd(details.globalPosition),
       child: WidgetDesignPreview(
         definition: definition,
         width: double.infinity,
       ),
     );
-    final child = LongPressDraggable<int>(
-      data: sourceIndex,
-      maxSimultaneousDrags: editing && !deleteVisible ? 0 : 1,
-      onDragStarted: onDragStarted,
-      onDragEnd: (_) => onDragFinished(),
-      childWhenDragging: const _WidgetDropPlaceholder(),
-      feedback: Material(
-        color: Colors.transparent,
-        child: SizedBox(
-          width: tileWidth,
-          height: tileHeight,
-          child: WidgetDesignPreview(definition: definition, width: tileWidth),
-        ),
-      ),
-      child: _WobblingTile(enabled: editing && deleteVisible, child: tile),
-    );
+    final child = tile;
     final stack = Stack(
       clipBehavior: Clip.none,
       fit: StackFit.expand,
@@ -597,29 +633,28 @@ class _MasonryTile extends StatelessWidget {
             child: SizedBox(
               width: 44,
               height: 44,
-              child: Center(
-                child: Material(
-                  color: veriSemantic(context, veriExpense),
-                  shape: CircleBorder(
-                    side: BorderSide(
-                      color: Theme.of(context).colorScheme.surface,
+              child: IconButton(
+                key: ValueKey('widget_delete_${definition.id}'),
+                tooltip: AppLocalizations.of(context).widgetDelete,
+                onPressed: onDelete,
+                padding: EdgeInsets.zero,
+                icon: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outlineVariant,
                       width: 1.5,
                     ),
                   ),
-                  elevation: 2,
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: onDelete,
-                    child: Semantics(
-                      button: true,
-                      label: AppLocalizations.of(context).widgetDelete,
-                      child: SizedBox(
-                        key: ValueKey('widget_delete_${definition.id}'),
-                        width: 24,
-                        height: 24,
-                        child: CustomPaint(painter: _DeleteBadgePainter()),
-                      ),
-                    ),
+                  child: Icon(
+                    Icons.remove_rounded,
+                    color: Theme.of(context).colorScheme.onSurface,
+                    size: 16,
                   ),
                 ),
               ),
@@ -627,103 +662,8 @@ class _MasonryTile extends StatelessWidget {
           ),
       ],
     );
-    return _TileLongPressTrigger(
-      enabled: true,
-      onTriggered: onLongPress,
-      onReleased: onDragFinished,
-      child: stack,
-    );
+    return _WobblingTile(enabled: editing && deleteVisible, child: stack);
   }
-}
-
-class _DeleteBadgePainter extends CustomPainter {
-  const _DeleteBadgePainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 2.4
-      ..strokeCap = StrokeCap.round;
-    final inset = size.width * .31;
-    canvas.drawLine(
-      Offset(inset, inset),
-      Offset(size.width - inset, size.height - inset),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(size.width - inset, inset),
-      Offset(inset, size.height - inset),
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-/// Starts the edit affordance at the long-press boundary while leaving the
-/// same pointer available to [LongPressDraggable] for the following movement.
-class _TileLongPressTrigger extends StatefulWidget {
-  const _TileLongPressTrigger({
-    required this.enabled,
-    required this.onTriggered,
-    required this.onReleased,
-    required this.child,
-  });
-  final bool enabled;
-  final VoidCallback onTriggered;
-  final VoidCallback onReleased;
-  final Widget child;
-
-  @override
-  State<_TileLongPressTrigger> createState() => _TileLongPressTriggerState();
-}
-
-class _TileLongPressTriggerState extends State<_TileLongPressTrigger> {
-  Timer? _timer;
-
-  void _start(PointerDownEvent event) {
-    if (!widget.enabled) return;
-    _timer?.cancel();
-    // Fire ahead of the platform long-press boundary so the edit affordance
-    // is visible while the finger is still down, including slower frames.
-    _timer = Timer(const Duration(milliseconds: 300), () {
-      if (mounted && widget.enabled) {
-        widget.onTriggered();
-      }
-    });
-  }
-
-  void _cancel(PointerEvent event) {
-    _timer?.cancel();
-    _timer = null;
-  }
-
-  void _release(PointerEvent event) {
-    _cancel(event);
-    widget.onReleased();
-  }
-
-  @override
-  void didUpdateWidget(covariant _TileLongPressTrigger oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!widget.enabled) _timer?.cancel();
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => Listener(
-    onPointerDown: _start,
-    onPointerUp: _release,
-    onPointerCancel: _cancel,
-    child: widget.child,
-  );
 }
 
 class _WobblingTile extends StatefulWidget {
