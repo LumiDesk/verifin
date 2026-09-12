@@ -459,7 +459,20 @@ class _UserWidgetEditorPageState extends State<UserWidgetEditorPage> {
     WidgetTemplate.trend => l.widgetTrendName,
     WidgetTemplate.netWorth => l.widgetNetWorthName,
   };
-  String _metricLabel(AppLocalizations l, WidgetMetric m) => m.name;
+  String _metricLabel(AppLocalizations l, WidgetMetric m) => switch (m) {
+    WidgetMetric.todayExpense => l.widgetMetricTodayExpense,
+    WidgetMetric.periodExpense => l.widgetMetricPeriodExpense,
+    WidgetMetric.periodIncome => l.widgetMetricPeriodIncome,
+    WidgetMetric.budgetRemaining => l.widgetMetricBudgetRemaining,
+    WidgetMetric.budgetUsed => l.widgetMetricBudgetUsed,
+    WidgetMetric.budgetRate => l.widgetMetricBudgetRate,
+    WidgetMetric.netWorth => l.widgetMetricNetWorth,
+    WidgetMetric.totalAssets => l.widgetMetricTotalAssets,
+    WidgetMetric.totalLiabilities => l.widgetMetricTotalLiabilities,
+    WidgetMetric.balance => l.widgetMetricBalance,
+    WidgetMetric.transactionCount => l.widgetMetricTransactionCount,
+    WidgetMetric.savingsRate => l.widgetMetricSavingsRate,
+  };
   String _sizeLabel(AppLocalizations l, WidgetSize s) => switch (s) {
     WidgetSize.oneByOne => '1 × 1',
     WidgetSize.twoByTwo => '2 × 2',
@@ -467,8 +480,15 @@ class _UserWidgetEditorPageState extends State<UserWidgetEditorPage> {
     WidgetSize.fourByTwo => '4 × 2',
     WidgetSize.twoByFour => '2 × 4',
   };
-  String _chartLabel(AppLocalizations l, WidgetChartMetric? m) =>
-      m == null ? l.widgetNoChart : m.name;
+  String _chartLabel(AppLocalizations l, WidgetChartMetric? m) => m == null
+      ? l.widgetNoChart
+      : switch (m) {
+          WidgetChartMetric.expense => l.widgetChartExpense,
+          WidgetChartMetric.income => l.widgetChartIncome,
+          WidgetChartMetric.net => l.widgetChartNet,
+          WidgetChartMetric.budgetUsage => l.widgetChartBudgetUsage,
+          WidgetChartMetric.netWorth => l.widgetChartNetWorth,
+        };
   String _rangeLabel(AppLocalizations l, WidgetDateRange r) => switch (r) {
     WidgetDateRange.sevenDays => l.widgetRange7d,
     WidgetDateRange.thirtyDays => l.widgetRange30d,
