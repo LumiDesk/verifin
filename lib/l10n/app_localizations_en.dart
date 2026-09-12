@@ -3874,6 +3874,141 @@ class AppLocalizationsEn extends AppLocalizations {
   String get widgetNetWorthDesc => 'Sum of all visible account balances';
 
   @override
+  String get widgetTrendName => 'Cash flow trend';
+
+  @override
+  String get widgetTrendDesc => 'See how your cash flow changes over time';
+
+  @override
+  String get widgetConfigure => 'Configure';
+
+  @override
+  String get widgetMetricTodayExpense => 'Today\'s spending';
+
+  @override
+  String get widgetMetricPeriodExpense => 'Period spending';
+
+  @override
+  String get widgetMetricPeriodIncome => 'Period income';
+
+  @override
+  String get widgetMetricBudgetRemaining => 'Budget remaining';
+
+  @override
+  String get widgetMetricBudgetUsed => 'Budget used';
+
+  @override
+  String get widgetMetricBudgetRate => 'Budget usage';
+
+  @override
+  String get widgetMetricNetWorth => 'Net worth';
+
+  @override
+  String get widgetMetricTotalAssets => 'Total assets';
+
+  @override
+  String get widgetMetricTotalLiabilities => 'Total liabilities';
+
+  @override
+  String get widgetMetricBalance => 'Account balance';
+
+  @override
+  String get widgetMetricTransactionCount => 'Transactions';
+
+  @override
+  String get widgetMetricSavingsRate => 'Savings rate';
+
+  @override
+  String get widgetNoChart => 'No chart';
+
+  @override
+  String get widgetChartExpense => 'Spending trend';
+
+  @override
+  String get widgetChartIncome => 'Income trend';
+
+  @override
+  String get widgetChartNet => 'Balance trend';
+
+  @override
+  String get widgetChartBudgetUsage => 'Budget usage';
+
+  @override
+  String get widgetChartNetWorth => 'Net worth trend';
+
+  @override
+  String get widgetRange7d => 'Last 7 days';
+
+  @override
+  String get widgetRange30d => 'Last 30 days';
+
+  @override
+  String get widgetRange90d => 'Last 90 days';
+
+  @override
+  String get widgetRangeCycle => 'Current budget cycle';
+
+  @override
+  String get widgetRangeYear => 'This year';
+
+  @override
+  String get widgetCurrentBook => 'Current book';
+
+  @override
+  String get widgetConfigTitle => 'Configure widget';
+
+  @override
+  String get widgetSaveConfig => 'Save';
+
+  @override
+  String get widgetTemplate => 'Widget template';
+
+  @override
+  String get widgetBook => 'Book';
+
+  @override
+  String get widgetPrimaryMetric => 'Primary metric';
+
+  @override
+  String get widgetChart => 'Chart';
+
+  @override
+  String get widgetDateRange => 'Date range';
+
+  @override
+  String get widgetHideAmounts => 'Hide amounts, show trend only';
+
+  @override
+  String get widgetConfigSaved => 'Widget configuration saved';
+
+  @override
+  String get widgetSecondaryMetric => 'Secondary metric';
+
+  @override
+  String get widgetNoSecondaryMetric => 'No secondary metric';
+
+  @override
+  String get widgetTapAction => 'Tap opens';
+
+  @override
+  String get widgetActionApp => 'Open app';
+
+  @override
+  String get widgetActionEntry => 'Quick entry';
+
+  @override
+  String get widgetActionBudget => 'Budget';
+
+  @override
+  String get widgetActionTrend => 'Analytics';
+
+  @override
+  String get widgetActionAssets => 'Assets';
+
+  @override
+  String get widgetActionProfile => 'Me';
+
+  @override
   String get reminderNotifBody => 'Don\'t forget to record today\'s spending!';
 
   @override

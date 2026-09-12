@@ -47,6 +47,14 @@ Future<void> pushWidgetData(VeriFinController controller) async {
     date: now,
   );
 
+  // 轻量趋势快照交给原生组件绘制 sparkline；默认展示最近 30 个自然日的支出。
+  final trendPoints = <double>[];
+  for (var offset = 29; offset >= 0; offset--) {
+    final day = addCalendarDays(dateOnly(now), -offset);
+    trendPoints.add(dayExpenseTotal(entries, day));
+  }
+  final trendTotal = trendPoints.fold<double>(0, (sum, value) => sum + value);
+
   String two(int n) => n.toString().padLeft(2, '0');
 
   await AppWidgetBridge.updateWidgetData(
@@ -61,6 +69,10 @@ Future<void> pushWidgetData(VeriFinController controller) async {
     netWorthLabel: accountValuation.completeTotal == null
         ? '${l10n.widgetNetWorth} · ${l10n.widgetRateMissing}'
         : l10n.widgetNetWorth,
+    trendAmount: formatUserMoney(trendTotal, baseCurrencyCode),
+    trendLabel: l10n.widgetMetricPeriodExpense,
+    trendPoints: trendPoints.map((value) => value.toStringAsFixed(2)).join(','),
+    trendRangeLabel: l10n.widgetRange30d,
     // 跨天/跨期锚点：原生据此判断展示值是否过期。跨天后「今日支出」归零，
     // 过了预算周期截止日后「可用预算」回到整期预算（新周期尚无支出）。
     todayDate: '${now.year}-${two(now.month)}-${two(now.day)}',

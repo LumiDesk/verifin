@@ -62,6 +62,7 @@ class _VeriFinShellState extends State<VeriFinShell> {
     _pageController.addListener(_trackScrollVelocity);
     AppCaptureBridge.setQuickEntryHandler(_openQuickEntryFromPlatform);
     AppCaptureBridge.setSharedCaptureHandler(_openSharedCaptureFromPlatform);
+    AppWidgetBridge.setRouteHandler(_openWidgetRouteFromPlatform);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // 同意与引导由外部门卫完成后才构建本壳。
       if (await AppCaptureBridge.consumeInitialQuickEntryIntent() && mounted) {
@@ -79,6 +80,7 @@ class _VeriFinShellState extends State<VeriFinShell> {
   void dispose() {
     AppCaptureBridge.clearQuickEntryHandler();
     AppCaptureBridge.clearSharedCaptureHandler();
+    AppWidgetBridge.clearRouteHandler();
     _pageController.removeListener(_trackScrollVelocity);
     _pageController.dispose();
     super.dispose();
@@ -428,6 +430,24 @@ class _VeriFinShellState extends State<VeriFinShell> {
       return;
     }
     await startSharedCaptureEntry(context);
+  }
+
+  Future<void> _openWidgetRouteFromPlatform(Map<String, Object?> args) async {
+    if (!mounted) return;
+    final route = args['route'] as String? ?? 'app';
+    if (route == 'entry' || route == 'quick_entry') {
+      await _openQuickEntryFromPlatform();
+      return;
+    }
+    final target = switch (route) {
+      'assets' || 'account' || 'net_worth' => 1,
+      'reports' || 'budget' || 'trend' => 2,
+      'profile' => 3,
+      _ => null,
+    };
+    if (target != null && target != _index) {
+      _goToTab(target);
+    }
   }
 }
 

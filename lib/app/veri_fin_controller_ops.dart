@@ -3,6 +3,14 @@ part of 'veri_fin_controller.dart';
 /// 控制器的「领域操作」层：交易/账户/分组/账本/分类/标签/预算/偏好/备份/
 /// 导入导出等所有对外方法。字段与持久化在 [_ControllerState]。
 mixin _ControllerOps on ChangeNotifier, _ControllerState {
+  /// 读取桌面小组件实例配置（设备偏好，不属于账本备份）。
+  List<WidgetInstanceConfig> get widgetInstanceConfigs =>
+      WidgetConfigStore.load(_store);
+
+  Future<void> saveWidgetInstanceConfigs(
+    Iterable<WidgetInstanceConfig> configs,
+  ) => WidgetConfigStore.save(_store, configs);
+
   List<LedgerEntry> get entries =>
       _entriesView ??= List<LedgerEntry>.unmodifiable(
         _entries.where((entry) => entry.bookId == _activeBookId),

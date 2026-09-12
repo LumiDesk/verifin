@@ -78,9 +78,9 @@ abstract class StatWidgetProvider : AppWidgetProvider() {
             ?.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
         if (openIntent != null) {
             openIntent.action = "top.talyra42.verifin.action.WIDGET_ROUTE"
-            putExtra("widgetRoute", config.action)
-            putExtra("widgetBookId", config.bookId)
-            putExtra("widgetId", widgetId)
+            openIntent.putExtra("widgetRoute", config.action)
+            openIntent.putExtra("widgetBookId", config.bookId)
+            openIntent.putExtra("widgetId", widgetId)
             views.setOnClickPendingIntent(
                 R.id.stat_widget_root,
                 // requestCode 随类名区分，避免不同小组件的 PendingIntent 相互覆盖。

@@ -6926,6 +6926,276 @@ abstract class AppLocalizations {
   /// **'所有可见账户余额合计'**
   String get widgetNetWorthDesc;
 
+  /// No description provided for @widgetTrendName.
+  ///
+  /// In zh, this message translates to:
+  /// **'收支趋势'**
+  String get widgetTrendName;
+
+  /// No description provided for @widgetTrendDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看最近一段时间的收支变化'**
+  String get widgetTrendDesc;
+
+  /// No description provided for @widgetConfigure.
+  ///
+  /// In zh, this message translates to:
+  /// **'配置'**
+  String get widgetConfigure;
+
+  /// No description provided for @widgetMetricTodayExpense.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日支出'**
+  String get widgetMetricTodayExpense;
+
+  /// No description provided for @widgetMetricPeriodExpense.
+  ///
+  /// In zh, this message translates to:
+  /// **'本期支出'**
+  String get widgetMetricPeriodExpense;
+
+  /// No description provided for @widgetMetricPeriodIncome.
+  ///
+  /// In zh, this message translates to:
+  /// **'本期收入'**
+  String get widgetMetricPeriodIncome;
+
+  /// No description provided for @widgetMetricBudgetRemaining.
+  ///
+  /// In zh, this message translates to:
+  /// **'剩余预算'**
+  String get widgetMetricBudgetRemaining;
+
+  /// No description provided for @widgetMetricBudgetUsed.
+  ///
+  /// In zh, this message translates to:
+  /// **'已用预算'**
+  String get widgetMetricBudgetUsed;
+
+  /// No description provided for @widgetMetricBudgetRate.
+  ///
+  /// In zh, this message translates to:
+  /// **'预算使用率'**
+  String get widgetMetricBudgetRate;
+
+  /// No description provided for @widgetMetricNetWorth.
+  ///
+  /// In zh, this message translates to:
+  /// **'净资产'**
+  String get widgetMetricNetWorth;
+
+  /// No description provided for @widgetMetricTotalAssets.
+  ///
+  /// In zh, this message translates to:
+  /// **'总资产'**
+  String get widgetMetricTotalAssets;
+
+  /// No description provided for @widgetMetricTotalLiabilities.
+  ///
+  /// In zh, this message translates to:
+  /// **'总负债'**
+  String get widgetMetricTotalLiabilities;
+
+  /// No description provided for @widgetMetricBalance.
+  ///
+  /// In zh, this message translates to:
+  /// **'账户余额'**
+  String get widgetMetricBalance;
+
+  /// No description provided for @widgetMetricTransactionCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'交易笔数'**
+  String get widgetMetricTransactionCount;
+
+  /// No description provided for @widgetMetricSavingsRate.
+  ///
+  /// In zh, this message translates to:
+  /// **'储蓄率'**
+  String get widgetMetricSavingsRate;
+
+  /// No description provided for @widgetNoChart.
+  ///
+  /// In zh, this message translates to:
+  /// **'不显示图表'**
+  String get widgetNoChart;
+
+  /// No description provided for @widgetChartExpense.
+  ///
+  /// In zh, this message translates to:
+  /// **'支出趋势'**
+  String get widgetChartExpense;
+
+  /// No description provided for @widgetChartIncome.
+  ///
+  /// In zh, this message translates to:
+  /// **'收入趋势'**
+  String get widgetChartIncome;
+
+  /// No description provided for @widgetChartNet.
+  ///
+  /// In zh, this message translates to:
+  /// **'结余趋势'**
+  String get widgetChartNet;
+
+  /// No description provided for @widgetChartBudgetUsage.
+  ///
+  /// In zh, this message translates to:
+  /// **'预算消耗'**
+  String get widgetChartBudgetUsage;
+
+  /// No description provided for @widgetChartNetWorth.
+  ///
+  /// In zh, this message translates to:
+  /// **'净资产趋势'**
+  String get widgetChartNetWorth;
+
+  /// No description provided for @widgetRange7d.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近 7 天'**
+  String get widgetRange7d;
+
+  /// No description provided for @widgetRange30d.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近 30 天'**
+  String get widgetRange30d;
+
+  /// No description provided for @widgetRange90d.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近 90 天'**
+  String get widgetRange90d;
+
+  /// No description provided for @widgetRangeCycle.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前预算周期'**
+  String get widgetRangeCycle;
+
+  /// No description provided for @widgetRangeYear.
+  ///
+  /// In zh, this message translates to:
+  /// **'本年度'**
+  String get widgetRangeYear;
+
+  /// No description provided for @widgetCurrentBook.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前账本'**
+  String get widgetCurrentBook;
+
+  /// No description provided for @widgetConfigTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'配置小组件'**
+  String get widgetConfigTitle;
+
+  /// No description provided for @widgetSaveConfig.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存'**
+  String get widgetSaveConfig;
+
+  /// No description provided for @widgetTemplate.
+  ///
+  /// In zh, this message translates to:
+  /// **'组件模板'**
+  String get widgetTemplate;
+
+  /// No description provided for @widgetBook.
+  ///
+  /// In zh, this message translates to:
+  /// **'账本'**
+  String get widgetBook;
+
+  /// No description provided for @widgetPrimaryMetric.
+  ///
+  /// In zh, this message translates to:
+  /// **'主指标'**
+  String get widgetPrimaryMetric;
+
+  /// No description provided for @widgetChart.
+  ///
+  /// In zh, this message translates to:
+  /// **'图表'**
+  String get widgetChart;
+
+  /// No description provided for @widgetDateRange.
+  ///
+  /// In zh, this message translates to:
+  /// **'日期范围'**
+  String get widgetDateRange;
+
+  /// No description provided for @widgetHideAmounts.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐藏金额，仅显示趋势'**
+  String get widgetHideAmounts;
+
+  /// No description provided for @widgetConfigSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'小组件配置已保存'**
+  String get widgetConfigSaved;
+
+  /// No description provided for @widgetSecondaryMetric.
+  ///
+  /// In zh, this message translates to:
+  /// **'辅助指标'**
+  String get widgetSecondaryMetric;
+
+  /// No description provided for @widgetNoSecondaryMetric.
+  ///
+  /// In zh, this message translates to:
+  /// **'不显示辅助指标'**
+  String get widgetNoSecondaryMetric;
+
+  /// No description provided for @widgetTapAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'点击后打开'**
+  String get widgetTapAction;
+
+  /// No description provided for @widgetActionApp.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开应用'**
+  String get widgetActionApp;
+
+  /// No description provided for @widgetActionEntry.
+  ///
+  /// In zh, this message translates to:
+  /// **'快速记账'**
+  String get widgetActionEntry;
+
+  /// No description provided for @widgetActionBudget.
+  ///
+  /// In zh, this message translates to:
+  /// **'预算'**
+  String get widgetActionBudget;
+
+  /// No description provided for @widgetActionTrend.
+  ///
+  /// In zh, this message translates to:
+  /// **'统计分析'**
+  String get widgetActionTrend;
+
+  /// No description provided for @widgetActionAssets.
+  ///
+  /// In zh, this message translates to:
+  /// **'资产'**
+  String get widgetActionAssets;
+
+  /// No description provided for @widgetActionProfile.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的'**
+  String get widgetActionProfile;
+
   /// No description provided for @reminderNotifBody.
   ///
   /// In zh, this message translates to:

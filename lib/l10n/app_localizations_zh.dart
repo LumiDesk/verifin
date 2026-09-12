@@ -3772,6 +3772,141 @@ class AppLocalizationsZh extends AppLocalizations {
   String get widgetNetWorthDesc => '所有可见账户余额合计';
 
   @override
+  String get widgetTrendName => '收支趋势';
+
+  @override
+  String get widgetTrendDesc => '查看最近一段时间的收支变化';
+
+  @override
+  String get widgetConfigure => '配置';
+
+  @override
+  String get widgetMetricTodayExpense => '今日支出';
+
+  @override
+  String get widgetMetricPeriodExpense => '本期支出';
+
+  @override
+  String get widgetMetricPeriodIncome => '本期收入';
+
+  @override
+  String get widgetMetricBudgetRemaining => '剩余预算';
+
+  @override
+  String get widgetMetricBudgetUsed => '已用预算';
+
+  @override
+  String get widgetMetricBudgetRate => '预算使用率';
+
+  @override
+  String get widgetMetricNetWorth => '净资产';
+
+  @override
+  String get widgetMetricTotalAssets => '总资产';
+
+  @override
+  String get widgetMetricTotalLiabilities => '总负债';
+
+  @override
+  String get widgetMetricBalance => '账户余额';
+
+  @override
+  String get widgetMetricTransactionCount => '交易笔数';
+
+  @override
+  String get widgetMetricSavingsRate => '储蓄率';
+
+  @override
+  String get widgetNoChart => '不显示图表';
+
+  @override
+  String get widgetChartExpense => '支出趋势';
+
+  @override
+  String get widgetChartIncome => '收入趋势';
+
+  @override
+  String get widgetChartNet => '结余趋势';
+
+  @override
+  String get widgetChartBudgetUsage => '预算消耗';
+
+  @override
+  String get widgetChartNetWorth => '净资产趋势';
+
+  @override
+  String get widgetRange7d => '最近 7 天';
+
+  @override
+  String get widgetRange30d => '最近 30 天';
+
+  @override
+  String get widgetRange90d => '最近 90 天';
+
+  @override
+  String get widgetRangeCycle => '当前预算周期';
+
+  @override
+  String get widgetRangeYear => '本年度';
+
+  @override
+  String get widgetCurrentBook => '当前账本';
+
+  @override
+  String get widgetConfigTitle => '配置小组件';
+
+  @override
+  String get widgetSaveConfig => '保存';
+
+  @override
+  String get widgetTemplate => '组件模板';
+
+  @override
+  String get widgetBook => '账本';
+
+  @override
+  String get widgetPrimaryMetric => '主指标';
+
+  @override
+  String get widgetChart => '图表';
+
+  @override
+  String get widgetDateRange => '日期范围';
+
+  @override
+  String get widgetHideAmounts => '隐藏金额，仅显示趋势';
+
+  @override
+  String get widgetConfigSaved => '小组件配置已保存';
+
+  @override
+  String get widgetSecondaryMetric => '辅助指标';
+
+  @override
+  String get widgetNoSecondaryMetric => '不显示辅助指标';
+
+  @override
+  String get widgetTapAction => '点击后打开';
+
+  @override
+  String get widgetActionApp => '打开应用';
+
+  @override
+  String get widgetActionEntry => '快速记账';
+
+  @override
+  String get widgetActionBudget => '预算';
+
+  @override
+  String get widgetActionTrend => '统计分析';
+
+  @override
+  String get widgetActionAssets => '资产';
+
+  @override
+  String get widgetActionProfile => '我的';
+
+  @override
   String get reminderNotifBody => '别忘了记录今天的收支～';
 
   @override

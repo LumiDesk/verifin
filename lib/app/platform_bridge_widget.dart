@@ -4,6 +4,23 @@ part of 'platform_bridge.dart';
 class AppWidgetBridge {
   AppWidgetBridge._();
 
+  static Future<void> Function(Map<String, Object?> args)? _routeHandler;
+
+  static void setRouteHandler(
+    Future<void> Function(Map<String, Object?> args) handler,
+  ) {
+    _routeHandler = handler;
+    _ensureInboundDispatcher();
+  }
+
+  static void clearRouteHandler() {
+    _routeHandler = null;
+  }
+
+  static Future<void> handleRoute(Map<String, Object?> args) async {
+    await _routeHandler?.call(args);
+  }
+
   /// 一次推送三个桌面小组件（今日支出 / 本月预算 / 资产总额）的数据到 Android
   /// （非 Android 平台静默忽略）。金额均由调用方按用户偏好格式化好。
   static Future<void> updateWidgetData({
@@ -14,6 +31,10 @@ class AppWidgetBridge {
     required String budgetLabel,
     required String netWorthAmount,
     required String netWorthLabel,
+    String trendAmount = '0',
+    String trendLabel = '',
+    String trendPoints = '',
+    String trendRangeLabel = '',
     required String todayDate,
     required String todayZeroAmount,
     required String todayStaleAmount,
@@ -35,6 +56,10 @@ class AppWidgetBridge {
         'budgetLabel': budgetLabel,
         'netWorthAmount': netWorthAmount,
         'netWorthLabel': netWorthLabel,
+        'trendAmount': trendAmount,
+        'trendLabel': trendLabel,
+        'trendPoints': trendPoints,
+        'trendRangeLabel': trendRangeLabel,
         // 跨天/跨期自愈用的锚点：原生按当前日期判断推送值是否过期，过期则展示
         // 归零/满额值，不必等应用打开重新推送。budgetExpiry 为预算周期截止日
         // （yyyy-MM-dd，含当天；自定义预算周期起始日后不再是自然月末）。
@@ -63,6 +88,39 @@ class AppWidgetBridge {
     try {
       final ok = await _channel.invokeMethod<bool>('pinWidget', {
         'widget': widget,
+      });
+      return ok ?? false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  /// Save the configuration for one Android appWidgetId. The id is supplied by
+  /// the launcher; configurations are intentionally per instance.
+  static Future<bool> updateWidgetConfig({
+    required int widgetId,
+    required String template,
+    String? bookId,
+    String? primaryMetric,
+    String? secondaryMetric,
+    String? chartMetric,
+    int chartDays = 30,
+    String action = 'app',
+    bool hideAmounts = false,
+  }) async {
+    try {
+      final ok = await _channel.invokeMethod<bool>('updateWidgetConfig', {
+        'widgetId': widgetId,
+        'template': template,
+        'bookId': bookId,
+        'primaryMetric': primaryMetric,
+        'secondaryMetric': secondaryMetric,
+        'chartMetric': chartMetric,
+        'chartDays': chartDays,
+        'action': action,
+        'hideAmounts': hideAmounts,
       });
       return ok ?? false;
     } on MissingPluginException {
