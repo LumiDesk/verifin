@@ -153,6 +153,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     expect(find.byKey(const ValueKey('widget_delete_first')), findsOneWidget);
+    expect(find.byKey(const ValueKey('widget_delete_second')), findsNothing);
     await tester.tap(find.byKey(const ValueKey('widget_delete_first')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('取消'));
@@ -168,6 +169,35 @@ void main() {
       firstPosition,
     );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('编辑态点击画布空白退出，长按组件只显示当前删除入口', (tester) async {
+    final c = await makeController();
+    addTearDown(c.dispose);
+    await c.saveUserWidgetDefinitions(const [
+      UserWidgetDefinition(
+        id: 'only',
+        name: '唯一组件',
+        template: WidgetTemplate.quickEntry,
+      ),
+    ]);
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: c,
+        child: zhMaterialApp(home: const WidgetGalleryPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.longPress(find.byKey(const ValueKey('widget_tile_only')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('widget_delete_only')), findsOneWidget);
+    // The right half of a one-column tile is intentionally empty canvas.
+    final tileRect = tester.getRect(
+      find.byKey(const ValueKey('widget_tile_only')),
+    );
+    await tester.tapAt(Offset(tileRect.right + 20, tileRect.center.dy));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('widget_delete_only')), findsNothing);
   });
 
   testWidgets('拖动重新排序后保存顺序', (tester) async {
