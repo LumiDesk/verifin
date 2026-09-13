@@ -1407,7 +1407,7 @@
   "widgetNetWorth": "Total assets",
   "widgetGalleryTitle": "Desktop widgets",
   "widgetGallerySubtitle": "Preview the fixed VeriFin widget templates",
-  "widgetGalleryShort": "Preview & add",
+  "widgetGalleryShort": "Template preview",
   "widgetAddToHome": "Add to home screen",
   "widgetPinRequested": "Add request sent — confirm in the system dialog",
   "widgetPinUnsupported": "This launcher doesn't support one-tap add — add it manually as shown below",

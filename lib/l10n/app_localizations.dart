@@ -6857,7 +6857,7 @@ abstract class AppLocalizations {
   /// No description provided for @widgetGalleryShort.
   ///
   /// In zh, this message translates to:
-  /// **'预览与添加'**
+  /// **'模板预览'**
   String get widgetGalleryShort;
 
   /// No description provided for @widgetAddToHome.

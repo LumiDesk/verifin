@@ -3735,7 +3735,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get widgetGallerySubtitle => '查看 VeriFin 提供的固定组件样式';
 
   @override
-  String get widgetGalleryShort => '预览与添加';
+  String get widgetGalleryShort => '模板预览';
 
   @override
   String get widgetAddToHome => '添加到桌面';

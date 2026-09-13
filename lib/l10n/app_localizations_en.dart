@@ -3834,7 +3834,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Preview the fixed VeriFin widget templates';
 
   @override
-  String get widgetGalleryShort => 'Preview & add';
+  String get widgetGalleryShort => 'Template preview';
 
   @override
   String get widgetAddToHome => 'Add to home screen';
