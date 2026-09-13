@@ -9,4 +9,5 @@
     android:previewLayout="@layout/stat_widget"
     android:resizeMode="horizontal"
     android:widgetCategory="home_screen"
+    android:widgetFeatures="hide_from_picker"
     android:description="@string/net_worth_widget_description" />

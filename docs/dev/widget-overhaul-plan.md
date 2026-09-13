@@ -46,6 +46,8 @@
 
 点击已保存组件进入编辑页，编辑页提供保存、删除和添加到桌面。长按删除需要确认；删除后画布自动重排。Android 配置 Activity 也只展示已保存设计，并把选中的设计 ID 与新 `appWidgetId` 绑定。
 
+Android 系统选择器只保留一个可配置的 VeriFin Provider；旧的今日支出、预算、资产和趋势 Provider 仅保留禁用声明用于升级清理，不再作为独立入口显示。Provider 同时提供 `previewLayout`、`previewImage` 与 Android 15 的生成预览，配置 Activity 展示设备上已同步的用户设计。`requestPinAppWidget` 使用同一预览和显式回调；启动器不支持一键添加时，应用显示手动添加路径，不静默吞掉失败。
+
 ## 导出与导入
 
 备份 JSON v3 增加 `userWidgets`。定义中保存配置和背景资源引用，不保存 `appWidgetId`。内置背景保存主题 ID；本地图片复制为应用资源并随主动备份导出，导入时重新生成本地资源 ID。

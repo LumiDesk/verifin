@@ -32,6 +32,46 @@ class UserWidgetProvider : AppWidgetProvider() {
     companion object {
         const val EXTRA_DEFINITION_ID = "userWidgetDefinitionId"
 
+        /** Preview shown by Android's pin confirmation when the launcher supports it. */
+        fun pickerPreview(context: Context): RemoteViews {
+            val id = WidgetData.readDefinitionIds(context).firstOrNull()
+            val definition = id?.let { WidgetData.readDefinition(context, it) }
+            val presentation = try {
+                JSONObject(definition?.presentationJson.orEmpty())
+            } catch (_: Exception) {
+                JSONObject()
+            }
+            val views = RemoteViews(context.packageName, R.layout.user_widget)
+            val bitmap = definition?.backgroundPath?.takeIf { it.isNotBlank() }?.let {
+                runCatching { BitmapFactory.decodeFile(it) }.getOrNull()
+            }
+            if (bitmap != null) {
+                views.setImageViewBitmap(R.id.user_widget_background, bitmap)
+                views.setViewVisibility(R.id.user_widget_background, View.VISIBLE)
+                views.setViewVisibility(R.id.user_widget_scrim, View.VISIBLE)
+                views.setTextColor(R.id.user_widget_title, Color.WHITE)
+                views.setTextColor(R.id.user_widget_label, Color.LTGRAY)
+                views.setTextColor(R.id.user_widget_value, Color.WHITE)
+            } else {
+                views.setInt(R.id.user_widget_root, "setBackgroundColor", definition?.backgroundColor ?: Color.rgb(30, 41, 59))
+                views.setViewVisibility(R.id.user_widget_background, View.GONE)
+                views.setViewVisibility(R.id.user_widget_scrim, View.GONE)
+            }
+            return views.apply {
+                setTextViewText(
+                    R.id.user_widget_title,
+                    definition?.name ?: context.getString(R.string.user_widget_default_name),
+                )
+                setTextViewText(
+                    R.id.user_widget_label,
+                    presentation.optString("label", context.getString(R.string.widget_today_expense)),
+                )
+                setTextViewText(R.id.user_widget_value, presentation.optString("amount", "0"))
+                setViewVisibility(R.id.user_widget_chart, View.GONE)
+                setViewVisibility(R.id.user_widget_add, View.GONE)
+            }
+        }
+
         fun refresh(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
             val provider = android.content.ComponentName(context, UserWidgetProvider::class.java)
@@ -41,7 +81,13 @@ class UserWidgetProvider : AppWidgetProvider() {
 
         private fun render(context: Context, manager: AppWidgetManager, widgetId: Int) {
             val definitionId = WidgetData.readDefinitionId(context, widgetId)
+            // Some launchers skip the configure Activity when adding from the picker.
+            // Render the first saved design as a safe fallback; a later pin callback
+            // replaces this binding with the design selected in the app.
             val definition = WidgetData.readDefinition(context, definitionId)
+                ?: WidgetData.readDefinitionIds(context).firstOrNull()?.let {
+                    WidgetData.readDefinition(context, it)
+                }
                 ?: WidgetData.UserDefinition(id = "fallback", name = context.getString(R.string.user_widget_choose_design))
             val views = RemoteViews(context.packageName, R.layout.user_widget)
             val presentation = try { JSONObject(definition.presentationJson) } catch (_: Exception) { JSONObject() }
@@ -54,6 +100,7 @@ class UserWidgetProvider : AppWidgetProvider() {
                 views.setImageViewBitmap(R.id.user_widget_background, bitmap)
                 views.setViewVisibility(R.id.user_widget_background, View.VISIBLE)
             } else {
+                views.setInt(R.id.user_widget_root, "setBackgroundColor", definition.backgroundColor)
                 views.setViewVisibility(R.id.user_widget_background, View.GONE)
             }
             views.setViewVisibility(R.id.user_widget_scrim, if (bitmap == null) View.GONE else View.VISIBLE)

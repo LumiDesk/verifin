@@ -3,6 +3,7 @@ package top.talyra42.verifin
 import android.Manifest
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProviderInfo
 import android.content.ComponentName
 import android.content.ContentValues
 import android.content.Intent
@@ -299,6 +300,15 @@ class MainActivity : FlutterFragmentActivity() {
         }
         WidgetData.removeDefinitionsNotIn(this, ids)
         UserWidgetProvider.refresh(this)
+        if (ids.isNotEmpty() && Build.VERSION.SDK_INT >= 35) {
+            runCatching {
+                AppWidgetManager.getInstance(this).setWidgetPreview(
+                    ComponentName(this, UserWidgetProvider::class.java),
+                    AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN,
+                    UserWidgetProvider.pickerPreview(this),
+                )
+            }
+        }
         result.success(true)
     }
 
@@ -428,10 +438,6 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     private fun pinUserWidget(definitionId: String, result: MethodChannel.Result) {
-        if (WidgetData.readDefinition(this, definitionId) == null) {
-            result.success(false)
-            return
-        }
         val manager = AppWidgetManager.getInstance(this)
         val ok = try {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
@@ -449,11 +455,16 @@ class MainActivity : FlutterFragmentActivity() {
                     // The launcher supplies EXTRA_APPWIDGET_ID in the callback.
                     // This is an explicit broadcast to our own receiver only.
                     PendingIntent.FLAG_UPDATE_CURRENT or
-                        (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0),
+                        (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0),
                 )
                 manager.requestPinAppWidget(
                     ComponentName(this, UserWidgetProvider::class.java),
-                    null,
+                    Bundle().apply {
+                        putParcelable(
+                            AppWidgetManager.EXTRA_APPWIDGET_PREVIEW,
+                            UserWidgetProvider.pickerPreview(this@MainActivity),
+                        )
+                    },
                     callback,
                 )
             }

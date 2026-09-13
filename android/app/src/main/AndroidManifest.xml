@@ -87,53 +87,28 @@
                 android:name="android.service.quicksettings.TOGGLEABLE_TILE"
                 android:value="false" />
         </service>
-        <!-- 桌面小组件：今日支出概览 + 快速记账入口。 -->
-        <receiver
-            android:name=".QuickEntryWidgetProvider"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/quick_entry_widget_info" />
+        <!-- Legacy fixed widget entries are retained only for package migration;
+             the picker must expose the configurable VeriFin entry below. -->
+        <receiver android:name=".QuickEntryWidgetProvider" android:enabled="false" android:exported="false">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/quick_entry_widget_info" />
         </receiver>
-        <!-- 桌面小组件：本月可用预算。 -->
-        <receiver
-            android:name=".BudgetWidgetProvider"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/budget_widget_info" />
+        <receiver android:name=".BudgetWidgetProvider" android:enabled="false" android:exported="false">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/budget_widget_info" />
         </receiver>
-        <!-- 桌面小组件：资产总额。 -->
-        <receiver
-            android:name=".NetWorthWidgetProvider"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/net_worth_widget_info" />
+        <receiver android:name=".NetWorthWidgetProvider" android:enabled="false" android:exported="false">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/net_worth_widget_info" />
         </receiver>
-        <!-- 可配置收支趋势小组件；数据由 Flutter 快照推送。 -->
-        <receiver
-            android:name=".TrendWidgetProvider"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/trend_widget_info" />
+        <receiver android:name=".TrendWidgetProvider" android:enabled="false" android:exported="false">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/trend_widget_info" />
         </receiver>
         <receiver
             android:name=".UserWidgetProvider"
-            android:exported="false">
+            android:exported="false"
+            android:label="@string/user_widget_picker_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>

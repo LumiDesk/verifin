@@ -9,7 +9,9 @@
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/user_widget"
     android:previewLayout="@layout/user_widget"
+    android:previewImage="@drawable/user_widget_preview"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable"
     android:configure=".UserWidgetConfigureActivity"
     android:description="@string/user_widget_description" />

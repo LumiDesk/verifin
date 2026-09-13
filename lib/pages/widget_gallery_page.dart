@@ -1068,13 +1068,20 @@ class _UserWidgetEditorPageState extends State<UserWidgetEditorPage> {
     final ok = await AppWidgetBridge.pinUserWidget(id);
     if (!mounted) return;
     final l10n = AppLocalizations.of(context);
+    if (!ok) {
+      await showConfirmDialog(
+        context,
+        title: l10n.widgetPinUnsupported,
+        message: l10n.widgetHowToAddDesc,
+        confirmLabel: l10n.gotIt,
+      );
+      return;
+    }
     unawaited(
       VeriFeedbackHost.of(context).showMessage(
-        message: ok ? l10n.widgetPinRequested : l10n.widgetPinUnsupported,
-        tone: ok ? VeriFeedbackTone.success : VeriFeedbackTone.warning,
-        duration: ok
-            ? VeriFeedbackDuration.standard
-            : VeriFeedbackDuration.long,
+        message: l10n.widgetPinRequested,
+        tone: VeriFeedbackTone.success,
+        duration: VeriFeedbackDuration.standard,
       ),
     );
   }

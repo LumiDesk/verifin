@@ -9,4 +9,5 @@
     android:previewLayout="@layout/quick_entry_widget"
     android:resizeMode="horizontal"
     android:widgetCategory="home_screen"
+    android:widgetFeatures="hide_from_picker"
     android:description="@string/quick_entry_widget_description" />

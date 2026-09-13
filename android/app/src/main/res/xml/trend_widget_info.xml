@@ -9,4 +9,5 @@
     android:previewLayout="@layout/stat_widget"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
+    android:widgetFeatures="hide_from_picker"
     android:description="@string/trend_widget_description" />

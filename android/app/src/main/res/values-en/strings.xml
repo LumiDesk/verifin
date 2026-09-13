@@ -13,6 +13,7 @@
     <string name="widget_trend">Income and spending trend</string>
     <string name="widget_chart_content_description">Trend chart</string>
     <string name="user_widget_description">My widget with custom finance data and background</string>
+    <string name="user_widget_picker_label">VeriFin</string>
     <string name="user_widget_choose_design">Choose my widget</string>
     <string name="user_widget_add">Add to home screen</string>
     <string name="user_widget_default_name">My finance overview</string>
