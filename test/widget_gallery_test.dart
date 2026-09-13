@@ -6,7 +6,7 @@ import 'support/test_harness.dart';
 void main() {
   useTestDatabases();
 
-  testWidgets('my widgets canvas opens the separate create page', (
+  testWidgets('desktop widget page is a read-only template gallery', (
     tester,
   ) async {
     await pumpApp(tester);
@@ -20,12 +20,10 @@ void main() {
     await tester.tap(find.text('桌面小组件'));
     await tester.pumpAndSettle();
 
-    expect(find.text('我的小组件'), findsOneWidget);
-    expect(find.text('还没有保存的小组件'), findsOneWidget);
-    expect(find.text('基础模板'), findsNothing);
-    await tester.tap(find.byTooltip('创建小组件'));
-    await tester.pumpAndSettle();
-    expect(find.text('创建小组件'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, '基于模板创建'), findsWidgets);
+    expect(find.text('桌面小组件'), findsOneWidget);
+    expect(find.text('查看 VeriFin 提供的固定组件样式'), findsOneWidget);
+    expect(find.text('我的小组件'), findsNothing);
+    expect(find.byTooltip('创建小组件'), findsNothing);
+    expect(find.text('保存到我的小组件'), findsNothing);
   });
 }
