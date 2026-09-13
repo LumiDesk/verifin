@@ -410,20 +410,27 @@ class _BudgetProgress extends StatelessWidget {
       trackColor: color.withValues(alpha: .16),
       progressColor: color,
     ),
-    child: Center(
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: FittedBox(
-          child: Text(
-            value == null ? '—' : '${(value! * 100).round()}%',
-            style: TextStyle(
-              color: textColor,
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
+    child: LayoutBuilder(
+      builder: (context, constraints) {
+        final diameter = constraints.biggest.shortestSide;
+        final fontSize = (12 + ((diameter - 44) / 60).clamp(0, 1) * 6)
+            .toDouble();
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: FittedBox(
+              child: Text(
+                value == null ? '—' : '${(value! * 100).round()}%',
+                style: TextStyle(
+                  color: textColor,
+                  fontWeight: FontWeight.w800,
+                  fontSize: fontSize,
+                ),
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     ),
   );
 }
