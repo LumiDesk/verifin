@@ -34,11 +34,18 @@ class _WidgetGalleryPageState extends State<WidgetGalleryPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    const showcaseSizes = <WidgetSize>[
+      WidgetSize.oneByTwo,
+      WidgetSize.twoByTwo,
+      WidgetSize.twoByTwo,
+      WidgetSize.twoByFour,
+    ];
     final definitions = [
-      for (final template in WidgetTemplate.values)
-        for (final size in supportedWidgetSizes)
-          UserWidgetDefinition(
-            id: 'showcase_${template.name}_${size.name}',
+      for (var index = 0; index < WidgetTemplate.values.length; index++)
+        () {
+          final template = WidgetTemplate.values[index];
+          return UserWidgetDefinition(
+            id: 'showcase_${template.name}',
             name: switch (template) {
               WidgetTemplate.quickEntry => l10n.widgetQuickEntryName,
               WidgetTemplate.budget => l10n.widgetBudgetName,
@@ -46,10 +53,11 @@ class _WidgetGalleryPageState extends State<WidgetGalleryPage> {
               WidgetTemplate.netWorth => l10n.widgetNetWorthName,
             },
             template: template,
-            size: size,
+            size: showcaseSizes[index],
             primaryMetric: defaultWidgetMetric(template),
             chartMetric: defaultWidgetChart(template),
-          ),
+          );
+        }(),
     ];
     return PopScope(
       child: Scaffold(

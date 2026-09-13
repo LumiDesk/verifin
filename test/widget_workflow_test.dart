@@ -23,7 +23,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('桌面小组件'), findsOneWidget);
-    expect(find.byType(WidgetDesignPreview), findsNWidgets(12));
+    expect(find.byType(WidgetDesignPreview), findsNWidgets(4));
     expect(find.byTooltip('创建小组件'), findsNothing);
     expect(find.byType(UserWidgetEditorPage), findsNothing);
     expect(find.byKey(const ValueKey('widget_delete_first')), findsNothing);

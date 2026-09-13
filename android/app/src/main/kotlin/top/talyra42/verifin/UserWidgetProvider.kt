@@ -316,8 +316,10 @@ class UserWidgetConfigureActivity : android.app.Activity() {
     }
 
     private fun refreshProvider(className: String) {
-        val provider = Class.forName(className).asSubclass(AppWidgetProvider::class.java)
-        WidgetData.refresh(this, provider)
+        runCatching {
+            val provider = Class.forName(className).asSubclass(AppWidgetProvider::class.java)
+            WidgetData.refresh(this, provider)
+        }
     }
 }
 
