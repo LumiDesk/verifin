@@ -87,35 +87,24 @@
                 android:name="android.service.quicksettings.TOGGLEABLE_TILE"
                 android:value="false" />
         </service>
-        <!-- Legacy fixed widget entries are retained only for package migration;
-             the picker must expose the configurable VeriFin entry below. -->
-        <receiver android:name=".QuickEntryWidgetProvider" android:enabled="false" android:exported="false">
+        <!-- Fixed template providers. Each desktop instance owns its configuration. -->
+        <receiver android:name=".QuickEntryWidgetProvider" android:exported="false" android:label="@string/widget_template_quick_entry">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/quick_entry_widget_info" />
         </receiver>
-        <receiver android:name=".BudgetWidgetProvider" android:enabled="false" android:exported="false">
+        <receiver android:name=".BudgetWidgetProvider" android:exported="false" android:label="@string/widget_template_budget">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/budget_widget_info" />
         </receiver>
-        <receiver android:name=".NetWorthWidgetProvider" android:enabled="false" android:exported="false">
+        <receiver android:name=".NetWorthWidgetProvider" android:exported="false" android:label="@string/widget_template_net_worth">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/net_worth_widget_info" />
         </receiver>
-        <receiver android:name=".TrendWidgetProvider" android:enabled="false" android:exported="false">
+        <receiver android:name=".TrendWidgetProvider" android:exported="false" android:label="@string/widget_template_trend">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/trend_widget_info" />
         </receiver>
-        <receiver
-            android:name=".UserWidgetProvider"
-            android:exported="false"
-            android:label="@string/user_widget_picker_label">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/user_widget_info" />
-        </receiver>
+        <receiver android:name=".UserWidgetProvider" android:enabled="false" android:exported="false" />
         <activity
             android:name=".UserWidgetConfigureActivity"
             android:exported="true"

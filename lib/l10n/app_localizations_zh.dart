@@ -3732,7 +3732,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get widgetGalleryTitle => '桌面小组件';
 
   @override
-  String get widgetGallerySubtitle => '把常看的数据放到手机桌面';
+  String get widgetGallerySubtitle => '查看 VeriFin 提供的固定组件样式';
 
   @override
   String get widgetGalleryShort => '预览与添加';

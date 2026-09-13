@@ -202,61 +202,122 @@ class UserWidgetProvider : AppWidgetProvider() {
     }
 }
 
-/** Native configuration screen shown by the launcher when adding a user widget. */
+/** Native per-instance configuration shown when the launcher adds or edits a widget. */
 class UserWidgetConfigureActivity : android.app.Activity() {
     private var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
-    private var selectedId: String = ""
 
     override fun onCreate(state: android.os.Bundle?) {
         super.onCreate(state)
         setResult(RESULT_CANCELED)
         widgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
         if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) { finish(); return }
-        val ids = WidgetData.readDefinitionIds(this)
-        selectedId = ids.firstOrNull().orEmpty()
-
-        val root = android.widget.LinearLayout(this).apply {
-            orientation = android.widget.LinearLayout.VERTICAL
-            setPadding(32, 40, 32, 24)
-            setBackgroundColor(Color.WHITE)
+        val info = AppWidgetManager.getInstance(this).getAppWidgetInfo(widgetId)
+        if (info == null) { finish(); return }
+        val provider = info.provider.className
+        val template = when {
+            provider.endsWith("QuickEntryWidgetProvider") -> "quickEntry"
+            provider.endsWith("BudgetWidgetProvider") -> "budget"
+            provider.endsWith("TrendWidgetProvider") -> "trend"
+            else -> "netWorth"
         }
-        root.addView(android.widget.TextView(this).apply {
-            text = getString(R.string.user_widget_choose_design)
-            textSize = 22f
+        val current = WidgetData.readInstanceConfig(this, widgetId)
+        val root = android.widget.ScrollView(this).apply { setBackgroundColor(Color.WHITE) }
+        val content = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(32, 36, 32, 24)
+        }
+        content.addView(android.widget.TextView(this).apply {
+            text = getString(R.string.widget_instance_config_title)
+            textSize = 23f
             setTextColor(Color.rgb(17, 24, 39))
         })
-        val group = android.widget.RadioGroup(this).apply { orientation = android.widget.RadioGroup.VERTICAL }
-        ids.forEach { id ->
-            val definition = WidgetData.readDefinition(this@UserWidgetConfigureActivity, id) ?: return@forEach
-            val button = android.widget.RadioButton(this@UserWidgetConfigureActivity).apply {
-                this.id = View.generateViewId()
-                text = definition.name
-                textSize = 16f
-                isChecked = id == selectedId
-                tag = id
-            }
-            group.addView(button)
-        }
-        group.setOnCheckedChangeListener { _, checkedId ->
-            selectedId = group.findViewById<android.widget.RadioButton>(checkedId)?.tag as? String ?: selectedId
-        }
-        root.addView(group, android.widget.LinearLayout.LayoutParams(-1, 0, 1f))
-        if (ids.isEmpty()) root.addView(android.widget.TextView(this).apply {
-            text = getString(R.string.user_widget_empty)
-            setPadding(0, 24, 0, 24)
+        content.addView(android.widget.TextView(this).apply {
+            text = templateLabel(template)
+            textSize = 16f
+            setTextColor(Color.rgb(107, 114, 128))
+            setPadding(0, 8, 0, 18)
         })
-        root.addView(android.widget.Button(this).apply {
-            text = getString(R.string.user_widget_add)
-            isEnabled = ids.isNotEmpty()
+
+        val books = WidgetData.readWidgetBooks(this)
+        val bookIds = books.map { it.first }
+        val bookSpinner = addSpinner(content, getString(R.string.widget_instance_book),
+            books.map { it.second }, bookIds.indexOf(current.bookId).coerceAtLeast(0))
+        val metricCodes = listOf("todayExpense", "periodExpense", "periodIncome", "budgetRemaining", "budgetUsed", "netWorth", "totalAssets", "totalLiabilities", "balance", "transactionCount")
+        val metricLabels = listOf("今日支出", "周期支出", "周期收入", "预算剩余", "预算已用", "净资产", "总资产", "总负债", "账户余额", "交易笔数")
+        val defaultMetric = when (template) { "quickEntry" -> "todayExpense"; "budget" -> "budgetRemaining"; "trend" -> "periodExpense"; else -> "netWorth" }
+        val metricSpinner = addSpinner(content, getString(R.string.widget_instance_primary), metricLabels,
+            metricCodes.indexOf(current.primaryMetric.ifBlank { defaultMetric }).coerceAtLeast(0))
+        val secondaryCodes = listOf("") + metricCodes
+        val secondaryLabels = listOf(getString(R.string.widget_instance_none)) + metricLabels
+        val secondarySpinner = addSpinner(content, getString(R.string.widget_instance_secondary), secondaryLabels,
+            secondaryCodes.indexOf(current.secondaryMetric).coerceAtLeast(0))
+        val chartCodes = listOf("", "expense", "income", "net", "budgetUsage", "netWorth")
+        val chartLabels = listOf(getString(R.string.widget_instance_none), "支出趋势", "收入趋势", "收支净额", "预算使用", "净资产变化")
+        val chartSpinner = addSpinner(content, getString(R.string.widget_instance_chart), chartLabels,
+            chartCodes.indexOf(current.chartMetric).coerceAtLeast(0))
+        val rangeSpinner = addSpinner(content, getString(R.string.widget_instance_range),
+            listOf("近 7 天", "近 30 天", "近 90 天", "本年"), listOf(7, 30, 90, 365).indexOf(current.chartDays).let { if (it < 0) 1 else it })
+        val colorCodes = listOf("FF1E293B", "FF111827", "FFFFFFFF", "FF312E81", "FF0F3D3E")
+        val colorLabels = listOf("深海蓝", "墨黑", "纯白", "靛青", "深青")
+        val colorSpinner = addSpinner(content, getString(R.string.widget_instance_background), colorLabels,
+            colorCodes.indexOf(Integer.toHexString(current.backgroundColor).uppercase()).coerceAtLeast(0))
+        val hide = android.widget.Switch(this).apply {
+            text = getString(R.string.widget_instance_hide_amounts)
+            setTextColor(Color.rgb(17, 24, 39))
+            isChecked = current.hideAmounts
+            setPadding(0, 12, 0, 12)
+        }
+        content.addView(hide)
+        val save = android.widget.Button(this).apply {
+            text = getString(R.string.widget_instance_save)
             setOnClickListener {
-                WidgetData.bindDefinition(this@UserWidgetConfigureActivity, widgetId, selectedId)
+                val values = mapOf(
+                    "template" to template,
+                    "bookId" to bookIds.getOrElse(bookSpinner.selectedItemPosition) { "" },
+                    "primaryMetric" to metricCodes[metricSpinner.selectedItemPosition],
+                    "secondaryMetric" to secondaryCodes[secondarySpinner.selectedItemPosition],
+                    "chartMetric" to chartCodes[chartSpinner.selectedItemPosition],
+                    "chartDays" to listOf(7, 30, 90, 365)[rangeSpinner.selectedItemPosition].toString(),
+                    "backgroundColor" to colorCodes[colorSpinner.selectedItemPosition],
+                    "hideAmounts" to hide.isChecked.toString(),
+                    "action" to if (template == "quickEntry") "entry" else "app",
+                )
+                WidgetData.writeInstanceConfig(this@UserWidgetConfigureActivity, widgetId, values)
                 val result = Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
                 setResult(RESULT_OK, result)
-                UserWidgetProvider.refresh(this@UserWidgetConfigureActivity)
+                refreshProvider(provider)
                 finish()
             }
-        })
+        }
+        content.addView(save)
+        root.addView(content)
         setContentView(root)
+    }
+
+    private fun addSpinner(parent: android.widget.LinearLayout, label: String, values: List<String>, selected: Int): android.widget.Spinner {
+        parent.addView(android.widget.TextView(this).apply {
+            text = label
+            textSize = 13f
+            setTextColor(Color.rgb(107, 114, 128))
+            setPadding(0, 8, 0, 2)
+        })
+        val spinner = android.widget.Spinner(this)
+        spinner.adapter = android.widget.ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, values)
+        spinner.setSelection(selected.coerceIn(0, values.lastIndex.coerceAtLeast(0)))
+        parent.addView(spinner, android.widget.LinearLayout.LayoutParams(-1, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT))
+        return spinner
+    }
+
+    private fun templateLabel(template: String): String = when (template) {
+        "quickEntry" -> getString(R.string.widget_template_quick_entry)
+        "budget" -> getString(R.string.widget_template_budget)
+        "trend" -> getString(R.string.widget_template_trend)
+        else -> getString(R.string.widget_template_net_worth)
+    }
+
+    private fun refreshProvider(className: String) {
+        val provider = Class.forName(className).asSubclass(AppWidgetProvider::class.java)
+        WidgetData.refresh(this, provider)
     }
 }
 

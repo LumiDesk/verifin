@@ -36,7 +36,7 @@ class QuickEntryWidgetProvider : AppWidgetProvider() {
             val config = WidgetData.readInstanceConfig(context, widgetId)
             val defaults = WidgetData.todayForToday(context)
             val selected = if (config.primaryMetric.isBlank()) defaults else
-                WidgetData.metric(context, config.primaryMetric, defaults.first, defaults.second)
+                WidgetData.metric(context, config.primaryMetric, defaults.first, defaults.second, config.bookId)
             val amount = if (config.hideAmounts) "••••" else selected.first
             val label = selected.second
             val quickEntryLabel = WidgetData.read(
@@ -46,6 +46,7 @@ class QuickEntryWidgetProvider : AppWidgetProvider() {
             )
 
             val views = RemoteViews(context.packageName, R.layout.quick_entry_widget)
+            views.setInt(R.id.widget_root, "setBackgroundResource", WidgetData.backgroundResource(config.backgroundColor))
             views.setTextViewText(R.id.widget_amount, amount)
             views.setTextViewText(R.id.widget_label, label)
             views.setTextViewText(R.id.widget_add_button, quickEntryLabel)

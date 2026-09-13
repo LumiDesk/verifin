@@ -39,6 +39,8 @@ object WidgetData {
     private const val INSTANCE_CONFIG_PREFIX = "instance_config_"
     private const val DEFINITIONS_KEY = "user_widget_definitions"
     private const val INSTANCE_DEFINITION_PREFIX = "user_widget_definition_"
+    private const val WIDGET_BOOKS_KEY = "widget_books"
+    private const val WIDGET_SNAPSHOTS_KEY = "widget_snapshots"
 
     /** A saved design owned by the user. Kept as JSON so Flutter can evolve the schema. */
     data class UserDefinition(
@@ -149,6 +151,7 @@ object WidgetData {
         val chartDays: Int = 30,
         val action: String = "app",
         val hideAmounts: Boolean = false,
+        val backgroundColor: Int = 0xFF1E293B.toInt(),
     )
 
     fun readInstanceConfig(context: Context, widgetId: Int): InstanceConfig {
@@ -165,6 +168,7 @@ object WidgetData {
                 chartDays = json.optInt("chartDays", 30).coerceIn(7, 365),
                 action = json.optString("action", "app"),
                 hideAmounts = json.optBoolean("hideAmounts", false),
+                backgroundColor = json.optInt("backgroundColor", 0xFF1E293B.toInt()),
             )
         } catch (_: Exception) {
             InstanceConfig()
@@ -183,6 +187,15 @@ object WidgetData {
             put("chartDays", values["chartDays"]?.toIntOrNull() ?: current.chartDays)
             put("action", values["action"] ?: current.action)
             put("hideAmounts", values["hideAmounts"]?.toBoolean() ?: current.hideAmounts)
+            val colorText = values["backgroundColor"]?.removePrefix("#")
+            val colorValue = colorText?.toLongOrNull(16)?.let {
+                when (colorText.length) {
+                    6 -> (0xFF000000L or it).toInt()
+                    8 -> it.toInt()
+                    else -> null
+                }
+            }
+            put("backgroundColor", colorValue ?: current.backgroundColor)
         }
         write(context, mapOf(instanceConfigKey(widgetId) to json.toString()))
     }
@@ -195,9 +208,65 @@ object WidgetData {
 
     private fun instanceConfigKey(widgetId: Int) = "$INSTANCE_CONFIG_PREFIX$widgetId"
 
+    fun writeWidgetBooks(context: Context, books: List<Pair<String, String>>) {
+        val json = org.json.JSONArray().apply {
+            books.forEach { (id, name) ->
+                put(JSONObject().apply { put("id", id); put("name", name) })
+            }
+        }
+        write(context, mapOf(WIDGET_BOOKS_KEY to json.toString()))
+    }
+
+    fun readWidgetBooks(context: Context): List<Pair<String, String>> {
+        val raw = read(context, WIDGET_BOOKS_KEY, "")
+        if (raw.isBlank()) return emptyList()
+        return runCatching {
+            val json = org.json.JSONArray(raw)
+            (0 until json.length()).mapNotNull { index ->
+                val item = json.optJSONObject(index) ?: return@mapNotNull null
+                val id = item.optString("id").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                id to item.optString("name", id)
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    fun backgroundResource(color: Int): Int = when (color) {
+        0xFF111827.toInt() -> R.drawable.widget_background_ink
+        0xFFFFFFFF.toInt() -> R.drawable.widget_background_white
+        0xFF312E81.toInt() -> R.drawable.widget_background_indigo
+        0xFF0F3D3E.toInt() -> R.drawable.widget_background_teal
+        else -> R.drawable.widget_background_navy
+    }
+
+    fun writeWidgetSnapshots(context: Context, json: String) {
+        write(context, mapOf(WIDGET_SNAPSHOTS_KEY to json))
+    }
+
+    fun snapshotMetric(
+        context: Context,
+        bookId: String,
+        metric: String,
+        fallbackAmount: String,
+        fallbackLabel: String,
+    ): Pair<String, String> {
+        if (bookId.isBlank()) return fallbackAmount to fallbackLabel
+        return runCatching {
+            val books = JSONObject(read(context, WIDGET_SNAPSHOTS_KEY, "{}"))
+            val values = books.optJSONObject(bookId)?.optJSONObject(metric) ?: return@runCatching fallbackAmount to fallbackLabel
+            values.optString("amount", fallbackAmount) to values.optString("label", fallbackLabel)
+        }.getOrDefault(fallbackAmount to fallbackLabel)
+    }
+
+    fun snapshotPoints(context: Context, bookId: String): List<Float> = runCatching {
+        val books = JSONObject(read(context, WIDGET_SNAPSHOTS_KEY, "{}"))
+        val metric = books.optJSONObject(bookId)?.optJSONObject("periodExpense")
+        metric?.optString("points", "").orEmpty().split(',').mapNotNull { it.toFloatOrNull() }
+    }.getOrDefault(emptyList())
+
     /** Resolve a metric from the global Flutter snapshot. This keeps native rendering
      * deterministic while allowing new metrics to be added without changing providers. */
-    fun metric(context: Context, metric: String, fallbackAmount: String, fallbackLabel: String): Pair<String, String> {
+    fun metric(context: Context, metric: String, fallbackAmount: String, fallbackLabel: String, bookId: String = ""): Pair<String, String> {
+        if (bookId.isNotBlank()) return snapshotMetric(context, bookId, metric, fallbackAmount, fallbackLabel)
         val normalized = metric.trim().lowercase()
         return when (normalized) {
             "today", "today_expense", "daily_expense" -> todayForToday(context)

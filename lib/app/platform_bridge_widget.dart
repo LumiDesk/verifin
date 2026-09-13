@@ -171,4 +171,30 @@ class AppWidgetBridge {
       // A stale native snapshot must not block normal ledger use.
     }
   }
+
+  /// Push the current ledger book names for the native per-instance widget
+  /// configuration screen. This is a device-local UI snapshot, not app data.
+  static Future<void> syncWidgetBooks(List<Map<String, Object?>> books) async {
+    try {
+      await _channel.invokeMethod<void>('syncWidgetBooks', {'books': books});
+    } on MissingPluginException {
+      // Non-Android hosts have no native widget configuration screen.
+    } on PlatformException {
+      // A stale native snapshot is safe; the next app foreground refreshes it.
+    }
+  }
+
+  static Future<void> syncWidgetSnapshots(
+    Map<String, Map<String, Map<String, Object?>>> snapshots,
+  ) async {
+    try {
+      await _channel.invokeMethod<void>('syncWidgetSnapshots', {
+        'snapshots': snapshots,
+      });
+    } on MissingPluginException {
+      // Non-Android hosts have no native widget renderer.
+    } on PlatformException {
+      // The next foreground refresh will replace a stale snapshot.
+    }
+  }
 }

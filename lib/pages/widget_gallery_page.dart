@@ -31,112 +31,27 @@ class WidgetGalleryPage extends StatefulWidget {
 }
 
 class _WidgetGalleryPageState extends State<WidgetGalleryPage> {
-  bool _editing = false;
-  String? _activeTileId;
-  List<String> _order = const [];
-
-  void _enterEditing(String id) {
-    if (!mounted) return;
-    setState(() {
-      _editing = true;
-      _activeTileId = id;
-    });
-  }
-
-  void _exitEditing() {
-    if (!_editing && _activeTileId == null) return;
-    setState(() {
-      _editing = false;
-      _activeTileId = null;
-    });
-  }
-
-  Future<void> _create() async {
-    final saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(builder: (_) => const WidgetCreatePage()),
-    );
-    if (saved == true && mounted) setState(() {});
-  }
-
-  Future<void> _edit(UserWidgetDefinition definition) async {
-    final saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
-        builder: (_) => UserWidgetEditorPage(definition: definition),
-      ),
-    );
-    if (saved == true && mounted) setState(() {});
-  }
-
-  void _syncOrder(List<UserWidgetDefinition> definitions) {
-    final ids = definitions.map((item) => item.id).toSet();
-    _order = [
-      ..._order.where(ids.contains),
-      ...definitions.map((item) => item.id).where((id) => !_order.contains(id)),
-    ];
-  }
-
-  Future<void> _reorder(
-    int from,
-    int to,
-    List<UserWidgetDefinition> definitions,
-  ) async {
-    final ids = definitions.map((item) => item.id).toList();
-    final moved = ids.removeAt(from);
-    ids.insert(to.clamp(0, ids.length), moved);
-    final byId = {for (final item in definitions) item.id: item};
-    await VeriFinScope.of(
-      context,
-    ).saveUserWidgetDefinitions(ids.map((id) => byId[id]!).toList());
-    if (mounted) setState(() => _order = ids);
-  }
-
-  Future<void> _deleteById(String id) async {
-    final controller = VeriFinScope.of(context);
-    final definition = controller.userWidgetDefinitions.firstWhere(
-      (item) => item.id == id,
-    );
-    await _delete(definition);
-  }
-
-  Future<void> _delete(UserWidgetDefinition definition) async {
-    final l10n = AppLocalizations.of(context);
-    final ok = await showConfirmDialog(
-      context,
-      title: l10n.widgetDelete,
-      message: definition.name,
-      confirmLabel: l10n.widgetDelete,
-      destructive: true,
-    );
-    if (ok != true || !mounted) return;
-    final controller = VeriFinScope.of(context);
-    final definitions = controller.userWidgetDefinitions
-        .where((item) => item.id != definition.id)
-        .toList();
-    await controller.saveUserWidgetDefinitions(definitions);
-    if (!mounted) return;
-    setState(() {});
-    unawaited(
-      VeriFeedbackHost.of(context).showMessage(
-        message: l10n.widgetDesignDeleted,
-        tone: VeriFeedbackTone.success,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final controller = VeriFinScope.of(context);
-    final definitions = controller.userWidgetDefinitions;
-    _syncOrder(definitions);
-    final ordered = [
-      for (final id in _order) ...definitions.where((item) => item.id == id),
+    final definitions = [
+      for (final template in WidgetTemplate.values)
+        for (final size in supportedWidgetSizes)
+          UserWidgetDefinition(
+            id: 'showcase_${template.name}_${size.name}',
+            name: switch (template) {
+              WidgetTemplate.quickEntry => l10n.widgetQuickEntryName,
+              WidgetTemplate.budget => l10n.widgetBudgetName,
+              WidgetTemplate.trend => l10n.widgetTrendName,
+              WidgetTemplate.netWorth => l10n.widgetNetWorthName,
+            },
+            template: template,
+            size: size,
+            primaryMetric: defaultWidgetMetric(template),
+            chartMetric: defaultWidgetChart(template),
+          ),
     ];
     return PopScope(
-      canPop: !_editing,
-      onPopInvokedWithResult: (didPop, result) {
-        if (!didPop && _editing) _exitEditing();
-      },
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -144,52 +59,22 @@ class _WidgetGalleryPageState extends State<WidgetGalleryPage> {
               padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
               children: [
                 VeriHeader(
-                  title: l10n.myWidgetsTitle,
-                  subtitle: l10n.myWidgetsSubtitle,
+                  title: l10n.widgetGalleryTitle,
+                  subtitle: l10n.widgetGallerySubtitle,
                   showBack: true,
-                  actions: [
-                    HeaderAction(
-                      icon: Icons.add,
-                      tooltip: l10n.widgetCreateNew,
-                      onPressed: _create,
-                    ),
-                  ],
                 ),
                 const SizedBox(height: 10),
-                if (definitions.isEmpty)
-                  VeriCard(
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.dashboard_customize_outlined,
-                          size: 40,
-                          color: veriRoyal,
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          l10n.widgetEmpty,
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          l10n.widgetEmptyHint,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  _MasonryCanvas(
-                    definitions: ordered,
-                    editing: _editing,
-                    activeTileId: _activeTileId,
-                    onTap: _edit,
-                    onLongPress: _enterEditing,
-                    onTapBlank: _exitEditing,
-                    onDelete: _deleteById,
-                    onReorder: (from, to) => _reorder(from, to, ordered),
-                  ),
+                _MasonryCanvas(
+                  definitions: definitions,
+                  editing: false,
+                  interactive: false,
+                  activeTileId: null,
+                  onTap: (_) {},
+                  onLongPress: (_) {},
+                  onTapBlank: () {},
+                  onDelete: (_) {},
+                  onReorder: (_, _) async {},
+                ),
               ],
             ),
           ),
@@ -242,6 +127,7 @@ class _MasonryCanvas extends StatefulWidget {
   const _MasonryCanvas({
     required this.definitions,
     required this.editing,
+    required this.interactive,
     required this.activeTileId,
     required this.onTap,
     required this.onLongPress,
@@ -251,6 +137,7 @@ class _MasonryCanvas extends StatefulWidget {
   });
   final List<UserWidgetDefinition> definitions;
   final bool editing;
+  final bool interactive;
   final String? activeTileId;
   final ValueChanged<UserWidgetDefinition> onTap;
   final ValueChanged<String> onLongPress;
@@ -490,6 +377,7 @@ class _MasonryCanvasState extends State<_MasonryCanvas> {
                     ),
                     definition: renderDefinitions[item.index],
                     editing: widget.editing,
+                    interactive: widget.interactive,
                     deleteVisible:
                         widget.activeTileId == renderDefinitions[item.index].id,
                     onTap: () => widget.onTap(renderDefinitions[item.index]),
@@ -590,6 +478,7 @@ class _MasonryTile extends StatelessWidget {
     super.key,
     required this.definition,
     required this.editing,
+    required this.interactive,
     required this.deleteVisible,
     required this.onTap,
     required this.onLongPressStart,
@@ -599,6 +488,7 @@ class _MasonryTile extends StatelessWidget {
   });
   final UserWidgetDefinition definition;
   final bool editing;
+  final bool interactive;
   final bool deleteVisible;
   final VoidCallback onTap;
   final ValueChanged<Offset> onLongPressStart;
@@ -610,11 +500,16 @@ class _MasonryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final tile = GestureDetector(
       key: ValueKey('widget_tile_${definition.id}'),
-      onTap: editing ? null : onTap,
-      onLongPressStart: (details) => onLongPressStart(details.globalPosition),
-      onLongPressMoveUpdate: (details) =>
-          onLongPressMove(details.globalPosition),
-      onLongPressEnd: (details) => onLongPressEnd(details.globalPosition),
+      onTap: interactive && !editing ? onTap : null,
+      onLongPressStart: interactive
+          ? (details) => onLongPressStart(details.globalPosition)
+          : null,
+      onLongPressMoveUpdate: interactive
+          ? (details) => onLongPressMove(details.globalPosition)
+          : null,
+      onLongPressEnd: interactive
+          ? (details) => onLongPressEnd(details.globalPosition)
+          : null,
       child: WidgetDesignPreview(
         definition: definition,
         width: double.infinity,

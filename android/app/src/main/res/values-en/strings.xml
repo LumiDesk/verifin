@@ -18,4 +18,18 @@
     <string name="user_widget_add">Add to home screen</string>
     <string name="user_widget_default_name">My finance overview</string>
     <string name="user_widget_empty">Open the app and tap + in My widgets to create a widget first.</string>
+    <string name="widget_instance_config_title">Configure widget</string>
+    <string name="widget_instance_book">Ledger</string>
+    <string name="widget_instance_primary">Primary metric</string>
+    <string name="widget_instance_secondary">Secondary metric</string>
+    <string name="widget_instance_chart">Chart</string>
+    <string name="widget_instance_range">Chart range</string>
+    <string name="widget_instance_background">Background</string>
+    <string name="widget_instance_hide_amounts">Hide amounts</string>
+    <string name="widget_instance_save">Save settings</string>
+    <string name="widget_instance_none">None</string>
+    <string name="widget_template_quick_entry">Quick entry</string>
+    <string name="widget_template_budget">Budget progress</string>
+    <string name="widget_template_trend">Spending trend</string>
+    <string name="widget_template_net_worth">Net worth</string>
 </resources>

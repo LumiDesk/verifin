@@ -41,16 +41,17 @@ abstract class StatWidgetProvider : AppWidgetProvider() {
         val config = WidgetData.readInstanceConfig(context, widgetId)
         val defaults = resolveAmountLabel(context)
         val selected = if (config.primaryMetric.isBlank()) defaults else
-            WidgetData.metric(context, config.primaryMetric, defaults.first, defaults.second)
+            WidgetData.metric(context, config.primaryMetric, defaults.first, defaults.second, config.bookId)
         val amount = if (config.hideAmounts) "••••" else selected.first
         val label = selected.second
 
         val views = RemoteViews(context.packageName, R.layout.stat_widget)
+        views.setInt(R.id.stat_widget_root, "setBackgroundResource", WidgetData.backgroundResource(config.backgroundColor))
         views.setTextViewText(R.id.stat_widget_label, label)
         views.setTextViewText(R.id.stat_widget_value, amount)
 
         if (config.secondaryMetric.isNotBlank()) {
-            val secondary = WidgetData.metric(context, config.secondaryMetric, "", "")
+            val secondary = WidgetData.metric(context, config.secondaryMetric, "", "", config.bookId)
             views.setTextViewText(
                 R.id.stat_widget_secondary,
                 if (config.hideAmounts) secondary.second else "${secondary.second}  ${secondary.first}",
@@ -61,7 +62,10 @@ abstract class StatWidgetProvider : AppWidgetProvider() {
         }
 
         if (config.chartMetric.isNotBlank()) {
-            val chart = WidgetChartRenderer.sparkline(WidgetData.trendPoints(context))
+            val chart = WidgetChartRenderer.sparkline(
+                if (config.bookId.isBlank()) WidgetData.trendPoints(context)
+                else WidgetData.snapshotPoints(context, config.bookId),
+            )
             if (chart != null) {
                 views.setImageViewBitmap(R.id.stat_widget_chart, chart)
                 views.setViewVisibility(R.id.stat_widget_chart, android.view.View.VISIBLE)
