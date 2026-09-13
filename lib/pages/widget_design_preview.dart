@@ -192,7 +192,11 @@ class WidgetDesignPreview extends StatelessWidget {
                                         children: [
                                           Expanded(
                                             child: Align(
-                                              alignment: Alignment.centerLeft,
+                                              alignment:
+                                                  data != null &&
+                                                      data.secondary.isNotEmpty
+                                                  ? Alignment.centerLeft
+                                                  : Alignment.bottomLeft,
                                               child: metric,
                                             ),
                                           ),
@@ -234,7 +238,12 @@ class WidgetDesignPreview extends StatelessWidget {
                                     ),
                                     const SizedBox(height: 6),
                                     SizedBox(
-                                      height: 44,
+                                      height:
+                                          definition.template ==
+                                                  WidgetTemplate.budget &&
+                                              size == WidgetSize.twoByTwo
+                                          ? 64
+                                          : 44,
                                       child:
                                           definition.template ==
                                               WidgetTemplate.quickEntry
@@ -254,8 +263,16 @@ class WidgetDesignPreview extends StatelessWidget {
                                                 Expanded(child: auxiliaries),
                                                 const SizedBox(width: 8),
                                                 SizedBox(
-                                                  width: 44,
-                                                  height: 44,
+                                                  width:
+                                                      size ==
+                                                          WidgetSize.twoByTwo
+                                                      ? 60
+                                                      : 44,
+                                                  height:
+                                                      size ==
+                                                          WidgetSize.twoByTwo
+                                                      ? 60
+                                                      : 44,
                                                   child: ring,
                                                 ),
                                               ],
