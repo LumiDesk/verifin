@@ -56,6 +56,10 @@ class UserWidgetProvider : AppWidgetProvider() {
                 views.setInt(R.id.user_widget_root, "setBackgroundColor", definition?.backgroundColor ?: Color.rgb(30, 41, 59))
                 views.setViewVisibility(R.id.user_widget_background, View.GONE)
                 views.setViewVisibility(R.id.user_widget_scrim, View.GONE)
+                val light = definition?.let { isLightColor(it.backgroundColor) } ?: false
+                views.setTextColor(R.id.user_widget_title, if (light) Color.rgb(107, 114, 128) else Color.WHITE)
+                views.setTextColor(R.id.user_widget_label, if (light) Color.rgb(107, 114, 128) else Color.LTGRAY)
+                views.setTextColor(R.id.user_widget_value, if (light) Color.rgb(17, 24, 39) else Color.WHITE)
             }
             return views.apply {
                 setTextViewText(
@@ -104,8 +108,12 @@ class UserWidgetProvider : AppWidgetProvider() {
                 views.setViewVisibility(R.id.user_widget_background, View.GONE)
             }
             views.setViewVisibility(R.id.user_widget_scrim, if (bitmap == null) View.GONE else View.VISIBLE)
-            val foreground = if (bitmap == null) context.getColor(R.color.widget_value) else Color.WHITE
-            val muted = if (bitmap == null) context.getColor(R.color.widget_label) else Color.LTGRAY
+            // User designs use dark surfaces by default. Android inflates RemoteViews
+            // with the launcher's resource mode, which may be light even when the app
+            // preview is dark; choose text contrast from the actual surface color.
+            val surfaceLight = bitmap == null && isLightColor(definition.backgroundColor)
+            val foreground = if (bitmap != null || !surfaceLight) Color.WHITE else Color.rgb(17, 24, 39)
+            val muted = if (bitmap != null || !surfaceLight) Color.LTGRAY else Color.rgb(107, 114, 128)
             views.setTextColor(R.id.user_widget_title, muted)
             views.setTextColor(R.id.user_widget_label, muted)
             views.setTextColor(R.id.user_widget_value, foreground)
@@ -167,6 +175,13 @@ class UserWidgetProvider : AppWidgetProvider() {
                 }
             }
             manager.updateAppWidget(widgetId, views)
+        }
+
+        private fun isLightColor(color: Int): Boolean {
+            val r = Color.red(color) / 255.0
+            val g = Color.green(color) / 255.0
+            val b = Color.blue(color) / 255.0
+            return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 0.62
         }
     }
 }
