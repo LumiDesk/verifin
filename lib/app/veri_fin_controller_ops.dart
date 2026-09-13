@@ -3,9 +3,72 @@ part of 'veri_fin_controller.dart';
 /// 控制器的「领域操作」层：交易/账户/分组/账本/分类/标签/预算/偏好/备份/
 /// 导入导出等所有对外方法。字段与持久化在 [_ControllerState]。
 mixin _ControllerOps on ChangeNotifier, _ControllerState {
+  /// 读取桌面小组件实例配置（设备偏好，不属于账本备份）。
+  List<WidgetInstanceConfig> get widgetInstanceConfigs =>
+      WidgetConfigStore.load(_store);
+
+  Future<void> saveWidgetInstanceConfigs(
+    Iterable<WidgetInstanceConfig> configs,
+  ) => WidgetConfigStore.save(_store, configs);
+
+  List<UserWidgetDefinition> get userWidgetDefinitions =>
+      WidgetConfigStore.loadDefinitions(_store);
+
+  List<WidgetPlacement> get widgetPlacements =>
+      WidgetConfigStore.loadPlacements(_store);
+
+  Future<void> saveUserWidgetDefinitions(
+    Iterable<UserWidgetDefinition> definitions,
+  ) async {
+    try {
+      await WidgetConfigStore.saveDefinitions(_store, definitions);
+    } on Object catch (error) {
+      _logger?.error(
+        'Widget definitions save failed',
+        source: 'widgets',
+        error: error,
+      );
+      rethrow;
+    }
+    onWidgetProjectionInvalidated?.call();
+  }
+
+  WidgetLedgerSnapshot? widgetLedgerSnapshot(
+    String? selectedBookId,
+    DateTime now,
+  ) {
+    final id = selectedBookId ?? _activeBookId;
+    final book = ledgerBooks.where((item) => item.id == id).firstOrNull;
+    if (book == null) return null;
+    final startDay = _budgetCycleStartDays[id] ?? naturalMonthStartDay;
+    final keyMonth = budgetCycleKeyMonthFor(now, startDay);
+    return WidgetLedgerSnapshot(
+      book: book,
+      entries: entriesForBook(id),
+      accounts: List.unmodifiable(_accounts.where((item) => item.bookId == id)),
+      rates: List.unmodifiable(
+        _exchangeRates.where((item) => item.bookId == id),
+      ),
+      budgetWindow: budgetCycleOfKeyMonth(keyMonth, startDay),
+      budget:
+          _monthlyBudgets['$id:${_monthKey(keyMonth)}'] ??
+          _monthlyBudgets[_defaultMonthlyBudgetKey(id)] ??
+          0,
+    );
+  }
+
+  Future<void> saveWidgetPlacements(Iterable<WidgetPlacement> placements) =>
+      WidgetConfigStore.savePlacements(_store, placements);
+
   List<LedgerEntry> get entries =>
       _entriesView ??= List<LedgerEntry>.unmodifiable(
         _entries.where((entry) => entry.bookId == _activeBookId),
+      );
+
+  /// Read-only entries for cross-book widget previews.
+  List<LedgerEntry> entriesForBook(String bookId) =>
+      List<LedgerEntry>.unmodifiable(
+        _entries.where((entry) => entry.bookId == bookId),
       );
 
   List<LedgerBook> get ledgerBooks => List<LedgerBook>.unmodifiable(
@@ -3871,6 +3934,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       _assetSectionOrderKey,
       _homePanelsKey,
       _reportPanelsKey,
+      WidgetConfigStore.definitionsKey,
+      WidgetConfigStore.placementsKey,
+      WidgetConfigStore.storageKey,
     ]) {
       _store.delete(key);
     }
@@ -3921,7 +3987,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   String exportDataJson() {
     final payload = <String, Object?>{
       'app': 'verifin',
-      'version': 2,
+      'version': 3,
       'exportedAt': DateTime.now().toIso8601String(),
       'data': <String, Object?>{
         'ledgerBooks': _ledgerBooks.map((book) => book.toJson()).toList(),
@@ -3961,6 +4027,10 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         'autoSuggestEnabled': _autoSuggestEnabled,
         'showRunningBalance': _showRunningBalance,
         'homeTrendConfig': _homeTrendConfig.toJson(),
+        // 用户小组件设计属于可迁移数据；Android appWidgetId 不进入备份。
+        'userWidgetDefinitions': userWidgetDefinitions
+            .map((definition) => definition.toJson())
+            .toList(),
       },
     };
     return const JsonEncoder.withIndent('  ').convert(payload);
@@ -3987,7 +4057,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       throw const FormatException('备份版本格式不正确');
     }
     final version = (rawVersion as num?)?.toInt() ?? 1;
-    if (version < 1 || version > 2) {
+    if (version < 1 || version > 3) {
       throw FormatException('不支持的备份版本：$version');
     }
 
@@ -4148,6 +4218,11 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         ? HomeTrendConfig.fromJson(Map<String, dynamic>.from(homeTrendValue))
         : HomeTrendConfig.defaults;
 
+    final nextWidgetDefinitions = _decodeModelList<UserWidgetDefinition>(
+      data['userWidgetDefinitions'],
+      UserWidgetDefinition.fromJson,
+    ).where((definition) => definition.id.isNotEmpty).toList(growable: false);
+
     _validateImportedCurrencyData(
       books: nextLedgerBooks,
       accounts: nextAccounts,
@@ -4237,6 +4312,12 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _autoSuggestEnabled = nextAutoSuggestEnabled;
     _showRunningBalance = nextShowRunningBalance;
     _homeTrendConfig = nextHomeTrendConfig;
+    // v1/v2 备份没有该字段，按空设计处理；旧设备上的实例配置仍可由
+    // WidgetConfigStore 在读取时按 legacy appWidgetId 惰性迁移。
+    WidgetConfigStore.saveDefinitionsSync(_store, nextWidgetDefinitions);
+    // 桌面 appWidgetId 是设备私有绑定，导入设计后必须解除旧设备实例，避免
+    // 旧实例继续引用已不存在的设计；用户可在“我的小组件”中重新添加。
+    WidgetConfigStore.savePlacementsSync(_store, const <WidgetPlacement>[]);
 
     // 备份恢复零参照完整性校验，是「幽灵同名分类」的唯一现实入口（内部不一致的外部/
     // 异构/手改备份）；覆盖后跑一遍自愈，堵住这个入口。落库统一由下方 _persistAllLedgerData。

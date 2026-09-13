@@ -67,6 +67,7 @@ object WidgetRefreshScheduler {
         WidgetData.refresh(context, QuickEntryWidgetProvider::class.java)
         WidgetData.refresh(context, BudgetWidgetProvider::class.java)
         WidgetData.refresh(context, NetWorthWidgetProvider::class.java)
+        WidgetData.refresh(context, TrendWidgetProvider::class.java)
     }
 }
 

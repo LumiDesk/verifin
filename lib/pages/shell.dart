@@ -62,6 +62,7 @@ class _VeriFinShellState extends State<VeriFinShell> {
     _pageController.addListener(_trackScrollVelocity);
     AppCaptureBridge.setQuickEntryHandler(_openQuickEntryFromPlatform);
     AppCaptureBridge.setSharedCaptureHandler(_openSharedCaptureFromPlatform);
+    AppWidgetBridge.setRouteHandler(_openWidgetRouteFromPlatform);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // 同意与引导由外部门卫完成后才构建本壳。
       if (await AppCaptureBridge.consumeInitialQuickEntryIntent() && mounted) {
@@ -70,6 +71,12 @@ class _VeriFinShellState extends State<VeriFinShell> {
       if (!mounted) {
         return;
       }
+      final widgetRoute = await AppWidgetBridge.consumeInitialRoute();
+      if (!mounted) return;
+      if (widgetRoute != null) {
+        await _openWidgetRouteFromPlatform(widgetRoute);
+      }
+      if (!mounted) return;
       // 冷启动带着分享/外部采集内容时（分享截图给 Veri Fin 等），开屏即识别。
       await startSharedCaptureEntry(context);
     });
@@ -79,6 +86,7 @@ class _VeriFinShellState extends State<VeriFinShell> {
   void dispose() {
     AppCaptureBridge.clearQuickEntryHandler();
     AppCaptureBridge.clearSharedCaptureHandler();
+    AppWidgetBridge.clearRouteHandler();
     _pageController.removeListener(_trackScrollVelocity);
     _pageController.dispose();
     super.dispose();
@@ -428,6 +436,29 @@ class _VeriFinShellState extends State<VeriFinShell> {
       return;
     }
     await startSharedCaptureEntry(context);
+  }
+
+  Future<void> _openWidgetRouteFromPlatform(Map<String, Object?> args) async {
+    if (!mounted) return;
+    final controller = VeriFinScope.of(context);
+    final bookId = args['bookId'] as String?;
+    if (bookId != null && bookId.isNotEmpty) {
+      controller.switchLedgerBook(bookId);
+    }
+    final route = args['route'] as String? ?? 'app';
+    if (route == 'entry' || route == 'quick_entry') {
+      await _openQuickEntryFromPlatform();
+      return;
+    }
+    final target = switch (route) {
+      'assets' || 'account' || 'net_worth' => 1,
+      'reports' || 'budget' || 'trend' => 2,
+      'profile' => 3,
+      _ => null,
+    };
+    if (target != null && target != _index) {
+      _goToTab(target);
+    }
   }
 }
 

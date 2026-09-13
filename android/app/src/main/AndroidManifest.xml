@@ -120,6 +120,34 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/net_worth_widget_info" />
         </receiver>
+        <!-- 可配置收支趋势小组件；数据由 Flutter 快照推送。 -->
+        <receiver
+            android:name=".TrendWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/trend_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".UserWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/user_widget_info" />
+        </receiver>
+        <activity
+            android:name=".UserWidgetConfigureActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+        <receiver
+            android:name=".UserWidgetPinReceiver"
+            android:exported="false" />
         <!-- 桌面小组件午夜刷新：定时广播重绘小组件以跨天/跨月自愈；开机/更新后重排闹钟。 -->
         <receiver
             android:name=".WidgetRefreshReceiver"

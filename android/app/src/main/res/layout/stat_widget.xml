@@ -32,4 +32,23 @@
         android:maxLines="1"
         android:ellipsize="end"
         android:includeFontPadding="false" />
+
+    <TextView
+        android:id="@+id/stat_widget_secondary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textColor="@color/widget_label"
+        android:textSize="11sp"
+        android:visibility="gone"
+        android:includeFontPadding="false" />
+
+    <ImageView
+        android:id="@+id/stat_widget_chart"
+        android:layout_width="match_parent"
+        android:layout_height="34dp"
+        android:layout_marginTop="6dp"
+        android:scaleType="fitXY"
+        android:contentDescription="@string/widget_chart_content_description"
+        android:visibility="gone" />
 </LinearLayout>

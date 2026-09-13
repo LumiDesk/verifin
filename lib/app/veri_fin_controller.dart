@@ -20,6 +20,8 @@ import 'demo_data.dart';
 import 'model_lookup.dart';
 import 'amount_format.dart' as amount_format;
 import 'home_metrics.dart';
+import 'widget_config.dart';
+import 'widget_presentation.dart';
 import 'series_math.dart';
 import 'ledger_math.dart';
 import 'ledger_data_validation.dart';
@@ -51,6 +53,7 @@ const Set<String> _knownBackupDataKeys = <String>{
   'themePreference',
   'homePanels',
   'reportPanels',
+  'userWidgetDefinitions',
 };
 
 // 偏好类 KV 键（库级私有以便各 part 共享）。全部 `verifin.*.v1` 键集中在此，

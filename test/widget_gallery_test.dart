@@ -6,7 +6,7 @@ import 'support/test_harness.dart';
 void main() {
   useTestDatabases();
 
-  testWidgets('widget gallery lists all widgets and reaches add-to-home', (
+  testWidgets('my widgets canvas opens the separate create page', (
     tester,
   ) async {
     await pumpApp(tester);
@@ -20,14 +20,12 @@ void main() {
     await tester.tap(find.text('桌面小组件'));
     await tester.pumpAndSettle();
 
-    // 三个小组件都列出（卡片标题）+ 各自「添加到桌面」按钮（镂空样式）。
-    expect(find.text('今日支出 + 记一笔'), findsOneWidget);
-    expect(find.text('本月可用预算'), findsWidgets);
-    expect(find.text('资产总额'), findsWidgets);
-    expect(find.widgetWithText(OutlinedButton, '添加到桌面'), findsNWidgets(3));
-
-    // 底部「如何手动添加」引导（懒加载列表，需滚动到位）。
-    await tester.scrollUntilVisible(find.text('如何手动添加'), 200);
-    expect(find.text('如何手动添加'), findsOneWidget);
+    expect(find.text('我的小组件'), findsOneWidget);
+    expect(find.text('还没有保存的小组件'), findsOneWidget);
+    expect(find.text('基础模板'), findsNothing);
+    await tester.tap(find.byTooltip('创建小组件'));
+    await tester.pumpAndSettle();
+    expect(find.text('创建小组件'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, '基于模板创建'), findsWidgets);
   });
 }

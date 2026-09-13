@@ -45,6 +45,13 @@ void _ensureInboundDispatcher() {
       AppUpdateBridge.updateProgress.value = UpdateDownloadProgress.fromMap(
         args,
       );
+      return;
+    }
+    if (call.method == 'openWidgetRoute') {
+      final args = Map<String, Object?>.from(
+        call.arguments as Map<dynamic, dynamic>? ?? <dynamic, dynamic>{},
+      );
+      await AppWidgetBridge.handleRoute(args);
     }
   });
 }

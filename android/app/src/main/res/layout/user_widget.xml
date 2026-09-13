@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/user_widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:clipToOutline="true">
+
+    <ImageView
+        android:id="@+id/user_widget_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/user_widget_scrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#66000000" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="14dp">
+        <TextView
+            android:id="@+id/user_widget_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/user_widget_default_name"
+            android:textColor="@color/widget_label"
+            android:includeFontPadding="false"
+            android:textSize="12sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+        <TextView
+            android:id="@+id/user_widget_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/widget_today_expense"
+            android:textColor="@color/widget_label"
+            android:includeFontPadding="false"
+            android:textSize="12sp" />
+        <TextView
+            android:id="@+id/user_widget_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0"
+            android:textColor="@color/widget_value"
+            android:includeFontPadding="false"
+            android:textSize="30sp"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <TextView android:id="@+id/user_widget_secondary_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#CCFFFFFF" android:textSize="11sp" android:visibility="gone" />
+            <TextView android:id="@+id/user_widget_secondary_2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#CCFFFFFF" android:textSize="11sp" android:visibility="gone" />
+            <TextView android:id="@+id/user_widget_secondary_3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#CCFFFFFF" android:textSize="11sp" android:visibility="gone" />
+        </LinearLayout>
+        <ImageView
+            android:id="@+id/user_widget_chart"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginTop="6dp"
+            android:scaleType="fitXY"
+            android:visibility="gone" />
+    </LinearLayout>
+    <TextView
+        android:id="@+id/user_widget_add"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="12dp"
+        android:background="@drawable/widget_button_background"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:text="+"
+        android:textSize="26sp"
+        android:textColor="@color/widget_button_text"
+        android:contentDescription="@string/quick_entry_button"
+        android:visibility="gone" />
+</FrameLayout>

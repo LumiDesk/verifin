@@ -9,4 +9,12 @@
     <string name="widget_budget_available">Budget left this month</string>
     <string name="widget_net_worth">Net worth</string>
     <string name="widget_refresh_required">Open app to refresh</string>
+    <string name="trend_widget_description">Income and spending trend with configurable metrics</string>
+    <string name="widget_trend">Income and spending trend</string>
+    <string name="widget_chart_content_description">Trend chart</string>
+    <string name="user_widget_description">My widget with custom finance data and background</string>
+    <string name="user_widget_choose_design">Choose my widget</string>
+    <string name="user_widget_add">Add to home screen</string>
+    <string name="user_widget_default_name">My finance overview</string>
+    <string name="user_widget_empty">Open the app and tap + in My widgets to create a widget first.</string>
 </resources>
