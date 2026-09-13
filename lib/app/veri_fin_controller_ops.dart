@@ -4027,10 +4027,6 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         'autoSuggestEnabled': _autoSuggestEnabled,
         'showRunningBalance': _showRunningBalance,
         'homeTrendConfig': _homeTrendConfig.toJson(),
-        // 用户小组件设计属于可迁移数据；Android appWidgetId 不进入备份。
-        'userWidgetDefinitions': userWidgetDefinitions
-            .map((definition) => definition.toJson())
-            .toList(),
       },
     };
     return const JsonEncoder.withIndent('  ').convert(payload);
@@ -4218,11 +4214,6 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         ? HomeTrendConfig.fromJson(Map<String, dynamic>.from(homeTrendValue))
         : HomeTrendConfig.defaults;
 
-    final nextWidgetDefinitions = _decodeModelList<UserWidgetDefinition>(
-      data['userWidgetDefinitions'],
-      UserWidgetDefinition.fromJson,
-    ).where((definition) => definition.id.isNotEmpty).toList(growable: false);
-
     _validateImportedCurrencyData(
       books: nextLedgerBooks,
       accounts: nextAccounts,
@@ -4312,11 +4303,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _autoSuggestEnabled = nextAutoSuggestEnabled;
     _showRunningBalance = nextShowRunningBalance;
     _homeTrendConfig = nextHomeTrendConfig;
-    // v1/v2 备份没有该字段，按空设计处理；旧设备上的实例配置仍可由
-    // WidgetConfigStore 在读取时按 legacy appWidgetId 惰性迁移。
-    WidgetConfigStore.saveDefinitionsSync(_store, nextWidgetDefinitions);
-    // 桌面 appWidgetId 是设备私有绑定，导入设计后必须解除旧设备实例，避免
-    // 旧实例继续引用已不存在的设计；用户可在“我的小组件”中重新添加。
+    // 桌面 appWidgetId 与配置只属于当前设备，不随备份导入。
     WidgetConfigStore.savePlacementsSync(_store, const <WidgetPlacement>[]);
 
     // 备份恢复零参照完整性校验，是「幽灵同名分类」的唯一现实入口（内部不一致的外部/

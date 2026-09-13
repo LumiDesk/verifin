@@ -6851,13 +6851,13 @@ abstract class AppLocalizations {
   /// No description provided for @widgetGallerySubtitle.
   ///
   /// In zh, this message translates to:
-  /// **'把常看的数据放到手机桌面'**
+  /// **'查看 VeriFin 提供的固定组件样式'**
   String get widgetGallerySubtitle;
 
   /// No description provided for @widgetGalleryShort.
   ///
   /// In zh, this message translates to:
-  /// **'预览与添加'**
+  /// **'模板预览'**
   String get widgetGalleryShort;
 
   /// No description provided for @widgetAddToHome.

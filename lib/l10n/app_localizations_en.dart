@@ -3827,14 +3827,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get widgetNetWorth => 'Total assets';
 
   @override
-  String get widgetGalleryTitle => 'Home widgets';
+  String get widgetGalleryTitle => 'Desktop widgets';
 
   @override
   String get widgetGallerySubtitle =>
-      'Put the numbers you check most on your home screen';
+      'Preview the fixed VeriFin widget templates';
 
   @override
-  String get widgetGalleryShort => 'Preview & add';
+  String get widgetGalleryShort => 'Template preview';
 
   @override
   String get widgetAddToHome => 'Add to home screen';

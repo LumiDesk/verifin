@@ -3,6 +3,7 @@ package top.talyra42.verifin
 import android.Manifest
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProviderInfo
 import android.content.ComponentName
 import android.content.ContentValues
 import android.content.Intent
@@ -80,6 +81,12 @@ class MainActivity : FlutterFragmentActivity() {
                 }
                 "syncUserWidgetDefinitions" -> {
                     syncUserWidgetDefinitions(call, result)
+                }
+                "syncWidgetBooks" -> {
+                    syncWidgetBooks(call, result)
+                }
+                "syncWidgetSnapshots" -> {
+                    syncWidgetSnapshots(call, result)
                 }
                 "setSecureFlag" -> {
                     setSecureFlag(call.argument<Boolean>("secure") ?: false)
@@ -299,6 +306,52 @@ class MainActivity : FlutterFragmentActivity() {
         }
         WidgetData.removeDefinitionsNotIn(this, ids)
         UserWidgetProvider.refresh(this)
+        if (ids.isNotEmpty() && Build.VERSION.SDK_INT >= 35) {
+            runCatching {
+                AppWidgetManager.getInstance(this).setWidgetPreview(
+                    ComponentName(this, UserWidgetProvider::class.java),
+                    AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN,
+                    UserWidgetProvider.pickerPreview(this),
+                )
+            }
+        }
+        result.success(true)
+    }
+
+    private fun syncWidgetBooks(
+        call: io.flutter.plugin.common.MethodCall,
+        result: MethodChannel.Result,
+    ) {
+        val books = call.argument<List<*>>("books").orEmpty().mapNotNull { item ->
+            val map = item as? Map<*, *> ?: return@mapNotNull null
+            val id = map["id"]?.toString()?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            id to (map["name"]?.toString()?.takeIf { it.isNotBlank() } ?: id)
+        }
+        WidgetData.writeWidgetBooks(this, books)
+        result.success(true)
+    }
+
+    private fun syncWidgetSnapshots(
+        call: io.flutter.plugin.common.MethodCall,
+        result: MethodChannel.Result,
+    ) {
+        val snapshots = call.argument<Map<*, *>>("snapshots").orEmpty()
+        val json = JSONObject()
+        snapshots.forEach { (bookId, rawMetrics) ->
+            val metrics = rawMetrics as? Map<*, *> ?: return@forEach
+            val metricJson = JSONObject()
+            metrics.forEach { (metric, rawValue) ->
+                val value = rawValue as? Map<*, *> ?: return@forEach
+                metricJson.put(metric?.toString() ?: return@forEach, JSONObject().apply {
+                    put("amount", value["amount"]?.toString() ?: "—")
+                    put("label", value["label"]?.toString() ?: "")
+                    put("points", value["points"]?.toString() ?: "")
+                })
+            }
+            json.put(bookId?.toString() ?: return@forEach, metricJson)
+        }
+        WidgetData.writeWidgetSnapshots(this, json.toString())
+        WidgetData.refreshAll(this)
         result.success(true)
     }
 
@@ -428,10 +481,6 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     private fun pinUserWidget(definitionId: String, result: MethodChannel.Result) {
-        if (WidgetData.readDefinition(this, definitionId) == null) {
-            result.success(false)
-            return
-        }
         val manager = AppWidgetManager.getInstance(this)
         val ok = try {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
@@ -449,11 +498,16 @@ class MainActivity : FlutterFragmentActivity() {
                     // The launcher supplies EXTRA_APPWIDGET_ID in the callback.
                     // This is an explicit broadcast to our own receiver only.
                     PendingIntent.FLAG_UPDATE_CURRENT or
-                        (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0),
+                        (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0),
                 )
                 manager.requestPinAppWidget(
                     ComponentName(this, UserWidgetProvider::class.java),
-                    null,
+                    Bundle().apply {
+                        putParcelable(
+                            AppWidgetManager.EXTRA_APPWIDGET_PREVIEW,
+                            UserWidgetProvider.pickerPreview(this@MainActivity),
+                        )
+                    },
                     callback,
                 )
             }

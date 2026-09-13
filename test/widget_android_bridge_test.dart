@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/home_widget_service.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/app/veri_fin_scope.dart';
-import 'package:verifin/app/widget_config.dart';
 import 'package:verifin/pages/shell.dart';
 
 import 'support/test_harness.dart';
@@ -37,31 +36,21 @@ void main() {
         occurredAt: DateTime.now(),
       ),
     );
-    await controller.saveUserWidgetDefinitions([
-      UserWidgetDefinition(
-        id: 'selected',
-        name: '旅行支出',
-        template: WidgetTemplate.trend,
-        bookId: selected,
-        chartMetric: WidgetChartMetric.expense,
-        dateRange: WidgetDateRange.sevenDays,
-      ),
-    ]);
     controller.switchLedgerBook(original);
     Map<dynamic, dynamic>? payload;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
-          if (call.method == 'syncUserWidgetDefinitions') {
+          if (call.method == 'syncWidgetSnapshots') {
             payload = call.arguments;
           }
           return null;
         });
     await pushWidgetData(controller);
-    final definition = (payload!['definitions'] as List).single as Map;
-    final presentation = definition['presentation'] as Map;
-    expect(definition['bookId'], selected);
+    final snapshots = payload!['snapshots'] as Map;
+    final metrics = snapshots[selected] as Map;
+    final presentation = metrics['periodExpense'] as Map;
     expect(presentation['amount'], contains('37'));
-    expect(presentation['points'], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 37.0]);
+    expect((presentation['points'] as String).split(',').last, '37.0');
     expect(controller.activeBook.id, original);
   });
 

@@ -4,6 +4,7 @@ import 'ledger_math.dart';
 import 'models.dart';
 import 'platform_bridge.dart';
 import 'veri_fin_controller.dart';
+import 'widget_config.dart';
 import 'widget_presentation.dart';
 
 /// 把当前账本的桌面小组件数据（今日支出 / 本月可用预算 / 资产总额）推送到 Android。
@@ -56,43 +57,39 @@ Future<void> pushWidgetData(VeriFinController controller) async {
   }
   final trendTotal = trendPoints.fold<double>(0, (sum, value) => sum + value);
 
-  await AppWidgetBridge.syncUserWidgetDefinitions(
-    controller.userWidgetDefinitions.map((item) {
-      final snapshot = controller.widgetLedgerSnapshot(item.bookId, now);
-      final data = snapshot == null
-          ? null
-          : buildWidgetPresentation(
-              definition: item,
-              snapshot: snapshot,
-              now: now,
-            );
-      return <String, Object?>{
-        ...item.toJson(),
-        'bookId': snapshot?.book.id ?? item.bookId,
-        'presentation': {
-          'label': data == null
-              ? l10n.widgetRefreshRequired
-              : widgetMetricLabel(l10n, data.primary.metric),
-          'amount':
-              data?.primary.formatted(
-                data.currencyCode,
-                hidden: item.hideAmounts,
-              ) ??
-              '—',
-          'secondary': [
-            if (data != null)
-              for (final metric in data.secondary)
-                '${widgetMetricLabel(l10n, metric.metric)}  ${metric.formatted(data.currencyCode, hidden: item.hideAmounts)}',
-          ],
-          'points': data != null && data.hasChartData
-              ? data.series
-              : <double>[],
-          'budgetUsage': data?.budgetUsage,
-          'quickEntryLabel': l10n.addEntryTooltip,
-        },
-      };
-    }).toList(),
+  await AppWidgetBridge.syncWidgetBooks(
+    controller.ledgerBooks
+        .map((book) => <String, Object?>{'id': book.id, 'name': book.name})
+        .toList(growable: false),
   );
+  final widgetSnapshots = <String, Map<String, Map<String, Object?>>>{};
+  for (final book in controller.ledgerBooks) {
+    final snapshot = controller.widgetLedgerSnapshot(book.id, now);
+    if (snapshot == null) continue;
+    final metrics = <String, Map<String, Object?>>{};
+    for (final metric in WidgetMetric.values) {
+      final definition = UserWidgetDefinition(
+        id: 'native_${book.id}_${metric.name}',
+        name: 'VeriFin',
+        template: WidgetTemplate.trend,
+        bookId: book.id,
+        primaryMetric: metric,
+        chartMetric: WidgetChartMetric.expense,
+      );
+      final data = buildWidgetPresentation(
+        definition: definition,
+        snapshot: snapshot,
+        now: now,
+      );
+      metrics[metric.name] = {
+        'amount': data.primary.formatted(data.currencyCode),
+        'label': widgetMetricLabel(l10n, metric),
+        'points': data.series.join(','),
+      };
+    }
+    widgetSnapshots[book.id] = metrics;
+  }
+  await AppWidgetBridge.syncWidgetSnapshots(widgetSnapshots);
 
   String two(int n) => n.toString().padLeft(2, '0');
 
