@@ -163,7 +163,6 @@ class _AccountGroupsPageState extends State<AccountGroupsPage> {
                                         accountCount,
                                       ),
                                       semanticLabel: group.name,
-                                      width: 188,
                                       builder: (context, openMenu, menuOpen) =>
                                           _AccountGroupManageRow(
                                             index: index,

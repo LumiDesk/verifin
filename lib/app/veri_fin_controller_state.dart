@@ -130,6 +130,7 @@ mixin _ControllerState on ChangeNotifier {
   bool _autoSuggestEnabled = true;
   // 交易列表是否在每行显示该账户当时的结余；默认关闭，避免信息过载。
   bool _showRunningBalance = false;
+  NumberPadLayout _numberPadLayout = NumberPadLayout.standard;
   AiSettings _aiSettings = const AiSettings();
   AiCapabilityProfile? _aiCapabilityProfile;
 
@@ -215,6 +216,9 @@ mixin _ControllerState on ChangeNotifier {
     _webdavConfig = WebdavConfig.decode(_store.read(_webdavKey));
     _reminderSettings = ReminderSettings.decode(_store.read(_reminderKey));
     _fabActionMode = FabActionMode.fromStorage(_store.read(_fabActionKey));
+    _numberPadLayout = NumberPadLayout.fromStorage(
+      _store.read(_numberPadLayoutKey),
+    );
     _loadDefaultAccounts();
     _loadBudgetCycleStartDays();
     _amountForceTwoDecimals = _store.read(_amountFormatKey) == 'true';

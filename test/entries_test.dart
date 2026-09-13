@@ -383,6 +383,7 @@ void main() {
       defaultAccountId: controller2.defaultAccountId,
       autoSuggestEnabled: controller2.autoSuggestEnabled,
       showRunningBalance: true,
+      numberPadLayout: controller2.numberPadLayout,
     );
     await tester.pumpAndSettle();
     expect(find.textContaining('900'), findsOneWidget);

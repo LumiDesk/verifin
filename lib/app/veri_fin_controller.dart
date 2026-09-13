@@ -78,6 +78,7 @@ const String _backupPassphraseKey = 'verifin.backup_passphrase.v1';
 const String _webdavKey = 'verifin.webdav.v1';
 const String _reminderKey = 'verifin.reminder.v1';
 const String _fabActionKey = 'verifin.fab_action.v1';
+const String _numberPadLayoutKey = 'verifin.number_pad_layout.v1';
 const String _defaultAccountKey = 'verifin.default_account.v1';
 const String _budgetCycleKey = 'verifin.budget_cycle.v1';
 const String _amountFormatKey = 'verifin.amount_format.v1';

@@ -813,7 +813,6 @@ class _TransactionsPageState extends State<TransactionsPage> {
         });
       },
       semanticLabel: l10n.filterTimeTitle,
-      width: 208,
       builder: (context, openMenu, menuOpen) => builder(openMenu),
     );
   }
@@ -833,7 +832,6 @@ class _TransactionsPageState extends State<TransactionsPage> {
       },
       onSelected: (value) => setState(() => _sortOrder = value),
       semanticLabel: l10n.sortTitle,
-      width: 204,
       builder: (context, openMenu, menuOpen) =>
           FilterPill(label: _sortOrder.label(l10n), onTap: openMenu),
     );
@@ -1361,7 +1359,6 @@ class _TransactionSearchFilters extends StatelessWidget {
                   semanticLabel: AppLocalizations.of(
                     context,
                   ).reimbursementFilterTitle,
-                  width: 208,
                   builder: (context, openMenu, menuOpen) => FilterPill(
                     label: reimbursementFilter == ReimbursementFilter.all
                         ? AppLocalizations.of(context).reimbursementFilterName

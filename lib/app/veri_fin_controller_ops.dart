@@ -1046,6 +1046,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
+  /// 金额数字键盘的数字排列。设备本地偏好，不影响账目数据。
+  NumberPadLayout get numberPadLayout => _numberPadLayout;
+
   /// 首页走势卡片的自定义配置（各槽展示的指标、曲线序列、标题）。设备本地显示偏好，
   /// 不进 JSON 备份、初始化时保留。
   HomeTrendConfig get homeTrendConfig => _homeTrendConfig;
@@ -1265,6 +1268,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     required String? defaultAccountId,
     required bool autoSuggestEnabled,
     required bool showRunningBalance,
+    required NumberPadLayout numberPadLayout,
   }) async {
     final nextDefaultAccounts = Map<String, String>.of(_defaultAccountIds);
     if (defaultAccountId == null || defaultAccountId.isEmpty) {
@@ -1298,6 +1302,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         _runningBalanceKey,
         showRunningBalance.toString(),
       );
+      await _store.writeAndFlush(_numberPadLayoutKey, numberPadLayout.name);
     } catch (error, stackTrace) {
       _handlePersistError(error, stackTrace);
       return false;
@@ -1316,6 +1321,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       ..addAll(nextDefaultAccounts);
     _autoSuggestEnabled = autoSuggestEnabled;
     _showRunningBalance = showRunningBalance;
+    _numberPadLayout = numberPadLayout;
     themePreferenceListenable.value = themePreference;
     localePreferenceListenable.value = localePreference;
     notifyListeners();

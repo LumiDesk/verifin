@@ -1004,7 +1004,6 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
                     },
                     onSelected: (value) => setState(() => _type = value),
                     semanticLabel: l10n.statTypeTitle,
-                    width: 188,
                     builder: (context, openMenu, menuOpen) =>
                         FilterPill(label: _type.label(l10n), onTap: openMenu),
                   ),

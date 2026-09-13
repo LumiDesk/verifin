@@ -4496,6 +4496,30 @@ abstract class AppLocalizations {
   /// **'触感反馈'**
   String get hapticsLabel;
 
+  /// No description provided for @numberPadLayoutLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'数字键盘布局'**
+  String get numberPadLayoutLabel;
+
+  /// No description provided for @numberPadLayoutPickerTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择数字键盘布局'**
+  String get numberPadLayoutPickerTitle;
+
+  /// No description provided for @numberPadLayoutStandard.
+  ///
+  /// In zh, this message translates to:
+  /// **'标准布局'**
+  String get numberPadLayoutStandard;
+
+  /// No description provided for @numberPadLayoutPhone.
+  ///
+  /// In zh, this message translates to:
+  /// **'电话布局'**
+  String get numberPadLayoutPhone;
+
   /// Settings toggle: always show amounts with two decimal places
   ///
   /// In zh, this message translates to:

@@ -42,6 +42,8 @@ class _SettingsPageState extends State<SettingsPage> {
   late bool _hideSingleCurrencyUnit;
   late FabActionMode _initialFabAction;
   late FabActionMode _fabAction;
+  late NumberPadLayout _initialNumberPadLayout;
+  late NumberPadLayout _numberPadLayout;
   String? _initialDefaultAccountId;
   String? _defaultAccountId;
   late bool _initialAutoSuggest;
@@ -65,6 +67,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _initialHideSingleCurrencyUnit = _hideSingleCurrencyUnit =
         controller.hideUnitInSingleCurrency;
     _initialFabAction = _fabAction = controller.fabActionMode;
+    _initialNumberPadLayout = _numberPadLayout = controller.numberPadLayout;
     _initialDefaultAccountId = _defaultAccountId = controller.defaultAccountId;
     _initialAutoSuggest = _autoSuggest = controller.autoSuggestEnabled;
     _initialShowRunningBalance = _showRunningBalance =
@@ -117,7 +120,6 @@ class _SettingsPageState extends State<SettingsPage> {
                         semanticLabel: AppLocalizations.of(
                           context,
                         ).themePickerTitle,
-                        width: 208,
                         builder: (context, openMenu, menuOpen) => SettingsRow(
                           icon: Icons.dark_mode_outlined,
                           title: AppLocalizations.of(context).themeMode,
@@ -168,7 +170,6 @@ class _SettingsPageState extends State<SettingsPage> {
                         semanticLabel: AppLocalizations.of(
                           context,
                         ).moneyUnitStyleLabel,
-                        width: 220,
                         builder: (context, openMenu, menuOpen) => SettingsRow(
                           icon: Icons.currency_exchange_outlined,
                           title: AppLocalizations.of(
@@ -241,7 +242,6 @@ class _SettingsPageState extends State<SettingsPage> {
                         semanticLabel: AppLocalizations.of(
                           context,
                         ).languagePickerTitle,
-                        width: 208,
                         builder: (context, openMenu, menuOpen) => SettingsRow(
                           icon: Icons.translate_outlined,
                           title: AppLocalizations.of(context).settingsLanguage,
@@ -301,11 +301,40 @@ class _SettingsPageState extends State<SettingsPage> {
                         semanticLabel: AppLocalizations.of(
                           context,
                         ).fabActionPickerTitle,
-                        width: 244,
                         builder: (context, openMenu, menuOpen) => SettingsRow(
                           icon: Icons.bolt_outlined,
                           title: AppLocalizations.of(context).fabActionTitle,
                           trailing: _fabAction.label(
+                            AppLocalizations.of(context),
+                          ),
+                          trailingIcon: Icons.chevron_right,
+                          onTap: openMenu,
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      VeriAnchoredChoice<NumberPadLayout>(
+                        values: NumberPadLayout.values,
+                        selected: _numberPadLayout,
+                        idOf: (value) =>
+                            'settings_number_pad_layout_${value.name}',
+                        labelOf: (value) =>
+                            value.label(AppLocalizations.of(context)),
+                        iconOf: (value) => switch (value) {
+                          NumberPadLayout.standard => Icons.calculate_outlined,
+                          NumberPadLayout.phone => Icons.dialpad_outlined,
+                        },
+                        onSelected: (value) =>
+                            setState(() => _numberPadLayout = value),
+                        semanticLabel: AppLocalizations.of(
+                          context,
+                        ).numberPadLayoutPickerTitle,
+                        width: null,
+                        builder: (context, openMenu, menuOpen) => SettingsRow(
+                          icon: Icons.dialpad_outlined,
+                          title: AppLocalizations.of(
+                            context,
+                          ).numberPadLayoutLabel,
+                          trailing: _numberPadLayout.label(
                             AppLocalizations.of(context),
                           ),
                           trailingIcon: Icons.chevron_right,
@@ -506,6 +535,7 @@ class _SettingsPageState extends State<SettingsPage> {
       _moneyUnitStyle != _initialMoneyUnitStyle ||
       _hideSingleCurrencyUnit != _initialHideSingleCurrencyUnit ||
       _fabAction != _initialFabAction ||
+      _numberPadLayout != _initialNumberPadLayout ||
       _defaultAccountId != _initialDefaultAccountId ||
       _autoSuggest != _initialAutoSuggest ||
       _showRunningBalance != _initialShowRunningBalance;
@@ -520,6 +550,7 @@ class _SettingsPageState extends State<SettingsPage> {
         _initialMoneyUnitStyle = _moneyUnitStyle;
         _initialHideSingleCurrencyUnit = _hideSingleCurrencyUnit;
         _initialFabAction = _fabAction;
+        _initialNumberPadLayout = _numberPadLayout;
         _initialDefaultAccountId = _defaultAccountId;
         _initialAutoSuggest = _autoSuggest;
         _initialShowRunningBalance = _showRunningBalance;
@@ -537,6 +568,7 @@ class _SettingsPageState extends State<SettingsPage> {
       moneyUnitStyle: _moneyUnitStyle,
       hideUnitInSingleCurrency: _hideSingleCurrencyUnit,
       fabActionMode: _fabAction,
+      numberPadLayout: _numberPadLayout,
       defaultAccountId: _defaultAccountId,
       autoSuggestEnabled: _autoSuggest,
       showRunningBalance: _showRunningBalance,

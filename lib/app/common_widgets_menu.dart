@@ -64,7 +64,7 @@ class VeriAnchoredChoice<T> extends StatelessWidget {
     this.iconOf,
     this.subtitleOf,
     this.enabledOf,
-    this.width = 224,
+    this.width,
   });
 
   final List<T> values;
@@ -77,7 +77,7 @@ class VeriAnchoredChoice<T> extends StatelessWidget {
   final bool Function(T value)? enabledOf;
   final VeriMenuAnchorBuilder builder;
   final String semanticLabel;
-  final double width;
+  final double? width;
 
   @override
   Widget build(BuildContext context) {
@@ -143,6 +143,55 @@ double _veriMenuEntryOffset(
   return offset;
 }
 
+double _veriMenuTextWidth(BuildContext context, String text, TextStyle? style) {
+  final painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    maxLines: 1,
+    textDirection: TextDirection.ltr,
+    textScaler: MediaQuery.textScalerOf(context),
+  )..layout();
+  return painter.width;
+}
+
+double _veriMenuItemWidth(
+  BuildContext context,
+  VeriMenuItem item, {
+  bool header = false,
+}) {
+  final theme = Theme.of(context);
+  final textWidth = math.max(
+    _veriMenuTextWidth(context, item.title, theme.textTheme.titleSmall),
+    item.subtitle == null
+        ? 0
+        : _veriMenuTextWidth(
+            context,
+            item.subtitle!,
+            theme.textTheme.labelMedium,
+          ),
+  );
+  final leadingWidth = item.icon == null ? 0.0 : 28.0 + 10.0;
+  final trailingWidth = header || item.hasSubmenu || item.selected ? 21.0 : 0.0;
+  // 外层行 Padding(8) + 内层内容 Padding(12)，再加文本与图标之间的固定间距。
+  return 16 + 24 + leadingWidth + textWidth + 8 + trailingWidth;
+}
+
+double _veriMenuContentWidth(
+  BuildContext context,
+  List<VeriMenuEntry> entries, {
+  VeriMenuItem? parent,
+}) {
+  var width = parent == null
+      ? 0.0
+      : _veriMenuItemWidth(context, parent, header: true);
+  for (final entry in entries) {
+    if (entry is VeriMenuItem) {
+      width = math.max(width, _veriMenuItemWidth(context, entry));
+    }
+  }
+  // 面板本身没有水平 Padding，行的外层 Padding 已包含在上面的计算中。
+  return width;
+}
+
 /// Attaches a Veri Fin menu to any caller-provided trigger widget.
 ///
 /// The menu follows the trigger, avoids the screen edge, closes on outside tap,
@@ -153,15 +202,15 @@ class VeriAnchoredMenuAnchor extends StatefulWidget {
     required this.entries,
     required this.builder,
     required this.semanticLabel,
-    this.width = 224,
-    this.submenuWidth = 232,
+    this.width,
+    this.submenuWidth,
   });
 
   final List<VeriMenuEntry> entries;
   final VeriMenuAnchorBuilder builder;
   final String semanticLabel;
-  final double width;
-  final double submenuWidth;
+  final double? width;
+  final double? submenuWidth;
 
   @override
   State<VeriAnchoredMenuAnchor> createState() => _VeriAnchoredMenuAnchorState();
@@ -227,15 +276,15 @@ class VeriAnchoredMenuButton extends StatelessWidget {
     required this.icon,
     required this.tooltip,
     required this.entries,
-    this.width = 224,
-    this.submenuWidth = 232,
+    this.width,
+    this.submenuWidth,
   });
 
   final IconData icon;
   final String tooltip;
   final List<VeriMenuEntry> entries;
-  final double width;
-  final double submenuWidth;
+  final double? width;
+  final double? submenuWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -265,8 +314,8 @@ class _VeriAnchoredMenuRoute extends StatefulWidget {
 
   final Rect anchor;
   final List<VeriMenuEntry> entries;
-  final double width;
-  final double submenuWidth;
+  final double? width;
+  final double? submenuWidth;
   final String semanticLabel;
 
   @override
@@ -357,12 +406,22 @@ class _VeriAnchoredMenuRouteState extends State<_VeriAnchoredMenuRoute>
     const edgePadding = 12.0;
     const anchorGap = 6.0;
     final availableWidth = viewport.width - edgePadding * 2;
-    double resolveWidth(double requested) {
+    double resolveWidth(
+      double? requested,
+      List<VeriMenuEntry> entries, {
+      VeriMenuItem? parent,
+    }) {
       final minWidth = availableWidth < 168 ? availableWidth : 168.0;
-      return requested.clamp(minWidth, availableWidth).toDouble();
+      final contentWidth = _veriMenuContentWidth(
+        context,
+        entries,
+        parent: parent,
+      );
+      final desiredWidth = requested ?? contentWidth;
+      return desiredWidth.clamp(minWidth, availableWidth).toDouble();
     }
 
-    final rootWidth = resolveWidth(widget.width);
+    final rootWidth = resolveWidth(widget.width, widget.entries);
     final spaceBelow = viewport.height - widget.anchor.bottom - edgePadding;
     final spaceAbove = widget.anchor.top - edgePadding;
     final openBelow = spaceBelow >= 180 || spaceBelow >= spaceAbove;
@@ -370,7 +429,11 @@ class _VeriAnchoredMenuRouteState extends State<_VeriAnchoredMenuRoute>
     final activeParent = _path.isEmpty ? null : _path.last;
     final foregroundWidth = activeParent == null
         ? rootWidth
-        : resolveWidth(activeParent.submenuWidth ?? widget.submenuWidth);
+        : resolveWidth(
+            activeParent.submenuWidth ?? widget.submenuWidth,
+            _entries,
+            parent: activeParent,
+          );
     final widestWidth = rootWidth > foregroundWidth
         ? rootWidth
         : foregroundWidth;
@@ -436,7 +499,11 @@ class _VeriAnchoredMenuRouteState extends State<_VeriAnchoredMenuRoute>
         addAncestorLayer(
           entries: layerParent.children,
           parent: layerParent,
-          width: resolveWidth(layerParent.submenuWidth ?? widget.submenuWidth),
+          width: resolveWidth(
+            layerParent.submenuWidth ?? widget.submenuWidth,
+            layerParent.children,
+            parent: layerParent,
+          ),
           origin: _panelOriginForPathIndex(index),
         );
       }

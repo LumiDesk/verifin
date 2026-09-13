@@ -253,7 +253,6 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                           semanticLabel: AppLocalizations.of(
                             context,
                           ).pickTypeTitle,
-                          width: 188,
                           builder: (context, openMenu, menuOpen) =>
                               DetailInfoRow(
                                 label: AppLocalizations.of(context).commonType,

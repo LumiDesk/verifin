@@ -104,7 +104,6 @@ class _TagManagementPageState extends State<TagManagementPage> {
                           key: ValueKey<String>(tag.id),
                           entries: _tagMenuEntries(tag),
                           semanticLabel: tag.label,
-                          width: 188,
                           builder: (context, openMenu, menuOpen) =>
                               _TagManageRow(
                                 index: index,

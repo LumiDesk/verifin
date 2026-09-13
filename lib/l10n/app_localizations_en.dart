@@ -2497,6 +2497,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hapticsLabel => 'Haptic feedback';
 
   @override
+  String get numberPadLayoutLabel => 'Number pad layout';
+
+  @override
+  String get numberPadLayoutPickerTitle => 'Choose number pad layout';
+
+  @override
+  String get numberPadLayoutStandard => 'Standard layout';
+
+  @override
+  String get numberPadLayoutPhone => 'Phone layout';
+
+  @override
   String get amountTwoDecimalsLabel => 'Two decimal places';
 
   @override

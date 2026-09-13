@@ -2449,6 +2449,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get hapticsLabel => '触感反馈';
 
   @override
+  String get numberPadLayoutLabel => '数字键盘布局';
+
+  @override
+  String get numberPadLayoutPickerTitle => '选择数字键盘布局';
+
+  @override
+  String get numberPadLayoutStandard => '标准布局';
+
+  @override
+  String get numberPadLayoutPhone => '电话布局';
+
+  @override
   String get amountTwoDecimalsLabel => '金额保留两位小数';
 
   @override

@@ -628,7 +628,6 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
                         semanticLabel: AppLocalizations.of(
                           context,
                         ).recurringRatePolicyLabel,
-                        width: 252,
                         builder: (context, openMenu, menuOpen) => DetailInfoRow(
                           label: AppLocalizations.of(
                             context,
@@ -662,7 +661,6 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
                         semanticLabel: AppLocalizations.of(
                           context,
                         ).pickFrequencyTitle,
-                        width: 196,
                         builder: (context, openMenu, menuOpen) => DetailInfoRow(
                           label: AppLocalizations.of(context).frequencyLabel,
                           value: _frequency.label(AppLocalizations.of(context)),
