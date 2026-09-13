@@ -70,6 +70,14 @@
             android:scaleType="fitXY"
             android:visibility="gone" />
     </LinearLayout>
+    <ImageView
+        android:id="@+id/user_widget_ring"
+        android:layout_width="96dp"
+        android:layout_height="96dp"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="12dp"
+        android:scaleType="fitCenter"
+        android:visibility="gone" />
     <TextView
         android:id="@+id/user_widget_add"
         android:layout_width="40dp"

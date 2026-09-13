@@ -72,7 +72,15 @@ class UserWidgetProvider : AppWidgetProvider() {
                 )
                 setTextViewText(R.id.user_widget_value, presentation.optString("amount", "0"))
                 setViewVisibility(R.id.user_widget_chart, View.GONE)
+                setViewVisibility(R.id.user_widget_ring, View.GONE)
                 setViewVisibility(R.id.user_widget_add, View.GONE)
+                if (definition?.template == "budget") {
+                    val usage = presentation.optDouble("budgetUsage", Double.NaN).toFloat()
+                    WidgetChartRenderer.progressRing(usage)?.let {
+                        setImageViewBitmap(R.id.user_widget_ring, it)
+                        setViewVisibility(R.id.user_widget_ring, View.VISIBLE)
+                    }
+                }
             }
         }
 
@@ -137,6 +145,14 @@ class UserWidgetProvider : AppWidgetProvider() {
                 }
             }
             views.setViewVisibility(R.id.user_widget_chart, View.GONE)
+            views.setViewVisibility(R.id.user_widget_ring, View.GONE)
+            if (definition.template == "budget" && !compact) {
+                val usage = presentation.optDouble("budgetUsage", Double.NaN).toFloat()
+                WidgetChartRenderer.progressRing(usage)?.let {
+                    views.setImageViewBitmap(R.id.user_widget_ring, it)
+                    views.setViewVisibility(R.id.user_widget_ring, View.VISIBLE)
+                }
+            }
             if (definition.chartMetric.isNotBlank() && !compact && definition.template != "quickEntry") {
                 val points = presentation.optJSONArray("points")
                 val values = if (points == null) emptyList() else
