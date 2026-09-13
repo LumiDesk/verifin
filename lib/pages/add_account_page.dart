@@ -102,7 +102,6 @@ class _AddAccountPageState extends State<AddAccountPage> {
                     semanticLabel: AppLocalizations.of(
                       context,
                     ).accountTypePickerTitle,
-                    width: 276,
                     builder: (context, openMenu, menuOpen) => SelectField(
                       label: AppLocalizations.of(context).accountTypeLabel,
                       value: _type.label(AppLocalizations.of(context)),

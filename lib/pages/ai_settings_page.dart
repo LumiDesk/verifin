@@ -365,7 +365,6 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                         },
                         onSelected: _selectToolCallMode,
                         semanticLabel: l10n.aiToolModeTitle,
-                        width: 276,
                         builder: (context, openMenu, menuOpen) => Material(
                           color: Colors.transparent,
                           child: ListTile(

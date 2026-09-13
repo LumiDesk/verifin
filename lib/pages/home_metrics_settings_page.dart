@@ -269,7 +269,6 @@ class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
                     onSelected: (value) =>
                         _update(_config.copyWith(series: value)),
                     semanticLabel: l10n.pickChartSeriesTitle,
-                    width: 196,
                     builder: (context, openMenu, menuOpen) => _SlotField(
                       label: l10n.trendSlotChart,
                       value: homeTrendSeriesLabel(l10n, config.series),

@@ -135,6 +135,29 @@ enum FabActionMode {
   }
 }
 
+/// 金额数字键盘的数字排列。标准布局保留当前的计算器顺序，电话布局使用
+/// Android/电话拨号盘常见的从上到下递增顺序。
+enum NumberPadLayout {
+  standard,
+  phone;
+
+  String label(AppLocalizations l10n) {
+    switch (this) {
+      case NumberPadLayout.standard:
+        return l10n.numberPadLayoutStandard;
+      case NumberPadLayout.phone:
+        return l10n.numberPadLayoutPhone;
+    }
+  }
+
+  static NumberPadLayout fromStorage(String? value) {
+    return NumberPadLayout.values.firstWhere(
+      (layout) => layout.name == value,
+      orElse: () => NumberPadLayout.standard,
+    );
+  }
+}
+
 /// 支持面板管理的主页面。
 enum PanelPageKind {
   home,

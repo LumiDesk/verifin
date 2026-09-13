@@ -1004,7 +1004,6 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                             semanticLabel: AppLocalizations.of(
                               context,
                             ).attachTitle,
-                            width: 196,
                             builder: (context, openMenu, menuOpen) =>
                                 _EntryMetadataChip(
                                   chipKey: const Key(

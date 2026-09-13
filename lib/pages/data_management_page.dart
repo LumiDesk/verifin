@@ -174,7 +174,6 @@ class _DataManagementPageState extends State<DataManagementPage> {
                           semanticLabel: AppLocalizations.of(
                             context,
                           ).pickBackupFrequency,
-                          width: 236,
                           builder: (context, openMenu, menuOpen) => SettingsRow(
                             icon: Icons.schedule_outlined,
                             title: AppLocalizations.of(
@@ -207,7 +206,6 @@ class _DataManagementPageState extends State<DataManagementPage> {
                             semanticLabel: AppLocalizations.of(
                               context,
                             ).backupIntervalTitle,
-                            width: 196,
                             builder: (context, openMenu, menuOpen) =>
                                 SettingsRow(
                                   icon: Icons.hourglass_bottom_outlined,
@@ -237,7 +235,6 @@ class _DataManagementPageState extends State<DataManagementPage> {
                           semanticLabel: AppLocalizations.of(
                             context,
                           ).retentionTitle,
-                          width: 196,
                           builder: (context, openMenu, menuOpen) => SettingsRow(
                             icon: Icons.inventory_2_outlined,
                             title: AppLocalizations.of(context).retentionLabel,

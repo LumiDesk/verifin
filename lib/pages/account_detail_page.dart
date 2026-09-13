@@ -342,7 +342,6 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                         semanticLabel: AppLocalizations.of(
                           context,
                         ).accountTypePickerTitle,
-                        width: 276,
                         builder: (context, openMenu, menuOpen) => SettingsRow(
                           icon: Icons.category_outlined,
                           title: AppLocalizations.of(context).commonType,

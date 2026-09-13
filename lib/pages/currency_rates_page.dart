@@ -365,7 +365,6 @@ class _RateHistoryRow extends StatelessWidget {
         trailing: VeriAnchoredMenuButton(
           icon: Icons.more_vert,
           tooltip: l10n.exchangeRateHistory(rate.currencyCode),
-          width: 188,
           entries: <VeriMenuEntry>[
             VeriMenuItem(
               id: 'rate_edit',

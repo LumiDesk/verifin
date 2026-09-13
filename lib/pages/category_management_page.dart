@@ -159,8 +159,6 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
             : VeriAnchoredMenuAnchor(
                 entries: _categoryMenuEntries(category),
                 semanticLabel: category.label,
-                width: 220,
-                submenuWidth: 208,
                 builder: (context, openMenu, menuOpen) => _CategoryManageRow(
                   index: index,
                   depth: depth,

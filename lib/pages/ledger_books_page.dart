@@ -145,7 +145,6 @@ class _LedgerBookRow extends StatelessWidget {
               VeriAnchoredMenuButton(
                 icon: Icons.more_vert,
                 tooltip: l10n.bookActions,
-                width: 216,
                 entries: <VeriMenuEntry>[
                   VeriMenuItem(
                     id: 'book_rename',

@@ -45,8 +45,8 @@ Header 图标入口的快捷封装。
 | `entries` | `List<VeriMenuEntry>` | 必填 | 根菜单内容 |
 | `builder` | `VeriMenuAnchorBuilder` | 必填 | 构造按钮或其他触发控件 |
 | `semanticLabel` | `String` | 必填 | 弹层语义标签 |
-| `width` | `double` | `224` | 根菜单宽度 |
-| `submenuWidth` | `double` | `232` | 默认子菜单宽度 |
+| `width` | `double?` | `null` | 根菜单宽度；默认按当前根菜单内容自适应 |
+| `submenuWidth` | `double?` | `null` | 默认子菜单宽度；默认按当前子菜单内容自适应 |
 
 ### `VeriAnchoredChoice<T>`
 
@@ -64,7 +64,7 @@ Header 图标入口的快捷封装。
 | `builder` | `VeriMenuAnchorBuilder` | 必填 | 构造原页面触发控件 |
 | `semanticLabel` | `String` | 必填 | 弹层语义标签 |
 | `iconOf` / `subtitleOf` / `enabledOf` | 可空回调 | `null` | 可选图标、副标题和禁用态 |
-| `width` | `double` | `224` | 菜单宽度 |
+| `width` | `double?` | `null` | 菜单宽度；默认按选项内容自适应 |
 
 ### `VeriMenuItem`
 
@@ -197,9 +197,9 @@ VeriMenuItem(
 
 1. 当前父项的 `VeriMenuItem.submenuWidth`；
 2. Anchor/Button 的 `submenuWidth`；
-3. 组件默认值 `232`。
+3. 组件默认值为 `null`，按当前子菜单内容自适应。
 
-根菜单只读取 Anchor/Button 的 `width`。所有宽度都会按弹层当前实际布局约束限制在屏幕可用范围内，安全下限为 `168`；窗口尺寸变化后不得继续使用旧 `MediaQuery` 尺寸把菜单定位到屏幕外。
+根菜单只读取 Anchor/Button 的 `width`。宽度为 `null` 时，组件按最长标题/副标题、图标、选中标记和内边距计算；子菜单同理，且会把父项标题行纳入计算。显式宽度仍保持固定行为。所有宽度都会按弹层当前实际布局约束限制在屏幕可用范围内，安全下限为 `168`；窗口尺寸变化后不得继续使用旧 `MediaQuery` 尺寸把菜单定位到屏幕外。
 
 宽度以最短的不换行标题为依据，不应为了和其他页面相同而强行拉宽。标题与右侧箭头之间只保留必要弹性空间。
 
@@ -241,8 +241,8 @@ VeriMenuItem(
 
 | 项目 | 当前规则 |
 |---|---|
-| 根菜单默认宽度 | `224` |
-| 子菜单默认宽度 | `232` |
+| 根菜单默认宽度 | 按内容自适应 |
+| 子菜单默认宽度 | 按内容自适应 |
 | 最小安全宽度 | `168` |
 | 单行项最小高度 | `44` |
 | 带副标题项最小高度 | `52` |

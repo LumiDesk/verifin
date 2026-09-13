@@ -25,6 +25,7 @@ class NumberPadSheet extends StatefulWidget {
     this.maxAmount,
     this.maxFractionDigits = 2,
     this.currencyCode,
+    this.layout = NumberPadLayout.standard,
     this.showTitle = true,
   }) : assert(maxFractionDigits >= 0 && maxFractionDigits <= 12);
 
@@ -37,6 +38,7 @@ class NumberPadSheet extends StatefulWidget {
   /// 单个操作数允许的小数位数。普通金额默认为 2；本地汇率可提高到 10。
   final int maxFractionDigits;
   final String? currencyCode;
+  final NumberPadLayout layout;
 
   /// 快速记账入口已由底部按钮表达语义，金额键盘不重复显示标题。
   final bool showTitle;
@@ -161,11 +163,22 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
                 ),
               const SizedBox(height: 10),
               // 5 行键盘：前 3 行满 4 列，最后两行左侧为 2×3 数字区
-              // （1 2 3 / 00 0 .，小数点落在 0 右边），右下角 OK 占竖两格。
+              // （所选布局的第三行 / 00 0 .，小数点落在 0 右边），右下角 OK 占竖两格。
               // 用固定网格无法跨格，故手写布局。
               LayoutBuilder(
                 builder: (context, constraints) {
                   const spacing = 8.0;
+                  final numericRows = widget.layout == NumberPadLayout.phone
+                      ? const <List<String>>[
+                          <String>['1', '2', '3'],
+                          <String>['4', '5', '6'],
+                          <String>['7', '8', '9'],
+                        ]
+                      : const <List<String>>[
+                          <String>['7', '8', '9'],
+                          <String>['4', '5', '6'],
+                          <String>['1', '2', '3'],
+                        ];
                   final cellW = (constraints.maxWidth - spacing * 3) / 4;
                   final cellH = cellW * 3 / 4;
                   Widget cell(String v) => SizedBox(
@@ -182,14 +195,6 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
                       ],
                     ],
                   );
-                  final leftBottom = Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      keyRow(<String>['1', '2', '3']),
-                      const SizedBox(height: spacing),
-                      keyRow(<String>['00', '0', '.']),
-                    ],
-                  );
                   final rightBottom = SizedBox(
                     width: cellW,
                     height: cellH * 2 + spacing,
@@ -202,15 +207,22 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
                       children: <Widget>[
                         keyRow(<String>['C', '⌫', '÷', '×']),
                         const SizedBox(height: spacing),
-                        keyRow(<String>['7', '8', '9', '-']),
+                        keyRow(<String>[...numericRows[0], '-']),
                         const SizedBox(height: spacing),
-                        keyRow(<String>['4', '5', '6', '+']),
+                        keyRow(<String>[...numericRows[1], '+']),
                         const SizedBox(height: spacing),
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            leftBottom,
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                keyRow(<String>[...numericRows[2]]),
+                                const SizedBox(height: spacing),
+                                keyRow(<String>['00', '0', '.']),
+                              ],
+                            ),
                             const SizedBox(width: spacing),
                             rightBottom,
                           ],

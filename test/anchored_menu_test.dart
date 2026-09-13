@@ -289,6 +289,38 @@ void main() {
     expect(panelRect.right, lessThanOrEqualTo(460));
   });
 
+  testWidgets('root menu can size itself from its content', (tester) async {
+    await tester.pumpWidget(
+      const _MenuTestApp(
+        width: null,
+        entries: <VeriMenuEntry>[
+          VeriMenuItem(
+            id: 'standard',
+            icon: Icons.calculate_outlined,
+            title: '标准布局',
+            selected: true,
+            onPressed: _noop,
+          ),
+          VeriMenuItem(
+            id: 'phone',
+            icon: Icons.dialpad_outlined,
+            title: '电话布局',
+            onPressed: _noop,
+          ),
+        ],
+      ),
+    );
+
+    await tester.tap(find.byTooltip('更多'));
+    await tester.pumpAndSettle();
+
+    final panelWidth = tester
+        .getSize(find.byType(SingleChildScrollView).last)
+        .width;
+    expect(panelWidth, greaterThanOrEqualTo(168));
+    expect(panelWidth, lessThan(224));
+  });
+
   testWidgets('submenu expands from the selected row and supports widths', (
     tester,
   ) async {
@@ -336,6 +368,39 @@ void main() {
         .evaluate()
         .map((element) => tester.getSize(find.byWidget(element.widget)).width);
     expect(panelWidths, containsAll(<double>[206, 184]));
+  });
+
+  testWidgets('submenu can size itself from its content', (tester) async {
+    await tester.pumpWidget(
+      const _MenuTestApp(
+        width: null,
+        submenuWidth: null,
+        entries: <VeriMenuEntry>[
+          VeriMenuItem(
+            id: 'layout',
+            title: '布局',
+            children: <VeriMenuEntry>[
+              VeriMenuItem(id: 'standard', title: '标准布局', onPressed: _noop),
+              VeriMenuItem(id: 'phone', title: '电话布局', onPressed: _noop),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    await tester.tap(find.byTooltip('更多'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('布局'));
+    await tester.pumpAndSettle();
+
+    final panelWidths = find
+        .byType(SingleChildScrollView)
+        .evaluate()
+        .map((element) => tester.getSize(find.byWidget(element.widget)).width)
+        .toList();
+    expect(panelWidths.first, greaterThanOrEqualTo(168));
+    expect(panelWidths.last, greaterThanOrEqualTo(168));
+    expect(panelWidths.last, lessThan(232));
   });
 
   testWidgets('supports four levels and reverses one level at a time', (
@@ -437,8 +502,8 @@ class _MenuTestApp extends StatelessWidget {
   });
 
   final List<VeriMenuEntry> entries;
-  final double width;
-  final double submenuWidth;
+  final double? width;
+  final double? submenuWidth;
 
   @override
   Widget build(BuildContext context) {

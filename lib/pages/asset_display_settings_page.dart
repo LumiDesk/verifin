@@ -186,7 +186,6 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
                       VeriAnchoredMenuAnchor(
                         entries: _viewModeMenuEntries(l10n),
                         semanticLabel: l10n.assetViewModeLabel,
-                        width: 184,
                         builder: (context, openMenu, menuOpen) => SelectField(
                           label: l10n.assetViewModeLabel,
                           value: _viewMode.label(l10n),
@@ -197,8 +196,6 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
                       VeriAnchoredMenuAnchor(
                         entries: _coverMenuEntries(l10n),
                         semanticLabel: l10n.assetsCoverTitle,
-                        width: 216,
-                        submenuWidth: 216,
                         builder: (context, openMenu, menuOpen) => SettingsRow(
                           icon: Icons.photo_size_select_actual_outlined,
                           title: l10n.assetsCoverTitle,
@@ -347,7 +344,6 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
         id: 'asset_cover_online',
         icon: Icons.public_outlined,
         title: l10n.coverUseOnline,
-        submenuWidth: 216,
         children: <VeriMenuEntry>[
           for (final preset in _AssetsPageState._coverPresets)
             VeriMenuItem(

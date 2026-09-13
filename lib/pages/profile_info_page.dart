@@ -125,7 +125,6 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
                   },
                   onSelected: (value) => setState(() => _gender = value),
                   semanticLabel: AppLocalizations.of(context).pickGenderTitle,
-                  width: 188,
                   builder: (context, openMenu, menuOpen) => SelectField(
                     label: AppLocalizations.of(context).genderLabel,
                     value: _gender.label(AppLocalizations.of(context)),

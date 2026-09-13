@@ -886,6 +886,10 @@
   "settingsSectionAbout": "About",
   "themeMode": "Theme",
   "hapticsLabel": "Haptic feedback",
+  "numberPadLayoutLabel": "Number pad layout",
+  "numberPadLayoutPickerTitle": "Choose number pad layout",
+  "numberPadLayoutStandard": "Standard layout",
+  "numberPadLayoutPhone": "Phone layout",
   "amountTwoDecimalsLabel": "Two decimal places",
   "@amountTwoDecimalsLabel": {
     "description": "Settings toggle: always show amounts with two decimal places"

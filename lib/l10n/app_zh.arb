@@ -1654,6 +1654,10 @@
   "settingsSectionAbout": "关于",
   "themeMode": "主题模式",
   "hapticsLabel": "触感反馈",
+  "numberPadLayoutLabel": "数字键盘布局",
+  "numberPadLayoutPickerTitle": "选择数字键盘布局",
+  "numberPadLayoutStandard": "标准布局",
+  "numberPadLayoutPhone": "电话布局",
   "amountTwoDecimalsLabel": "金额保留两位小数",
   "@amountTwoDecimalsLabel": {
     "description": "Settings toggle: always show amounts with two decimal places"

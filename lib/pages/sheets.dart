@@ -705,6 +705,7 @@ Future<double?> showNumberPadSheet(
       maxAmount: maxAmount,
       maxFractionDigits: resolvedFractionDigits,
       currencyCode: currencyCode,
+      layout: VeriFinScope.of(context).numberPadLayout,
       showTitle: showTitle,
     ),
   );

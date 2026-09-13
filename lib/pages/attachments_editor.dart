@@ -98,7 +98,6 @@ class AttachmentsEditor extends StatelessWidget {
                     ),
                   ],
                   semanticLabel: l10n.attachTitle,
-                  width: 196,
                   builder: (context, openMenu, menuOpen) =>
                       _AddButton(onTap: openMenu),
                 );

@@ -1224,7 +1224,6 @@ class _UserWidgetEditorPageState extends State<UserWidgetEditorPage> {
                       VeriAnchoredMenuAnchor(
                         entries: _backgroundMenuEntries(l),
                         semanticLabel: l.widgetBackground,
-                        width: 216,
                         builder: (context, openMenu, menuOpen) => SettingsRow(
                           icon: Icons.wallpaper_outlined,
                           title: l.widgetBackground,

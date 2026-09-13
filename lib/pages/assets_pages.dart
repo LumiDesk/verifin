@@ -183,7 +183,6 @@ class _AssetsPageState extends State<AssetsPage> {
             trailing: VeriAnchoredMenuButton(
               icon: Icons.add,
               tooltip: AppLocalizations.of(context).assetsActions,
-              width: 208,
               entries: _assetActionMenuEntries(context),
             ),
           ),
