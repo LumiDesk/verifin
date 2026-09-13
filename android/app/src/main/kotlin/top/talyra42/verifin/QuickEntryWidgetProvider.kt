@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.widget.RemoteViews
 
 /// 桌面小组件：展示「今日支出」并提供快速记账入口。
@@ -47,6 +48,12 @@ class QuickEntryWidgetProvider : AppWidgetProvider() {
 
             val views = RemoteViews(context.packageName, R.layout.quick_entry_widget)
             views.setInt(R.id.widget_root, "setBackgroundResource", WidgetData.backgroundResource(config.backgroundColor))
+            val r = Color.red(config.backgroundColor) / 255.0
+            val g = Color.green(config.backgroundColor) / 255.0
+            val b = Color.blue(config.backgroundColor) / 255.0
+            val lightSurface = (0.2126 * r + 0.7152 * g + 0.0722 * b) > 0.62
+            views.setTextColor(R.id.widget_label, if (lightSurface) Color.rgb(107, 114, 128) else Color.rgb(184, 192, 204))
+            views.setTextColor(R.id.widget_amount, if (lightSurface) Color.rgb(17, 24, 39) else Color.WHITE)
             views.setTextViewText(R.id.widget_amount, amount)
             views.setTextViewText(R.id.widget_label, label)
             views.setTextViewText(R.id.widget_add_button, quickEntryLabel)

@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.widget.RemoteViews
 
 /// 「一行标签 + 大数值」型只读小组件的基类：本月预算、资产总额等复用同一布局
@@ -47,6 +48,10 @@ abstract class StatWidgetProvider : AppWidgetProvider() {
 
         val views = RemoteViews(context.packageName, R.layout.stat_widget)
         views.setInt(R.id.stat_widget_root, "setBackgroundResource", WidgetData.backgroundResource(config.backgroundColor))
+        val lightSurface = isLightSurface(config.backgroundColor)
+        views.setTextColor(R.id.stat_widget_label, if (lightSurface) Color.rgb(107, 114, 128) else Color.rgb(184, 192, 204))
+        views.setTextColor(R.id.stat_widget_value, if (lightSurface) Color.rgb(17, 24, 39) else Color.WHITE)
+        views.setTextColor(R.id.stat_widget_secondary, if (lightSurface) Color.rgb(107, 114, 128) else Color.rgb(184, 192, 204))
         views.setTextViewText(R.id.stat_widget_label, label)
         views.setTextViewText(R.id.stat_widget_value, amount)
 
@@ -97,6 +102,13 @@ abstract class StatWidgetProvider : AppWidgetProvider() {
             )
         }
         manager.updateAppWidget(widgetId, views)
+    }
+
+    private fun isLightSurface(color: Int): Boolean {
+        val r = Color.red(color) / 255.0
+        val g = Color.green(color) / 255.0
+        val b = Color.blue(color) / 255.0
+        return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 0.62
     }
 }
 
