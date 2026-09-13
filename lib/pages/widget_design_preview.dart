@@ -211,8 +211,8 @@ class WidgetDesignPreview extends StatelessWidget {
                                               WidgetTemplate.budget
                                           ? Center(
                                               child: SizedBox(
-                                                width: 76,
-                                                height: 76,
+                                                width: 104,
+                                                height: 104,
                                                 child: ring,
                                               ),
                                             )
