@@ -76,6 +76,19 @@ class MainActivity : FlutterFragmentActivity() {
                     updateWidgetData(call)
                     result.success(true)
                 }
+                "renderWidgetPreview" -> {
+                    try {
+                        result.success(FixedWidgetPreviewRenderer.png(
+                            this,
+                            call.argument<String>("template") ?: "",
+                            call.argument<Int>("widthDp") ?: 168,
+                            call.argument<Int>("heightDp") ?: 168,
+                        ))
+                    } catch (error: Exception) {
+                        android.util.Log.e("VeriFinWidgets", "Widget preview rendering failed", error)
+                        result.error("WIDGET_PREVIEW_FAILED", "Widget preview unavailable", null)
+                    }
+                }
                 "updateWidgetConfig" -> {
                     updateWidgetConfig(call, result)
                 }
@@ -384,6 +397,11 @@ class MainActivity : FlutterFragmentActivity() {
                 (call.argument<String>("quickEntryLabel") ?: "记一笔"),
             WidgetData.KEY_BUDGET_AMOUNT to (call.argument<String>("budgetAmount") ?: "0"),
             WidgetData.KEY_BUDGET_LABEL to (call.argument<String>("budgetLabel") ?: "本月可用预算"),
+            WidgetData.KEY_BUDGET_USAGE to (call.argument<Double>("budgetUsage")?.toString() ?: ""),
+            WidgetData.KEY_BUDGET_NEXT_USAGE to (call.argument<Double>("budgetNextUsage")?.toString() ?: ""),
+            WidgetData.KEY_NET_WORTH_POINTS to (call.argument<String>("netWorthPoints") ?: ""),
+            WidgetData.KEY_DARK_THEME to (call.argument<Boolean>("darkTheme")?.toString() ?: "true"),
+            WidgetData.KEY_LOCALE to (call.argument<String>("locale") ?: ""),
             WidgetData.KEY_NET_WORTH_AMOUNT to (call.argument<String>("netWorthAmount") ?: "0"),
             WidgetData.KEY_NET_WORTH_LABEL to (call.argument<String>("netWorthLabel") ?: "资产总额"),
             WidgetData.KEY_TREND_AMOUNT to (call.argument<String>("trendAmount") ?: "0"),
@@ -416,6 +434,7 @@ class MainActivity : FlutterFragmentActivity() {
         WidgetData.refresh(this, BudgetWidgetProvider::class.java)
         WidgetData.refresh(this, NetWorthWidgetProvider::class.java)
         WidgetData.refresh(this, TrendWidgetProvider::class.java)
+        FixedWidgetPreviewRenderer.publishPickerPreviews(this)
         // 推送新数据后对齐下一次午夜刷新闹钟。
         WidgetRefreshScheduler.scheduleNextMidnight(this)
     }

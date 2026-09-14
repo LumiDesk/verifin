@@ -1,3 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
-<include xmlns:android="http://schemas.android.com/apk/res/android"
-    layout="@layout/stat_widget" />
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background" android:clipToOutline="true" android:layout_width="match_parent"
+    android:layout_height="match_parent" android:orientation="vertical"
+    android:padding="14dp" android:background="@drawable/widget_surface_dark">
+    <TextView android:id="@+id/stat_widget_title" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:text="@string/widget_trend"
+        android:textColor="#FFB8C0CC" android:textSize="12sp" android:maxLines="1"
+        android:ellipsize="end" android:includeFontPadding="false"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1" android:layout_marginTop="8dp" android:orientation="horizontal">
+        <LinearLayout android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="1" android:orientation="vertical" android:gravity="bottom">
+            <TextView android:id="@+id/stat_widget_label" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:textColor="#FFB8C0CC"
+                android:textSize="11sp" android:maxLines="1" android:ellipsize="end"
+                android:includeFontPadding="false"/>
+            <TextView android:id="@+id/stat_widget_value" android:layout_width="match_parent"
+                android:layout_height="34dp" android:layout_marginTop="4dp"
+                android:text="0" android:textColor="#FFF5F5F7" android:textSize="28sp"
+                android:textStyle="bold" android:includeFontPadding="false" android:maxLines="1"
+                android:autoSizeTextType="uniform" android:autoSizeMinTextSize="14sp" android:autoSizeMaxTextSize="28sp"/>
+            <TextView android:id="@+id/stat_widget_secondary" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:visibility="gone"/>
+        </LinearLayout>
+        <ImageView android:id="@+id/stat_widget_chart" android:layout_width="0dp"
+            android:layout_weight="1" android:layout_height="match_parent" android:layout_marginLeft="16dp"
+            android:scaleType="fitXY" android:contentDescription="@string/widget_chart_content_description"/>
+    </LinearLayout>
+</LinearLayout>

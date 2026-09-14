@@ -1,3 +1,5 @@
+import 'package:flutter/widgets.dart';
+
 import 'l10n_outside_context.dart';
 import 'currency_math.dart';
 import 'ledger_math.dart';
@@ -56,6 +58,19 @@ Future<void> pushWidgetData(VeriFinController controller) async {
     trendPoints.add(dayExpenseTotal(entries, day));
   }
   final trendTotal = trendPoints.fold<double>(0, (sum, value) => sum + value);
+  final assetSnapshot = controller.widgetLedgerSnapshot(null, now);
+  final netWorthSeries = assetSnapshot == null
+      ? const <double?>[]
+      : buildWidgetPresentation(
+          definition: const UserWidgetDefinition(
+            id: 'fixed_net_worth',
+            name: '',
+            template: WidgetTemplate.netWorth,
+            chartMetric: WidgetChartMetric.netWorth,
+          ),
+          snapshot: assetSnapshot,
+          now: now,
+        ).series;
 
   await AppWidgetBridge.syncWidgetBooks(
     controller.ledgerBooks
@@ -94,11 +109,26 @@ Future<void> pushWidgetData(VeriFinController controller) async {
   String two(int n) => n.toString().padLeft(2, '0');
 
   await AppWidgetBridge.updateWidgetData(
+    locale: l10n.localeName,
     todayAmount: formatUserMoney(todayTotal, baseCurrencyCode),
     todayLabel: l10n.widgetTodayExpense,
     quickEntryLabel: l10n.addEntryTooltip,
     budgetAmount: formatUserMoney(remaining.abs(), baseCurrencyCode),
     budgetLabel: remaining < 0 ? overspentLabel : availableLabel,
+    budgetUsage: monthBudget > 0
+        ? (cycleExpense / monthBudget).clamp(0.0, 1.0).toDouble()
+        : null,
+    budgetNextUsage: nextBudget > 0 ? nextCycleExpense / nextBudget : null,
+    netWorthPoints: netWorthSeries.any((value) => value == null)
+        ? ''
+        : netWorthSeries.join(','),
+    darkTheme: switch (controller.themePreference) {
+      ThemePreference.dark => true,
+      ThemePreference.light => false,
+      ThemePreference.system =>
+        WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+            Brightness.dark,
+    },
     netWorthAmount: accountValuation.completeTotal == null
         ? '—'
         : formatUserMoney(accountValuation.completeTotal!, baseCurrencyCode),
