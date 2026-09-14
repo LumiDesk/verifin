@@ -13,6 +13,4 @@
     android:previewLayout="@layout/stat_widget"
     android:resizeMode="none"
     android:widgetCategory="home_screen"
-    android:widgetFeatures="reconfigurable"
-    android:configure=".UserWidgetConfigureActivity"
     android:description="@string/trend_widget_description" />

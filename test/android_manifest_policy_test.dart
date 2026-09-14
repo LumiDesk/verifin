@@ -11,19 +11,19 @@ void main() {
     expect(manifest, contains('android:allowBackup="false"'));
   });
 
-  test('用户设计小组件声明为完整的 AppWidgetProvider', () {
+  test('桌面只注册固定模板小组件，不注册用户自定义 Provider', () {
     final manifest = File(
       'android/app/src/main/AndroidManifest.xml',
     ).readAsStringSync();
 
-    expect(manifest, contains('android:name=".UserWidgetProvider"'));
+    expect(manifest, isNot(contains('android:name=".UserWidgetProvider"')));
     expect(
       manifest,
-      isNot(
-        contains('android:name=".UserWidgetProvider" android:enabled="false"'),
-      ),
+      isNot(contains('android:name=".UserWidgetConfigureActivity"')),
     );
-    expect(manifest, contains('android:resource="@xml/user_widget_info"'));
-    expect(manifest, contains('android.appwidget.action.APPWIDGET_UPDATE'));
+    expect(manifest, contains('android:name=".QuickEntryWidgetProvider"'));
+    expect(manifest, contains('android:name=".BudgetWidgetProvider"'));
+    expect(manifest, contains('android:name=".NetWorthWidgetProvider"'));
+    expect(manifest, contains('android:name=".TrendWidgetProvider"'));
   });
 }
