@@ -181,7 +181,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 
 ## 族 11 — AI 对话查询 UI
 
-桌面小组件的应用内预览统一使用 `pages/widget_design_preview.dart` 的 `WidgetDesignPreview`；画布、编辑页与拖动反馈共用尺寸、文字对齐及圆角。`app/widget_presentation.dart` 的 `buildWidgetPresentation` 接收 Controller 提供的 `WidgetLedgerSnapshot`，按所选账本、日期和筛选生成真实指标、预算进度和趋势；禁止为预览另造假数值、假比例或假折线。
+桌面小组件只提供四个固定模板。`WidgetGalleryPage` 经 `AppWidgetBridge.renderPreview` 请求 Android `FixedWidgetPreviewRenderer`，直接展示 Provider 的 `createViews` 渲染图；已删除独立的 Flutter `WidgetDesignPreview` 与闲置自定义编辑页，禁止重新手绘一套近似预览。实际桌面、应用内预览和 Android 15+ 系统预览共用 RemoteViews 布局。旧版启动器的中英文、深浅色 PNG 由 `scripts/export-widget-previews.ps1` 从同一 Provider 导出。`widget_presentation.dart` 仅负责真实指标与净资产序列；资产曲线不得复用支出数据。原生渲染与导出验收见 `docs/dev/widget-preview-parity.md`。
 
 | 名称 | 类型 | 位置 | 用途 |
 |---|---|---|---|

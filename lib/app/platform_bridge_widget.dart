@@ -4,6 +4,24 @@ part of 'platform_bridge.dart';
 class AppWidgetBridge {
   AppWidgetBridge._();
 
+  /// Android inflates the provider's actual RemoteViews and returns its pixels.
+  /// MissingPluginException means only the test host has no Android renderer.
+  static Future<Uint8List?> renderPreview({
+    required String template,
+    required int widthDp,
+    required int heightDp,
+  }) async {
+    try {
+      return await _channel.invokeMethod<Uint8List>('renderWidgetPreview', {
+        'template': template,
+        'widthDp': widthDp,
+        'heightDp': heightDp,
+      });
+    } on MissingPluginException {
+      return null;
+    }
+  }
+
   static Future<void> Function(Map<String, Object?> args)? _routeHandler;
 
   static void setRouteHandler(
@@ -41,6 +59,11 @@ class AppWidgetBridge {
     required String quickEntryLabel,
     required String budgetAmount,
     required String budgetLabel,
+    double? budgetUsage,
+    double? budgetNextUsage,
+    String netWorthPoints = '',
+    bool darkTheme = true,
+    String locale = '',
     required String netWorthAmount,
     required String netWorthLabel,
     String trendAmount = '0',
@@ -66,6 +89,11 @@ class AppWidgetBridge {
         'quickEntryLabel': quickEntryLabel,
         'budgetAmount': budgetAmount,
         'budgetLabel': budgetLabel,
+        'budgetUsage': budgetUsage,
+        'budgetNextUsage': budgetNextUsage,
+        'netWorthPoints': netWorthPoints,
+        'darkTheme': darkTheme,
+        'locale': locale,
         'netWorthAmount': netWorthAmount,
         'netWorthLabel': netWorthLabel,
         'trendAmount': trendAmount,

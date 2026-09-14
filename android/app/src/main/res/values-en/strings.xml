@@ -6,12 +6,14 @@
     <string name="budget_widget_description">Budget remaining this period</string>
     <string name="net_worth_widget_description">Total assets across accounts</string>
     <string name="widget_today_expense">Today spending</string>
+    <string name="widget_quick_entry_title">Today spending + quick entry</string>
     <string name="widget_budget_available">Budget left this month</string>
     <string name="widget_net_worth">Net worth</string>
     <string name="widget_refresh_required">Open app to refresh</string>
     <string name="trend_widget_description">Income and spending trend with configurable metrics</string>
     <string name="widget_trend">Income and spending trend</string>
     <string name="widget_chart_content_description">Trend chart</string>
+    <string name="widget_budget_ring_content_description">Budget usage</string>
     <string name="user_widget_description">My widget with custom finance data and background</string>
     <string name="user_widget_picker_label">VeriFin</string>
     <string name="user_widget_choose_design">Choose my widget</string>

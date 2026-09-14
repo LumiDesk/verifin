@@ -16,6 +16,11 @@ abstract class StatWidgetProvider : AppWidgetProvider() {
     protected abstract val amountKey: String
     protected abstract val labelKey: String
     protected abstract val defaultLabelRes: Int
+    protected open val titleRes: Int = defaultLabelRes
+    protected open val layoutRes: Int = R.layout.stat_widget
+    protected open val hasBottomSlot: Boolean = true
+    protected open val showBudgetRing: Boolean = false
+    protected open val showChartByDefault: Boolean = false
 
     /// 解析展示的数值与标签；默认直接读取推送值。需要跨天/跨月自愈的子类（如预算）覆写。
     protected open fun resolveAmountLabel(context: Context): Pair<String, String> {
@@ -28,7 +33,7 @@ abstract class StatWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
     ) {
-        appWidgetIds.forEach { render(context, appWidgetManager, it) }
+        appWidgetIds.forEach { appWidgetManager.updateAppWidget(it, createViews(context, it)) }
         // 每次重绘顺带把下一次午夜刷新闹钟对齐好（跨天/跨月自愈的触发源）。
         WidgetRefreshScheduler.scheduleNextMidnight(context)
     }
@@ -38,23 +43,29 @@ abstract class StatWidgetProvider : AppWidgetProvider() {
         super.onDeleted(context, appWidgetIds)
     }
 
-    private fun render(context: Context, manager: AppWidgetManager, widgetId: Int) {
-        val config = WidgetData.readInstanceConfig(context, widgetId)
+    fun createViews(baseContext: Context, widgetId: Int, sample: Boolean = false): RemoteViews {
+        val context = WidgetData.localizedContext(baseContext)
+        // Fixed templates no longer inherit an old instance's custom metric or styling.
+        val config = WidgetData.InstanceConfig()
         val defaults = resolveAmountLabel(context)
         val selected = if (config.primaryMetric.isBlank()) defaults else
             WidgetData.metric(context, config.primaryMetric, defaults.first, defaults.second, config.bookId)
-        val amount = if (config.hideAmounts) "••••" else selected.first
-        val label = selected.second
+        val amount = if (sample) "0" else selected.first
+        val label = if (sample) context.getString(defaultLabelRes) else selected.second
 
-        val views = RemoteViews(context.packageName, R.layout.stat_widget)
-        views.setInt(R.id.stat_widget_root, "setBackgroundResource", WidgetData.backgroundResource(config.backgroundColor))
-        val lightSurface = isLightSurface(config.backgroundColor)
+        val views = RemoteViews(context.packageName, layoutRes)
+        val lightSurface = !WidgetData.darkTheme(context)
+        views.setInt(android.R.id.background, "setBackgroundResource", if (lightSurface) R.drawable.widget_surface_light else R.drawable.widget_surface_dark)
         views.setTextColor(R.id.stat_widget_label, if (lightSurface) Color.rgb(107, 114, 128) else Color.rgb(184, 192, 204))
+        views.setTextColor(R.id.stat_widget_title, if (lightSurface) Color.rgb(107, 114, 128) else Color.rgb(184, 192, 204))
         views.setTextColor(R.id.stat_widget_value, if (lightSurface) Color.rgb(17, 24, 39) else Color.WHITE)
         views.setTextColor(R.id.stat_widget_secondary, if (lightSurface) Color.rgb(107, 114, 128) else Color.rgb(184, 192, 204))
+        views.setTextViewText(R.id.stat_widget_title, context.getString(titleRes))
         views.setTextViewText(R.id.stat_widget_label, label)
+        views.setViewVisibility(R.id.stat_widget_label, if (label == context.getString(titleRes)) android.view.View.GONE else android.view.View.VISIBLE)
         views.setTextViewText(R.id.stat_widget_value, amount)
 
+        var hasSecondary = false
         if (config.secondaryMetric.isNotBlank()) {
             val secondary = WidgetData.metric(context, config.secondaryMetric, "", "", config.bookId)
             views.setTextViewText(
@@ -62,14 +73,29 @@ abstract class StatWidgetProvider : AppWidgetProvider() {
                 if (config.hideAmounts) secondary.second else "${secondary.second}  ${secondary.first}",
             )
             views.setViewVisibility(R.id.stat_widget_secondary, android.view.View.VISIBLE)
+            hasSecondary = true
         } else {
             views.setViewVisibility(R.id.stat_widget_secondary, android.view.View.GONE)
         }
 
-        if (config.chartMetric.isNotBlank()) {
+        if (showBudgetRing) {
+            WidgetChartRenderer.progressRing(if (sample) 0f else WidgetData.budgetUsage(context),
+                textColor = if (lightSurface) Color.rgb(17, 24, 39) else Color.WHITE,
+                trackColor = if (lightSurface) Color.rgb(229, 231, 235) else Color.rgb(48, 53, 61))?.let {
+                views.setImageViewBitmap(R.id.stat_widget_ring, it)
+                views.setViewVisibility(R.id.stat_widget_ring, android.view.View.VISIBLE)
+            } ?: views.setViewVisibility(R.id.stat_widget_ring, android.view.View.GONE)
+        }
+        if (hasBottomSlot) {
+            views.setViewVisibility(
+                R.id.stat_widget_bottom,
+                if (showBudgetRing || hasSecondary) android.view.View.VISIBLE else android.view.View.GONE,
+            )
+        }
+
+        if (showChartByDefault || config.chartMetric.isNotBlank()) {
             val chart = WidgetChartRenderer.sparkline(
-                if (config.bookId.isBlank()) WidgetData.trendPoints(context)
-                else WidgetData.snapshotPoints(context, config.bookId),
+                if (sample) List(30) { 0f } else chartPoints(context),
             )
             if (chart != null) {
                 views.setImageViewBitmap(R.id.stat_widget_chart, chart)
@@ -91,7 +117,7 @@ abstract class StatWidgetProvider : AppWidgetProvider() {
             openIntent.putExtra("widgetBookId", config.bookId)
             openIntent.putExtra("widgetId", widgetId)
             views.setOnClickPendingIntent(
-                R.id.stat_widget_root,
+                android.R.id.background,
                 // requestCode 随类名区分，避免不同小组件的 PendingIntent 相互覆盖。
                 PendingIntent.getActivity(
                     context,
@@ -101,15 +127,11 @@ abstract class StatWidgetProvider : AppWidgetProvider() {
                 ),
             )
         }
-        manager.updateAppWidget(widgetId, views)
+        return views
     }
 
-    private fun isLightSurface(color: Int): Boolean {
-        val r = Color.red(color) / 255.0
-        val g = Color.green(color) / 255.0
-        val b = Color.blue(color) / 255.0
-        return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 0.62
-    }
+    protected open fun chartPoints(context: Context): List<Float> = WidgetData.trendPoints(context)
+
 }
 
 /// 本月预算小组件：展示当前账本本月「可用预算 / 已超支」金额。
@@ -117,6 +139,8 @@ class BudgetWidgetProvider : StatWidgetProvider() {
     override val amountKey = WidgetData.KEY_BUDGET_AMOUNT
     override val labelKey = WidgetData.KEY_BUDGET_LABEL
     override val defaultLabelRes = R.string.widget_budget_available
+    override val titleRes = R.string.widget_budget_available
+    override val showBudgetRing = true
 
     // 跨月自愈：进入新月后展示整月预算与「可用」文案。
     override fun resolveAmountLabel(context: Context) =
@@ -128,6 +152,10 @@ class NetWorthWidgetProvider : StatWidgetProvider() {
     override val amountKey = WidgetData.KEY_NET_WORTH_AMOUNT
     override val labelKey = WidgetData.KEY_NET_WORTH_LABEL
     override val defaultLabelRes = R.string.widget_net_worth
+    override val titleRes = R.string.widget_net_worth
+    override val showChartByDefault = true
+    override fun chartPoints(context: Context) = WidgetData.read(context, WidgetData.KEY_NET_WORTH_POINTS, "")
+        .split(',').mapNotNull { it.toFloatOrNull() }
 }
 
 /** Configurable trend card. Flutter supplies the aggregate amount and comma-separated points. */
@@ -135,6 +163,10 @@ class TrendWidgetProvider : StatWidgetProvider() {
     override val amountKey = WidgetData.KEY_TREND_AMOUNT
     override val labelKey = WidgetData.KEY_TREND_LABEL
     override val defaultLabelRes = R.string.widget_trend
+    override val titleRes = R.string.widget_trend
+    override val layoutRes = R.layout.trend_widget
+    override val hasBottomSlot = false
+    override val showChartByDefault = true
 
     override fun resolveAmountLabel(context: Context) =
         WidgetData.read(context, amountKey, "0") to

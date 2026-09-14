@@ -17,7 +17,7 @@ class QuickEntryWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
     ) {
-        appWidgetIds.forEach { renderWidget(context, appWidgetManager, it) }
+        appWidgetIds.forEach { appWidgetManager.updateAppWidget(it, createViews(context, it)) }
         // 每次重绘顺带把下一次午夜刷新闹钟对齐好（跨天自愈的触发源）。
         WidgetRefreshScheduler.scheduleNextMidnight(context)
     }
@@ -28,18 +28,18 @@ class QuickEntryWidgetProvider : AppWidgetProvider() {
     }
 
     companion object {
-        private fun renderWidget(
-            context: Context,
-            manager: AppWidgetManager,
+        fun createViews(
+            baseContext: Context,
             widgetId: Int,
-        ) {
+            sample: Boolean = false,
+        ): RemoteViews {
+            val context = WidgetData.localizedContext(baseContext)
             // 跨天自愈：已过午夜则展示归零值，不必等应用打开重新推送。
-            val config = WidgetData.readInstanceConfig(context, widgetId)
+            val config = WidgetData.InstanceConfig()
             val defaults = WidgetData.todayForToday(context)
             val selected = if (config.primaryMetric.isBlank()) defaults else
                 WidgetData.metric(context, config.primaryMetric, defaults.first, defaults.second, config.bookId)
-            val amount = if (config.hideAmounts) "••••" else selected.first
-            val label = selected.second
+            val amount = if (sample) "0" else selected.first
             val quickEntryLabel = WidgetData.read(
                 context,
                 WidgetData.KEY_QUICK_ENTRY_LABEL,
@@ -47,16 +47,15 @@ class QuickEntryWidgetProvider : AppWidgetProvider() {
             )
 
             val views = RemoteViews(context.packageName, R.layout.quick_entry_widget)
-            views.setInt(R.id.widget_root, "setBackgroundResource", WidgetData.backgroundResource(config.backgroundColor))
-            val r = Color.red(config.backgroundColor) / 255.0
-            val g = Color.green(config.backgroundColor) / 255.0
-            val b = Color.blue(config.backgroundColor) / 255.0
-            val lightSurface = (0.2126 * r + 0.7152 * g + 0.0722 * b) > 0.62
+            val lightSurface = !WidgetData.darkTheme(context)
+            views.setInt(android.R.id.background, "setBackgroundResource", if (lightSurface) R.drawable.widget_surface_light else R.drawable.widget_surface_dark)
             views.setTextColor(R.id.widget_label, if (lightSurface) Color.rgb(107, 114, 128) else Color.rgb(184, 192, 204))
             views.setTextColor(R.id.widget_amount, if (lightSurface) Color.rgb(17, 24, 39) else Color.WHITE)
+            views.setTextColor(R.id.widget_title, if (lightSurface) Color.rgb(107, 114, 128) else Color.rgb(184, 192, 204))
+            views.setTextViewText(R.id.widget_title, if (sample) context.getString(R.string.widget_today_expense) else selected.second)
+            views.setViewVisibility(R.id.widget_label, android.view.View.GONE)
             views.setTextViewText(R.id.widget_amount, amount)
-            views.setTextViewText(R.id.widget_label, label)
-            views.setTextViewText(R.id.widget_add_button, quickEntryLabel)
+            views.setContentDescription(R.id.widget_add_button, quickEntryLabel)
 
             val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
 
@@ -89,7 +88,7 @@ class QuickEntryWidgetProvider : AppWidgetProvider() {
                 )
             }
 
-            manager.updateAppWidget(widgetId, views)
+            return views
         }
     }
 }

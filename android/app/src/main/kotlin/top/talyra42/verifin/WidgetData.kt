@@ -23,6 +23,19 @@ object WidgetData {
     // 本月预算小组件（展示本月可用/超支金额）。
     const val KEY_BUDGET_AMOUNT = "month_budget"
     const val KEY_BUDGET_LABEL = "month_budget_label"
+    const val KEY_BUDGET_USAGE = "month_budget_usage"
+    const val KEY_BUDGET_NEXT_USAGE = "next_budget_usage"
+    const val KEY_NET_WORTH_POINTS = "net_worth_points"
+    const val KEY_DARK_THEME = "dark_theme"
+    const val KEY_LOCALE = "locale"
+
+    fun localizedContext(context: Context): Context {
+        val language = read(context, KEY_LOCALE, "")
+        if (language.isBlank()) return context
+        val config = android.content.res.Configuration(context.resources.configuration)
+        config.setLocale(java.util.Locale.forLanguageTag(language))
+        return context.createConfigurationContext(config)
+    }
 
     // 资产总额小组件。
     const val KEY_NET_WORTH_AMOUNT = "net_worth"
@@ -373,6 +386,19 @@ object WidgetData {
         return read(context, KEY_BUDGET_FULL, amount) to
             read(context, KEY_BUDGET_FULL_LABEL, label)
     }
+
+    fun budgetUsage(context: Context): Float? {
+        val expiry = read(context, KEY_BUDGET_EXPIRY, "")
+        val nextExpiry = read(context, KEY_BUDGET_NEXT_EXPIRY, "")
+        val key = when {
+            expiry.isEmpty() || currentDate() <= expiry -> KEY_BUDGET_USAGE
+            nextExpiry.isNotEmpty() && currentDate() <= nextExpiry -> KEY_BUDGET_NEXT_USAGE
+            else -> return null
+        }
+        return read(context, key, "").toFloatOrNull()?.takeIf { it.isFinite() }
+    }
+
+    fun darkTheme(context: Context) = read(context, KEY_DARK_THEME, "true") == "true"
 
     /// 批量写入字段（只写传入的键，缺省键保持原值）。
     fun write(context: Context, values: Map<String, String>) {

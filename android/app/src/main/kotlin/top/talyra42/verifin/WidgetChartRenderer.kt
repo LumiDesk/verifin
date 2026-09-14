@@ -12,7 +12,8 @@ import kotlin.math.roundToInt
 
 /** Small, allocation-light sparkline suitable for RemoteViews ImageView. */
 object WidgetChartRenderer {
-    fun progressRing(progress: Float?, size: Int = 192): Bitmap? {
+    fun progressRing(progress: Float?, size: Int = 192,
+        textColor: Int = Color.WHITE, trackColor: Int = Color.argb(80, 255, 255, 255)): Bitmap? {
         val value = progress ?: return null
         if (!value.isFinite()) return null
         val clamped = value.coerceIn(0f, 1f)
@@ -21,7 +22,7 @@ object WidgetChartRenderer {
         val center = size / 2f
         val radius = center - 18f
         val track = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.argb(80, 255, 255, 255)
+            color = trackColor
             style = Paint.Style.STROKE
             strokeWidth = 16f
             strokeCap = Paint.Cap.ROUND
@@ -31,7 +32,7 @@ object WidgetChartRenderer {
         canvas.drawArc(center - radius, center - radius, center + radius, center + radius,
             -90f, clamped * 360f, false, accent)
         val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
+            color = textColor
             textSize = size * .24f
             typeface = android.graphics.Typeface.DEFAULT_BOLD
             textAlign = Paint.Align.CENTER
@@ -41,7 +42,7 @@ object WidgetChartRenderer {
         return bitmap
     }
 
-    fun sparkline(points: List<Float>, width: Int = 480, height: Int = 96): Bitmap? {
+    fun sparkline(points: List<Float>, width: Int = 720, height: Int = 240): Bitmap? {
         if (points.size < 2) return null
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
