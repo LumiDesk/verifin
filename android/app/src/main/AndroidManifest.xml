@@ -104,32 +104,6 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/trend_widget_info" />
         </receiver>
-        <!-- User-created designs are real AppWidgetProvider instances too. Keeping this
-             receiver disabled or omitting AppWidgetProviderInfo makes requestPinAppWidget
-             target a component the launcher cannot create, and drag-to-home falls back to
-             an empty/unbound widget. -->
-        <receiver
-            android:name=".UserWidgetProvider"
-            android:exported="false"
-            android:label="@string/user_widget_default_name">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/user_widget_info" />
-        </receiver>
-        <activity
-            android:name=".UserWidgetConfigureActivity"
-            android:exported="true"
-            android:theme="@android:style/Theme.Material.Light.NoActionBar">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
-            </intent-filter>
-        </activity>
-        <receiver
-            android:name=".UserWidgetPinReceiver"
-            android:exported="false" />
         <!-- 桌面小组件午夜刷新：定时广播重绘小组件以跨天/跨月自愈；开机/更新后重排闹钟。 -->
         <receiver
             android:name=".WidgetRefreshReceiver"
