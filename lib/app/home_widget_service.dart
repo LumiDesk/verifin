@@ -91,6 +91,54 @@ Future<void> pushWidgetData(VeriFinController controller) async {
   }
   await AppWidgetBridge.syncWidgetSnapshots(widgetSnapshots);
 
+  // 用户设计的小组件由 Android 进程独立渲染。除了账本快照外，还要把每个设计
+  // 当前可直接展示的结果一并推过去；桌面启动器渲染时 Flutter 进程可能并未运行，
+  // 不能依赖 SharedPreferences 里的 Dart 定义或内存中的 Controller。
+  final userDefinitions = <Map<String, Object?>>[];
+  for (final definition in controller.userWidgetDefinitions) {
+    final snapshot = controller.widgetLedgerSnapshot(definition.bookId, now);
+    final WidgetPresentation? presentation = snapshot == null
+        ? null
+        : buildWidgetPresentation(
+            definition: definition,
+            snapshot: snapshot,
+            now: now,
+          );
+    final primary = presentation?.primary;
+    final secondary = presentation == null
+        ? const <String>[]
+        : presentation.secondary
+              .map(
+                (value) =>
+                    '${widgetMetricLabel(l10n, value.metric)}  '
+                    '${value.formatted(presentation.currencyCode, hidden: definition.hideAmounts)}',
+              )
+              .toList(growable: false);
+    final payload = <String, Object?>{
+      ...definition.toJson(),
+      'presentation': <String, Object?>{
+        'amount': primary == null || presentation == null
+            ? '—'
+            : primary.formatted(
+                presentation.currencyCode,
+                hidden: definition.hideAmounts,
+              ),
+        'label': primary == null || presentation == null
+            ? l10n.widgetRefreshRequired
+            : widgetMetricLabel(l10n, primary.metric),
+        'secondary': secondary,
+        'points': presentation == null
+            ? const <double>[]
+            : presentation.series.whereType<double>().toList(growable: false),
+        if (presentation?.budgetUsage case final usage? when usage.isFinite)
+          'budgetUsage': usage,
+        'quickEntryLabel': l10n.addEntryTooltip,
+      },
+    };
+    userDefinitions.add(payload);
+  }
+  await AppWidgetBridge.syncUserWidgetDefinitions(userDefinitions);
+
   String two(int n) => n.toString().padLeft(2, '0');
 
   await AppWidgetBridge.updateWidgetData(
