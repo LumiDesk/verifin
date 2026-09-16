@@ -95,6 +95,18 @@
         "occurredAt": "2026-07-02T09:30:00.000"
       },
       {
+        "id": "entry_20260702_003",
+        "bookId": "default",
+        "type": "expense",
+        "amount": 600.0,
+        "categoryId": "shopping",
+        "accountId": "acc_wechat",
+        "toAccountId": null,
+        "note": "帮同事代付团建费",
+        "occurredAt": "2026-07-02T20:15:00.000",
+        "excludedFromBudget": true
+      },
+      {
         "id": "entry_20260701_001",
         "bookId": "default",
         "type": "expense",

@@ -59,7 +59,8 @@ class HomePage extends StatelessWidget {
     final budgetKeyMonth = controller.budgetKeyMonthFor(now);
     final budgetWindow = controller.budgetWindow(budgetKeyMonth);
     final budgetEntries = entriesInWindow(entries, budgetWindow);
-    final budgetExpense = sumByType(budgetEntries, EntryType.expense);
+    // 预算面板按预算口径取数：排除标记「不计入预算」的交易。
+    final budgetExpense = budgetExpenseTotal(budgetEntries);
     final monthlyBudget = controller.monthlyBudget(budgetKeyMonth);
     final categoryBudgetSnapshots = computeCategoryBudgetSnapshots(
       controller: controller,

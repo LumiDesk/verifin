@@ -709,6 +709,7 @@ class SqliteLedgerRepository implements LedgerRepository {
     'tag_ids': e.tagIds.isEmpty ? null : jsonEncode(e.tagIds),
     'fee': e.fee,
     'reimbursable': e.reimbursable ? 1 : 0,
+    'excluded_from_budget': e.excludedFromBudget ? 1 : 0,
     'refunded_amount': e.refundedBaseAmount,
     'refund_of': e.refundOf,
     'settled_at': e.settledAt?.millisecondsSinceEpoch,
@@ -734,6 +735,7 @@ class SqliteLedgerRepository implements LedgerRepository {
     tagIds: _decodeTagIds(row['tag_ids']),
     fee: (row['fee'] as num?)?.toDouble() ?? 0,
     reimbursable: ((row['reimbursable'] as int?) ?? 0) != 0,
+    excludedFromBudget: ((row['excluded_from_budget'] as int?) ?? 0) != 0,
     refundedBaseAmount: (row['refunded_amount'] as num?)?.toDouble() ?? 0,
     refundOf: row['refund_of'] as String?,
     settledAt: row['settled_at'] == null

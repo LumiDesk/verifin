@@ -99,6 +99,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reimbursementReimbursed => '已到账';
 
   @override
+  String get excludedFromBudget => '不计入预算';
+
+  @override
+  String get excludedFromBudgetHint => '标记本身不改变金额：这笔仍计入账户余额与收支统计，只是不占用预算。';
+
+  @override
+  String get budgetScopeFilterName => '预算';
+
+  @override
+  String get budgetScopeFilterTitle => '预算计入';
+
+  @override
+  String get budgetScopeAll => '全部';
+
+  @override
+  String get budgetScopeIncluded => '计入预算';
+
+  @override
   String get calendarTitle => '日历';
 
   @override

@@ -101,6 +101,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reimbursementReimbursed => 'Received';
 
   @override
+  String get excludedFromBudget => 'Excluded from budget';
+
+  @override
+  String get excludedFromBudgetHint =>
+      'Marking changes no amount: this expense still counts toward account balances and income/expense stats, it just stops using up your budget.';
+
+  @override
+  String get budgetScopeFilterName => 'Budget';
+
+  @override
+  String get budgetScopeFilterTitle => 'Budget inclusion';
+
+  @override
+  String get budgetScopeAll => 'All';
+
+  @override
+  String get budgetScopeIncluded => 'In budget';
+
+  @override
   String get calendarTitle => 'Calendar';
 
   @override

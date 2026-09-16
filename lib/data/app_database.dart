@@ -14,7 +14,7 @@ class AppDatabase {
   final Database db;
 
   static const String defaultDatabaseName = 'verifin.db';
-  static const int schemaVersion = 16;
+  static const int schemaVersion = 17;
 
   /// 打开（或创建）数据库。测试通过 [factory]/[path] 注入 ffi 与内存路径；
   /// 真实平台留空则由 [resolveDatabaseFactory]/[resolveDatabasePath] 决定。
@@ -69,6 +69,7 @@ class AppDatabase {
         14: _migrateToV14,
         15: _migrateToV15,
         16: _migrateToV16,
+        17: _migrateToV17,
       };
 
   /// 只读暴露迁移注册表，供迁移矩阵测试把库推进到任意中间版本。生产代码勿用。
@@ -329,6 +330,23 @@ class AppDatabase {
     ''');
   }
 
+  /// v16 → v17：预算外支出。交易新增「不计入预算」标记，默认 0（照常计入预算）。
+  static Future<void> _migrateToV17(Database db) async {
+    if (!await _tableExists(db, 'entries')) {
+      return;
+    }
+    // 全新库的 onCreate 已带该列，迁移矩阵里「库结构比 user_version 新」的库也是；
+    // 直接 ALTER 会因重复列名失败。
+    if (await _columnsExist(db, 'entries', const <String>[
+      'excluded_from_budget',
+    ])) {
+      return;
+    }
+    await db.execute(
+      'ALTER TABLE entries ADD COLUMN excluded_from_budget INTEGER NOT NULL DEFAULT 0',
+    );
+  }
+
   static Future<bool> _tableExists(Database db, String name) async {
     final rows = await db.rawQuery(
       "SELECT name FROM sqlite_master WHERE type='table' AND name = ?",
@@ -518,6 +536,7 @@ class AppDatabase {
       tag_ids TEXT,
       fee REAL NOT NULL DEFAULT 0,
       reimbursable INTEGER NOT NULL DEFAULT 0,
+      excluded_from_budget INTEGER NOT NULL DEFAULT 0,
       refunded_amount REAL NOT NULL DEFAULT 0,
       refund_of TEXT,
       settled_at INTEGER

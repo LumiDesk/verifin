@@ -40,7 +40,9 @@ class ReportsPage extends StatelessWidget {
       entries,
       controller.budgetWindow(budgetKeyMonth),
     );
-    final budgetExpense = sumByType(budgetEntries, EntryType.expense);
+    // 预算执行卡按预算口径取数：排除标记「不计入预算」的交易，看板其余统计
+    // 仍按自然月、按实际发生（标记不影响收支统计）。
+    final budgetExpense = budgetExpenseTotal(budgetEntries);
     final monthlyBudget = controller.monthlyBudget(budgetKeyMonth);
     final categoryBudgetSnapshots = computeCategoryBudgetSnapshots(
       controller: controller,

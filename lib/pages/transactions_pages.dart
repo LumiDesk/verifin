@@ -120,6 +120,36 @@ enum ReimbursementFilter {
   }
 }
 
+/// 预算计入筛选：全部 / 计入预算 / 不计入预算（借款、垫付等已标记的支出）。
+/// 与报销筛选一样只回答「这笔有没有被标记」，未标记的收入与转账同样属于「计入预算」。
+enum BudgetScopeFilter {
+  all,
+  included,
+  excluded;
+
+  String label(AppLocalizations l10n) {
+    switch (this) {
+      case BudgetScopeFilter.all:
+        return l10n.budgetScopeAll;
+      case BudgetScopeFilter.included:
+        return l10n.budgetScopeIncluded;
+      case BudgetScopeFilter.excluded:
+        return l10n.excludedFromBudget;
+    }
+  }
+
+  bool matches(LedgerEntry entry) {
+    switch (this) {
+      case BudgetScopeFilter.all:
+        return true;
+      case BudgetScopeFilter.included:
+        return !entry.excludedFromBudget;
+      case BudgetScopeFilter.excluded:
+        return entry.excludedFromBudget;
+    }
+  }
+}
+
 class TransactionsPage extends StatefulWidget {
   const TransactionsPage({
     super.key,
@@ -159,6 +189,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
   String? _selectedCategoryId;
   String? _selectedTagId;
   ReimbursementFilter _reimbursementFilter = ReimbursementFilter.all;
+  BudgetScopeFilter _budgetScopeFilter = BudgetScopeFilter.all;
   bool _selectionMode = false;
   final Set<String> _selectedIds = <String>{};
 
@@ -202,6 +233,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
     _selectedCategoryId,
     _selectedTagId,
     _reimbursementFilter,
+    _budgetScopeFilter,
     _sortOrder,
   ];
 
@@ -475,6 +507,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
                                     _selectedTagId = null;
                                     _reimbursementFilter =
                                         ReimbursementFilter.all;
+                                    _budgetScopeFilter = BudgetScopeFilter.all;
                                     // 按天视图与时间档同属时间维度，清空必须一起复位。
                                     _dateMode = false;
                                     _timeFilter = TransactionTimeFilter.all;
@@ -485,6 +518,9 @@ class _TransactionsPageState extends State<TransactionsPage> {
                           reimbursementFilter: _reimbursementFilter,
                           onSelectReimbursement: (value) =>
                               setState(() => _reimbursementFilter = value),
+                          budgetScopeFilter: _budgetScopeFilter,
+                          onSelectBudgetScope: (value) =>
+                              setState(() => _budgetScopeFilter = value),
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -674,6 +710,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
       _selectedCategoryId != null ||
       _selectedTagId != null ||
       _reimbursementFilter != ReimbursementFilter.all ||
+      _budgetScopeFilter != BudgetScopeFilter.all ||
       // 只算时间筛选，不算「按天进入」：日历里点开一个空日期仍应显示「暂无交易」，
       // 而不是「没有匹配交易」。
       _timeFilter != TransactionTimeFilter.all;
@@ -713,6 +750,10 @@ class _TransactionsPageState extends State<TransactionsPage> {
     )) {
       return false;
     }
+    // 预算计入：全部 / 计入预算 / 不计入预算。
+    if (!_budgetScopeFilter.matches(entry)) {
+      return false;
+    }
     return true;
   }
 
@@ -745,6 +786,9 @@ class _TransactionsPageState extends State<TransactionsPage> {
         AppLocalizations.of(context).badgeReimbursable,
         AppLocalizations.of(context).entryTypeRefund,
       ],
+      // 预算标记也纳入搜索：可用「不计入预算」关键词快速找回这类交易。
+      if (entry.excludedFromBudget)
+        AppLocalizations.of(context).excludedFromBudget,
     ].join(' ').toLowerCase();
     return searchable.contains(query);
   }
@@ -1251,6 +1295,8 @@ class _TransactionSearchFilters extends StatelessWidget {
     this.onPickTag,
     required this.reimbursementFilter,
     required this.onSelectReimbursement,
+    required this.budgetScopeFilter,
+    required this.onSelectBudgetScope,
     this.onClear,
   });
 
@@ -1268,6 +1314,8 @@ class _TransactionSearchFilters extends StatelessWidget {
   final VoidCallback? onPickTag;
   final ReimbursementFilter reimbursementFilter;
   final ValueChanged<ReimbursementFilter> onSelectReimbursement;
+  final BudgetScopeFilter budgetScopeFilter;
+  final ValueChanged<BudgetScopeFilter> onSelectBudgetScope;
   final VoidCallback? onClear;
 
   @override
@@ -1368,6 +1416,25 @@ class _TransactionSearchFilters extends StatelessWidget {
                     icon: reimbursementFilter != ReimbursementFilter.all
                         ? Icons.check_circle
                         : Icons.receipt_long_outlined,
+                    onTap: openMenu,
+                  ),
+                ),
+                VeriAnchoredChoice<BudgetScopeFilter>(
+                  values: BudgetScopeFilter.values,
+                  selected: budgetScopeFilter,
+                  idOf: (value) => 'budget_scope_${value.name}',
+                  labelOf: (value) => value.label(AppLocalizations.of(context)),
+                  onSelected: onSelectBudgetScope,
+                  semanticLabel: AppLocalizations.of(
+                    context,
+                  ).budgetScopeFilterTitle,
+                  builder: (context, openMenu, menuOpen) => FilterPill(
+                    label: budgetScopeFilter == BudgetScopeFilter.all
+                        ? AppLocalizations.of(context).budgetScopeFilterName
+                        : budgetScopeFilter.label(AppLocalizations.of(context)),
+                    icon: budgetScopeFilter != BudgetScopeFilter.all
+                        ? Icons.check_circle
+                        : Icons.pie_chart_outline,
                     onTap: openMenu,
                   ),
                 ),

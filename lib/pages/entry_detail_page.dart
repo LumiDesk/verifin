@@ -100,6 +100,8 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   ConvertedCurrencyAmount? _baseConversion;
   // 支出可标记「待报销」；新建时不涉及回款冲抵，退款金额建后在编辑页填写。
   bool _reimbursable = false;
+  // 支出可标记「不计入预算」（借款、垫付等）：只脱离预算口径，收支统计照旧。
+  bool _excludedFromBudget = false;
   List<String> _tagIds = <String>[];
   // 新增交易时先缓存附件 data URL，保存后再按新交易 id 落库。
   final List<String> _pendingAttachments = <String>[];
@@ -164,6 +166,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       _baseAmount = editing.baseAmount;
       _conversionSource = editing.conversionSource;
       _reimbursable = editing.reimbursable;
+      _excludedFromBudget = editing.excludedFromBudget;
       _tagIds = List<String>.of(editing.tagIds);
       _applyingSuggestion = true;
       _noteController.text = editing.note;
@@ -976,6 +979,20 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                             onTap: () =>
                                 setState(() => _reimbursable = !_reimbursable),
                           ),
+                        if (_type == EntryType.expense)
+                          _EntryMetadataChip(
+                            chipKey: const Key(
+                              'entry_metadata_excluded_budget',
+                            ),
+                            icon: Icons.money_off_outlined,
+                            label: Text(
+                              AppLocalizations.of(context).excludedFromBudget,
+                            ),
+                            selected: _excludedFromBudget,
+                            onTap: () => setState(
+                              () => _excludedFromBudget = !_excludedFromBudget,
+                            ),
+                          ),
                         if (!_isDraft)
                           VeriAnchoredMenuAnchor(
                             entries: <VeriMenuEntry>[
@@ -1052,6 +1069,20 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         padding: const EdgeInsets.only(top: 8),
                         child: Text(
                           AppLocalizations.of(context).reimbursableHint,
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.62),
+                              ),
+                        ),
+                      ),
+                    // 标记不计入预算也不产生资金变动，用户容易误以为这笔不算钱了。
+                    if (_type == EntryType.expense && _excludedFromBudget)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          AppLocalizations.of(context).excludedFromBudgetHint,
                           style: Theme.of(context).textTheme.labelSmall
                               ?.copyWith(
                                 color: Theme.of(
@@ -1757,6 +1788,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
           ? normalizeCurrencyAmount(_fee, code)
           : 0,
       reimbursable: _type == EntryType.expense && _reimbursable,
+      excludedFromBudget: _type == EntryType.expense && _excludedFromBudget,
       refundedBaseAmount: original?.refundedBaseAmount ?? 0,
     );
   }
@@ -1781,7 +1813,8 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       left.occurredAt == right.occurredAt &&
       listEquals(left.tagIds, right.tagIds) &&
       left.fee == right.fee &&
-      left.reimbursable == right.reimbursable;
+      left.reimbursable == right.reimbursable &&
+      left.excludedFromBudget == right.excludedFromBudget;
 
   bool get _isDirty {
     if (_saved) {

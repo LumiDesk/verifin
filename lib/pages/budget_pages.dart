@@ -71,11 +71,8 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
       controller.entries,
       controller.budgetWindow(previousMonth),
     );
-    final monthExpense = sumByType(monthEntries, EntryType.expense);
-    final previousMonthExpense = sumByType(
-      previousMonthEntries,
-      EntryType.expense,
-    );
+    final monthExpense = budgetExpenseTotal(monthEntries);
+    final previousMonthExpense = budgetExpenseTotal(previousMonthEntries);
     final budget = controller.monthlyBudget(_month);
     final previousBudget = controller.monthlyBudget(previousMonth);
     final remaining = budget - monthExpense;
@@ -355,7 +352,7 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
                 const SizedBox(height: 10),
                 _DailyBudgetCard(
                   dailyBudget: controller.dailyBudget(),
-                  todayExpense: dayExpenseTotal(controller.entries, now),
+                  todayExpense: dayBudgetExpenseTotal(controller.entries, now),
                 ),
               ],
               const SizedBox(height: 10),

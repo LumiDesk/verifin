@@ -53,6 +53,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
   late List<String> _tagIds;
   late double _fee;
   late bool _reimbursable;
+  late bool _excludedFromBudget;
   late final TextEditingController _noteController;
   late List<LedgerEntry> _refunds;
   late List<Attachment> _attachments;
@@ -88,6 +89,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     _tagIds = List<String>.of(entry.tagIds);
     _fee = entry.fee;
     _reimbursable = entry.reimbursable;
+    _excludedFromBudget = entry.excludedFromBudget;
     _noteController = TextEditingController(text: entry.note);
     _refunds = List<LedgerEntry>.of(controller.refundsForEntry(entry.id));
     _attachments = List<Attachment>.of(
@@ -379,6 +381,40 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                                     setState(() => _reimbursable = value),
                               ),
                             ],
+                          ),
+                        ),
+                      // 与「待报销」并列：只脱离预算口径，账户余额与收支统计照旧，
+                      // 因此挂一句说明，避免用户以为这笔钱不算了。
+                      if (_type == EntryType.expense)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: <Widget>[
+                              Expanded(
+                                child: Text(
+                                  AppLocalizations.of(
+                                    context,
+                                  ).excludedFromBudget,
+                                ),
+                              ),
+                              Switch(
+                                value: _excludedFromBudget,
+                                onChanged: (value) =>
+                                    setState(() => _excludedFromBudget = value),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (_type == EntryType.expense && _excludedFromBudget)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Text(
+                            AppLocalizations.of(context).excludedFromBudgetHint,
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.62),
+                                ),
                           ),
                         ),
                     ],
@@ -1125,6 +1161,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
           ? normalizeCurrencyAmount(_fee, _currencyCode)
           : 0,
       reimbursable: _type == EntryType.expense && _reimbursable,
+      excludedFromBudget: _type == EntryType.expense && _excludedFromBudget,
       refundedBaseAmount: _type == EntryType.expense
           ? _refunds
                 .where((refund) => refund.isSettledRefund)

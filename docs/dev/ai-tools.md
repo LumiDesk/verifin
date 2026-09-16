@@ -65,7 +65,7 @@
 | `accountsOverview` | 各账户名称、币种与余额一览（不含隐藏账户；隐藏单位时整列不输出「币种」） | — | `ctx.balanceOf` + `convertAccountBalancesToBase` | Table |
 | `netWorth` | 总资产 / 总负债 / 净资产（本位币口径） | — | `convertAccountBalancesToBase` | Stat |
 | `creditCardBill` | 信用类账户的欠款、可用额度、本期账单与还款日；多币种时表格保留币种列 | — | `credit_card.dart` | Table |
-| `budgetStatus` | 某预算期的预算、已花、剩余、剩余日均与需要关注的分类 | `month` | `budget_status.dart` | Stat |
+| `budgetStatus` | 某预算期的预算、已花、剩余、剩余日均与需要关注的分类（预算口径，排除标记「不计入预算」的支出） | `month` | `budget_status.dart` | Stat |
 
 **时间窗参数 `range` 预设**：`thisMonth` / `lastMonth` / `thisYear` / `lastYear` / `last7Days` / `last30Days` / `last3Months` / `last6Months` / `last12Months` / `all`；或用 `start`+`end`（`YYYY-MM-DD`）指定显式区间。
 
@@ -81,5 +81,5 @@
 - 多币种：`AiToolContext` 增加账本本位币；统计与金额筛选明确采用冻结本位币口径；工具回馈模型的摘要与用户可见结果卡片都跟随货币单位偏好——多币种或未隐藏单位时摘要按「单位样式」写符号或 ISO 代码、卡片标题右侧标本位币，单币种隐藏单位时两者都不出现；AI 记账草稿可解析 ISO 4217 原币并在保存前继续由用户复核。
 - 单币种隐藏单位（v1.17.5）：`AiToolContext` 新增 `currencyDisplay`（`MoneyCodeDisplay`，默认 `code`，保留改动前行为供只关心金额口径的单测使用），由聊天页按 `activeMoneyCodeDisplay` 注入，工具层不读 `amount_format` 的全局闸门（工具是纯函数、按数据快照单测）。`_baseMoney`、转账两端金额、账户表币种列、信用卡欠款句全部跟随它：隐藏单位时摘要整句不带币种、账户表整列去掉「币种」、同币种转账只报一次金额。`buildAgentSystemPrompt` 同步：隐藏单位时只写「使用账本本位币，回答里不要写出币种代码或货币符号」，不再把 `baseCurrencyCode` 告诉模型，避免模型在回答正文里写出与卡片矛盾的「合计 CNY 4,300」。多币种账本不受影响。
 - 工具扩展：新增 `trend` / `compare` / `accountsOverview` / `netWorth` / `creditCardBill`；`AiToolContext` 增加 `bookId`（折算账户余额需要按账本定位汇率）。`netWorth` 与 `accountsOverview` 在缺汇率时明确说明缺哪种币、不给部分和。工具步骤标题同步登记在 `ai_tool_presentation.dart`。
-- `budgetStatus`：预算聚合与「超支 / 接近上限」判定抽到 `lib/app/budget_status.dart` 的纯函数 `computeBudgetStatus`；预算键月、单期覆盖等口径仍留在 controller，通过 `AiToolContext.budget`（`AiBudgetContext`）以回调注入，避免两处各写一套 key 规则。
+- `budgetStatus`：预算聚合与「超支 / 接近上限」判定抽到 `lib/app/budget_status.dart` 的纯函数 `computeBudgetStatus`；预算键月、单期覆盖等口径仍留在 controller，通过 `AiToolContext.budget`（`AiBudgetContext`）以回调注入，避免两处各写一套 key 规则。该工具与界面共用同一套预算口径，因此自动排除标记「不计入预算」的支出（见 `tech-decisions.md`）；回答里的预算执行数始终与预算页一致，而 `summary` / `categoryRanking` 这类收支统计工具仍按实际发生计入。
 - i18n：`AiToolContext` 新增 `required AppLocalizations l10n`（聊天页传 `AppLocalizations.of(context)`，单测传 `lookupAppLocalizations(const Locale('zh'))`）。工具产出的卡片标题、统计项标签、表头与回喂模型的 summary 全部改为按当前语言解析，新增键统一加 `ai` 前缀并同步写入 `app_zh.arb` / `app_en.arb`。工具 `description` 与参数 schema 仍为中文（给模型看，不随界面语言变化）。

@@ -22,9 +22,9 @@ Future<void> pushWidgetData(VeriFinController controller) async {
   final budgetKeyMonth = controller.budgetKeyMonthFor(now);
   final budgetWindow = controller.budgetWindow(budgetKeyMonth);
   final monthBudget = controller.monthlyBudget(budgetKeyMonth);
-  final cycleExpense = sumByType(
+  // 预算组件走预算口径（排除「不计入预算」）；上面的「今日支出」是实际花销，不排除。
+  final cycleExpense = budgetExpenseTotal(
     entriesInWindow(entries, budgetWindow),
-    EntryType.expense,
   );
   final remaining = monthBudget - cycleExpense;
   final cyclic = controller.budgetCycleIsCustom;
@@ -38,9 +38,8 @@ Future<void> pushWidgetData(VeriFinController controller) async {
   final nextBudgetKeyMonth = controller.budgetKeyMonthFor(nextCycleStart);
   final nextBudgetWindow = controller.budgetWindow(nextBudgetKeyMonth);
   final nextBudget = controller.monthlyBudget(nextBudgetKeyMonth);
-  final nextCycleExpense = sumByType(
+  final nextCycleExpense = budgetExpenseTotal(
     entriesInWindow(entries, nextBudgetWindow),
-    EntryType.expense,
   );
   final nextRemaining = nextBudget - nextCycleExpense;
   final baseCurrencyCode = controller.activeBook.baseCurrencyCode;

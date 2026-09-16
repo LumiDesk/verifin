@@ -2374,6 +2374,20 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
+  /// 标记 / 取消标记支出为「不计入预算」。仅支出有效。
+  ///
+  /// 只改预算口径，不动账户余额与收支统计；预算派生数值随后续
+  /// `notifyListeners()` 重建。
+  void setEntryExcludedFromBudget(String entryId, bool excluded) {
+    final index = _entries.indexWhere((item) => item.id == entryId);
+    if (index == -1 || _entries[index].type != EntryType.expense) {
+      return;
+    }
+    _entries[index] = _entries[index].copyWith(excludedFromBudget: excluded);
+    _persistEntries();
+    notifyListeners();
+  }
+
   LedgerEntry? _entryOrNull(String id) {
     for (final entry in _entries) {
       if (entry.id == id) return entry;

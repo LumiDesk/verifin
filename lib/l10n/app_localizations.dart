@@ -278,6 +278,42 @@ abstract class AppLocalizations {
   /// **'已到账'**
   String get reimbursementReimbursed;
 
+  /// 支出标记/徽标/筛选:该笔不占用预算额度,但仍计入账户余额与收支统计
+  ///
+  /// In zh, this message translates to:
+  /// **'不计入预算'**
+  String get excludedFromBudget;
+
+  /// No description provided for @excludedFromBudgetHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'标记本身不改变金额：这笔仍计入账户余额与收支统计，只是不占用预算。'**
+  String get excludedFromBudgetHint;
+
+  /// No description provided for @budgetScopeFilterName.
+  ///
+  /// In zh, this message translates to:
+  /// **'预算'**
+  String get budgetScopeFilterName;
+
+  /// No description provided for @budgetScopeFilterTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'预算计入'**
+  String get budgetScopeFilterTitle;
+
+  /// No description provided for @budgetScopeAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get budgetScopeAll;
+
+  /// No description provided for @budgetScopeIncluded.
+  ///
+  /// In zh, this message translates to:
+  /// **'计入预算'**
+  String get budgetScopeIncluded;
+
   /// No description provided for @calendarTitle.
   ///
   /// In zh, this message translates to:

@@ -120,7 +120,8 @@ List<BudgetMonthSnapshot> _budgetMonthSnapshots({
   final startDay = controller.budgetCycleStartDay;
   final expenseByKeyMonth = <DateTime, double>{};
   for (final entry in controller.entries) {
-    if (entry.type != EntryType.expense) {
+    // 预算口径：跳过标记「不计入预算」的交易。
+    if (!countsTowardBudget(entry)) {
       continue;
     }
     final keyMonth = budgetCycleKeyMonthFor(entry.occurredAt, startDay);
@@ -155,9 +156,8 @@ List<CategoryBudgetSnapshot> computeCategoryBudgetSnapshots({
   // 分类查找表只建一次：原实现每笔支出都经 ancestorIds 重建整张表。
   final categoryIndexById = categoryIndex(all);
   void accumulate(Map<String, double> into, List<LedgerEntry> source) {
-    for (final entry in source.where(
-      (entry) => entry.type == EntryType.expense,
-    )) {
+    // countsTowardBudget 同时覆盖「是支出」与「未标记不计入预算」两个条件。
+    for (final entry in source.where(countsTowardBudget)) {
       final chain = <String>[
         entry.categoryId,
         ...ancestorIdsFrom(categoryIndexById, entry.categoryId),

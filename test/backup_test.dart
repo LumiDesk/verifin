@@ -470,6 +470,13 @@ void main() {
     expect(sampleRefunds.length, 1);
     expect(sampleRefunds.single.amount, 8.5);
     expect(sampleRefunds.single.settledAt, isNotNull);
+    // 预算外支出：样例含一笔标记「不计入预算」的代付，导入后应保留；
+    // 同账本其余未标记的交易不受影响。
+    final excluded = controller.entries.firstWhere(
+      (e) => e.id == 'entry_20260702_003',
+    );
+    expect(excluded.excludedFromBudget, isTrue);
+    expect(reimbursed.excludedFromBudget, isFalse);
     expect(
       controller.categoryBudget(DateTime(2026, 7), 'dining'),
       greaterThan(0),

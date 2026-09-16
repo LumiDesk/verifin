@@ -137,6 +137,10 @@ void main() {
       find.byKey(const Key('entry_metadata_reimbursable')),
       findsOneWidget,
     );
+    expect(
+      find.byKey(const Key('entry_metadata_excluded_budget')),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('entry_metadata_attachments')), findsOneWidget);
     expect(find.byKey(const Key('entry_currency_button')), findsOneWidget);
 

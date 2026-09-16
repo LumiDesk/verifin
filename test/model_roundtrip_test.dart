@@ -41,6 +41,7 @@ void main() {
     tagIds: const <String>['t1', 't2'],
     fee: 2.5,
     reimbursable: true,
+    excludedFromBudget: true,
     refundedBaseAmount: 11.5,
     refundOf: 'entry-orig',
     settledAt: DateTime(2026, 7, 13, 9, 0, 0, 456),

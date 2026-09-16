@@ -78,6 +78,7 @@ class LedgerEntry {
     this.tagIds = const <String>[],
     this.fee = 0,
     this.reimbursable = false,
+    this.excludedFromBudget = false,
     double? refundedBaseAmount,
     double? refundedAmount,
     this.refundOf,
@@ -123,6 +124,13 @@ class LedgerEntry {
   /// 是否标记为「待报销」（仅支出有意义）。仅作标记，不影响金额；
   /// 报销/退款到账通过关联的退款条目（[EntryType.refund]）冲抵原交易。
   final bool reimbursable;
+
+  /// 是否标记为「不计入预算」（仅支出有意义）。仅作标记，不影响金额。
+  /// 预算口径（预算页、首页与看板预算卡、按日预算、桌面小组件预算、
+  /// AI `budgetStatus` 工具）聚合时跳过该笔——借款、垫付这类钱确实花出去了、
+  /// 但不该占用本月消费额度的支出。**收支统计、账户余额与报表不受影响**，
+  /// 它们算的是「实际发生」，与预算口径是两件事。
+  final bool excludedFromBudget;
 
   /// 已被退款 / 报销回款冲抵的金额（仅支出有意义）——**派生缓存**，
   /// 恒等于「挂在本支出上的·已到账·退款条目金额之和」，由 controller 的
@@ -181,6 +189,7 @@ class LedgerEntry {
     List<String>? tagIds,
     double? fee,
     bool? reimbursable,
+    bool? excludedFromBudget,
     double? refundedBaseAmount,
     double? refundedAmount,
     String? refundOf,
@@ -210,6 +219,7 @@ class LedgerEntry {
       tagIds: tagIds ?? this.tagIds,
       fee: fee ?? this.fee,
       reimbursable: reimbursable ?? this.reimbursable,
+      excludedFromBudget: excludedFromBudget ?? this.excludedFromBudget,
       refundedBaseAmount:
           refundedBaseAmount ?? refundedAmount ?? this.refundedBaseAmount,
       refundOf: clearRefundOf ? null : refundOf ?? this.refundOf,
@@ -236,6 +246,7 @@ class LedgerEntry {
       if (tagIds.isNotEmpty) 'tagIds': tagIds,
       if (fee != 0) 'fee': fee,
       if (reimbursable) 'reimbursable': true,
+      if (excludedFromBudget) 'excludedFromBudget': true,
       if (refundedBaseAmount != 0) 'refundedBaseAmount': refundedBaseAmount,
       if (refundOf != null) 'refundOf': refundOf,
       if (settledAt != null) 'settledAt': settledAt!.toIso8601String(),
@@ -270,6 +281,7 @@ class LedgerEntry {
       tagIds: _stringList(json['tagIds']),
       fee: (json['fee'] as num?)?.toDouble() ?? 0,
       reimbursable: json['reimbursable'] as bool? ?? false,
+      excludedFromBudget: json['excludedFromBudget'] as bool? ?? false,
       refundedBaseAmount:
           (json['refundedBaseAmount'] as num?)?.toDouble() ??
           (json['refundedAmount'] as num?)?.toDouble() ??

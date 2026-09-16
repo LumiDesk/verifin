@@ -128,9 +128,8 @@ WidgetPresentation buildWidgetPresentation({
   final period = entriesInWindow(filtered, window);
   final expense = sumByType(period, EntryType.expense);
   final income = sumByType(period, EntryType.income);
-  final budgetSpent = sumByType(
+  final budgetSpent = budgetExpenseTotal(
     entriesInWindow(filtered, snapshot.budgetWindow),
-    EntryType.expense,
   );
 
   final visibleAccounts = snapshot.accounts
@@ -209,7 +208,8 @@ WidgetPresentation buildWidgetPresentation({
         : entriesInWindow(filtered, DateWindow(start: date, end: date));
     final spent = sumByType(bucket, EntryType.expense);
     final earned = sumByType(bucket, EntryType.income);
-    cumulative += spent;
+    // 这条曲线同时服务两种口径：支出曲线看实际花销，「预算用量」累积只看预算口径。
+    cumulative += budgetExpenseTotal(bucket);
     series.add(switch (definition.chartMetric) {
       WidgetChartMetric.income => earned,
       WidgetChartMetric.net => earned - spent,

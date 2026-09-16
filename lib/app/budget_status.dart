@@ -98,8 +98,8 @@ BudgetStatusSummary computeBudgetStatus({
       .toList(growable: false);
   return BudgetStatusSummary(
     budget: budget,
-    expense: sumByType(windowEntries, EntryType.expense),
-    previousExpense: sumByType(previousWindowEntries, EntryType.expense),
+    expense: budgetExpenseTotal(windowEntries),
+    previousExpense: budgetExpenseTotal(previousWindowEntries),
     remainingDays: remainingDays,
     categories: rows,
   );
@@ -113,7 +113,8 @@ Map<String, double> _spentByCategory(
   final index = categoryIndex(categories);
   final result = <String, double>{};
   for (final entry in entries) {
-    if (entry.type != EntryType.expense) {
+    // 预算口径：跳过标记「不计入预算」的交易。
+    if (!countsTowardBudget(entry)) {
       continue;
     }
     final chain = <String>[

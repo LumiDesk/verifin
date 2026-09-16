@@ -92,6 +92,22 @@ double statAmountForEntry(LedgerEntry entry) {
   };
 }
 
+/// 该交易是否计入**预算**口径：支出，且未标记「不计入预算」。
+///
+/// 预算口径与「实际发生」口径是两件事——账户余额、收支统计与报表算的是钱有没有
+/// 动，标记「不计入预算」的借款/垫付照样要算进去，它们不走这个判定。
+bool countsTowardBudget(LedgerEntry entry) =>
+    entry.type == EntryType.expense && !entry.excludedFromBudget;
+
+/// 预算口径的支出合计：排除标记为「不计入预算」的交易。
+///
+/// **所有预算取数都必须走这里**（预算页、首页与看板预算卡、桌面小组件预算、
+/// AI `budgetStatus` 工具）。直接用 `sumByType(entries, expense)` 会让同一笔
+/// 交易在一处算进预算、在另一处不算。
+double budgetExpenseTotal(Iterable<LedgerEntry> entries) => entries
+    .where(countsTowardBudget)
+    .fold<double>(0, (sum, entry) => sum + statAmountForEntry(entry));
+
 bool isZeroAmount(num value) =>
     isZeroCurrencyAmount(value, activeBaseCurrencyCode);
 
@@ -276,6 +292,20 @@ double dayExpenseTotal(Iterable<LedgerEntry> entries, DateTime day) {
             DateUtils.isSameDay(entry.occurredAt, day),
       )
       .fold<double>(0, (sum, entry) => sum + entry.netBaseAmount);
+}
+
+/// 指定日期当天、**预算口径**的支出合计（用于按日预算的今日进度）。
+///
+/// 与 [dayExpenseTotal] 的差别只有一点：跳过「不计入预算」的交易。桌面小组件的
+/// 「今日支出」用的是前者——它展示实际花销，不受预算口径影响。
+double dayBudgetExpenseTotal(Iterable<LedgerEntry> entries, DateTime day) {
+  return entries
+      .where(
+        (entry) =>
+            countsTowardBudget(entry) &&
+            DateUtils.isSameDay(entry.occurredAt, day),
+      )
+      .fold<double>(0, (sum, entry) => sum + statAmountForEntry(entry));
 }
 
 List<double> monthlyExpenseValues(Iterable<LedgerEntry> entries) {

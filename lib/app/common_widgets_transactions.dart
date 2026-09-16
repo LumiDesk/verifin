@@ -230,6 +230,18 @@ class TransactionTile extends StatelessWidget {
                             text: AppLocalizations.of(context).badgeRefunded,
                             color: veriSemantic(context, veriIncome),
                           ),
+                        // 与报销徽标不同，这个标记与报销状态互不影响，可以同时出现。
+                        // 用中性色：它是用户主动做的分类，不是需要关注的异常状态。
+                        if (entry.type == EntryType.expense &&
+                            entry.excludedFromBudget)
+                          _EntryBadge(
+                            text: AppLocalizations.of(
+                              context,
+                            ).excludedFromBudget,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                          ),
                       ],
                     ),
                     const SizedBox(height: 2),
