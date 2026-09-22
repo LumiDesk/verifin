@@ -1,4 +1,5 @@
 plugins {
+    id("org.jetbrains.kotlin.plugin.compose") version "2.3.20"
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
@@ -17,13 +18,14 @@ android {
     }
 
     buildFeatures {
+        compose = true
         buildConfig = true
     }
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "top.talyra42.verifin"
-        testInstrumentationRunner = "top.talyra42.verifin.FixedWidgetRenderingTest"
+        testInstrumentationRunner = "top.talyra42.verifin.WidgetGlanceInstrumentationTest"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         // local_auth 要求 minSdk >= 23；取二者较大值，不降低 Flutter 默认值。
@@ -97,6 +99,7 @@ flutter {
 }
 
 dependencies {
+    implementation("androidx.glance:glance-appwidget:1.2.0")
     implementation("androidx.core:core-ktx:1.13.1")
     // 备份目录 SAF 读写（DocumentFile 树操作）。
     implementation("androidx.documentfile:documentfile:1.0.1")

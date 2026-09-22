@@ -11,16 +11,13 @@ void main() {
     expect(manifest, contains('android:allowBackup="false"'));
   });
 
-  test('桌面只注册固定模板小组件，不注册用户自定义 Provider', () {
+  test('桌面只注册固定模板 Provider，并统一接入 home_widget 配置 Activity', () {
     final manifest = File(
       'android/app/src/main/AndroidManifest.xml',
     ).readAsStringSync();
 
-    expect(manifest, isNot(contains('android:name=".UserWidgetProvider"')));
-    expect(
-      manifest,
-      isNot(contains('android:name=".UserWidgetConfigureActivity"')),
-    );
+    expect(manifest, contains('android:name=".WidgetConfigurationActivity"'));
+    expect(manifest, contains('HomeWidgetScheduledUpdateReceiver'));
     expect(manifest, contains('android:name=".QuickEntryWidgetProvider"'));
     expect(manifest, contains('android:name=".BudgetWidgetProvider"'));
     expect(manifest, contains('android:name=".NetWorthWidgetProvider"'));

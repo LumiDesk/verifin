@@ -1,166 +1,116 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 
 import '../app/common_widgets.dart';
-import '../app/home_widget_service.dart';
-import '../app/platform_bridge.dart';
-import '../app/veri_fin_controller.dart';
-import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
 
-/// Every card is rendered by Android's actual provider layout. Flutter only
-/// positions the returned pixels, so it cannot silently drift from the widget.
-class WidgetGalleryPage extends StatefulWidget {
+/// In-app guide for the native home_widget/Glance templates. The launcher is
+/// the source of truth for the actual widget preview and placement flow.
+class WidgetGalleryPage extends StatelessWidget {
   const WidgetGalleryPage({super.key});
 
   @override
-  State<WidgetGalleryPage> createState() => _WidgetGalleryPageState();
-}
-
-class _WidgetGalleryPageState extends State<WidgetGalleryPage> {
-  late VeriFinController _controller;
-  late Future<void> _dataReady;
-  final _previews = <String, Future<Uint8List?>>{};
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _controller = VeriFinScope.of(context);
-    _dataReady = pushWidgetData(_controller);
-    _previews.clear();
-  }
-
-  Future<Uint8List?> _render(String template, int width, int height) async {
-    try {
-      await _dataReady;
-      return await AppWidgetBridge.renderPreview(
-        template: template,
-        widthDp: width,
-        heightDp: height,
-      );
-    } catch (error) {
-      _controller.logger?.error(
-        'Native widget preview failed',
-        source: 'widgets',
-        error: error,
-      );
-      rethrow;
-    }
-  }
-
-  Widget _card(String template, String label, int width, int height) {
-    final key = '$template:$width:$height';
-    return SizedBox(
-      width: width.toDouble(),
-      height: height.toDouble(),
-      child: Semantics(
-        label: label,
-        image: true,
-        child: FutureBuilder<Uint8List?>(
-          future: _previews.putIfAbsent(
-            key,
-            () => _render(template, width, height),
-          ),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            final bytes = snapshot.data;
-            if (snapshot.hasError || bytes == null) {
-              return Center(
-                child: Text(AppLocalizations.of(context).widgetRefreshRequired),
-              );
-            }
-            return Image.memory(
-              bytes,
-              key: ValueKey('native_widget_preview_$template'),
-              width: width.toDouble(),
-              height: height.toDouble(),
-              gaplessPlayback: true,
-              excludeFromSemantics: true,
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context);
+    final items = <(String, String, String)>[
+      (l10n.widgetQuickEntryName, l10n.widgetQuickEntryDesc, 'quick'),
+      (l10n.widgetBudgetName, l10n.widgetBudgetDesc, 'budget'),
+      (l10n.widgetNetWorthName, l10n.widgetNetWorthDesc, 'assets'),
+      (l10n.widgetTrendName, l10n.widgetTrendDesc, 'trend'),
+    ];
     return Scaffold(
       body: SafeArea(
         child: VeriPage(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
             children: [
               VeriHeader(
-                title: l.widgetGalleryTitle,
-                subtitle: l.widgetGallerySubtitle,
+                title: l10n.widgetGalleryTitle,
+                subtitle: l10n.widgetGallerySubtitle,
                 showBack: true,
               ),
-              const SizedBox(height: 10),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final column = ((constraints.maxWidth - 12) / 2)
-                      .floor()
-                      .clamp(100, 280);
-                  final width = column * 2 + 12;
-                  const quickHeight = 72;
-                  final trendTop = quickHeight + column + 24;
-                  return SizedBox(
-                    height: (trendTop + column).toDouble(),
-                    child: Stack(
-                      children: [
-                        Positioned(
-                          left: 0,
-                          top: 0,
-                          child: _card(
-                            'quick_entry',
-                            l.widgetQuickEntryName,
-                            column,
-                            quickHeight,
-                          ),
-                        ),
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: _card(
-                            'budget',
-                            l.widgetBudgetName,
-                            column,
-                            column,
-                          ),
-                        ),
-                        Positioned(
-                          left: 0,
-                          top: quickHeight + 12,
-                          child: _card(
-                            'net_worth',
-                            l.widgetNetWorthName,
-                            column,
-                            column,
-                          ),
-                        ),
-                        Positioned(
-                          left: 0,
-                          top: trendTop.toDouble(),
-                          child: _card(
-                            'trend',
-                            l.widgetTrendName,
-                            width,
-                            column,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+              const SizedBox(height: 12),
+              Text(l10n.widgetHowToAddDesc),
+              const SizedBox(height: 16),
+              ...items.map(
+                (item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _WidgetGuideCard(
+                    title: item.$1,
+                    description: item.$2,
+                    kind: item.$3,
+                  ),
+                ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _WidgetGuideCard extends StatelessWidget {
+  const _WidgetGuideCard({
+    required this.title,
+    required this.description,
+    required this.kind,
+  });
+
+  final String title;
+  final String description;
+  final String kind;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 92,
+            height: 68,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  kind == 'quick' ? '+' : title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '0',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 4),
+                Text(description),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

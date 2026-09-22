@@ -52,7 +52,7 @@ void main() {
 
   test('主值与曲线使用所选日期内真实数据', () {
     final week = buildWidgetPresentation(
-      definition: const UserWidgetDefinition(
+      definition: const WidgetProjectionDefinition(
         id: 'week',
         name: '本周',
         template: WidgetTemplate.trend,
@@ -63,7 +63,7 @@ void main() {
       now: now,
     );
     final month = buildWidgetPresentation(
-      definition: const UserWidgetDefinition(
+      definition: const WidgetProjectionDefinition(
         id: 'month',
         name: '本月',
         template: WidgetTemplate.trend,
@@ -80,7 +80,7 @@ void main() {
 
   test('预算进度与净资产没有假百分比或错误支出回退', () {
     final budget = buildWidgetPresentation(
-      definition: const UserWidgetDefinition(
+      definition: const WidgetProjectionDefinition(
         id: 'budget',
         name: '预算',
         template: WidgetTemplate.budget,
@@ -89,7 +89,7 @@ void main() {
       now: now,
     );
     final assets = buildWidgetPresentation(
-      definition: const UserWidgetDefinition(
+      definition: const WidgetProjectionDefinition(
         id: 'assets',
         name: '资产',
         template: WidgetTemplate.netWorth,
@@ -100,13 +100,5 @@ void main() {
     expect(budget.primary.value, 63);
     expect(budget.budgetUsage, .37);
     expect(assets.primary.value, 883);
-  });
-
-  test('旧尺寸迁移与行列命名保持一致', () {
-    expect(widgetSizeAspect(WidgetSize.twoByTwo), 1);
-    expect(widgetSizeAspect(WidgetSize.oneByTwo), 2);
-    expect(widgetSizeAspect(WidgetSize.twoByFour), 2);
-    expect(supportedWidgetSize(WidgetSize.oneByOne), WidgetSize.oneByTwo);
-    expect(supportedWidgetSize(WidgetSize.fourByTwo), WidgetSize.twoByFour);
   });
 }

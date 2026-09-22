@@ -3,36 +3,6 @@ part of 'veri_fin_controller.dart';
 /// 控制器的「领域操作」层：交易/账户/分组/账本/分类/标签/预算/偏好/备份/
 /// 导入导出等所有对外方法。字段与持久化在 [_ControllerState]。
 mixin _ControllerOps on ChangeNotifier, _ControllerState {
-  /// 读取桌面小组件实例配置（设备偏好，不属于账本备份）。
-  List<WidgetInstanceConfig> get widgetInstanceConfigs =>
-      WidgetConfigStore.load(_store);
-
-  Future<void> saveWidgetInstanceConfigs(
-    Iterable<WidgetInstanceConfig> configs,
-  ) => WidgetConfigStore.save(_store, configs);
-
-  List<UserWidgetDefinition> get userWidgetDefinitions =>
-      WidgetConfigStore.loadDefinitions(_store);
-
-  List<WidgetPlacement> get widgetPlacements =>
-      WidgetConfigStore.loadPlacements(_store);
-
-  Future<void> saveUserWidgetDefinitions(
-    Iterable<UserWidgetDefinition> definitions,
-  ) async {
-    try {
-      await WidgetConfigStore.saveDefinitions(_store, definitions);
-    } on Object catch (error) {
-      _logger?.error(
-        'Widget definitions save failed',
-        source: 'widgets',
-        error: error,
-      );
-      rethrow;
-    }
-    onWidgetProjectionInvalidated?.call();
-  }
-
   WidgetLedgerSnapshot? widgetLedgerSnapshot(
     String? selectedBookId,
     DateTime now,
@@ -56,9 +26,6 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
           0,
     );
   }
-
-  Future<void> saveWidgetPlacements(Iterable<WidgetPlacement> placements) =>
-      WidgetConfigStore.savePlacements(_store, placements);
 
   List<LedgerEntry> get entries =>
       _entriesView ??= List<LedgerEntry>.unmodifiable(
@@ -3954,9 +3921,6 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       _assetSectionOrderKey,
       _homePanelsKey,
       _reportPanelsKey,
-      WidgetConfigStore.definitionsKey,
-      WidgetConfigStore.placementsKey,
-      WidgetConfigStore.storageKey,
     ]) {
       _store.delete(key);
     }
@@ -4323,9 +4287,6 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _autoSuggestEnabled = nextAutoSuggestEnabled;
     _showRunningBalance = nextShowRunningBalance;
     _homeTrendConfig = nextHomeTrendConfig;
-    // 桌面 appWidgetId 与配置只属于当前设备，不随备份导入。
-    WidgetConfigStore.savePlacementsSync(_store, const <WidgetPlacement>[]);
-
     // 备份恢复零参照完整性校验，是「幽灵同名分类」的唯一现实入口（内部不一致的外部/
     // 异构/手改备份）；覆盖后跑一遍自愈，堵住这个入口。落库统一由下方 _persistAllLedgerData。
     _healCategoryData();

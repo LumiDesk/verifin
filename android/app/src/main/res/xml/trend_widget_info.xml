@@ -9,9 +9,10 @@
     android:targetCellWidth="4"
     android:targetCellHeight="2"
     android:updatePeriodMillis="0"
-    android:initialLayout="@layout/trend_widget"
-    android:previewLayout="@layout/widget_picker_preview_trend"
-    android:previewImage="@drawable/widget_preview_trend"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:previewLayout="@layout/widget_picker_preview_glance"
     android:resizeMode="none"
     android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable|configuration_optional"
+    android:configure="top.talyra42.verifin.WidgetConfigurationActivity"
     android:description="@string/trend_widget_description" />

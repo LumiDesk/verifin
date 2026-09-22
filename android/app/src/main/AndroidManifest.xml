@@ -50,6 +50,21 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <activity
+            android:name=".WidgetConfigurationActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
         <!-- 截图识账 / 外部采集入口：分享图片、分享文本、自动化工具显式意图统一由
              无界面跳板接收并转发到自家任务栈的 MainActivity，避免在分享方任务栈里
              再起一个 Flutter 实例。收到的内容只产草稿弹确认，绝不静默落账。 -->
@@ -104,13 +119,14 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/trend_widget_info" />
         </receiver>
-        <!-- 桌面小组件午夜刷新：定时广播重绘小组件以跨天/跨月自愈；开机/更新后重排闹钟。 -->
+        <!-- home_widget owns widget scheduling and re-arms it after reboot/update. -->
         <receiver
-            android:name=".WidgetRefreshReceiver"
+            android:name="es.antonborri.home_widget.HomeWidgetScheduledUpdateReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
             </intent-filter>
         </receiver>
         <!-- flutter_local_notifications 定时通知的接收器；开机后重排已安排的记账提醒。 -->

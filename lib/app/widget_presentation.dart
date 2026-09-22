@@ -24,6 +24,34 @@ class WidgetLedgerSnapshot {
   final double budget;
 }
 
+class WidgetProjectionDefinition {
+  const WidgetProjectionDefinition({
+    required this.id,
+    required this.name,
+    required this.template,
+    this.bookId,
+    this.primaryMetric,
+    this.secondaryMetrics = const <WidgetMetric>[],
+    this.chartMetric,
+    this.dateRange = WidgetDateRange.thirtyDays,
+    this.accountId,
+    this.categoryId,
+    this.tagId,
+  });
+
+  final String id;
+  final String name;
+  final WidgetTemplate template;
+  final String? bookId;
+  final WidgetMetric? primaryMetric;
+  final List<WidgetMetric> secondaryMetrics;
+  final WidgetChartMetric? chartMetric;
+  final WidgetDateRange dateRange;
+  final String? accountId;
+  final String? categoryId;
+  final String? tagId;
+}
+
 class WidgetMetricValue {
   const WidgetMetricValue(this.metric, this.value);
   final WidgetMetric metric;
@@ -92,7 +120,7 @@ String widgetMetricLabel(AppLocalizations l, WidgetMetric metric) =>
     };
 
 WidgetPresentation buildWidgetPresentation({
-  required UserWidgetDefinition definition,
+  required WidgetProjectionDefinition definition,
   required WidgetLedgerSnapshot snapshot,
   required DateTime now,
 }) {

@@ -1,10 +1,6 @@
 package top.talyra42.verifin
 
 import android.Manifest
-import android.app.PendingIntent
-import android.appwidget.AppWidgetManager
-import android.appwidget.AppWidgetProviderInfo
-import android.content.ComponentName
 import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -72,41 +68,10 @@ class MainActivity : FlutterFragmentActivity() {
                     pendingCaptureText = null
                     result.success(text)
                 }
-                "updateWidgetData" -> {
-                    updateWidgetData(call)
-                    result.success(true)
-                }
-                "renderWidgetPreview" -> {
-                    try {
-                        result.success(FixedWidgetPreviewRenderer.png(
-                            this,
-                            call.argument<String>("template") ?: "",
-                            call.argument<Int>("widthDp") ?: 168,
-                            call.argument<Int>("heightDp") ?: 168,
-                        ))
-                    } catch (error: Exception) {
-                        android.util.Log.e("VeriFinWidgets", "Widget preview rendering failed", error)
-                        result.error("WIDGET_PREVIEW_FAILED", "Widget preview unavailable", null)
-                    }
-                }
-                "updateWidgetConfig" -> {
-                    updateWidgetConfig(call, result)
-                }
-                "syncUserWidgetDefinitions" -> {
-                    syncUserWidgetDefinitions(call, result)
-                }
-                "syncWidgetBooks" -> {
-                    syncWidgetBooks(call, result)
-                }
-                "syncWidgetSnapshots" -> {
-                    syncWidgetSnapshots(call, result)
-                }
                 "setSecureFlag" -> {
                     setSecureFlag(call.argument<Boolean>("secure") ?: false)
                     result.success(true)
                 }
-                "pinWidget" -> pinWidget(call.argument<String>("widget") ?: "", result)
-                "pinUserWidget" -> pinUserWidget(call.argument<String>("definitionId") ?: "", result)
                 "checkLatestRelease" -> checkLatestRelease(
                     call.argument<Boolean>("includePrerelease") ?: false,
                     result,
@@ -174,7 +139,7 @@ class MainActivity : FlutterFragmentActivity() {
                 channel?.invokeMethod("openQuickEntry", null)
             }
         }
-        if (intent.action == ACTION_WIDGET_ROUTE) {
+        if (isWidgetRouteIntent(intent)) {
             rememberWidgetRouteIntent(intent)
             if (channel != null) {
                 channel?.invokeMethod("openWidgetRoute", pendingWidgetRoute)
@@ -268,272 +233,19 @@ class MainActivity : FlutterFragmentActivity() {
         }
     }
 
-    /// 一次写入三个小组件的全部字段并广播刷新各 Provider。字段由 Flutter 侧格式化。
-    private fun syncUserWidgetDefinitions(
-        call: io.flutter.plugin.common.MethodCall,
-        result: MethodChannel.Result,
-    ) {
-        val raw = call.argument<List<*>>("definitions") ?: emptyList<Any>()
-        val ids = mutableListOf<String>()
-        raw.forEach { item ->
-            val map = item as? Map<*, *> ?: return@forEach
-            val id = map["id"]?.toString()?.takeIf { it.isNotBlank() } ?: return@forEach
-            val background = map["background"] as? Map<*, *>
-            val kind = background?.get("kind")?.toString() ?: "theme"
-            val value = background?.get("value")?.toString().orEmpty()
-            val color = if (kind == "solid") {
-                value.removePrefix("#").toLongOrNull(16)?.let { parsed ->
-                    when (value.length) {
-                        6 -> (0xFF000000L or parsed).toInt()
-                        8 -> parsed.toInt()
-                        else -> null
-                    }
-                } ?: 0xFF1E293B.toInt()
-            } else {
-                0xFF1E293B.toInt()
-            }
-            val secondary = (map["secondaryMetrics"] as? List<*>)
-                ?.mapNotNull { it?.toString() }
-                ?.take(3)
-                ?: emptyList()
-            WidgetData.writeDefinition(
-                this,
-                WidgetData.UserDefinition(
-                    id = id,
-                    name = map["name"]?.toString() ?: getString(R.string.user_widget_default_name),
-                    template = map["template"]?.toString() ?: "overview",
-                    primaryMetric = map["primaryMetric"]?.toString() ?: "todayExpense",
-                    secondaryMetrics = secondary,
-                    chartMetric = map["chartMetric"]?.toString() ?: "",
-                    chartDays = (map["dateRange"]?.toString()?.let { rangeDays(it) } ?: 30),
-                    bookId = map["bookId"]?.toString() ?: "",
-                    action = map["action"]?.toString() ?: "app",
-                    backgroundColor = color,
-                    backgroundPath = if (kind == "asset") decodeWidgetBackground(id, value) else "",
-                    hideAmounts = map["hideAmounts"] as? Boolean ?: false,
-                    presentationJson = JSONObject(map["presentation"] as? Map<*, *> ?: emptyMap<String, Any>()).toString(),
-                    size = map["size"]?.toString() ?: "twoByTwo",
-                ),
-            )
-            ids += id
-        }
-        WidgetData.removeDefinitionsNotIn(this, ids)
-        UserWidgetProvider.refresh(this)
-        if (ids.isNotEmpty() && Build.VERSION.SDK_INT >= 35) {
-            runCatching {
-                AppWidgetManager.getInstance(this).setWidgetPreview(
-                    ComponentName(this, UserWidgetProvider::class.java),
-                    AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN,
-                    UserWidgetProvider.pickerPreview(this),
-                )
-            }
-        }
-        result.success(true)
-    }
-
-    private fun syncWidgetBooks(
-        call: io.flutter.plugin.common.MethodCall,
-        result: MethodChannel.Result,
-    ) {
-        val books = call.argument<List<*>>("books").orEmpty().mapNotNull { item ->
-            val map = item as? Map<*, *> ?: return@mapNotNull null
-            val id = map["id"]?.toString()?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
-            id to (map["name"]?.toString()?.takeIf { it.isNotBlank() } ?: id)
-        }
-        WidgetData.writeWidgetBooks(this, books)
-        result.success(true)
-    }
-
-    private fun syncWidgetSnapshots(
-        call: io.flutter.plugin.common.MethodCall,
-        result: MethodChannel.Result,
-    ) {
-        val snapshots = call.argument<Map<*, *>>("snapshots").orEmpty()
-        val json = JSONObject()
-        snapshots.forEach { (bookId, rawMetrics) ->
-            val metrics = rawMetrics as? Map<*, *> ?: return@forEach
-            val metricJson = JSONObject()
-            metrics.forEach { (metric, rawValue) ->
-                val value = rawValue as? Map<*, *> ?: return@forEach
-                metricJson.put(metric?.toString() ?: return@forEach, JSONObject().apply {
-                    put("amount", value["amount"]?.toString() ?: "—")
-                    put("label", value["label"]?.toString() ?: "")
-                    put("points", value["points"]?.toString() ?: "")
-                })
-            }
-            json.put(bookId?.toString() ?: return@forEach, metricJson)
-        }
-        WidgetData.writeWidgetSnapshots(this, json.toString())
-        WidgetData.refreshAll(this)
-        result.success(true)
-    }
-
-    private fun decodeWidgetBackground(id: String, value: String): String {
-        if (!value.startsWith("data:") || !value.contains(",")) return value
-        return try {
-            val bytes = Base64.decode(value.substringAfter(','), Base64.DEFAULT)
-            if (bytes.size > 6 * 1024 * 1024) return ""
-            val file = File(filesDir, "widget-background-$id.jpg")
-            FileOutputStream(file).use { it.write(bytes) }
-            file.absolutePath
-        } catch (_: Exception) {
-            ""
-        }
-    }
-
-    private fun rangeDays(value: String): Int = when (value) {
-        "sevenDays" -> 7
-        "ninetyDays" -> 90
-        "year" -> 365
-        else -> 30
-    }
-
-    private fun updateWidgetData(call: io.flutter.plugin.common.MethodCall) {
-        val values = mapOf(
-            WidgetData.KEY_TODAY_AMOUNT to (call.argument<String>("todayAmount") ?: "0"),
-            WidgetData.KEY_TODAY_LABEL to
-                (call.argument<String>("todayLabel") ?: getString(R.string.widget_today_expense)),
-            WidgetData.KEY_QUICK_ENTRY_LABEL to
-                (call.argument<String>("quickEntryLabel") ?: "记一笔"),
-            WidgetData.KEY_BUDGET_AMOUNT to (call.argument<String>("budgetAmount") ?: "0"),
-            WidgetData.KEY_BUDGET_LABEL to (call.argument<String>("budgetLabel") ?: "本月可用预算"),
-            WidgetData.KEY_BUDGET_USAGE to (call.argument<Double>("budgetUsage")?.toString() ?: ""),
-            WidgetData.KEY_BUDGET_NEXT_USAGE to (call.argument<Double>("budgetNextUsage")?.toString() ?: ""),
-            WidgetData.KEY_NET_WORTH_POINTS to (call.argument<String>("netWorthPoints") ?: ""),
-            WidgetData.KEY_DARK_THEME to (call.argument<Boolean>("darkTheme")?.toString() ?: "true"),
-            WidgetData.KEY_LOCALE to (call.argument<String>("locale") ?: ""),
-            WidgetData.KEY_NET_WORTH_AMOUNT to (call.argument<String>("netWorthAmount") ?: "0"),
-            WidgetData.KEY_NET_WORTH_LABEL to (call.argument<String>("netWorthLabel") ?: "资产总额"),
-            WidgetData.KEY_TREND_AMOUNT to (call.argument<String>("trendAmount") ?: "0"),
-            WidgetData.KEY_TREND_LABEL to
-                (call.argument<String>("trendLabel") ?: getString(R.string.widget_trend)),
-            WidgetData.KEY_TREND_POINTS to (call.argument<String>("trendPoints") ?: ""),
-            WidgetData.KEY_TREND_RANGE_LABEL to (call.argument<String>("trendRangeLabel") ?: ""),
-            // 跨天/跨期自愈锚点（预算锚点为周期截止日 yyyy-MM-dd，支持自定义预算周期）。
-            WidgetData.KEY_TODAY_DATE to (call.argument<String>("todayDate") ?: ""),
-            WidgetData.KEY_TODAY_ZERO to (call.argument<String>("todayZeroAmount") ?: "0"),
-            WidgetData.KEY_TODAY_STALE_AMOUNT to
-                (call.argument<String>("todayStaleAmount") ?: "—"),
-            WidgetData.KEY_TODAY_STALE_LABEL to
-                (call.argument<String>("todayStaleLabel") ?: getString(R.string.widget_refresh_required)),
-            WidgetData.KEY_BUDGET_EXPIRY to (call.argument<String>("budgetExpiry") ?: ""),
-            WidgetData.KEY_BUDGET_FULL to (call.argument<String>("budgetFullAmount") ?: "0"),
-            WidgetData.KEY_BUDGET_FULL_LABEL to
-                (call.argument<String>("budgetFullLabel") ?: getString(R.string.widget_budget_available)),
-            WidgetData.KEY_BUDGET_NEXT_EXPIRY to
-                (call.argument<String>("budgetNextExpiry") ?: ""),
-            WidgetData.KEY_BUDGET_NEXT_AMOUNT to
-                (call.argument<String>("budgetNextAmount") ?: "0"),
-            WidgetData.KEY_BUDGET_NEXT_LABEL to
-                (call.argument<String>("budgetNextLabel") ?: getString(R.string.widget_budget_available)),
-            WidgetData.KEY_BUDGET_STALE_LABEL to
-                (call.argument<String>("budgetStaleLabel") ?: getString(R.string.widget_refresh_required)),
-        )
-        WidgetData.write(this, values)
-        WidgetData.refresh(this, QuickEntryWidgetProvider::class.java)
-        WidgetData.refresh(this, BudgetWidgetProvider::class.java)
-        WidgetData.refresh(this, NetWorthWidgetProvider::class.java)
-        WidgetData.refresh(this, TrendWidgetProvider::class.java)
-        FixedWidgetPreviewRenderer.publishPickerPreviews(this)
-        // 推送新数据后对齐下一次午夜刷新闹钟。
-        WidgetRefreshScheduler.scheduleNextMidnight(this)
-    }
+    private fun isWidgetRouteIntent(intent: Intent?): Boolean =
+        intent?.action == ACTION_WIDGET_ROUTE ||
+            intent?.action == HOME_WIDGET_LAUNCH_ACTION
 
     private fun rememberWidgetRouteIntent(intent: Intent?) {
-        if (intent?.action != ACTION_WIDGET_ROUTE) return
+        if (!isWidgetRouteIntent(intent)) return
+        val uri = intent?.data
+        val path = uri?.pathSegments.orEmpty()
         pendingWidgetRoute = mapOf(
-            "route" to (intent.getStringExtra("widgetRoute") ?: "app"),
-            "bookId" to (intent.getStringExtra("widgetBookId") ?: ""),
-            "widgetId" to intent.getIntExtra("widgetId", 0).toString(),
+            "route" to (path.lastOrNull() ?: intent?.getStringExtra("widgetRoute") ?: "app"),
+            "bookId" to (intent?.getStringExtra("widgetBookId") ?: ""),
+            "widgetId" to (path.getOrNull(1) ?: intent?.getIntExtra("widgetId", 0)?.toString().orEmpty()),
         )
-    }
-
-    /** Persist one appWidgetId's template/filter choices and redraw that instance. */
-    private fun updateWidgetConfig(call: io.flutter.plugin.common.MethodCall, result: MethodChannel.Result) {
-        val widgetId = call.argument<Int>("widgetId")
-        if (widgetId == null || widgetId <= 0) {
-            result.success(false)
-            return
-        }
-        val values = mutableMapOf<String, String>()
-        listOf("template", "bookId", "primaryMetric", "secondaryMetric", "chartMetric", "chartDays", "action", "hideAmounts")
-            .forEach { key -> call.argument<Any>(key)?.let { values[key] = it.toString() } }
-        WidgetData.writeInstanceConfig(this, widgetId, values)
-        val manager = AppWidgetManager.getInstance(this)
-        listOf(
-            QuickEntryWidgetProvider::class.java,
-            BudgetWidgetProvider::class.java,
-            NetWorthWidgetProvider::class.java,
-            TrendWidgetProvider::class.java,
-        ).forEach { provider ->
-            val ids = manager.getAppWidgetIds(ComponentName(this, provider))
-            if (ids.contains(widgetId)) WidgetData.refresh(this, provider)
-        }
-        result.success(true)
-    }
-
-    /// 请求把指定小组件固定到桌面（API 26+ 且启动器支持时弹系统添加弹窗）。
-    /// 返回是否成功发起；不支持则返回 false，Flutter 侧回落为手动添加引导。
-    private fun pinWidget(widget: String, result: MethodChannel.Result) {
-        val provider = when (widget) {
-            "quick_entry" -> QuickEntryWidgetProvider::class.java
-            "budget" -> BudgetWidgetProvider::class.java
-            "net_worth" -> NetWorthWidgetProvider::class.java
-            "trend" -> TrendWidgetProvider::class.java
-            else -> null
-        }
-        if (provider == null) {
-            result.success(false)
-            return
-        }
-        val manager = AppWidgetManager.getInstance(this)
-        // 部分启动器（尤其国产 ROM）不支持一键固定，或调用时抛异常——一律安全回落，
-        // 由 Flutter 侧展示手动添加引导。
-        val ok = try {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-                manager.isRequestPinAppWidgetSupported &&
-                manager.requestPinAppWidget(ComponentName(this, provider), null, null)
-        } catch (e: Exception) {
-            false
-        }
-        result.success(ok)
-    }
-
-    private fun pinUserWidget(definitionId: String, result: MethodChannel.Result) {
-        val manager = AppWidgetManager.getInstance(this)
-        val ok = try {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
-                !manager.isRequestPinAppWidgetSupported
-            ) {
-                false
-            } else {
-                val callback = PendingIntent.getBroadcast(
-                    this,
-                    definitionId.hashCode(),
-                    Intent(this, UserWidgetPinReceiver::class.java).putExtra(
-                        UserWidgetProvider.EXTRA_DEFINITION_ID,
-                        definitionId,
-                    ),
-                    // The launcher supplies EXTRA_APPWIDGET_ID in the callback.
-                    // This is an explicit broadcast to our own receiver only.
-                    PendingIntent.FLAG_UPDATE_CURRENT or
-                        (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0),
-                )
-                manager.requestPinAppWidget(
-                    ComponentName(this, UserWidgetProvider::class.java),
-                    Bundle().apply {
-                        putParcelable(
-                            AppWidgetManager.EXTRA_APPWIDGET_PREVIEW,
-                            UserWidgetProvider.pickerPreview(this@MainActivity),
-                        )
-                    },
-                    callback,
-                )
-            }
-        } catch (_: Exception) {
-            false
-        }
-        result.success(ok)
     }
 
     private fun checkLatestRelease(includePrerelease: Boolean, result: MethodChannel.Result) {
@@ -1581,6 +1293,8 @@ class MainActivity : FlutterFragmentActivity() {
     companion object {
         const val ACTION_QUICK_ENTRY = "top.talyra42.verifin.action.QUICK_ENTRY"
         const val ACTION_WIDGET_ROUTE = "top.talyra42.verifin.action.WIDGET_ROUTE"
+        private const val HOME_WIDGET_LAUNCH_ACTION =
+            "es.antonborri.home_widget.action.LAUNCH"
 
         /// 外部采集：自动化工具（Tasker 等）可显式发起，extra `text` 带账单原文；
         /// 分享文本/图片经 ShareReceiverActivity 归一到同两个内部 action。

@@ -23,6 +23,10 @@ import 'pages/app_lock_gate.dart';
 import 'pages/privacy_consent_gate.dart';
 import 'pages/onboarding_page.dart';
 import 'pages/shell.dart';
+import 'pages/widget_configuration_page.dart';
+
+@pragma('vm:entry-point')
+Future<void> configureMain() => runWidgetConfiguration();
 
 Future<void> main() async {
   // 应用运行的顶层 zone，故意不 await（fire-and-forget）；未捕获错误交给下方 onError。
