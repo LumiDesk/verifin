@@ -8727,6 +8727,18 @@ abstract class AppLocalizations {
     String daily,
     String attention,
   );
+
+  /// No description provided for @widgetPreviewFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'小组件预览暂时不可用'**
+  String get widgetPreviewFailed;
+
+  /// No description provided for @widgetConfigurationFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法读取此小组件，请返回桌面后重试。'**
+  String get widgetConfigurationFailed;
 }
 
 class _AppLocalizationsDelegate

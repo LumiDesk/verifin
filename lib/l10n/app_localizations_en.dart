@@ -4984,4 +4984,11 @@ class AppLocalizationsEn extends AppLocalizations {
   ) {
     return '$period budget $budget, spent $spent, remaining $remaining$daily. $attention';
   }
+
+  @override
+  String get widgetPreviewFailed => 'Widget preview unavailable';
+
+  @override
+  String get widgetConfigurationFailed =>
+      'Could not load this widget. Return to the home screen and try again.';
 }

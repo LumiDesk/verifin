@@ -2,259 +2,249 @@ package top.talyra42.verifin
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.compose.ui.graphics.Color as ComposeColor
-import androidx.glance.GlanceId
-import androidx.glance.GlanceModifier
-import androidx.glance.action.clickable
-import androidx.glance.appwidget.GlanceAppWidget
-import androidx.glance.appwidget.GlanceAppWidgetManager
-import androidx.glance.appwidget.provideContent
-import androidx.glance.background
-import androidx.glance.currentState
-import androidx.glance.layout.Alignment
-import androidx.glance.layout.Column
-import androidx.glance.layout.Row
-import androidx.glance.layout.Spacer
-import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.height
-import androidx.glance.layout.padding
-import androidx.glance.text.Text
-import androidx.glance.text.TextStyle
-import androidx.glance.color.ColorProvider
+import android.content.res.Configuration
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Path
+import android.net.Uri
+import android.appwidget.AppWidgetManager
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.glance.*
 import androidx.glance.action.Action
-import es.antonborri.home_widget.actionStartActivity
-import es.antonborri.home_widget.HomeWidgetGlanceState
-import es.antonborri.home_widget.HomeWidgetGlanceStateDefinition
-import es.antonborri.home_widget.HomeWidgetPlugin
+import androidx.glance.action.clickable
+import androidx.glance.appwidget.*
+import androidx.glance.layout.*
+import androidx.glance.text.*
+import androidx.glance.unit.ColorProvider
+import es.antonborri.home_widget.*
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/**
- * Native widget renderer supplied through home_widget's supported Glance path.
- * Flutter only publishes a projection; the launcher can render this while the
- * Flutter process is stopped.
- */
-enum class VeriFinWidgetTemplate {
-    QUICK_ENTRY,
-    BUDGET,
-    NET_WORTH,
-    TREND,
+/** Provider identity is stable across upgrades; each Glance widget has its own
+ * class because Glance uses that class to resolve its receiver and sessions. */
+enum class VeriFinWidgetTemplate(val key: String, val metric: String, val labelRes: Int) {
+    QUICK_ENTRY("quick_entry", "todayExpense", R.string.widget_today_expense),
+    BUDGET("budget", "budgetRemaining", R.string.widget_budget_available),
+    NET_WORTH("net_worth", "netWorth", R.string.widget_net_worth),
+    TREND("trend", "periodExpense", R.string.widget_trend);
+    companion object {
+        fun fromKey(key: String) = entries.first { it.key == key }
+        fun fromProvider(provider: String) = when (provider.substringAfterLast('.')) {
+            "QuickEntryWidgetProvider" -> QUICK_ENTRY
+            "BudgetWidgetProvider" -> BUDGET
+            "NetWorthWidgetProvider" -> NET_WORTH
+            "TrendWidgetProvider" -> TREND
+            else -> error("Unknown widget provider")
+        }
+    }
 }
 
-private const val SNAPSHOTS_KEY = "verifin.widget.snapshots"
-private const val BOOKS_KEY = "verifin.widget.books"
-private const val ACTIVE_BOOK_KEY = "verifin.widget.active_book"
-private const val LOCALE_KEY = "verifin.widget.locale"
-private const val CONFIG_PREFIX = "verifin.widget.config."
-private const val TODAY_KEY = "todayExpense"
-private const val BUDGET_KEY = "budgetRemaining"
-private const val NET_WORTH_KEY = "netWorth"
-private const val PERIOD_EXPENSE_KEY = "periodExpense"
-
-private data class InstanceConfig(
-    val bookId: String = "",
-    val metric: String = "",
+data class WidgetInstanceSelection(val bookId: String = "", val metric: String = "")
+data class WidgetDisplay(
+    val title: String, val label: String, val amount: String,
+    val points: List<Float> = emptyList(), val usage: Float? = null,
+    val dark: Boolean = false, val bookId: String = "",
 )
 
-private data class MetricValue(
-    val label: String,
-    val amount: String,
-)
-
-private object VeriFinWidgetStore {
-    private fun prefs(context: Context): SharedPreferences = HomeWidgetPlugin.getData(context)
-
-    fun locale(context: Context): String = prefs(context).getString(LOCALE_KEY, "") ?: ""
-
-    fun config(context: Context, appWidgetId: Int): InstanceConfig {
-        val raw = prefs(context).getString(CONFIG_PREFIX + appWidgetId, null) ?: return InstanceConfig()
-        return runCatching {
+object VeriFinWidgetStore {
+    const val CONFIG_PREFIX = "verifin.widget.config."
+    fun prefs(context: Context): SharedPreferences = HomeWidgetPlugin.getData(context)
+    fun config(prefs: SharedPreferences, id: Int): WidgetInstanceSelection {
+        val raw = prefs.getString("$CONFIG_PREFIX$id", null) ?: return WidgetInstanceSelection()
+        return try {
             val json = JSONObject(raw)
-            InstanceConfig(
-                bookId = json.optString("bookId"),
-                metric = json.optString("metric"),
-            )
-        }.getOrDefault(InstanceConfig())
-    }
-
-    fun clearConfig(context: Context, appWidgetId: Int) {
-        prefs(context).edit().remove(CONFIG_PREFIX + appWidgetId).apply()
-    }
-
-    fun activeBook(context: Context): String = prefs(context).getString(ACTIVE_BOOK_KEY, "") ?: ""
-
-    fun snapshot(context: Context, bookId: String): JSONObject? {
-        val raw = prefs(context).getString(SNAPSHOTS_KEY, null) ?: return null
-        return runCatching { JSONObject(raw).optJSONObject(bookId) }.getOrNull()
-    }
-
-    fun defaultBook(context: Context): String {
-        val active = activeBook(context)
-        if (active.isNotBlank() && snapshot(context, active) != null) return active
-        val raw = prefs(context).getString(BOOKS_KEY, null) ?: return ""
-        return runCatching {
-            val books = org.json.JSONArray(raw)
-            if (books.length() == 0) "" else books.optJSONObject(0)?.optString("id", "").orEmpty()
-        }.getOrDefault("")
-    }
-
-    fun metric(
-        context: Context,
-        bookId: String,
-        template: VeriFinWidgetTemplate,
-        requested: String,
-    ): MetricValue {
-        val snapshot = snapshot(context, bookId)
-        val key = requested.ifBlank {
-            when (template) {
-                VeriFinWidgetTemplate.QUICK_ENTRY -> TODAY_KEY
-                VeriFinWidgetTemplate.BUDGET -> BUDGET_KEY
-                VeriFinWidgetTemplate.NET_WORTH -> NET_WORTH_KEY
-                VeriFinWidgetTemplate.TREND -> PERIOD_EXPENSE_KEY
-            }
+            WidgetInstanceSelection(json.optString("bookId"), json.optString("metric"))
+        } catch (error: Exception) {
+            android.util.Log.w("VeriFinWidgets", "Invalid instance configuration", error)
+            WidgetInstanceSelection()
         }
-        val item = snapshot?.optJSONObject(key)
-        val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-        val snapshotDate = snapshot?.optString("date").orEmpty()
-        if (key == TODAY_KEY && snapshotDate.isNotBlank() && snapshotDate != currentDate) {
-            return MetricValue(item?.optString("label").orEmpty().ifBlank { todayLabel(context) }, "0")
+    }
+    fun localized(context: Context, prefs: SharedPreferences): Context {
+        val language = prefs.getString("verifin.widget.locale", "").orEmpty()
+        if (language.isBlank()) return context
+        return context.createConfigurationContext(Configuration(context.resources.configuration).apply {
+            setLocale(Locale.forLanguageTag(language))
+        })
+    }
+    fun display(context: Context, template: VeriFinWidgetTemplate, selection: WidgetInstanceSelection,
+                sample: Boolean = false, now: Date = Date(), prefs: SharedPreferences = prefs(context)): WidgetDisplay {
+        val localized = localized(context, prefs)
+        val dark = when (prefs.getString("verifin.widget.theme", "system")) {
+            "dark" -> true
+            "light" -> false
+            else -> context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
         }
-        return MetricValue(
-            label = item?.optString("label").orEmpty().ifBlank { fallbackLabel(context, template) },
-            amount = item?.optString("amount").orEmpty().ifBlank { "0" },
-        )
+        val title = localized.getString(template.labelRes)
+        if (sample) return WidgetDisplay(title, title, "0", List(30) { 0f }, if (template == VeriFinWidgetTemplate.BUDGET) 0f else null, dark)
+        val bookId = selection.bookId.ifBlank { prefs.getString("verifin.widget.active_book", "").orEmpty() }
+        val root = try { JSONObject(prefs.getString("verifin.widget.snapshots", "{}").orEmpty()) }
+            catch (error: Exception) { android.util.Log.w("VeriFinWidgets", "Invalid widget projection", error); JSONObject() }
+        val snapshot = root.optJSONObject(bookId)
+        val metric = selection.metric.ifBlank { template.metric }
+        val item = snapshot?.optJSONObject(metric)
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(now)
+        val expiredToday = metric == "todayExpense" && snapshot?.optString("date") != today
+        val label = item?.optString("label").orEmpty().ifBlank { title }
+        val amount = if (expiredToday) "0" else item?.optString("amount").orEmpty().ifBlank { if (snapshot == null) "—" else "0" }
+        val pointsJson = item?.optJSONArray("points")
+        val points = if (pointsJson == null) emptyList() else (0 until pointsJson.length()).map {
+            pointsJson.optDouble(it, Double.NaN).toFloat()
+        }.let { values -> if (values.all { it.isFinite() }) values else emptyList() }
+        val usage = item?.optDouble("usage", Double.NaN)?.toFloat()?.takeIf { it.isFinite() }
+        return WidgetDisplay(title, label, amount, points, usage, dark, bookId)
     }
-
-    private fun fallbackLabel(context: Context, template: VeriFinWidgetTemplate): String = when (template) {
-        VeriFinWidgetTemplate.QUICK_ENTRY -> todayLabel(context)
-        VeriFinWidgetTemplate.BUDGET -> budgetLabel(context)
-        VeriFinWidgetTemplate.NET_WORTH -> netWorthLabel(context)
-        VeriFinWidgetTemplate.TREND -> periodExpenseLabel(context)
-    }
-
-    private fun todayLabel(context: Context): String = if (locale(context).startsWith("en")) "Today's spending" else "今日支出"
-    private fun budgetLabel(context: Context): String = if (locale(context).startsWith("en")) "Budget remaining" else "剩余预算"
-    private fun netWorthLabel(context: Context): String = if (locale(context).startsWith("en")) "Total assets" else "资产总额"
-    private fun periodExpenseLabel(context: Context): String = if (locale(context).startsWith("en")) "Period spending" else "本期支出"
 }
 
-class VeriFinGlanceWidget(private val template: VeriFinWidgetTemplate) : GlanceAppWidget() {
-    override val stateDefinition = HomeWidgetGlanceStateDefinition()
+// Native counterparts of app_theme.dart tokens; shared by all Glance surfaces.
+private val widgetRoyal = Color(0xFF346EDB)
+private val widgetTextLight = Color(0xFF111827)
+private val widgetTextDark = Color(0xFFF5F5F7)
+private val widgetMutedLight = Color(0xFF6B7280)
+private val widgetMutedDark = Color(0xFFB8C0CC)
 
-    fun previewFingerprint(context: Context): String =
-        "verifin-glance-v1|$template|${VeriFinWidgetStore.locale(context)}"
-
-    override suspend fun provideGlance(context: Context, id: GlanceId) {
-        provideContent { Content(context, id, currentState()) }
-    }
-
-    override suspend fun providePreview(context: Context, widgetCategory: Int) {
-        provideContent { PreviewContent(context) }
-    }
-
-    @androidx.compose.runtime.Composable
-    private fun PreviewContent(context: Context) {
-        WidgetCard(
-            context = context,
-            label = when (template) {
-                VeriFinWidgetTemplate.QUICK_ENTRY -> "今日支出"
-                VeriFinWidgetTemplate.BUDGET -> "剩余预算"
-                VeriFinWidgetTemplate.NET_WORTH -> "资产总额"
-                VeriFinWidgetTemplate.TREND -> "本期支出"
-            },
-            amount = "0",
-            action = null,
-        )
-    }
-
-    @androidx.compose.runtime.Composable
-    private fun Content(
-        context: Context,
-        id: GlanceId,
-        state: HomeWidgetGlanceState,
-    ) {
-        val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
-        val config = VeriFinWidgetStore.config(context, appWidgetId)
-        val bookId = config.bookId.ifBlank { VeriFinWidgetStore.defaultBook(context) }
-        val value = VeriFinWidgetStore.metric(context, bookId, template, config.metric)
-        val route = if (template == VeriFinWidgetTemplate.QUICK_ENTRY) "entry" else "open"
-        val rootAction = actionStartActivity<MainActivity>(context, android.net.Uri.parse("verifin://widget/$appWidgetId/$route"))
-        WidgetCard(
-            context = context,
-            label = value.label,
-            amount = value.amount,
-            action = rootAction,
-        )
-    }
-
-    @androidx.compose.runtime.Composable
-    private fun WidgetCard(
-        context: Context,
-        label: String,
-        amount: String,
-        action: Action?,
-    ) {
-        val dark = (context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
-            android.content.res.Configuration.UI_MODE_NIGHT_YES
-        val background = if (dark) ComposeColor(0xFF1E293B) else ComposeColor(0xFFFFFFFF)
-        val primary = if (dark) ComposeColor(0xFFF5F5F7) else ComposeColor(0xFF111827)
-        val muted = if (dark) ComposeColor(0xFFB8C0CC) else ComposeColor(0xFF6B7280)
-        val modifier = GlanceModifier.fillMaxSize().background(background).padding(14.dp)
-        if (action == null) {
-            Column(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
-                CardContent(label, amount, muted, primary)
+/** Same composition for the launcher, generated preview and in-app draft preview. */
+@Composable
+fun VeriFinWidgetContent(template: VeriFinWidgetTemplate, data: WidgetDisplay, open: Action? = null, add: Action? = null) {
+    val foreground = if (data.dark) widgetTextDark else widgetTextLight
+    val muted = if (data.dark) widgetMutedDark else widgetMutedLight
+    val size = LocalSize.current
+    val small = size.width < 150.dp || size.height < 130.dp
+    val metricSize = if (template == VeriFinWidgetTemplate.QUICK_ENTRY) 24 else if (small || data.amount.length > 12) 20 else 28
+    val surface = if (data.dark) R.drawable.widget_surface_dark else R.drawable.widget_surface_light
+    var card = GlanceModifier.fillMaxWidth().background(ImageProvider(surface)).cornerRadius(16.dp).appWidgetBackground()
+    card = if (template == VeriFinWidgetTemplate.QUICK_ENTRY) card.height(72.dp) else card.fillMaxHeight()
+    if (open != null) card = card.clickable(open)
+    Box(GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        if (template == VeriFinWidgetTemplate.QUICK_ENTRY) {
+            Row(card.padding(start = 12.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(GlanceModifier.defaultWeight()) {
+                    Text(data.label, style = TextStyle(color = ColorProvider(muted), fontSize = 11.sp), maxLines = 1)
+                    Spacer(GlanceModifier.height(4.dp))
+                    Text(data.amount, style = TextStyle(color = ColorProvider(foreground), fontSize = metricSize.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                }
+                Spacer(GlanceModifier.width(8.dp))
+                var button = GlanceModifier.size(48.dp).background(widgetRoyal).cornerRadius(12.dp)
+                if (add != null) button = button.clickable(add)
+                Box(button, contentAlignment = Alignment.Center) {
+                    Text("+", style = TextStyle(color = ColorProvider(Color.White), fontSize = 26.sp))
+                }
             }
         } else {
-            Column(modifier = modifier.clickable(onClick = action), verticalAlignment = Alignment.CenterVertically) {
-                CardContent(label, amount, muted, primary)
-            }
-        }
-    }
-
-    @androidx.compose.runtime.Composable
-    private fun CardContent(
-        label: String,
-        amount: String,
-        muted: ComposeColor,
-        primary: ComposeColor,
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = GlanceModifier.fillMaxWidth()) {
-            Column(modifier = GlanceModifier.fillMaxWidth()) {
-                Text(text = label, style = TextStyle(color = ColorProvider(muted, muted)))
-                Spacer(modifier = GlanceModifier.height(4.dp))
-                Text(text = amount, style = TextStyle(color = ColorProvider(primary, primary)))
+            Column(card.padding(if (small) 10.dp else 14.dp)) {
+                Text(data.title, style = TextStyle(color = ColorProvider(muted), fontSize = 12.sp), maxLines = 1)
+                if (template == VeriFinWidgetTemplate.TREND) {
+                    Spacer(GlanceModifier.height(8.dp))
+                    Row(GlanceModifier.fillMaxWidth().defaultWeight(), verticalAlignment = Alignment.Bottom) {
+                        Column(GlanceModifier.defaultWeight()) { MetricText(data, foreground, muted, metricSize) }
+                        if (data.points.size >= 2) {
+                            Spacer(GlanceModifier.width(16.dp))
+                            Image(ImageProvider(WidgetGraphics.sparkline(data.points)), null,
+                                GlanceModifier.defaultWeight().fillMaxHeight(), contentScale = ContentScale.FillBounds)
+                        }
+                    }
+                } else {
+                    Column(GlanceModifier.fillMaxWidth().defaultWeight(), verticalAlignment = Alignment.CenterVertically) {
+                        MetricText(data, foreground, muted, metricSize)
+                    }
+                    if (template == VeriFinWidgetTemplate.BUDGET && data.usage != null) {
+                        Box(GlanceModifier.fillMaxWidth().height(if (small) 48.dp else 64.dp), contentAlignment = Alignment.CenterEnd) {
+                            Image(ImageProvider(WidgetGraphics.ring(data.usage, data.dark)), null, GlanceModifier.size(if (small) 48.dp else 64.dp))
+                        }
+                    }
+                    if (template == VeriFinWidgetTemplate.NET_WORTH && data.points.size >= 2) {
+                        Image(ImageProvider(WidgetGraphics.sparkline(data.points)), null,
+                            GlanceModifier.fillMaxWidth().height(44.dp), contentScale = ContentScale.FillBounds)
+                    }
+                }
             }
         }
     }
 }
 
-abstract class VeriFinWidgetReceiver<T : VeriFinGlanceWidget> :
-    es.antonborri.home_widget.HomeWidgetGlanceWidgetReceiver<T>() {
-    override fun previewFingerprint(context: Context): String =
-        glanceAppWidget.previewFingerprint(context)
+@Composable
+private fun MetricText(data: WidgetDisplay, foreground: Color, muted: Color, size: Int) {
+    if (data.label != data.title) Text(data.label, style = TextStyle(color = ColorProvider(muted), fontSize = 11.sp), maxLines = 1)
+    Spacer(GlanceModifier.height(4.dp))
+    Text(data.amount, style = TextStyle(color = ColorProvider(foreground), fontSize = size.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+}
 
+/** Glance has no arbitrary chart canvas: charts are bitmap leaves, never a second UI. */
+object WidgetGraphics {
+    fun ring(usage: Float, dark: Boolean): Bitmap {
+        val bitmap = Bitmap.createBitmap(192, 192, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 16f; strokeCap = Paint.Cap.ROUND; color = if (dark) 0xFF30353D.toInt() else 0xFFE5E7EB.toInt() }
+        canvas.drawCircle(96f, 96f, 78f, paint)
+        paint.color = 0xFF346EDB.toInt()
+        canvas.drawArc(18f, 18f, 174f, 174f, -90f, usage.coerceIn(0f, 1f) * 360f, false, paint)
+        paint.style = Paint.Style.FILL; paint.color = if (dark) android.graphics.Color.WHITE else 0xFF111827.toInt()
+        paint.textSize = 46f; paint.textAlign = Paint.Align.CENTER; paint.typeface = android.graphics.Typeface.DEFAULT_BOLD
+        canvas.drawText("${(usage.coerceIn(0f, 1f) * 100).toInt()}%", 96f, 96f - (paint.ascent() + paint.descent()) / 2, paint)
+        return bitmap
+    }
+    fun sparkline(points: List<Float>): Bitmap {
+        val bitmap = Bitmap.createBitmap(720, 240, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        var low = points.minOrNull() ?: 0f
+        var high = points.maxOrNull() ?: 1f
+        if (high - low < .0001f) { low -= 1; high += 1 }
+        val line = Path()
+        points.forEachIndexed { i, value ->
+            val x = i * 719f / (points.size - 1).coerceAtLeast(1)
+            val y = 232f - (value - low) / (high - low) * 224f
+            if (i == 0) line.moveTo(x, y) else line.lineTo(x, y)
+        }
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x20346EDB; style = Paint.Style.FILL }
+        val fill = Path(line).apply { lineTo(720f, 240f); lineTo(0f, 240f); close() }
+        canvas.drawPath(fill, paint)
+        paint.color = 0xFF346EDB.toInt(); paint.style = Paint.Style.STROKE; paint.strokeWidth = 6f; paint.strokeJoin = Paint.Join.ROUND
+        canvas.drawPath(line, paint)
+        return bitmap
+    }
+}
+
+fun widgetAction(context: Context, id: Int, route: String, bookId: String): Action =
+    actionStartActivity<MainActivity>(context, Uri.Builder().scheme("verifin").authority("widget")
+        .appendPath(id.toString()).appendPath(route).appendQueryParameter("bookId", bookId).build())
+
+open class VeriFinGlanceWidget(val template: VeriFinWidgetTemplate) : GlanceAppWidget() {
+    override val stateDefinition = HomeWidgetGlanceStateDefinition()
+    override val sizeMode = SizeMode.Exact
+    override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val widgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
+        provideContent {
+            val preferences = currentState<HomeWidgetGlanceState>().preferences
+            val data = VeriFinWidgetStore.display(context, template, VeriFinWidgetStore.config(preferences, widgetId), prefs = preferences)
+            VeriFinWidgetContent(template, data, widgetAction(context, widgetId, "app", data.bookId),
+                widgetAction(context, widgetId, "entry", data.bookId))
+        }
+    }
+    override suspend fun providePreview(context: Context, widgetCategory: Int) {
+        provideContent { VeriFinWidgetContent(template, VeriFinWidgetStore.display(context, template, WidgetInstanceSelection(), sample = true)) }
+    }
+}
+class QuickEntryGlanceWidget : VeriFinGlanceWidget(VeriFinWidgetTemplate.QUICK_ENTRY)
+class BudgetGlanceWidget : VeriFinGlanceWidget(VeriFinWidgetTemplate.BUDGET)
+class NetWorthGlanceWidget : VeriFinGlanceWidget(VeriFinWidgetTemplate.NET_WORTH)
+class TrendGlanceWidget : VeriFinGlanceWidget(VeriFinWidgetTemplate.TREND)
+
+abstract class VeriFinWidgetReceiver<T : VeriFinGlanceWidget> : HomeWidgetGlanceWidgetReceiver<T>() {
+    override fun previewFingerprint(context: Context): String =
+        "verifin-glance-v2|${glanceAppWidget.template}|${context.resources.configuration.uiMode}|${VeriFinWidgetStore.prefs(context).getString("verifin.widget.locale", "")}|${VeriFinWidgetStore.prefs(context).getString("verifin.widget.theme", "system")}"
     override fun onDeleted(context: Context, appWidgetIds: IntArray) {
-        appWidgetIds.forEach { VeriFinWidgetStore.clearConfig(context, it) }
+        val editor = VeriFinWidgetStore.prefs(context).edit()
+        appWidgetIds.forEach { editor.remove(VeriFinWidgetStore.CONFIG_PREFIX + it) }
+        editor.apply()
         super.onDeleted(context, appWidgetIds)
     }
 }
-
-class QuickEntryWidgetProvider : VeriFinWidgetReceiver<VeriFinGlanceWidget>() {
-    override val glanceAppWidget = VeriFinGlanceWidget(VeriFinWidgetTemplate.QUICK_ENTRY)
-}
-
-class BudgetWidgetProvider : VeriFinWidgetReceiver<VeriFinGlanceWidget>() {
-    override val glanceAppWidget = VeriFinGlanceWidget(VeriFinWidgetTemplate.BUDGET)
-}
-
-class NetWorthWidgetProvider : VeriFinWidgetReceiver<VeriFinGlanceWidget>() {
-    override val glanceAppWidget = VeriFinGlanceWidget(VeriFinWidgetTemplate.NET_WORTH)
-}
-
-class TrendWidgetProvider : VeriFinWidgetReceiver<VeriFinGlanceWidget>() {
-    override val glanceAppWidget = VeriFinGlanceWidget(VeriFinWidgetTemplate.TREND)
-}
+class QuickEntryWidgetProvider : VeriFinWidgetReceiver<QuickEntryGlanceWidget>() { override val glanceAppWidget = QuickEntryGlanceWidget() }
+class BudgetWidgetProvider : VeriFinWidgetReceiver<BudgetGlanceWidget>() { override val glanceAppWidget = BudgetGlanceWidget() }
+class NetWorthWidgetProvider : VeriFinWidgetReceiver<NetWorthGlanceWidget>() { override val glanceAppWidget = NetWorthGlanceWidget() }
+class TrendWidgetProvider : VeriFinWidgetReceiver<TrendGlanceWidget>() { override val glanceAppWidget = TrendGlanceWidget() }

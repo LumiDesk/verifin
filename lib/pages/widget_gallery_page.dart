@@ -1,22 +1,30 @@
 import 'package:flutter/material.dart';
 
 import '../app/common_widgets.dart';
+import '../app/home_widget_service.dart';
+import '../app/native_widget_preview.dart';
+import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
 
-/// In-app guide for the native home_widget/Glance templates. The launcher is
-/// the source of truth for the actual widget preview and placement flow.
-class WidgetGalleryPage extends StatelessWidget {
+class WidgetGalleryPage extends StatefulWidget {
   const WidgetGalleryPage({super.key});
+  @override
+  State<WidgetGalleryPage> createState() => _WidgetGalleryPageState();
+}
+
+class _WidgetGalleryPageState extends State<WidgetGalleryPage> {
+  Future<void>? _ready;
+  int _generation = 0;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _ready = pushWidgetData(VeriFinScope.of(context));
+    _generation++;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final items = <(String, String, String)>[
-      (l10n.widgetQuickEntryName, l10n.widgetQuickEntryDesc, 'quick'),
-      (l10n.widgetBudgetName, l10n.widgetBudgetDesc, 'budget'),
-      (l10n.widgetNetWorthName, l10n.widgetNetWorthDesc, 'assets'),
-      (l10n.widgetTrendName, l10n.widgetTrendDesc, 'trend'),
-    ];
+    final l = AppLocalizations.of(context);
     return Scaffold(
       body: SafeArea(
         child: VeriPage(
@@ -24,93 +32,92 @@ class WidgetGalleryPage extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
             children: [
               VeriHeader(
-                title: l10n.widgetGalleryTitle,
-                subtitle: l10n.widgetGallerySubtitle,
+                title: l.widgetGalleryTitle,
+                subtitle: l.widgetGallerySubtitle,
                 showBack: true,
               ),
-              const SizedBox(height: 12),
-              Text(l10n.widgetHowToAddDesc),
-              const SizedBox(height: 16),
-              ...items.map(
-                (item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _WidgetGuideCard(
-                    title: item.$1,
-                    description: item.$2,
-                    kind: item.$3,
-                  ),
-                ),
+              const SizedBox(height: 10),
+              FutureBuilder<void>(
+                future: _ready,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState != ConnectionState.done) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  return LayoutBuilder(
+                    builder: (context, constraints) {
+                      final column = ((constraints.maxWidth - 12) / 2)
+                          .floor()
+                          .clamp(100, 280);
+                      final width = column * 2 + 12;
+                      final trendTop = 72 + column + 24;
+                      Widget preview(
+                        String template,
+                        String label,
+                        int w,
+                        int h,
+                      ) => NativeWidgetPreview(
+                        key: ValueKey('$_generation:$template'),
+                        template: template,
+                        width: w,
+                        height: h,
+                        semanticLabel: label,
+                      );
+                      return SizedBox(
+                        height: (trendTop + column).toDouble(),
+                        child: Stack(
+                          children: [
+                            Positioned(
+                              left: 0,
+                              top: 0,
+                              child: preview(
+                                'quick_entry',
+                                l.widgetQuickEntryName,
+                                column,
+                                72,
+                              ),
+                            ),
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              child: preview(
+                                'budget',
+                                l.widgetBudgetName,
+                                column,
+                                column,
+                              ),
+                            ),
+                            Positioned(
+                              left: 0,
+                              top: 84,
+                              child: preview(
+                                'net_worth',
+                                l.widgetNetWorthName,
+                                column,
+                                column,
+                              ),
+                            ),
+                            Positioned(
+                              left: 0,
+                              top: trendTop.toDouble(),
+                              child: preview(
+                                'trend',
+                                l.widgetTrendName,
+                                width,
+                                column,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
               ),
+              const SizedBox(height: 16),
+              Text(l.widgetHowToAddDesc),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _WidgetGuideCard extends StatelessWidget {
-  const _WidgetGuideCard({
-    required this.title,
-    required this.description,
-    required this.kind,
-  });
-
-  final String title;
-  final String description;
-  final String kind;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 92,
-            height: 68,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: scheme.surface,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  kind == 'quick' ? '+' : title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelSmall,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '0',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 4),
-                Text(description),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

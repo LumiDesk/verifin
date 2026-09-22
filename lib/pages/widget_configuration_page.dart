@@ -1,246 +1,256 @@
-import 'dart:convert';
-
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:home_widget/home_widget.dart';
 
 import '../app/app_theme.dart';
+import '../app/common_widgets.dart';
+import '../app/feedback.dart';
+import '../app/logging/app_logger.dart';
+import '../app/native_widget_preview.dart';
+import '../app/widget_configuration_session.dart';
+import '../local_storage/local_storage.dart';
 import '../l10n/app_localizations.dart';
 
-@pragma('vm:entry-point')
 Future<void> runWidgetConfiguration() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const WidgetConfigurationApp());
+  final logger = AppLogger(await LocalKeyValueStore.create());
+  final locale = await HomeWidget.getWidgetData<String>(
+    'verifin.widget.locale',
+  );
+  final theme = await HomeWidget.getWidgetData<String>('verifin.widget.theme');
+  runApp(WidgetConfigurationApp(logger: logger, locale: locale, theme: theme));
 }
 
-class WidgetConfigurationApp extends StatelessWidget {
-  const WidgetConfigurationApp({super.key});
+class WidgetConfigurationApp extends StatefulWidget {
+  const WidgetConfigurationApp({
+    super.key,
+    this.logger,
+    this.locale,
+    this.theme,
+  });
+  final AppLogger? logger;
+  final String? locale;
+  final String? theme;
+  @override
+  State<WidgetConfigurationApp> createState() => _WidgetConfigurationAppState();
+}
+
+class _WidgetConfigurationAppState extends State<WidgetConfigurationApp> {
+  final _feedback = VeriFeedbackController();
+  @override
+  void dispose() {
+    _feedback.dispose();
+    super.dispose();
+  }
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      supportedLocales: AppLocalizations.supportedLocales,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      theme: buildVeriFinTheme(Brightness.light),
-      darkTheme: buildVeriFinTheme(Brightness.dark),
-      home: const WidgetConfigurationPage(),
-    );
-  }
+  Widget build(BuildContext context) => MaterialApp(
+    debugShowCheckedModeBanner: false,
+    locale: widget.locale == null
+        ? null
+        : Locale(widget.locale!.split('_').first),
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    theme: buildVeriFinTheme(Brightness.light),
+    darkTheme: buildVeriFinTheme(Brightness.dark),
+    themeMode: switch (widget.theme) {
+      'dark' => ThemeMode.dark,
+      'light' => ThemeMode.light,
+      _ => ThemeMode.system,
+    },
+    builder: (context, child) =>
+        VeriFeedbackHost(controller: _feedback, child: child!),
+    home: WidgetConfigurationPage(logger: widget.logger),
+  );
 }
 
 class WidgetConfigurationPage extends StatefulWidget {
-  const WidgetConfigurationPage({super.key});
-
+  const WidgetConfigurationPage({super.key, this.logger});
+  final AppLogger? logger;
   @override
   State<WidgetConfigurationPage> createState() =>
       _WidgetConfigurationPageState();
 }
 
 class _WidgetConfigurationPageState extends State<WidgetConfigurationPage> {
-  int? _widgetId;
-  List<Map<String, String>> _books = const [];
-  Map<String, Map<String, String>> _snapshots = const {};
+  WidgetConfigurationSession? _session;
   String _bookId = '';
-  String _metric = 'todayExpense';
-  bool _loading = true;
-  bool _saving = false;
-
+  String _metric = '';
+  bool _loading = true, _failed = false, _saving = false;
   @override
   void initState() {
     super.initState();
-    _load();
+    unawaited(_load());
   }
 
   Future<void> _load() async {
-    final id = await HomeWidget.initiallyLaunchedFromHomeWidgetConfigure();
-    final booksRaw = await HomeWidget.getWidgetData<String>(
-      'verifin.widget.books',
-      defaultValue: '[]',
-    );
-    final snapshotsRaw = await HomeWidget.getWidgetData<String>(
-      'verifin.widget.snapshots',
-      defaultValue: '{}',
-    );
-    final books = <Map<String, String>>[];
-    final snapshots = <String, Map<String, String>>{};
     try {
-      final list = jsonDecode(booksRaw ?? '[]');
-      if (list is List) {
-        for (final item in list.whereType<Map>()) {
-          final book = <String, String>{
-            'id': item['id']?.toString() ?? '',
-            'name': item['name']?.toString() ?? '',
-          };
-          if (book['id']!.isNotEmpty) books.add(book);
-        }
-      }
-    } on Object {
-      // An empty list is a safe configuration fallback.
+      final session = await WidgetConfigurationSession.load();
+      if (!mounted) return;
+      setState(() {
+        _session = session;
+        _bookId = session.bookId;
+        _metric = session.metric;
+        _loading = false;
+      });
+    } on Object catch (error) {
+      widget.logger?.error(
+        'Widget configuration load failed',
+        source: 'widgets',
+        error: error,
+      );
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _failed = true;
+      });
     }
-    try {
-      final decoded = jsonDecode(snapshotsRaw ?? '{}');
-      if (decoded is Map) {
-        for (final entry in decoded.entries) {
-          final value = entry.value;
-          if (value is Map) {
-            final values = <String, String>{};
-            for (final metric in value.entries) {
-              final item = metric.value;
-              if (item is Map) {
-                values[metric.key.toString()] =
-                    item['amount']?.toString() ?? '0';
-              }
-            }
-            snapshots[entry.key.toString()] = values;
-          }
-        }
-      }
-    } on Object {
-      // Preview falls back to zero when a projection is unavailable.
-    }
-    if (!mounted) return;
-    setState(() {
-      _widgetId = int.tryParse(id ?? '');
-      _books = books;
-      _snapshots = snapshots;
-      _bookId = books.isEmpty ? '' : books.first['id']!;
-      _loading = false;
-    });
   }
-
-  String _value() =>
-      _snapshots[_bookId]?[_metric] ?? _snapshots[_bookId]?['amount'] ?? '0';
-
-  String _label(AppLocalizations l10n) => switch (_metric) {
-    'budgetRemaining' => l10n.widgetMetricBudgetRemaining,
-    'netWorth' => l10n.widgetMetricNetWorth,
-    'periodExpense' => l10n.widgetMetricPeriodExpense,
-    _ => l10n.widgetMetricTodayExpense,
-  };
 
   Future<void> _save() async {
-    final widgetId = _widgetId;
-    if (widgetId == null || widgetId <= 0) return;
+    if (_saving || _session == null) return;
     setState(() => _saving = true);
     try {
-      await HomeWidget.saveWidgetData(
-        'verifin.widget.config.$widgetId',
-        jsonEncode(<String, String>{'bookId': _bookId, 'metric': _metric}),
-      );
-      final providers = <String>[
-        'top.talyra42.verifin.QuickEntryWidgetProvider',
-        'top.talyra42.verifin.BudgetWidgetProvider',
-        'top.talyra42.verifin.NetWorthWidgetProvider',
-        'top.talyra42.verifin.TrendWidgetProvider',
-      ];
-      for (final provider in providers) {
-        await HomeWidget.updateWidget(qualifiedAndroidName: provider);
-      }
-      await HomeWidget.finishHomeWidgetConfigure();
+      await _session!.save(bookId: _bookId, metric: _metric);
     } on Object catch (error) {
+      widget.logger?.error(
+        'Widget configuration save failed',
+        source: 'widgets',
+        error: error,
+      );
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('$error')));
+      unawaited(
+        VeriFeedbackHost.of(context).showMessage(
+          message: AppLocalizations.of(context).saveFailed,
+          tone: VeriFeedbackTone.error,
+        ),
+      );
     }
   }
 
+  String _label(AppLocalizations l, String metric) => switch (metric) {
+    'budgetRemaining' => l.widgetMetricBudgetRemaining,
+    'netWorth' => l.widgetMetricNetWorth,
+    'periodExpense' => l.widgetMetricPeriodExpense,
+    _ => l.widgetMetricTodayExpense,
+  };
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    if (_loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.widgetConfigTitle)),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
-        children: [
-          _PreviewCard(label: _label(l10n), amount: _value()),
-          const SizedBox(height: 20),
-          Text(l10n.widgetBook, style: Theme.of(context).textTheme.labelLarge),
-          const SizedBox(height: 6),
-          DropdownButtonFormField<String>(
-            initialValue: _bookId.isEmpty ? null : _bookId,
-            items: _books
-                .map(
-                  (book) => DropdownMenuItem<String>(
-                    value: book['id'],
-                    child: Text(
-                      book['name']!.isEmpty ? book['id']! : book['name']!,
+    final l = AppLocalizations.of(context);
+    final session = _session;
+    return PopScope(
+      canPop: !_saving,
+      child: Scaffold(
+        body: SafeArea(
+          child: VeriPage(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+              children: [
+                VeriHeader(
+                  title: l.widgetConfigTitle,
+                  showBack: true,
+                  onBack: _saving ? () {} : () => SystemNavigator.pop(),
+                ),
+                if (_loading)
+                  const Center(child: CircularProgressIndicator())
+                else if (_failed || session == null)
+                  Text(l.widgetConfigurationFailed)
+                else ...[
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final width =
+                          (session.template == 'trend'
+                                  ? constraints.maxWidth
+                                  : 180.0)
+                              .floor()
+                              .clamp(100, 560);
+                      final height = session.template == 'quick_entry'
+                          ? 72
+                          : 180;
+                      return Center(
+                        child: NativeWidgetPreview(
+                          template: session.template,
+                          width: width,
+                          height: height,
+                          bookId: _bookId,
+                          metric: _metric,
+                          semanticLabel: l.widgetPreview,
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    l.widgetBook,
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  // A dynamic ledger list can exceed anchored-choice limits.
+                  DropdownButtonFormField<String>(
+                    key: const Key('widget_book'),
+                    initialValue: session.books.containsKey(_bookId)
+                        ? _bookId
+                        : null,
+                    isExpanded: true,
+                    items: session.books.entries
+                        .map(
+                          (book) => DropdownMenuItem(
+                            value: book.key,
+                            child: Text(
+                              book.value,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: _saving
+                        ? null
+                        : (value) => setState(() => _bookId = value ?? ''),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    l.widgetPrimaryMetric,
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  VeriAnchoredChoice<String>(
+                    values: widgetBasicMetrics,
+                    selected: _metric,
+                    idOf: (value) => value,
+                    labelOf: (value) => _label(l, value),
+                    semanticLabel: l.widgetPrimaryMetric,
+                    onSelected: (value) {
+                      if (!_saving) setState(() => _metric = value);
+                    },
+                    builder: (context, open, isOpen) => ListTile(
+                      key: const Key('widget_metric'),
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(_label(l, _metric)),
+                      trailing: const Icon(Icons.expand_more),
+                      onTap: _saving ? null : open,
                     ),
                   ),
-                )
-                .toList(),
-            onChanged: (value) => setState(() => _bookId = value ?? ''),
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    key: const Key('widget_save'),
+                    onPressed: _saving || !session.books.containsKey(_bookId)
+                        ? null
+                        : _save,
+                    child: _saving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(),
+                          )
+                        : Text(l.widgetSaveConfig),
+                  ),
+                ],
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-          Text(
-            l10n.widgetPrimaryMetric,
-            style: Theme.of(context).textTheme.labelLarge,
-          ),
-          const SizedBox(height: 6),
-          DropdownButtonFormField<String>(
-            initialValue: _metric,
-            items:
-                [
-                      ('todayExpense', l10n.widgetMetricTodayExpense),
-                      ('budgetRemaining', l10n.widgetMetricBudgetRemaining),
-                      ('netWorth', l10n.widgetMetricNetWorth),
-                      ('periodExpense', l10n.widgetMetricPeriodExpense),
-                    ]
-                    .map(
-                      (item) => DropdownMenuItem<String>(
-                        value: item.$1,
-                        child: Text(item.$2),
-                      ),
-                    )
-                    .toList(),
-            onChanged: (value) => setState(() => _metric = value ?? _metric),
-          ),
-          const SizedBox(height: 28),
-          FilledButton(
-            onPressed: _saving ? null : _save,
-            child: Text(l10n.widgetSaveConfig),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PreviewCard extends StatelessWidget {
-  const _PreviewCard({required this.label, required this.amount});
-
-  final String label;
-  final String amount;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      height: 132,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(veriRadiusLg),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(label, style: Theme.of(context).textTheme.labelLarge),
-          const SizedBox(height: 8),
-          Text(
-            amount,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
-        ],
+        ),
       ),
     );
   }

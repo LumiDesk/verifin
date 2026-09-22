@@ -1905,5 +1905,7 @@
   "aiBudgetAttention": "Needs attention: {items}.",
   "aiBudgetAttentionRow": "{label} {spent}/{budget} ({status})",
   "aiDailyRemainingLine": ", {amount}/day remaining",
-  "aiBudgetSummary": "{period} budget {budget}, spent {spent}, remaining {remaining}{daily}. {attention}"
+  "aiBudgetSummary": "{period} budget {budget}, spent {spent}, remaining {remaining}{daily}. {attention}",
+  "widgetPreviewFailed": "Widget preview unavailable",
+  "widgetConfigurationFailed": "Could not load this widget. Return to the home screen and try again."
 }

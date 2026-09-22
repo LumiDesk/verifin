@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:home_widget/home_widget.dart';
 
 import 'l10n_outside_context.dart';
+import 'models.dart';
 import 'veri_fin_controller.dart';
 import 'widget_config.dart';
 import 'widget_presentation.dart';
@@ -54,15 +55,23 @@ Future<void> pushWidgetData(VeriFinController controller) async {
           },
           bookId: book.id,
           primaryMetric: metric,
-          chartMetric: null,
+          chartMetric: metric == WidgetMetric.netWorth
+              ? WidgetChartMetric.netWorth
+              : WidgetChartMetric.expense,
         ),
         snapshot: snapshot,
         now: now,
       );
-      metrics[metric.name] = _metricJson(
-        label: widgetMetricLabel(l10n, metric),
-        amount: presentation.primary.formatted(presentation.currencyCode),
-      );
+      metrics[metric.name] = <String, Object?>{
+        ..._metricJson(
+          label: widgetMetricLabel(l10n, metric),
+          amount: presentation.primary.formatted(presentation.currencyCode),
+        ),
+        'points': presentation.series.any((value) => value == null)
+            ? <double>[]
+            : presentation.series,
+        if (presentation.budgetUsage != null) 'usage': presentation.budgetUsage,
+      };
     }
     snapshots[book.id] = <String, Object?>{
       'date': _dateKey(now),
@@ -91,6 +100,14 @@ Future<void> pushWidgetData(VeriFinController controller) async {
     await HomeWidget.saveWidgetData<String>(
       'verifin.widget.locale',
       l10n.localeName,
+    );
+    await HomeWidget.saveWidgetData<String>(
+      'verifin.widget.theme',
+      switch (controller.themePreference) {
+        ThemePreference.dark => 'dark',
+        ThemePreference.light => 'light',
+        ThemePreference.system => 'system',
+      },
     );
 
     await Future.wait(

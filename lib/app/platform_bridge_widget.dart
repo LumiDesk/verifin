@@ -23,6 +23,28 @@ class AppWidgetBridge {
     await _routeHandler?.call(args);
   }
 
+  static Future<Uint8List?> renderPreview({
+    required String template,
+    required int widthDp,
+    required int heightDp,
+    String bookId = '',
+    String metric = '',
+    bool sample = false,
+  }) async {
+    try {
+      return await _channel.invokeMethod<Uint8List>('renderWidgetPreview', {
+        'template': template,
+        'widthDp': widthDp,
+        'heightDp': heightDp,
+        'bookId': bookId,
+        'metric': metric,
+        'sample': sample,
+      });
+    } on MissingPluginException {
+      return null;
+    }
+  }
+
   static Future<Map<String, Object?>?> consumeInitialRoute() async {
     try {
       return await _channel.invokeMapMethod<String, Object?>(

@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 // local_auth 需要宿主是 FragmentActivity，故继承 FlutterFragmentActivity。
 class MainActivity : FlutterFragmentActivity() {
     private var channel: MethodChannel? = null
+    private var widgetPreview: WidgetPreviewBridge? = null
     private var pendingQuickEntryIntent = false
     private var pendingWidgetRoute: Map<String, String>? = null
     private var pendingCaptureImageUri: Uri? = null
@@ -49,9 +50,11 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        widgetPreview = WidgetPreviewBridge(this)
         channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL_NAME)
         channel?.setMethodCallHandler { call, result ->
             when (call.method) {
+                "renderWidgetPreview" -> widgetPreview!!.handle(call, result)
                 "consumeQuickEntryIntent" -> {
                     val shouldOpen = pendingQuickEntryIntent
                     pendingQuickEntryIntent = false
@@ -127,6 +130,11 @@ class MainActivity : FlutterFragmentActivity() {
                 else -> result.notImplemented()
             }
         }
+    }
+
+    override fun onDestroy() {
+        widgetPreview?.close()
+        super.onDestroy()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -243,8 +251,8 @@ class MainActivity : FlutterFragmentActivity() {
         val path = uri?.pathSegments.orEmpty()
         pendingWidgetRoute = mapOf(
             "route" to (path.lastOrNull() ?: intent?.getStringExtra("widgetRoute") ?: "app"),
-            "bookId" to (intent?.getStringExtra("widgetBookId") ?: ""),
-            "widgetId" to (path.getOrNull(1) ?: intent?.getIntExtra("widgetId", 0)?.toString().orEmpty()),
+            "bookId" to (uri?.getQueryParameter("bookId") ?: intent?.getStringExtra("widgetBookId") ?: ""),
+            "widgetId" to (path.firstOrNull() ?: intent?.getIntExtra("widgetId", 0)?.toString().orEmpty()),
         )
     }
 

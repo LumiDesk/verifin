@@ -4848,4 +4848,10 @@ class AppLocalizationsZh extends AppLocalizations {
   ) {
     return '$period 预算 $budget，已花 $spent，剩余 $remaining$daily。$attention';
   }
+
+  @override
+  String get widgetPreviewFailed => '小组件预览暂时不可用';
+
+  @override
+  String get widgetConfigurationFailed => '无法读取此小组件，请返回桌面后重试。';
 }

@@ -3039,5 +3039,7 @@
       "daily": {"type": "String"},
       "attention": {"type": "String"}
     }
-  }
+  },
+  "widgetPreviewFailed": "小组件预览暂时不可用",
+  "widgetConfigurationFailed": "无法读取此小组件，请返回桌面后重试。"
 }
