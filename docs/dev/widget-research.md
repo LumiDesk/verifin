@@ -1,8 +1,9 @@
 # 桌面小组件实现记录
 
 状态：已落地（2026-09-22）。小组件使用成熟的 `home_widget` Android/Glance 路线；旧的
-自定义 RemoteViews、全局 `WidgetData`、自定义午夜 Receiver、用户设计 Provider 和静态
-PNG 导出链路已移除。
+自定义 RemoteViews、全局 `WidgetData`、自定义午夜 Receiver、用户设计 Provider 和手工
+拼接预览链路已移除。旧系统需要的 `previewImage` 现在由 Glance instrumentation 从同一
+套原生组合渲染后导出，作为 Android 11 及以下/旧 Launcher 的回退。
 
 ## 已确认行为
 
@@ -33,8 +34,8 @@ Android 12–14 使用新的中性 `previewLayout`，不再依赖设备账目或
 ## 清理结果
 
 已删除旧的 `WidgetData.kt`、`WidgetRefreshReceiver.kt`、`FixedWidgetPreviewRenderer.kt`、
-`WidgetChartRenderer.kt`、三个旧 Provider 文件、`UserWidgetProvider.kt`、旧布局、旧预览
-PNG、旧用户设计存储和自定义 MethodChannel 数据协议。`WidgetConfigStore` 不再保存
+`WidgetChartRenderer.kt`、三个旧 Provider 文件、`UserWidgetProvider.kt`、旧布局、旧用户设计
+存储和自定义 MethodChannel 数据协议。`WidgetConfigStore` 不再保存
 `appWidgetId`；设备实例配置完全由 home_widget/原生小组件流程管理。
 
 ## 验证范围

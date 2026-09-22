@@ -181,7 +181,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 
 ## 族 11 — AI 对话查询 UI
 
-桌面小组件只提供四个固定模板。原生渲染使用 `home_widget` 的 Jetpack Glance Provider；首次添加使用默认配置，Android Launcher 的重新配置入口启动独立 `WidgetConfigurationActivity`。Flutter 只推送账本投影，实例配置按 `appWidgetId` 存在插件共享存储。应用内页面是模板指南，系统选择器预览由 Glance `providePreview` / `previewLayout` 提供，不再维护 RemoteViews 截图脚本或静态 PNG。`widget_presentation.dart` 仅负责真实指标投影；资产曲线不得复用支出数据。验收见 `docs/dev/widget-preview-parity.md`。
+桌面小组件只提供四个固定模板。原生渲染使用 `home_widget` 的 Jetpack Glance Provider；首次添加使用默认配置，Android Launcher 的重新配置入口启动独立 `WidgetConfigurationActivity`。Flutter 只推送账本投影，实例配置按 `appWidgetId` 存在插件共享存储。应用内页面和旧 Launcher 的 `previewImage` 都由同一套 Glance 组合渲染/导出，不再手绘第二套样式。`widget_presentation.dart` 仅负责真实指标投影；资产曲线不得复用支出数据。验收见 `docs/dev/widget-preview-parity.md`。
 
 | 名称 | 类型 | 位置 | 用途 |
 |---|---|---|---|

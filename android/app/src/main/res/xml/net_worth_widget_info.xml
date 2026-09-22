@@ -11,6 +11,7 @@
     android:updatePeriodMillis="0"
     android:initialLayout="@layout/glance_default_loading_layout"
     android:previewLayout="@layout/widget_picker_preview_glance"
+    android:previewImage="@drawable/widget_preview_net_worth"
     android:resizeMode="none"
     android:widgetCategory="home_screen"
     android:widgetFeatures="reconfigurable|configuration_optional"
