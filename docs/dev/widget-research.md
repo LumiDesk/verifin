@@ -149,6 +149,19 @@ Glance 是 Android 官方的 Compose 风格小组件层，仍然生成 App Widge
 可控；后者能提供更自由的 TickTick 式自定义，但会扩大 Provider、预览、尺寸和旧配置兼容
 的复杂度。
 
+### “编辑”由谁触发
+
+长按手势、菜单和“重新配置”按钮由 Launcher/Android 系统处理，应用不需要监听长按或
+自己画编辑菜单。应用只需要在 Provider XML 声明配置 Activity，并在 Android 12+ 声明
+`reconfigurable`；系统随后会用对应的 `appWidgetId` 启动配置 Activity。Android 11 及更低
+版本会忽略这个重新配置能力，若要覆盖这些系统仍需提供小组件点击进入应用设置的后备路径。
+
+用户希望的“上方预览、下方配置项”可以落在这个配置 Activity 内：上方使用同一个
+RemoteViews/中性数据渲染预览，下方先放基础的账本、主指标和点击动作。配置 Activity
+保存后按 `appWidgetId` 写入并刷新实例，返回带 ID 的 `RESULT_OK`；取消则保持
+`RESULT_CANCELED`。现有 `UserWidgetConfigureActivity` 用原生 `ScrollView` 拼出了一版
+控件，但未注册、文案未走 l10n、字段超出首版范围，不能直接视为可交付实现。
+
 ## 建议的后续阶段（待讨论）
 
 ### 阶段 A：先修复事实链路
