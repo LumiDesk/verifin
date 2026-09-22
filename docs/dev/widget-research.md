@@ -15,6 +15,8 @@
 - 配置按 Android `appWidgetId` 保存到 `home_widget` 的共享存储；删除实例时原生 Receiver
   清理对应配置。
 - 今日支出跨天时，Glance 渲染器根据快照日期直接显示 `0`，不显示“打开应用刷新”。
+- 快速记账横条的数值/标签区域只打开应用，加号区域才进入快速记账；内容使用原生
+  `TextView` 自动缩放并保持完整，不用省略号隐藏金额。
 
 ## 当前技术路线
 
@@ -28,8 +30,8 @@ Flutter Controller 只生成投影：每个账本的今日支出、预算剩余�
 每次投影刷新时重新安排下一次本地午夜，时区变化可在下一次前台刷新时重新计算。
 
 Android 15+ 的系统预览使用 Glance 的 `providePreview` 和 home_widget 的预览更新机制；
-Android 12–14 使用新的中性 `previewLayout`，不再依赖设备账目或提交的旧 PNG。应用内页面只
-展示模板指南，系统选择器是桌面预览的权威来源。
+Android 12–14 使用新的中性 `previewLayout`，旧 Launcher 使用同一套 Glance 组合导出的
+`previewImage`。应用内页面也直接显示原生组合像素，系统选择器是桌面预览的权威来源。
 
 ## 清理结果
 

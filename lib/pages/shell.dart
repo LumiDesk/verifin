@@ -446,6 +446,13 @@ class _VeriFinShellState extends State<VeriFinShell> {
       controller.switchLedgerBook(bookId);
     }
     final route = args['route'] as String? ?? 'app';
+    if (route == 'app' || route == 'open') {
+      // Bringing the task forward otherwise exposes a keypad left open by an
+      // earlier plus tap. The data area explicitly opens the app's home page.
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      if (_index != 0) _goToTab(0);
+      return;
+    }
     if (route == 'entry' || route == 'quick_entry') {
       await _openQuickEntryFromPlatform();
       return;

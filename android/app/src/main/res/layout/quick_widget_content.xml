@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Native text leaf inside Glance: TextView auto-size uses the actual launcher
+     width. No ellipsis or abbreviated amounts; the plus keeps its 48dp target. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/quick_widget_card"
+    android:layout_width="match_parent" android:layout_height="72dp"
+    android:orientation="horizontal" android:gravity="center_vertical"
+    android:paddingStart="12dp" android:paddingEnd="8dp"
+    android:background="@drawable/widget_surface_dark">
+    <LinearLayout android:id="@+id/quick_widget_data"
+        android:layout_width="0dp" android:layout_height="60dp"
+        android:layout_weight="1" android:orientation="vertical">
+        <TextView android:id="@+id/quick_widget_label"
+            android:layout_width="match_parent" android:layout_height="26dp"
+            android:gravity="center_vertical" android:includeFontPadding="false"
+            android:textSize="11sp" android:maxLines="1"
+            android:autoSizeTextType="uniform" android:autoSizeMinTextSize="7sp"
+            android:autoSizeMaxTextSize="11sp" android:autoSizeStepGranularity="1sp" />
+        <TextView android:id="@+id/quick_widget_amount"
+            android:layout_width="match_parent" android:layout_height="34dp"
+            android:gravity="center_vertical" android:includeFontPadding="false"
+            android:textSize="24sp" android:textStyle="bold" android:maxLines="1"
+            android:autoSizeTextType="uniform" android:autoSizeMinTextSize="8sp"
+            android:autoSizeMaxTextSize="24sp" android:autoSizeStepGranularity="1sp" />
+    </LinearLayout>
+    <TextView android:id="@+id/quick_widget_add"
+        android:layout_width="48dp" android:layout_height="48dp"
+        android:layout_marginStart="8dp" android:gravity="center"
+        android:text="+" android:textSize="26sp" android:includeFontPadding="false"
+        android:textColor="#FFFFFFFF" android:background="@drawable/widget_quick_action"
+        android:contentDescription="@string/quick_entry_button" />
+</LinearLayout>

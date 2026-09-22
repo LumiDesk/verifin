@@ -205,6 +205,7 @@ class _WidgetConfigurationPageState extends State<WidgetConfigurationPage> {
                           height: height,
                           bookId: _bookId,
                           metric: _metric,
+                          sample: false,
                           semanticLabel: l.widgetPreview,
                         ),
                       );

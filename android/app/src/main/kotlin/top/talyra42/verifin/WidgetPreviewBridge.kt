@@ -73,7 +73,7 @@ object WidgetPreviewRenderer {
         return GlanceRemoteViews().compose(context, DpSize(width.dp, height.dp)) {
             VeriFinWidgetContent(template, data,
                 widgetId?.let { widgetAction(context, it, "app", data.bookId) },
-                widgetId?.let { widgetAction(context, it, "entry", data.bookId) })
+                widgetId?.let { widgetAction(context, it, "entry", data.bookId) }, widgetId)
         }.remoteViews
     }
     suspend fun png(context: Context, template: VeriFinWidgetTemplate, width: Int, height: Int,

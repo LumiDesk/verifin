@@ -110,7 +110,7 @@ private val widgetMutedDark = Color(0xFFB8C0CC)
 
 /** Same composition for the launcher, generated preview and in-app draft preview. */
 @Composable
-fun VeriFinWidgetContent(template: VeriFinWidgetTemplate, data: WidgetDisplay, open: Action? = null, add: Action? = null) {
+fun VeriFinWidgetContent(template: VeriFinWidgetTemplate, data: WidgetDisplay, open: Action? = null, add: Action? = null, widgetId: Int? = null) {
     val foreground = if (data.dark) widgetTextDark else widgetTextLight
     val muted = if (data.dark) widgetMutedDark else widgetMutedLight
     val size = LocalSize.current
@@ -122,19 +122,8 @@ fun VeriFinWidgetContent(template: VeriFinWidgetTemplate, data: WidgetDisplay, o
     if (open != null) card = card.clickable(open)
     Box(GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         if (template == VeriFinWidgetTemplate.QUICK_ENTRY) {
-            Row(card.padding(start = 12.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(GlanceModifier.defaultWeight()) {
-                    Text(data.label, style = TextStyle(color = ColorProvider(muted), fontSize = 11.sp), maxLines = 1)
-                    Spacer(GlanceModifier.height(4.dp))
-                    Text(data.amount, style = TextStyle(color = ColorProvider(foreground), fontSize = metricSize.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-                }
-                Spacer(GlanceModifier.width(8.dp))
-                var button = GlanceModifier.size(48.dp).background(widgetRoyal).cornerRadius(12.dp)
-                if (add != null) button = button.clickable(add)
-                Box(button, contentAlignment = Alignment.Center) {
-                    Text("+", style = TextStyle(color = ColorProvider(Color.White), fontSize = 26.sp))
-                }
-            }
+            AndroidRemoteViews(QuickWidgetContent.views(LocalContext.current, data, widgetId),
+                GlanceModifier.fillMaxWidth().height(72.dp))
         } else {
             Column(card.padding(if (small) 10.dp else 14.dp)) {
                 Text(data.title, style = TextStyle(color = ColorProvider(muted), fontSize = 12.sp), maxLines = 1)
@@ -222,7 +211,7 @@ open class VeriFinGlanceWidget(val template: VeriFinWidgetTemplate) : GlanceAppW
             val preferences = currentState<HomeWidgetGlanceState>().preferences
             val data = VeriFinWidgetStore.display(context, template, VeriFinWidgetStore.config(preferences, widgetId), prefs = preferences)
             VeriFinWidgetContent(template, data, widgetAction(context, widgetId, "app", data.bookId),
-                widgetAction(context, widgetId, "entry", data.bookId))
+                widgetAction(context, widgetId, "entry", data.bookId), widgetId)
         }
     }
     override suspend fun providePreview(context: Context, widgetCategory: Int) {
@@ -236,7 +225,7 @@ class TrendGlanceWidget : VeriFinGlanceWidget(VeriFinWidgetTemplate.TREND)
 
 abstract class VeriFinWidgetReceiver<T : VeriFinGlanceWidget> : HomeWidgetGlanceWidgetReceiver<T>() {
     override fun previewFingerprint(context: Context): String =
-        "verifin-glance-v2|${glanceAppWidget.template}|${context.resources.configuration.uiMode}|${VeriFinWidgetStore.prefs(context).getString("verifin.widget.locale", "")}|${VeriFinWidgetStore.prefs(context).getString("verifin.widget.theme", "system")}"
+        "verifin-glance-v3|${glanceAppWidget.template}|${context.resources.configuration.uiMode}|${VeriFinWidgetStore.prefs(context).getString("verifin.widget.locale", "")}|${VeriFinWidgetStore.prefs(context).getString("verifin.widget.theme", "system")}"
     override fun onDeleted(context: Context, appWidgetIds: IntArray) {
         val editor = VeriFinWidgetStore.prefs(context).edit()
         appWidgetIds.forEach { editor.remove(VeriFinWidgetStore.CONFIG_PREFIX + it) }
