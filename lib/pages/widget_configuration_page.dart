@@ -11,6 +11,7 @@ import '../app/native_widget_preview.dart';
 import '../app/widget_configuration_session.dart';
 import '../local_storage/local_storage.dart';
 import '../l10n/app_localizations.dart';
+import 'sheets.dart';
 
 Future<void> runWidgetConfiguration() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -136,6 +137,34 @@ class _WidgetConfigurationPageState extends State<WidgetConfigurationPage> {
     'periodExpense' => l.widgetMetricPeriodExpense,
     _ => l.widgetMetricTodayExpense,
   };
+
+  Future<void> _pickBook(WidgetConfigurationSession session) async {
+    final selected = await showOptionSheet<String>(
+      context: context,
+      title: AppLocalizations.of(context).widgetBook,
+      values: session.books.keys.toList(growable: false),
+      selected: _bookId,
+      labelOf: (id) => session.books[id] ?? id,
+    );
+    if (selected != null && mounted && !_saving) {
+      setState(() => _bookId = selected);
+    }
+  }
+
+  Future<void> _pickMetric() async {
+    final l = AppLocalizations.of(context);
+    final selected = await showOptionSheet<String>(
+      context: context,
+      title: l.widgetPrimaryMetric,
+      values: widgetBasicMetrics,
+      selected: _metric,
+      labelOf: (metric) => _label(l, metric),
+    );
+    if (selected != null && mounted && !_saving) {
+      setState(() => _metric = selected);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -187,27 +216,12 @@ class _WidgetConfigurationPageState extends State<WidgetConfigurationPage> {
                     style: Theme.of(context).textTheme.labelLarge,
                   ),
                   const SizedBox(height: 8),
-                  // A dynamic ledger list can exceed anchored-choice limits.
-                  DropdownButtonFormField<String>(
+                  ListTile(
                     key: const Key('widget_book'),
-                    initialValue: session.books.containsKey(_bookId)
-                        ? _bookId
-                        : null,
-                    isExpanded: true,
-                    items: session.books.entries
-                        .map(
-                          (book) => DropdownMenuItem(
-                            value: book.key,
-                            child: Text(
-                              book.value,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: _saving
-                        ? null
-                        : (value) => setState(() => _bookId = value ?? ''),
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(session.books[_bookId] ?? _bookId),
+                    trailing: const Icon(Icons.expand_more),
+                    onTap: _saving ? null : () => _pickBook(session),
                   ),
                   const SizedBox(height: 20),
                   Text(
@@ -215,22 +229,12 @@ class _WidgetConfigurationPageState extends State<WidgetConfigurationPage> {
                     style: Theme.of(context).textTheme.labelLarge,
                   ),
                   const SizedBox(height: 8),
-                  VeriAnchoredChoice<String>(
-                    values: widgetBasicMetrics,
-                    selected: _metric,
-                    idOf: (value) => value,
-                    labelOf: (value) => _label(l, value),
-                    semanticLabel: l.widgetPrimaryMetric,
-                    onSelected: (value) {
-                      if (!_saving) setState(() => _metric = value);
-                    },
-                    builder: (context, open, isOpen) => ListTile(
-                      key: const Key('widget_metric'),
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(_label(l, _metric)),
-                      trailing: const Icon(Icons.expand_more),
-                      onTap: _saving ? null : open,
-                    ),
+                  ListTile(
+                    key: const Key('widget_metric'),
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(_label(l, _metric)),
+                    trailing: const Icon(Icons.expand_more),
+                    onTap: _saving ? null : _pickMetric,
                   ),
                   const SizedBox(height: 24),
                   FilledButton(
