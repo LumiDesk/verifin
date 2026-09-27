@@ -953,6 +953,18 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
+  ThemeColorPreference get themeColorPreference => _themeColorPreference;
+
+  void setThemeColorPreference(ThemeColorPreference preference) {
+    if (_themeColorPreference == preference) {
+      return;
+    }
+    _themeColorPreference = preference;
+    _store.write(_themeColorKey, preference.encode());
+    themeColorPreferenceListenable.value = preference;
+    notifyListeners();
+  }
+
   LocalePreference get localePreference => _localePreference;
 
   /// 语言是设备本地偏好：不进 JSON 备份，初始化数据时保留。
@@ -1226,6 +1238,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   /// 主设置页一次性提交显示与记账偏好；所有 KV 写入完成后才更新 Controller。
   Future<bool> saveAppPreferencesDraft({
     required ThemePreference themePreference,
+    required ThemeColorPreference themeColorPreference,
     required LocalePreference localePreference,
     required bool hapticsEnabled,
     required bool amountForceTwoDecimals,
@@ -1245,6 +1258,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     }
     try {
       await _store.writeAndFlush(_themeKey, themePreference.name);
+      await _store.writeAndFlush(_themeColorKey, themeColorPreference.encode());
       await _store.writeAndFlush(_localeKey, localePreference.name);
       await _store.writeAndFlush(_hapticsKey, hapticsEnabled.toString());
       await _store.writeAndFlush(
@@ -1276,6 +1290,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     }
 
     _themePreference = themePreference;
+    _themeColorPreference = themeColorPreference;
     _localePreference = localePreference;
     _hapticsEnabled = hapticsEnabled;
     _amountForceTwoDecimals = amountForceTwoDecimals;
@@ -1290,6 +1305,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _showRunningBalance = showRunningBalance;
     _numberPadLayout = numberPadLayout;
     themePreferenceListenable.value = themePreference;
+    themeColorPreferenceListenable.value = themeColorPreference;
     localePreferenceListenable.value = localePreference;
     notifyListeners();
     return true;
@@ -3911,6 +3927,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     // 偏好类 KV 键清空；账目类数据在下方以默认状态写回 SQLite。
     for (final key in <String>[
       _themeKey,
+      _themeColorKey,
       _profileKey,
       _activeBookKey,
       _assetCoverKey,
@@ -3946,6 +3963,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _dailyBudgets.clear();
     _profile = _seedProfile;
     _themePreference = ThemePreference.system;
+    _themeColorPreference = ThemeColorPreference.defaultValue;
     _activeBookId = defaultLedgerBookId;
     _assetCoverUrl = '';
     _hapticsEnabled = true;
@@ -3965,6 +3983,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     // 把重置后的默认状态写回 SQLite（单事务原子替换全部表）。
     _persistAllLedgerData();
     themePreferenceListenable.value = _themePreference;
+    themeColorPreferenceListenable.value = _themeColorPreference;
     notifyListeners();
   }
 
@@ -3990,6 +4009,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         'budgetCycleStartDays': Map<String, int>.from(_budgetCycleStartDays),
         'profile': _profile.toJson(),
         'themePreference': _themePreference.name,
+        'themeColor': jsonDecode(_themeColorPreference.encode()),
         'assetCoverUrl': _assetCoverUrl,
         'hapticsEnabled': _hapticsEnabled,
         'assetAccountViewMode': _assetAccountViewMode.name,
@@ -4136,6 +4156,11 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     final nextThemePreference = ThemePreference.fromStorage(
       data['themePreference'] as String?,
     );
+    final nextThemeColorPreference = ThemeColorPreference.fromStorage(
+      data['themeColor'] is Map
+          ? jsonEncode(data['themeColor'])
+          : data['themeColor'] as String?,
+    );
     final nextAssetCoverUrl = data['assetCoverUrl'] as String? ?? '';
     final nextHapticsEnabled = data['hapticsEnabled'] as bool? ?? true;
     final nextAssetAccountViewMode = AssetAccountViewMode.fromStorage(
@@ -4262,6 +4287,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       ..addAll(nextBudgetCycleStartDays);
     _profile = nextProfile;
     _themePreference = nextThemePreference;
+    _themeColorPreference = nextThemeColorPreference;
     _assetCoverUrl = nextAssetCoverUrl;
     _hapticsEnabled = nextHapticsEnabled;
     _assetAccountViewMode = nextAssetAccountViewMode;
@@ -4296,6 +4322,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _store.write(_activeBookKey, _activeBookId);
     _store.write(_profileKey, jsonEncode(_profile.toJson()));
     _store.write(_themeKey, _themePreference.name);
+    _store.write(_themeColorKey, _themeColorPreference.encode());
     _store.write(_hapticsKey, _hapticsEnabled.toString());
     _store.write(_assetViewModeKey, _assetAccountViewMode.name);
     _persistAssetSectionCollapsed();
@@ -4322,6 +4349,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       _store.write(_assetCoverKey, _assetCoverUrl);
     }
     themePreferenceListenable.value = _themePreference;
+    themeColorPreferenceListenable.value = _themeColorPreference;
     notifyListeners();
   }
 

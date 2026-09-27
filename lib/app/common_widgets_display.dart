@@ -306,24 +306,25 @@ class VeriIconBox extends StatelessWidget {
   const VeriIconBox({
     super.key,
     required this.icon,
-    this.color = veriRoyal,
+    this.color,
     this.size = 30,
   });
 
   final IconData icon;
-  final Color color;
+  final Color? color;
   final double size;
 
   @override
   Widget build(BuildContext context) {
+    final effectiveColor = color ?? Theme.of(context).colorScheme.primary;
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.13),
+        color: effectiveColor.withValues(alpha: 0.13),
         borderRadius: BorderRadius.circular(veriRadiusSm),
       ),
-      child: Icon(icon, size: size * 0.54, color: color),
+      child: Icon(icon, size: size * 0.54, color: effectiveColor),
     );
   }
 }
@@ -334,23 +335,24 @@ class CategoryIconBox extends StatelessWidget {
   const CategoryIconBox({
     super.key,
     required this.iconCode,
-    this.color = veriRoyal,
+    this.color,
     this.size = 30,
   });
 
   final String iconCode;
-  final Color color;
+  final Color? color;
   final double size;
 
   @override
   Widget build(BuildContext context) {
+    final effectiveColor = color ?? Theme.of(context).colorScheme.primary;
     if (isEmojiIconCode(iconCode)) {
       return Container(
         width: size,
         height: size,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.13),
+          color: effectiveColor.withValues(alpha: 0.13),
           borderRadius: BorderRadius.circular(veriRadiusSm),
         ),
         child: Text(
@@ -359,7 +361,11 @@ class CategoryIconBox extends StatelessWidget {
         ),
       );
     }
-    return VeriIconBox(icon: iconForCode(iconCode), color: color, size: size);
+    return VeriIconBox(
+      icon: iconForCode(iconCode),
+      color: effectiveColor,
+      size: size,
+    );
   }
 }
 
@@ -414,7 +420,7 @@ class VeriSectionAction extends StatelessWidget {
           context,
           veriBlue,
         ).withValues(alpha: 0.10),
-        foregroundColor: veriRoyal,
+        foregroundColor: Theme.of(context).colorScheme.primary,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(veriRadiusSm),
         ),

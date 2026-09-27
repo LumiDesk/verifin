@@ -169,7 +169,7 @@ class ProfilePage extends StatelessWidget {
             tiles: <_FeatureTileData>[
               _FeatureTileData(
                 icon: Icons.book_outlined,
-                color: veriRoyal,
+                color: Theme.of(context).colorScheme.primary,
                 label: AppLocalizations.of(context).ledgerLabel,
                 subtitle: controller.activeBook.name,
                 onTap: () => Navigator.of(context).push<void>(
@@ -226,7 +226,7 @@ class ProfilePage extends StatelessWidget {
             tiles: <_FeatureTileData>[
               _FeatureTileData(
                 icon: Icons.insights_outlined,
-                color: veriRoyal,
+                color: Theme.of(context).colorScheme.primary,
                 label: AppLocalizations.of(context).statAnalysisTitle,
                 subtitle: AppLocalizations.of(context).reportShort,
                 onTap: () => Navigator.of(context).push<void>(

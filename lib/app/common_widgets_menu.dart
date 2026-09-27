@@ -104,41 +104,129 @@ class VeriAnchoredChoice<T> extends StatelessWidget {
 const double _veriMenuPanelPadding = 6;
 const double _veriMenuDividerExtent = 9;
 
-/// 菜单行的基准高度。列表行高由内容决定，这里的高度用于面板尺寸与展开原点，
-/// 必须跟着 [textScaler] 走，否则系统字号放大后菜单行会错位。
-double _veriMenuEntryExtent(VeriMenuEntry entry, TextScaler textScaler) =>
-    switch (entry) {
-      VeriMenuItem() => textScaler.scale(entry.subtitle == null ? 50 : 58),
-      VeriMenuDivider() => _veriMenuDividerExtent,
-    };
+/// 菜单项的实际文本区域宽度。行的外层/内层 padding、图标列和尾部状态图标
+/// 都在这里扣除，文本测量和最终 Row 布局使用同一套数字。
+double _veriMenuItemTextExtent(
+  double width,
+  VeriMenuItem item, {
+  bool header = false,
+}) {
+  final leadingWidth = item.icon == null ? 0.0 : 28.0 + 10.0;
+  final trailingWidth = header || item.hasSubmenu || item.selected ? 21.0 : 0.0;
+  return math.max(0, width - 16 - 24 - leadingWidth - 8 - trailingWidth);
+}
+
+double _veriMenuTextHeight(
+  BuildContext context,
+  String text,
+  TextStyle? style,
+  double width,
+) {
+  final painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: TextDirection.ltr,
+    textScaler: MediaQuery.textScalerOf(context),
+  )..layout(maxWidth: width);
+  return painter.height;
+}
+
+/// 菜单行实际占用的高度。多行标题/副标题会进入同一套高度计算，供面板总高
+/// 和递进菜单展开原点共同使用，避免换行后层间错位。
+double _veriMenuEntryExtent(
+  BuildContext context,
+  VeriMenuEntry entry,
+  TextScaler textScaler, {
+  required double width,
+  VeriMenuItem? parent,
+}) {
+  if (entry is VeriMenuDivider) return _veriMenuDividerExtent;
+  final item = entry as VeriMenuItem;
+  final theme = Theme.of(context);
+  final textWidth = _veriMenuItemTextExtent(
+    width,
+    item,
+    header: parent != null,
+  );
+  final titleHeight = _veriMenuTextHeight(
+    context,
+    item.title,
+    theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+    textWidth,
+  );
+  final subtitleHeight = item.subtitle == null
+      ? 0.0
+      : 2 +
+            _veriMenuTextHeight(
+              context,
+              item.subtitle!,
+              theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+              textWidth,
+            );
+  final contentHeight = titleHeight + subtitleHeight + 12;
+  final minHeight = item.subtitle == null ? 44.0 : 52.0;
+  return math.max(minHeight, contentHeight) + 6;
+}
 
 double _veriMenuPanelExtent(
+  BuildContext context,
   List<VeriMenuEntry> entries, {
   VeriMenuItem? parent,
   required TextScaler textScaler,
+  required double width,
 }) {
   var extent = _veriMenuPanelPadding * 2;
   if (parent != null) {
-    extent += _veriMenuEntryExtent(parent, textScaler) + _veriMenuDividerExtent;
+    extent +=
+        _veriMenuEntryExtent(
+          context,
+          parent,
+          textScaler,
+          width: width,
+          parent: parent,
+        ) +
+        _veriMenuDividerExtent;
   }
   for (final entry in entries) {
-    extent += _veriMenuEntryExtent(entry, textScaler);
+    extent += _veriMenuEntryExtent(
+      context,
+      entry,
+      textScaler,
+      width: width,
+      parent: parent,
+    );
   }
   return extent;
 }
 
 double _veriMenuEntryOffset(
+  BuildContext context,
   List<VeriMenuEntry> entries,
   VeriMenuItem target, {
   VeriMenuItem? parent,
   required TextScaler textScaler,
+  required double width,
 }) {
   var offset = parent == null
       ? 0.0
-      : _veriMenuEntryExtent(parent, textScaler) + _veriMenuDividerExtent;
+      : _veriMenuEntryExtent(
+              context,
+              parent,
+              textScaler,
+              width: width,
+              parent: parent,
+            ) +
+            _veriMenuDividerExtent;
   for (final entry in entries) {
     if (entry is VeriMenuItem && entry.id == target.id) return offset;
-    offset += _veriMenuEntryExtent(entry, textScaler);
+    offset += _veriMenuEntryExtent(
+      context,
+      entry,
+      textScaler,
+      width: width,
+      parent: parent,
+    );
   }
   return offset;
 }
@@ -146,7 +234,6 @@ double _veriMenuEntryOffset(
 double _veriMenuTextWidth(BuildContext context, String text, TextStyle? style) {
   final painter = TextPainter(
     text: TextSpan(text: text, style: style),
-    maxLines: 1,
     textDirection: TextDirection.ltr,
     textScaler: MediaQuery.textScalerOf(context),
   )..layout();
@@ -160,13 +247,17 @@ double _veriMenuItemWidth(
 }) {
   final theme = Theme.of(context);
   final textWidth = math.max(
-    _veriMenuTextWidth(context, item.title, theme.textTheme.titleSmall),
+    _veriMenuTextWidth(
+      context,
+      item.title,
+      theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+    ),
     item.subtitle == null
         ? 0
         : _veriMenuTextWidth(
             context,
             item.subtitle!,
-            theme.textTheme.labelMedium,
+            theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
   );
   final leadingWidth = item.icon == null ? 0.0 : 28.0 + 10.0;
@@ -330,17 +421,22 @@ class _VeriAnchoredMenuRouteState extends State<_VeriAnchoredMenuRoute>
   List<VeriMenuEntry> get _entries =>
       _path.isEmpty ? widget.entries : _path.last.children;
 
-  double _panelOriginForPathIndex(int targetIndex) {
+  double _panelOriginForPathIndex(
+    int targetIndex, {
+    required List<double> panelWidths,
+  }) {
     var origin = 0.0;
     var entries = widget.entries;
     VeriMenuItem? parent;
     for (var index = 0; index <= targetIndex; index++) {
       final item = _path[index];
       origin += _veriMenuEntryOffset(
+        context,
         entries,
         item,
         parent: parent,
         textScaler: MediaQuery.textScalerOf(context),
+        width: panelWidths[index],
       );
       parent = item;
       entries = item.children;
@@ -454,6 +550,17 @@ class _VeriAnchoredMenuRouteState extends State<_VeriAnchoredMenuRoute>
 
     Widget buildSubmenuTransition() {
       final parent = activeParent!;
+      final panelWidths = <double>[rootWidth];
+      for (var index = 0; index < _path.length - 1; index++) {
+        final pathParent = _path[index];
+        panelWidths.add(
+          resolveWidth(
+            pathParent.submenuWidth ?? widget.submenuWidth,
+            pathParent.children,
+            parent: pathParent,
+          ),
+        );
+      }
       final ancestorLayers =
           <
             ({
@@ -481,9 +588,11 @@ class _VeriAnchoredMenuRouteState extends State<_VeriAnchoredMenuRoute>
           origin: origin,
           maxHeight: layerMaxHeight,
           height: _veriMenuPanelExtent(
+            context,
             entries,
             parent: parent,
             textScaler: MediaQuery.textScalerOf(context),
+            width: width,
           ).clamp(0.0, layerMaxHeight),
         ));
       }
@@ -499,31 +608,35 @@ class _VeriAnchoredMenuRouteState extends State<_VeriAnchoredMenuRoute>
         addAncestorLayer(
           entries: layerParent.children,
           parent: layerParent,
-          width: resolveWidth(
-            layerParent.submenuWidth ?? widget.submenuWidth,
-            layerParent.children,
-            parent: layerParent,
-          ),
-          origin: _panelOriginForPathIndex(index),
+          width: panelWidths[index + 1],
+          origin: _panelOriginForPathIndex(index, panelWidths: panelWidths),
         );
       }
 
       final backgroundWidth = ancestorLayers.last.width;
-      final originY = _panelOriginForPathIndex(_path.length - 1);
+      final originY = _panelOriginForPathIndex(
+        _path.length - 1,
+        panelWidths: panelWidths,
+      );
       final availableForegroundHeight = maxHeight - originY;
       final foregroundMaxHeight = availableForegroundHeight < 96
           ? 96.0
           : availableForegroundHeight;
       final fullForegroundHeight = _veriMenuPanelExtent(
+        context,
         _entries,
         parent: parent,
         textScaler: MediaQuery.textScalerOf(context),
+        width: foregroundWidth,
       ).clamp(0.0, foregroundMaxHeight);
       final collapsedHeight =
           (_veriMenuPanelPadding +
                   _veriMenuEntryExtent(
+                    context,
                     parent,
                     MediaQuery.textScalerOf(context),
+                    width: foregroundWidth,
+                    parent: parent,
                   ))
               .clamp(0.0, fullForegroundHeight);
 
@@ -800,13 +913,13 @@ class _VeriMenuItemRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final baseColor = item.foregroundColor ?? theme.colorScheme.onSurface;
-    final selectedColor = item.selected ? veriRoyal : baseColor;
+    final selectedColor = item.selected ? theme.colorScheme.primary : baseColor;
     final layerStrength = 1 - 0.58 * mutedProgress;
     final contentColor = selectedColor.withValues(
       alpha: (item.enabled ? 0.92 : 0.34) * layerStrength,
     );
     final subtitleColor = item.selected
-        ? veriRoyal.withValues(
+        ? theme.colorScheme.primary.withValues(
             alpha: (item.enabled ? 0.78 : 0.30) * layerStrength,
           )
         : baseColor.withValues(
@@ -854,8 +967,8 @@ class _VeriMenuItemRow extends StatelessWidget {
                         children: <Widget>[
                           Text(
                             item.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            softWrap: true,
+                            overflow: TextOverflow.clip,
                             style: theme.textTheme.titleSmall?.copyWith(
                               color: contentColor,
                               fontWeight: FontWeight.w700,
@@ -865,8 +978,8 @@ class _VeriMenuItemRow extends StatelessWidget {
                             const SizedBox(height: 2),
                             Text(
                               item.subtitle!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              softWrap: true,
+                              overflow: TextOverflow.clip,
                               style: theme.textTheme.labelMedium?.copyWith(
                                 color: subtitleColor,
                                 fontWeight: FontWeight.w600,
@@ -897,7 +1010,9 @@ class _VeriMenuItemRow extends StatelessWidget {
                       Icon(
                         Icons.check_rounded,
                         size: 21,
-                        color: veriRoyal.withValues(alpha: layerStrength),
+                        color: theme.colorScheme.primary.withValues(
+                          alpha: layerStrength,
+                        ),
                       ),
                   ],
                 ),

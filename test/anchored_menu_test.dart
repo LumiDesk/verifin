@@ -111,7 +111,12 @@ void main() {
     final plainTextRect = tester.getRect(find.text('列表视图'));
     expect(plainTextRect.left - submenuPanelRect.left, 20);
     final selectedText = tester.widget<Text>(find.text('卡片视图').last);
-    expect(selectedText.style?.color, veriRoyal.withValues(alpha: 0.92));
+    expect(
+      selectedText.style?.color,
+      Theme.of(
+        tester.element(find.text('卡片视图').last),
+      ).colorScheme.primary.withValues(alpha: 0.92),
+    );
   });
 
   testWidgets('submenu selection closes menu and invokes action', (
@@ -211,7 +216,40 @@ void main() {
     await tester.tap(find.text('打开选择'));
     await tester.pumpAndSettle();
     final secondText = tester.widget<Text>(find.text('次选项'));
-    expect(secondText.style?.color, veriRoyal.withValues(alpha: 0.92));
+    expect(
+      secondText.style?.color,
+      Theme.of(
+        tester.element(find.text('次选项')),
+      ).colorScheme.primary.withValues(alpha: 0.92),
+    );
+  });
+
+  testWidgets('窄屏菜单标题自然换行而不是显示省略号', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    const title = 'Symbol after (100 dollars per account)';
+    await tester.pumpWidget(
+      _MenuTestApp(
+        width: 168,
+        entries: const [
+          VeriMenuItem(id: 'long', title: title, onPressed: _noop),
+        ],
+      ),
+    );
+
+    await tester.tap(find.byTooltip('更多'));
+    await tester.pumpAndSettle();
+
+    final titleFinder = find.text(title);
+    expect(titleFinder, findsOneWidget);
+    final titleWidget = tester.widget<Text>(titleFinder);
+    expect(titleWidget.maxLines, isNull);
+    expect(titleWidget.overflow, TextOverflow.clip);
+    expect(find.textContaining('…'), findsNothing);
+    final ink = find
+        .ancestor(of: titleFinder, matching: find.byType(InkWell))
+        .first;
+    expect(tester.getSize(ink).height, greaterThan(44));
   });
 
   testWidgets('back closes submenu before closing the whole menu', (

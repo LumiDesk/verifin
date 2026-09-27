@@ -2464,6 +2464,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeMode => '主题模式';
 
   @override
+  String get themeColorLabel => '主题色';
+
+  @override
+  String get themeColorSystem => '跟随系统动态色';
+
+  @override
+  String get themeColorCustom => '自定义颜色';
+
+  @override
+  String get themeColorPickerTitle => '调整主题色';
+
+  @override
+  String get themeColorHex => 'HEX 颜色';
+
+  @override
+  String get themeColorHue => '色相';
+
+  @override
+  String get themeColorSaturation => '饱和度';
+
+  @override
+  String get themeColorBrightness => '明度';
+
+  @override
   String get hapticsLabel => '触感反馈';
 
   @override

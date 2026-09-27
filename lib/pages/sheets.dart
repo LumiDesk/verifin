@@ -84,6 +84,213 @@ class _VeriSheetDragHandle extends StatelessWidget {
   }
 }
 
+/// 主题色编辑器：使用 HSV 三轴和 HEX 输入，不引入第三方颜色选择器依赖。
+Future<Color?> showThemeColorPickerSheet({
+  required BuildContext context,
+  required Color initialColor,
+}) => _showVeriModalSheet<Color>(
+  context: context,
+  isScrollControlled: true,
+  showDragHandle: true,
+  builder: (context) => _ThemeColorPickerSheet(initialColor: initialColor),
+);
+
+class _ThemeColorPickerSheet extends StatefulWidget {
+  const _ThemeColorPickerSheet({required this.initialColor});
+
+  final Color initialColor;
+
+  @override
+  State<_ThemeColorPickerSheet> createState() => _ThemeColorPickerSheetState();
+}
+
+class _ThemeColorPickerSheetState extends State<_ThemeColorPickerSheet> {
+  late HSVColor _hsv;
+  late final TextEditingController _hexController;
+  bool _hexHasError = false;
+
+  Color get _color => _hsv.toColor();
+
+  @override
+  void initState() {
+    super.initState();
+    _hsv = HSVColor.fromColor(widget.initialColor.withAlpha(255));
+    _hexController = TextEditingController(text: _hexFor(_color));
+  }
+
+  @override
+  void dispose() {
+    _hexController.dispose();
+    super.dispose();
+  }
+
+  void _setHsv(HSVColor value) {
+    setState(() {
+      _hsv = value;
+      _hexHasError = false;
+      _hexController.text = _hexFor(_color);
+      _hexController.selection = TextSelection.collapsed(
+        offset: _hexController.text.length,
+      );
+    });
+  }
+
+  void _onHexChanged(String value) {
+    final parsed = _parseHex(value);
+    setState(() => _hexHasError = parsed == null);
+    if (parsed == null) return;
+    setState(() => _hsv = HSVColor.fromColor(parsed));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Text(
+              l10n.themeColorPickerTitle,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              height: 72,
+              decoration: BoxDecoration(
+                color: _color,
+                borderRadius: BorderRadius.circular(veriRadiusLg),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                _hexFor(_color),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: _color.computeLuminance() > 0.48
+                      ? Colors.black
+                      : Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _hexController,
+              textCapitalization: TextCapitalization.characters,
+              keyboardType: TextInputType.text,
+              decoration: InputDecoration(
+                labelText: l10n.themeColorHex,
+                errorText: _hexHasError ? '#RRGGBB' : null,
+                prefixText: _hexController.text.startsWith('#') ? null : '#',
+              ),
+              onChanged: _onHexChanged,
+            ),
+            const SizedBox(height: 8),
+            _ColorSliderRow(
+              label: l10n.themeColorHue,
+              value: _hsv.hue,
+              max: 360,
+              activeColor: _color,
+              onChanged: (value) => _setHsv(_hsv.withHue(value)),
+            ),
+            _ColorSliderRow(
+              label: l10n.themeColorSaturation,
+              value: _hsv.saturation,
+              max: 1,
+              activeColor: _color,
+              onChanged: (value) => _setHsv(_hsv.withSaturation(value)),
+            ),
+            _ColorSliderRow(
+              label: l10n.themeColorBrightness,
+              value: _hsv.value,
+              max: 1,
+              activeColor: _color,
+              onChanged: (value) => _setHsv(_hsv.withValue(value)),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(l10n.commonCancel),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: _hexHasError
+                      ? null
+                      : () => Navigator.of(context).pop(_color),
+                  child: Text(l10n.commonConfirm),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ColorSliderRow extends StatelessWidget {
+  const _ColorSliderRow({
+    required this.label,
+    required this.value,
+    required this.max,
+    required this.activeColor,
+    required this.onChanged,
+  });
+
+  final String label;
+  final double value;
+  final double max;
+  final Color activeColor;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        SizedBox(
+          width: 72,
+          child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
+        ),
+        Expanded(
+          child: Slider(
+            value: value,
+            max: max,
+            activeColor: activeColor,
+            onChanged: onChanged,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+String _hexFor(Color color) =>
+    '#${_colorByte(color.r).toRadixString(16).padLeft(2, '0')}'
+            '${_colorByte(color.g).toRadixString(16).padLeft(2, '0')}'
+            '${_colorByte(color.b).toRadixString(16).padLeft(2, '0')}'
+        .toUpperCase();
+
+int _colorByte(double channel) => (channel * 255).round().clamp(0, 255);
+
+Color? _parseHex(String value) {
+  final normalized = value.trim().replaceFirst('#', '');
+  if (normalized.length != 6 && normalized.length != 8) return null;
+  final raw = int.tryParse(normalized, radix: 16);
+  if (raw == null) return null;
+  final argb = normalized.length == 6 ? 0xFF000000 | raw : raw;
+  if ((argb >>> 24) != 0xFF) return null;
+  return Color(argb);
+}
+
 /// 若 [url] 会以明文 http 把凭证发往公网主机，弹确认对话框让用户知情后再继续；
 /// 非风险地址（https / 本机 / 内网）直接返回 true。用户取消返回 false。
 Future<bool> confirmCleartextIfRisky(BuildContext context, String url) async {
@@ -163,7 +370,9 @@ Future<T?> showOptionSheet<T>({
             padding: const EdgeInsets.only(bottom: 6),
             child: Material(
               color: showSelectedMarker && value == selected
-                  ? veriRoyal.withValues(alpha: 0.12)
+                  ? Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.12)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(veriRadiusSm),
               child: ListTile(
@@ -182,7 +391,11 @@ Future<T?> showOptionSheet<T>({
                   ),
                 ),
                 trailing: showSelectedMarker && value == selected
-                    ? const Icon(Icons.check, color: veriRoyal, size: 18)
+                    ? Icon(
+                        Icons.check,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 18,
+                      )
                     : null,
                 onTap: () => Navigator.of(context).pop(value),
               ),
@@ -380,9 +593,11 @@ class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
                               ),
                             ),
                             trailing: selected
-                                ? const Icon(
+                                ? Icon(
                                     Icons.check_circle,
-                                    color: veriRoyal,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
                                   )
                                 : null,
                             onTap: () => Navigator.of(context).pop(currency),
@@ -940,7 +1155,9 @@ class _AccountPickerRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? veriRoyal.withValues(alpha: 0.12) : Colors.transparent,
+      color: selected
+          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
+          : Colors.transparent,
       borderRadius: BorderRadius.circular(veriRadiusSm),
       child: ListTile(
         minTileHeight: 48,
@@ -985,7 +1202,11 @@ class _AccountPickerRow extends StatelessWidget {
             ),
             if (selected) ...<Widget>[
               const SizedBox(width: 6),
-              const Icon(Icons.check, color: veriRoyal, size: 18),
+              Icon(
+                Icons.check,
+                color: Theme.of(context).colorScheme.primary,
+                size: 18,
+              ),
             ],
           ],
         ),
@@ -1010,7 +1231,9 @@ class _NoneAccountRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? veriRoyal.withValues(alpha: 0.12) : Colors.transparent,
+      color: selected
+          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
+          : Colors.transparent,
       borderRadius: BorderRadius.circular(veriRadiusSm),
       child: ListTile(
         minTileHeight: 48,
@@ -1041,7 +1264,11 @@ class _NoneAccountRow extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall,
               ),
         trailing: selected
-            ? const Icon(Icons.check, color: veriRoyal, size: 18)
+            ? Icon(
+                Icons.check,
+                color: Theme.of(context).colorScheme.primary,
+                size: 18,
+              )
             : null,
         onTap: () => Navigator.of(context).pop(
           const Account(
@@ -1072,7 +1299,9 @@ class _AllAccountsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? veriRoyal.withValues(alpha: 0.12) : Colors.transparent,
+      color: selected
+          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
+          : Colors.transparent,
       borderRadius: BorderRadius.circular(veriRadiusSm),
       child: ListTile(
         minTileHeight: 48,
@@ -1095,7 +1324,11 @@ class _AllAccountsRow extends StatelessWidget {
           ),
         ),
         trailing: selected
-            ? const Icon(Icons.check, color: veriRoyal, size: 18)
+            ? Icon(
+                Icons.check,
+                color: Theme.of(context).colorScheme.primary,
+                size: 18,
+              )
             : null,
         onTap: () => Navigator.of(context).pop(_accountPickerAllSentinel),
       ),
@@ -1361,7 +1594,7 @@ class _IconChoiceCell extends StatelessWidget {
           borderRadius: BorderRadius.circular(veriRadiusMd),
           border: Border.all(
             color: selected
-                ? veriRoyal
+                ? Theme.of(context).colorScheme.primary
                 : Theme.of(
                     context,
                   ).colorScheme.onSurface.withValues(alpha: 0.10),

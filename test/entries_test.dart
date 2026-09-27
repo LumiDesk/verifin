@@ -374,6 +374,7 @@ void main() {
     // 打开偏好后显示该笔之后的余额：1000 − 100 = 900。
     await controller2.saveAppPreferencesDraft(
       themePreference: controller2.themePreference,
+      themeColorPreference: controller2.themeColorPreference,
       localePreference: controller2.localePreference,
       hapticsEnabled: controller2.hapticsEnabled,
       amountForceTwoDecimals: controller2.amountForceTwoDecimals,

@@ -394,6 +394,41 @@ void main() {
     expect(find.text('未保存的修改'), findsNothing);
   });
 
+  testWidgets('changes and persists a custom theme color', (tester) async {
+    final store = LocalKeyValueStore();
+    final controller = await pumpApp(tester, store);
+
+    await tapBottomTab(tester, 3);
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('主题色'));
+    await tester.tap(find.text('主题色'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('自定义颜色'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('settings_theme_color_custom')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '#B3261E');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('确认'));
+    await tester.pumpAndSettle();
+
+    // 颜色编辑仍然只改设置页草稿，保存前 Controller 保持原值。
+    expect(controller.themeColorPreference.mode, ThemeColorMode.system);
+    await tester.fling(firstVerticalScrollable(), const Offset(0, 1200), 1000);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+    expect(controller.themeColorPreference.mode, ThemeColorMode.custom);
+    expect(controller.themeColorPreference.customColorValue, 0xFFB3261E);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    final restarted = await pumpApp(tester, store);
+    expect(restarted.themeColorPreference.mode, ThemeColorMode.custom);
+    expect(restarted.themeColorPreference.customColorValue, 0xFFB3261E);
+  });
+
   testWidgets('changes language preference and persists across restart', (
     WidgetTester tester,
   ) async {

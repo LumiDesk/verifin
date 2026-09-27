@@ -1368,7 +1368,10 @@ class _TransactionSearchFilters extends StatelessWidget {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(veriRadiusSm),
-                borderSide: const BorderSide(color: veriRoyal, width: 1.2),
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 1.2,
+                ),
               ),
             ),
           ),

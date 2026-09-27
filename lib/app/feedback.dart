@@ -546,7 +546,11 @@ class _VeriFeedbackCardState extends State<_VeriFeedbackCard>
     final request = widget.request;
     final isDark = theme.brightness == Brightness.dark;
     final foreground = theme.colorScheme.onSurface;
-    final toneColor = _toneColor(request.tone, theme.brightness);
+    final toneColor = _toneColor(
+      request.tone,
+      theme.brightness,
+      theme.colorScheme.primary,
+    );
     final hasProgress = _lifetimeController != null;
     final hasAction = request.actionLabel != null;
     final messageStyle = theme.textTheme.bodyMedium?.copyWith(
@@ -873,9 +877,9 @@ void _complete(
   }
 }
 
-Color _toneColor(VeriFeedbackTone tone, Brightness brightness) {
+Color _toneColor(VeriFeedbackTone tone, Brightness brightness, Color accent) {
   return switch (tone) {
-    VeriFeedbackTone.info => veriRoyal,
+    VeriFeedbackTone.info => accent,
     VeriFeedbackTone.success => veriSemanticFor(brightness, veriIncome),
     VeriFeedbackTone.warning => veriSemanticFor(brightness, veriWarning),
     VeriFeedbackTone.error => veriSemanticFor(brightness, veriExpense),

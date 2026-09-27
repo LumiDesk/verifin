@@ -2024,10 +2024,13 @@ class _EntryBottomSaveBar extends StatelessWidget {
                 style: FilledButton.styleFrom(
                   // 保存栏不继承 FilledButton 的暗色禁用填充，保持与应用主色一致；
                   // 不可保存时用淡蓝（禁用态专属属性）表达，而非主题灰色。
-                  backgroundColor: veriRoyal,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: veriRoyal.withValues(alpha: 0.38),
-                  disabledForegroundColor: Colors.white.withValues(alpha: 0.78),
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  disabledBackgroundColor: theme.colorScheme.primary.withValues(
+                    alpha: 0.38,
+                  ),
+                  disabledForegroundColor: theme.colorScheme.onPrimary
+                      .withValues(alpha: 0.78),
                   minimumSize: const Size.fromHeight(50),
                   shape: const StadiumBorder(),
                   textStyle: theme.textTheme.titleMedium?.copyWith(
@@ -2329,10 +2332,10 @@ class _EntryMetadataChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final color = selected ? veriRoyal : scheme.onSurface;
+    final color = selected ? scheme.primary : scheme.onSurface;
     return Material(
       color: selected
-          ? veriRoyal.withValues(alpha: 0.10)
+          ? scheme.primary.withValues(alpha: 0.10)
           : scheme.surfaceContainerLow,
       borderRadius: BorderRadius.circular(13),
       child: InkWell(

@@ -266,15 +266,19 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
     final Color buttonBackground;
     final Color buttonForeground;
     if (isOk) {
-      buttonBackground = enabled ? veriRoyal : okDisabledBackground;
-      buttonForeground = enabled ? Colors.white : okDisabledForeground;
+      buttonBackground = enabled
+          ? Theme.of(context).colorScheme.primary
+          : okDisabledBackground;
+      buttonForeground = enabled
+          ? Theme.of(context).colorScheme.onPrimary
+          : okDisabledForeground;
     } else if (isOperator) {
       buttonBackground = isDark
-          ? veriRoyal.withValues(alpha: 0.28)
+          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.28)
           : const Color(0xFFDCE7FA);
       buttonForeground = isDark
           ? Colors.white.withValues(alpha: 0.94)
-          : veriRoyal;
+          : Theme.of(context).colorScheme.primary;
     } else if (isClear) {
       buttonBackground = isDark
           ? veriExpense.withValues(alpha: 0.26)
@@ -593,7 +597,9 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
               minTileHeight: 48,
               dense: true,
               selected: widget.selectedId == categoryPickerAll,
-              selectedTileColor: veriRoyal.withValues(alpha: 0.12),
+              selectedTileColor: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(veriRadiusSm),
               ),
@@ -612,7 +618,11 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
                 ),
               ),
               trailing: widget.selectedId == categoryPickerAll
-                  ? const Icon(Icons.check, color: veriRoyal, size: 18)
+                  ? Icon(
+                      Icons.check,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 18,
+                    )
                   : null,
               onTap: () => Navigator.of(context).pop(categoryPickerAll),
             ),
@@ -680,7 +690,9 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
                 final collapsed = _collapsed.contains(category.id);
                 return Material(
                   color: isSelected
-                      ? veriRoyal.withValues(alpha: 0.12)
+                      ? Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.12)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(veriRadiusSm),
                   child: ListTile(
@@ -724,9 +736,9 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
                             }),
                           )
                         : (isSelected
-                              ? const Icon(
+                              ? Icon(
                                   Icons.check,
-                                  color: veriRoyal,
+                                  color: Theme.of(context).colorScheme.primary,
                                   size: 18,
                                 )
                               : null),

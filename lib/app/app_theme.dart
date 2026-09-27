@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'models.dart';
+
 /// 候选设计只通过显式构建参数开启；正常 Android 构建仍使用已发布外观。
 const bool veriUnifiedDesignPreview = bool.fromEnvironment(
   'UNIFIED_DESIGN_PREVIEW',
@@ -79,14 +81,18 @@ const double veriRadiusXl = 24;
 const double veriHeaderHeight = veriUnifiedDesignPreview ? 56 : 52;
 const double veriPageMaxWidth = 440;
 
-ThemeData buildVeriFinTheme(Brightness brightness) {
+ThemeData buildVeriFinTheme(
+  Brightness brightness, {
+  ThemeColorPreference colorPreference = ThemeColorPreference.defaultValue,
+}) {
   final isDark = brightness == Brightness.dark;
+  final useSystemColors = colorPreference.mode == ThemeColorMode.system;
+  final seedColor = useSystemColors
+      ? veriRoyal
+      : Color(colorPreference.customColorValue);
   final seedScheme = ColorScheme.fromSeed(
-    seedColor: veriRoyal,
+    seedColor: seedColor,
     brightness: brightness,
-    primary: veriRoyal,
-    secondary: isDark ? veriBlue : veriBlueOnLight,
-    tertiary: isDark ? veriIncome : veriIncomeOnLight,
   );
   final canvas = isDark ? veriPreviewCanvasDark : veriPreviewCanvasLight;
   final colorScheme = veriUnifiedDesignPreview
@@ -102,6 +108,7 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
     pageTransitionsTheme: const PageTransitionsTheme(),
     brightness: brightness,
     colorScheme: colorScheme,
+    useSystemColors: useSystemColors,
     scaffoldBackgroundColor: veriUnifiedDesignPreview
         ? canvas
         : isDark
@@ -123,8 +130,8 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: veriRoyal,
-        foregroundColor: Colors.white,
+        backgroundColor: seedScheme.primary,
+        foregroundColor: seedScheme.onPrimary,
         minimumSize: const Size(44, 44),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         shape: RoundedRectangleBorder(
@@ -141,16 +148,16 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
         tapTargetSize: MaterialTapTargetSize.padded,
       ),
     ),
-    floatingActionButtonTheme: const FloatingActionButtonThemeData(
-      backgroundColor: veriRoyal,
-      foregroundColor: Colors.white,
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      backgroundColor: seedScheme.primary,
+      foregroundColor: seedScheme.onPrimary,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(veriRadiusLg)),
       ),
     ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
       type: BottomNavigationBarType.fixed,
-      selectedItemColor: veriRoyal,
+      selectedItemColor: seedScheme.primary,
       unselectedItemColor: isDark ? Colors.white54 : Colors.black45,
       backgroundColor: isDark ? veriSurfaceDark : veriSurfaceLight,
       elevation: 0,
@@ -161,8 +168,8 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
     ),
     chipTheme: ChipThemeData(
       backgroundColor: isDark ? veriSurfaceAltDark : veriSurfaceLight,
-      selectedColor: veriRoyal.withValues(alpha: 0.14),
-      secondarySelectedColor: veriRoyal.withValues(alpha: 0.14),
+      selectedColor: seedScheme.primary.withValues(alpha: 0.14),
+      secondarySelectedColor: seedScheme.primary.withValues(alpha: 0.14),
       labelStyle: TextStyle(
         color: isDark ? Colors.white.withValues(alpha: 0.86) : veriInk,
         fontSize: 12,
@@ -190,7 +197,7 @@ ThemeData buildVeriFinTheme(Brightness brightness) {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(veriRadiusMd),
-        borderSide: const BorderSide(color: veriRoyal, width: 1.4),
+        borderSide: BorderSide(color: seedScheme.primary, width: 1.4),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(veriRadiusMd),

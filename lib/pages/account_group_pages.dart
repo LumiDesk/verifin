@@ -364,7 +364,9 @@ class _AccountGroupManageRow extends StatelessWidget {
               Icon(
                 Icons.folder_outlined,
                 size: 24,
-                color: veriRoyal.withValues(alpha: 0.78),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.78),
               ),
               const SizedBox(width: 12),
               Expanded(

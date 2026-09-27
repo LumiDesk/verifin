@@ -1,6 +1,8 @@
 /// 偏好与界面配置模型：主题/语言/资产视图/FAB 行为枚举与页面面板配置。
 library;
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -38,6 +40,79 @@ enum ThemePreference {
       orElse: () => ThemePreference.system,
     );
   }
+}
+
+/// 主题强调色来源。系统模式在支持的平台使用系统动态颜色，旧平台回退到
+/// [ThemeColorPreference.defaultValue] 的默认蓝色；自定义模式使用用户保存的
+/// 不透明 ARGB 颜色作为 Material 3 的 seed。
+enum ThemeColorMode {
+  system,
+  custom;
+
+  static ThemeColorMode fromStorage(String? value) => values.firstWhere(
+    (mode) => mode.name == value,
+    orElse: () => ThemeColorMode.system,
+  );
+}
+
+/// 设备级主题色偏好。颜色不随亮/暗主题变化，两个主题分别从同一个 seed 生成。
+@immutable
+class ThemeColorPreference {
+  const ThemeColorPreference({
+    required this.mode,
+    required this.customColorValue,
+  });
+
+  static const ThemeColorPreference defaultValue = ThemeColorPreference(
+    mode: ThemeColorMode.system,
+    customColorValue: 0xFF346EDB,
+  );
+
+  final ThemeColorMode mode;
+  final int customColorValue;
+
+  ThemeColorPreference copyWith({
+    ThemeColorMode? mode,
+    int? customColorValue,
+  }) => ThemeColorPreference(
+    mode: mode ?? this.mode,
+    customColorValue: customColorValue ?? this.customColorValue,
+  );
+
+  String encode() => jsonEncode(<String, Object?>{
+    'mode': mode.name,
+    'color': customColorValue,
+  });
+
+  static ThemeColorPreference fromStorage(String? value) {
+    if (value == null || value.isEmpty) return defaultValue;
+    try {
+      final decoded = jsonDecode(value);
+      if (decoded is! Map) return defaultValue;
+      final rawColor = decoded['color'];
+      final color = rawColor is num ? rawColor.toInt() : null;
+      if (color == null || color < 0 || color > 0xFFFFFFFF) {
+        return defaultValue;
+      }
+      return ThemeColorPreference(
+        mode: ThemeColorMode.fromStorage(decoded['mode'] as String?),
+        // Theme seeds are always opaque. Preserve the RGB channels if an old or
+        // hand-edited value contains a transparent alpha.
+        customColorValue: color | 0xFF000000,
+      );
+    } on Object {
+      return defaultValue;
+    }
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is ThemeColorPreference &&
+      other.mode == mode &&
+      other.customColorValue == customColorValue;
+
+  @override
+  int get hashCode => Object.hash(mode, customColorValue);
 }
 
 /// 应用语言偏好：跟随系统或固定某一语言。设备本地偏好（存 KV），

@@ -42,9 +42,10 @@ void main() {
   });
 
   test('深色输入默认无白边，聚焦和错误保留语义边框', () {
-    final input = buildVeriFinTheme(Brightness.dark).inputDecorationTheme;
+    final theme = buildVeriFinTheme(Brightness.dark);
+    final input = theme.inputDecorationTheme;
     expect(input.enabledBorder!.borderSide.style, BorderStyle.none);
-    expect(input.focusedBorder!.borderSide.color, veriRoyal);
+    expect(input.focusedBorder!.borderSide.color, theme.colorScheme.primary);
     expect(input.errorBorder!.borderSide.color, veriExpense);
   });
 

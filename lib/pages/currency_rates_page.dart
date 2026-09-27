@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
 import '../app/currency_catalog.dart';
 import '../app/currency_math.dart';
@@ -79,9 +78,9 @@ class _CurrencyRatesPageState extends State<CurrencyRatesPage> {
               VeriCard(
                 child: Row(
                   children: <Widget>[
-                    const VeriIconBox(
+                    VeriIconBox(
                       icon: Icons.account_balance_wallet_outlined,
-                      color: veriRoyal,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                     const SizedBox(width: 12),
                     Expanded(

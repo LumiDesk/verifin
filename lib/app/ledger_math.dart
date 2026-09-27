@@ -68,7 +68,7 @@ Color colorForType(BuildContext context, EntryType type) {
     case EntryType.income:
       return veriSemantic(context, veriIncome);
     case EntryType.transfer:
-      return veriRoyal;
+      return Theme.of(context).colorScheme.primary;
     case EntryType.refund:
       // 退款是「钱回来」的正向流入，沿用收入的青绿色。
       return veriSemantic(context, veriIncome);

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../app/app_theme.dart';
 import '../app/image_sources.dart';
 import '../app/models.dart';
 
@@ -22,7 +21,7 @@ class ProfileAvatar extends StatelessWidget {
     }
     return CircleAvatar(
       radius: radius,
-      backgroundColor: veriRoyal,
+      backgroundColor: Theme.of(context).colorScheme.primary,
       child: Text(
         profile.nickname.isEmpty ? 'VF' : profile.nickname.characters.first,
         style: const TextStyle(
