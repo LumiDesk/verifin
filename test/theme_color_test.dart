@@ -39,4 +39,21 @@ void main() {
     expect(theme.colorScheme.primary, isNot(veriRoyal));
     expect(theme.colorScheme.onPrimary.a, 1);
   });
+
+  test('主题色编辑器预览使用 Material 实际主色而不是原始 seed', () {
+    const seed = Color(0xFFB3261E);
+    final theme = buildVeriFinTheme(
+      Brightness.light,
+      colorPreference: const ThemeColorPreference(
+        mode: ThemeColorMode.custom,
+        customColorValue: 0xFFB3261E,
+      ),
+    );
+
+    expect(
+      veriThemePrimaryForSeed(seed, Brightness.light),
+      theme.colorScheme.primary,
+    );
+    expect(theme.colorScheme.primary, isNot(seed));
+  });
 }

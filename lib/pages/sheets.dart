@@ -111,6 +111,9 @@ class _ThemeColorPickerSheetState extends State<_ThemeColorPickerSheet> {
 
   Color get _color => _hsv.toColor();
 
+  Color _effectivePrimary(BuildContext context) =>
+      veriThemePrimaryForSeed(_color, Theme.of(context).brightness);
+
   @override
   void initState() {
     super.initState();
@@ -145,6 +148,7 @@ class _ThemeColorPickerSheetState extends State<_ThemeColorPickerSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final effectivePrimary = _effectivePrimary(context);
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
@@ -162,21 +166,36 @@ class _ThemeColorPickerSheetState extends State<_ThemeColorPickerSheet> {
             Container(
               height: 72,
               decoration: BoxDecoration(
-                color: _color,
+                color: effectivePrimary,
                 borderRadius: BorderRadius.circular(veriRadiusLg),
                 border: Border.all(
                   color: Theme.of(context).colorScheme.outlineVariant,
                 ),
               ),
               alignment: Alignment.center,
-              child: Text(
-                _hexFor(_color),
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: _color.computeLuminance() > 0.48
-                      ? Colors.black
-                      : Colors.white,
-                  fontWeight: FontWeight.w800,
-                ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    l10n.themeColorEffectivePrimary,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: effectivePrimary.computeLuminance() > 0.48
+                          ? Colors.black
+                          : Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _hexFor(effectivePrimary),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: effectivePrimary.computeLuminance() > 0.48
+                          ? Colors.black
+                          : Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 14),
@@ -196,21 +215,21 @@ class _ThemeColorPickerSheetState extends State<_ThemeColorPickerSheet> {
               label: l10n.themeColorHue,
               value: _hsv.hue,
               max: 360,
-              activeColor: _color,
+              activeColor: effectivePrimary,
               onChanged: (value) => _setHsv(_hsv.withHue(value)),
             ),
             _ColorSliderRow(
               label: l10n.themeColorSaturation,
               value: _hsv.saturation,
               max: 1,
-              activeColor: _color,
+              activeColor: effectivePrimary,
               onChanged: (value) => _setHsv(_hsv.withSaturation(value)),
             ),
             _ColorSliderRow(
               label: l10n.themeColorBrightness,
               value: _hsv.value,
               max: 1,
-              activeColor: _color,
+              activeColor: effectivePrimary,
               onChanged: (value) => _setHsv(_hsv.withValue(value)),
             ),
             const SizedBox(height: 8),
