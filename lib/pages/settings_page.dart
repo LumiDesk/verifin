@@ -173,6 +173,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           ThemeColorMode.custom) ...<Widget>[
                         const Divider(height: 1),
                         SettingsRow(
+                          key: const ValueKey('settings_theme_color_custom'),
                           icon: Icons.palette_outlined,
                           title: AppLocalizations.of(context).themeColorCustom,
                           trailing: _themeColorHex,

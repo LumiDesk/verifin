@@ -132,6 +132,12 @@ void main() {
       ..setMonthlyBudget(DateTime(2026, 7), 2400)
       ..setCategoryBudget(DateTime(2026, 7), 'dining', 600)
       ..setThemePreference(ThemePreference.dark)
+      ..setThemeColorPreference(
+        const ThemeColorPreference(
+          mode: ThemeColorMode.custom,
+          customColorValue: 0xFFB3261E,
+        ),
+      )
       ..setHapticsEnabled(false)
       ..setDefaultAccountId('cash-test')
       ..setFabActionMode(FabActionMode.ai)
@@ -163,6 +169,8 @@ void main() {
     expect(target.monthlyBudget(DateTime(2026, 7)), 2400);
     expect(target.categoryBudget(DateTime(2026, 7), 'dining'), 600);
     expect(target.themePreference, ThemePreference.dark);
+    expect(target.themeColorPreference.mode, ThemeColorMode.custom);
+    expect(target.themeColorPreference.customColorValue, 0xFFB3261E);
     expect(target.hapticsEnabled, isFalse);
     // 设备偏好也随备份还原：默认账户、记一笔按钮行为、金额两位小数、自动识别开关、
     // 首页指标配置。
@@ -243,6 +251,10 @@ void main() {
       expect(data['exchangeRates'], hasLength(1));
       expect(data['currencyFractionStyle'], isNotNull);
       expect(data['moneyUnitStyle'], 'symbol');
+      expect(data['themeColor'], <String, Object?>{
+        'mode': 'system',
+        'color': 0xFF346EDB,
+      });
       expect(data['hideUnitInSingleCurrency'], isTrue);
 
       final target = await makeController();
