@@ -138,7 +138,9 @@ class TransactionTile extends StatelessWidget {
     );
 
     return Material(
-      color: selected ? veriRoyal.withValues(alpha: 0.08) : Colors.transparent,
+      color: selected
+          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.08)
+          : Colors.transparent,
       borderRadius: BorderRadius.circular(veriRadiusSm),
       child: InkWell(
         onTap: onTap,
@@ -156,7 +158,7 @@ class TransactionTile extends StatelessWidget {
                   selected ? Icons.check_circle : Icons.radio_button_unchecked,
                   size: 20,
                   color: selected
-                      ? veriRoyal
+                      ? Theme.of(context).colorScheme.primary
                       : Theme.of(
                           context,
                         ).colorScheme.onSurface.withValues(alpha: 0.3),
@@ -223,7 +225,7 @@ class TransactionTile extends StatelessWidget {
                             text: AppLocalizations.of(
                               context,
                             ).badgeReimbursable,
-                            color: veriRoyal,
+                            color: Theme.of(context).colorScheme.primary,
                           )
                         else if (entry.refundedAmount > 0)
                           _EntryBadge(
@@ -284,7 +286,9 @@ class TransactionTile extends StatelessWidget {
                                 softWrap: false,
                                 overflow: TextOverflow.ellipsis,
                                 style: subStyle?.copyWith(
-                                  color: veriRoyal.withValues(alpha: 0.7),
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.primary.withValues(alpha: 0.7),
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),

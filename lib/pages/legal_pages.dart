@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
 import '../app/legal_content.dart';
 import '../app/veri_fin_scope.dart';
@@ -160,7 +159,7 @@ class PrivacyConsentPage extends StatelessWidget {
                   child: FilledButton(
                     key: const Key('privacy_consent_accept'),
                     style: FilledButton.styleFrom(
-                      backgroundColor: veriRoyal,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     onPressed: () async {

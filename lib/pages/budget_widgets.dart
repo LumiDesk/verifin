@@ -64,6 +64,7 @@ class _DailyBudgetCard extends StatelessWidget {
       remaining,
       ratio,
       Theme.of(context).brightness,
+      Theme.of(context).colorScheme.primary,
     );
     return VeriCard(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -74,7 +75,7 @@ class _DailyBudgetCard extends StatelessWidget {
             children: <Widget>[
               VeriIconBox(
                 icon: Icons.today_outlined,
-                color: veriRoyal,
+                color: Theme.of(context).colorScheme.primary,
                 size: 30,
               ),
               const SizedBox(width: 10),
@@ -302,12 +303,16 @@ class _BudgetHistoryCard extends StatelessWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  const Icon(Icons.history, size: 15, color: veriRoyal),
+                  Icon(
+                    Icons.history,
+                    size: 15,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     '${AppLocalizations.of(context).monthNumber(previousMonth.month)} → ${AppLocalizations.of(context).monthNumber(currentMonth.month)}',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: veriRoyal,
+                      color: Theme.of(context).colorScheme.primary,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -361,7 +366,7 @@ class _BudgetHistoryCard extends StatelessWidget {
                     ? veriSemantic(context, veriExpense)
                     : currentUsage >= 0.85
                     ? veriSemantic(context, veriWarning)
-                    : veriRoyal,
+                    : Theme.of(context).colorScheme.primary,
               ),
             ),
           ),
@@ -668,7 +673,7 @@ class _CategoryBudgetRow extends StatelessWidget {
         ? veriSemantic(context, veriBlue)
         : snapshot.spent > snapshot.budget
         ? veriSemantic(context, veriExpense)
-        : veriRoyal;
+        : Theme.of(context).colorScheme.primary;
     final l10n = AppLocalizations.of(context);
     final subtitle = snapshot.budget <= 0
         ? l10n.catNoBudgetLine(formatAmount(snapshot.spent))
@@ -853,6 +858,7 @@ class _BudgetInsightCard extends StatelessWidget {
       remaining,
       ratio,
       Theme.of(context).brightness,
+      Theme.of(context).colorScheme.primary,
     );
     final (title, description, icon) = _budgetInsight(
       l10n: AppLocalizations.of(context),
@@ -924,7 +930,7 @@ class _MonthBudgetStatusChip extends StatelessWidget {
         ? (
             Icons.edit_calendar_outlined,
             l10n.budgetOverrideChip(scope),
-            veriRoyal,
+            theme.colorScheme.primary,
           )
         : defaultBudget > 0
         ? (
@@ -932,7 +938,11 @@ class _MonthBudgetStatusChip extends StatelessWidget {
             l10n.budgetInheritChip(formatAmount(defaultBudget)),
             theme.colorScheme.onSurface.withValues(alpha: 0.62),
           )
-        : (Icons.add_circle_outline, l10n.budgetSetChip(scope), veriRoyal);
+        : (
+            Icons.add_circle_outline,
+            l10n.budgetSetChip(scope),
+            theme.colorScheme.primary,
+          );
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -972,8 +982,9 @@ Color budgetProgressColor(
   double budget,
   double remaining,
   double ratio,
-  Brightness brightness,
-) {
+  Brightness brightness, [
+  Color accent = veriRoyal,
+]) {
   if (budget <= 0) {
     return veriLine;
   }
@@ -983,5 +994,5 @@ Color budgetProgressColor(
   if (ratio >= 0.85) {
     return veriSemanticFor(brightness, veriWarning);
   }
-  return veriRoyal;
+  return accent;
 }

@@ -230,14 +230,14 @@ class _OnboardingScaffold extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: <Color>[
-                  veriRoyal.withValues(alpha: 0.22),
-                  veriRoyal.withValues(alpha: 0.10),
+                  scheme.primary.withValues(alpha: 0.22),
+                  scheme.primary.withValues(alpha: 0.10),
                 ],
               ),
               borderRadius: BorderRadius.circular(veriRadiusXl),
-              border: Border.all(color: veriRoyal.withValues(alpha: 0.18)),
+              border: Border.all(color: scheme.primary.withValues(alpha: 0.18)),
             ),
-            child: Icon(icon, size: 38, color: veriRoyal),
+            child: Icon(icon, size: 38, color: scheme.primary),
           ),
           const SizedBox(height: 26),
           Text(
@@ -395,7 +395,9 @@ class _Dots extends StatelessWidget {
             width: i == index ? 22 : 7,
             height: 7,
             decoration: BoxDecoration(
-              color: i == index ? veriRoyal : inactive,
+              color: i == index
+                  ? Theme.of(context).colorScheme.primary
+                  : inactive,
               borderRadius: BorderRadius.circular(999),
             ),
           ),

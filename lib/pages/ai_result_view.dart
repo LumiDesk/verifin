@@ -103,7 +103,9 @@ class _StatCard extends StatelessWidget {
                       fontWeight: item.emphasize
                           ? FontWeight.w700
                           : FontWeight.w500,
-                      color: item.emphasize ? veriRoyal : null,
+                      color: item.emphasize
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
                     ),
                   ),
                 ],
@@ -230,7 +232,9 @@ class _TrendCard extends StatelessWidget {
           SizedBox(
             height: 172,
             child: InteractiveTrendChart(
-              color: display.isExpense ? veriRoyal : veriMint,
+              color: display.isExpense
+                  ? Theme.of(context).colorScheme.primary
+                  : veriMint,
               values: display.values,
               xLabels: display.labels,
               yLabels: _yLabels(context, display.values),

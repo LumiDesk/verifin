@@ -1219,13 +1219,19 @@ class _DataManagementPageState extends State<DataManagementPage> {
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: veriRoyal.withValues(alpha: 0.08),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(veriRadiusMd),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Icon(Icons.info_outline, size: 16, color: veriRoyal),
+                    Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(

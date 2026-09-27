@@ -1005,7 +1005,7 @@ class AccountReportPage extends StatelessWidget {
                       ),
                       color: balance < 0
                           ? veriSemantic(context, veriExpense)
-                          : veriRoyal,
+                          : Theme.of(context).colorScheme.primary,
                     ),
                     SummaryMetric(
                       label: AppLocalizations.of(context).entryTypeIncome,
@@ -1043,7 +1043,7 @@ class AccountReportPage extends StatelessWidget {
                     SizedBox(
                       height: 156,
                       child: InteractiveTrendChart(
-                        color: veriRoyal,
+                        color: Theme.of(context).colorScheme.primary,
                         values: reportBalanceValues,
                         xLabels: monthAxisLabels(DateTime.now()),
                         yLabels: balanceAxisLabels(
@@ -1134,7 +1134,9 @@ class _CreditCardDueBanner extends StatelessWidget {
     final due = nextDueDate(dueDay, now);
     final days = daysUntilDue(dueDay, now);
     final urgent = days <= 3;
-    final color = urgent ? veriSemantic(context, veriExpense) : veriRoyal;
+    final color = urgent
+        ? veriSemantic(context, veriExpense)
+        : Theme.of(context).colorScheme.primary;
     final l10n = AppLocalizations.of(context);
     final daysText = days == 0 ? l10n.dueToday : l10n.dueInDays(days);
     return Container(

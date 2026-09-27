@@ -772,7 +772,9 @@ class BudgetPanel extends StatelessWidget {
                             budget - expense,
                             ratio,
                             Theme.of(context).brightness,
+                            Theme.of(context).colorScheme.primary,
                           ),
+                          primary: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                     ),
@@ -859,10 +861,14 @@ class _CircleArrow extends StatelessWidget {
       width: 24,
       height: 24,
       decoration: BoxDecoration(
-        color: veriRoyal.withValues(alpha: 0.12),
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: const Icon(Icons.chevron_right, size: 17, color: veriRoyal),
+      child: Icon(
+        Icons.chevron_right,
+        size: 17,
+        color: Theme.of(context).colorScheme.primary,
+      ),
     );
   }
 }

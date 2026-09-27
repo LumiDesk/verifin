@@ -600,7 +600,7 @@ class _SendButton extends StatelessWidget {
     ).colorScheme.onSurface.withValues(alpha: 0.35);
     final active = enabled || streaming;
     return Material(
-      color: active ? veriRoyal : disabledBg,
+      color: active ? Theme.of(context).colorScheme.primary : disabledBg,
       shape: const CircleBorder(),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -646,7 +646,7 @@ class _MessageView extends StatelessWidget {
             maxWidth: MediaQuery.of(context).size.width * 0.8,
           ),
           decoration: BoxDecoration(
-            color: veriRoyal,
+            color: Theme.of(context).colorScheme.primary,
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(18),
               topRight: Radius.circular(18),

@@ -412,7 +412,7 @@ class _BudgetExecutionCard extends StatelessWidget {
         ? veriSemantic(context, veriExpense)
         : ratio >= 0.85
         ? veriSemantic(context, veriWarning)
-        : veriRoyal;
+        : Theme.of(context).colorScheme.primary;
 
     return VeriCard(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -607,6 +607,7 @@ class _CategoryRingChartState extends State<_CategoryRingChart> {
       AppLocalizations.of(context),
       widget.stats,
       Theme.of(context).brightness,
+      Theme.of(context).colorScheme.primary,
     );
     final ringSize = widget.ringSize;
     final mutedColor = Theme.of(
@@ -727,12 +728,13 @@ List<_CategoryRingSegment> _categoryRingSegments(
   AppLocalizations l10n,
   List<_CategoryStat> stats,
   Brightness brightness,
+  Color primary,
 ) {
   if (stats.isEmpty) {
     return const <_CategoryRingSegment>[];
   }
   final colors = <Color>[
-    veriRoyal,
+    primary,
     veriSemanticFor(brightness, veriBlue),
     veriCyan,
     veriMint,
@@ -995,7 +997,11 @@ class _TagStatTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: <Widget>[
-          VeriIconBox(icon: Icons.label, color: veriRoyal, size: 30),
+          VeriIconBox(
+            icon: Icons.label,
+            color: Theme.of(context).colorScheme.primary,
+            size: 30,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -1025,7 +1031,7 @@ class _TagStatTile extends StatelessWidget {
                   value: stat.percent.clamp(0, 1).toDouble(),
                   minHeight: 5,
                   borderRadius: BorderRadius.circular(999),
-                  color: veriRoyal,
+                  color: Theme.of(context).colorScheme.primary,
                   backgroundColor: Theme.of(
                     context,
                   ).colorScheme.surfaceContainerHighest,

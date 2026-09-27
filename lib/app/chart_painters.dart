@@ -363,6 +363,7 @@ class BarChartPainter extends CustomPainter {
     this.tooltip,
     this.textScaler = TextScaler.noScaling,
     required this.brightness,
+    this.primary = veriRoyal,
   });
 
   final List<double> values;
@@ -377,6 +378,7 @@ class BarChartPainter extends CustomPainter {
 
   /// 画布不经过 Theme,语义色需按当前明暗取实际值,必须由调用方显式传入。
   final Brightness brightness;
+  final Color primary;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -393,7 +395,7 @@ class BarChartPainter extends CustomPainter {
       ..strokeWidth = 1;
     final barPaint = Paint()
       ..shader = LinearGradient(
-        colors: <Color>[veriRoyal, veriSemanticFor(brightness, veriBlue)],
+        colors: <Color>[primary, veriSemanticFor(brightness, veriBlue)],
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
       ).createShader(Offset.zero & size);
@@ -471,7 +473,8 @@ class BarChartPainter extends CustomPainter {
         oldDelegate.selectedIndex != selectedIndex ||
         oldDelegate.tooltip != tooltip ||
         oldDelegate.textScaler != textScaler ||
-        oldDelegate.brightness != brightness;
+        oldDelegate.brightness != brightness ||
+        oldDelegate.primary != primary;
   }
 }
 
@@ -480,11 +483,13 @@ class BudgetRingPainter extends CustomPainter {
     required this.value,
     required this.trackColor,
     required this.progressColor,
+    this.primary = veriRoyal,
   });
 
   final double value;
   final Color trackColor;
   final Color progressColor;
+  final Color primary;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -505,7 +510,7 @@ class BudgetRingPainter extends CustomPainter {
     final progressPaint = Paint()
       ..shader = SweepGradient(
         transform: const GradientRotation(-math.pi / 2),
-        colors: <Color>[progressColor, veriRoyal, progressColor],
+        colors: <Color>[progressColor, primary, progressColor],
       ).createShader(rect)
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke
@@ -723,6 +728,7 @@ class _InteractiveBarChartState extends State<InteractiveBarChart> {
               tooltip: tooltip,
               textScaler: textScaler,
               brightness: Theme.of(context).brightness,
+              primary: Theme.of(context).colorScheme.primary,
             ),
             child: const SizedBox.expand(),
           ),

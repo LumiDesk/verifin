@@ -177,7 +177,11 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
                                       remaining,
                                       ratio,
                                       Theme.of(context).brightness,
+                                      Theme.of(context).colorScheme.primary,
                                     ),
+                                    primary: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
                                   ),
                                 ),
                               ),
@@ -209,6 +213,9 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
                                             remaining,
                                             ratio,
                                             Theme.of(context).brightness,
+                                            Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
                                           ),
                                         ),
                                   ),
@@ -330,7 +337,7 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
                               ).budgetDailyRemaining,
                               value: formatAmount(dailyAvailable),
                               icon: Icons.today_outlined,
-                              color: veriRoyal,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                             _BudgetMetricTile(
                               label: AppLocalizations.of(

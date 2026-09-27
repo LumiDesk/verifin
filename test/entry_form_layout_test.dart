@@ -46,13 +46,17 @@ void main() {
       saveButton.style!.backgroundColor!.resolve(<WidgetState>{
         WidgetState.disabled,
       }),
-      veriRoyal.withValues(alpha: 0.38),
+      Theme.of(
+        tester.element(find.byKey(const Key('save_entry_button'))),
+      ).colorScheme.primary.withValues(alpha: 0.38),
     );
     expect(
       saveButton.style!.foregroundColor!.resolve(<WidgetState>{
         WidgetState.disabled,
       }),
-      Colors.white.withValues(alpha: 0.78),
+      Theme.of(
+        tester.element(find.byKey(const Key('save_entry_button'))),
+      ).colorScheme.onPrimary.withValues(alpha: 0.78),
     );
     expect(
       tester

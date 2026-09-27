@@ -289,7 +289,9 @@ class _TagManageRow extends StatelessWidget {
               Icon(
                 Icons.label,
                 size: 22,
-                color: veriRoyal.withValues(alpha: 0.75),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.75),
               ),
               const SizedBox(width: 12),
               Expanded(

@@ -416,7 +416,7 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
               label: category.label,
               leading: CategoryIconBox(
                 iconCode: category.iconCode,
-                color: veriRoyal,
+                color: Theme.of(context).colorScheme.primary,
                 size: 26,
               ),
               selected: _categoryMapTo[provisional.id] == category.id,
@@ -467,7 +467,10 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
             _DecisionOption(
               id: tag.id,
               label: tag.label,
-              leading: const Icon(Icons.sell_outlined, color: veriRoyal),
+              leading: Icon(
+                Icons.sell_outlined,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               selected: _tagMapTo[provisional.id] == tag.id,
             ),
         ],
@@ -1054,7 +1057,10 @@ class _DecisionSheet extends StatelessWidget {
               leading: const Icon(Icons.add_circle_outline),
               title: Text(keepNewLabel),
               trailing: keepNewSelected
-                  ? const Icon(Icons.check, color: veriRoyal)
+                  ? Icon(
+                      Icons.check,
+                      color: Theme.of(context).colorScheme.primary,
+                    )
                   : null,
               onTap: () => Navigator.of(context).pop(keepNewValue),
             ),
@@ -1075,7 +1081,10 @@ class _DecisionSheet extends StatelessWidget {
                   leading: option.leading,
                   title: Text(option.label),
                   trailing: option.selected
-                      ? const Icon(Icons.check, color: veriRoyal)
+                      ? Icon(
+                          Icons.check,
+                          color: Theme.of(context).colorScheme.primary,
+                        )
                       : null,
                   onTap: () => Navigator.of(context).pop(option.id),
                 ),

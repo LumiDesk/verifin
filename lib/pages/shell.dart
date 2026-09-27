@@ -312,7 +312,7 @@ class _VeriFinShellState extends State<VeriFinShell> {
                           message: l10n.quickEntry,
                           child: Material(
                             key: const Key('quick_entry_fab'),
-                            color: veriRoyal,
+                            color: Theme.of(context).colorScheme.primary,
                             elevation: 6,
                             shadowColor: Colors.black.withValues(alpha: 0.3),
                             shape: RoundedRectangleBorder(
@@ -324,10 +324,10 @@ class _VeriFinShellState extends State<VeriFinShell> {
                               onTap: () => _startQuickEntry(context),
                               onLongPress: () =>
                                   _startQuickEntry(context, longPress: true),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.add_rounded,
                                 size: 28,
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.onPrimary,
                               ),
                             ),
                           ),

@@ -419,11 +419,21 @@ class EmptyState extends StatelessWidget {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: veriRoyal.withValues(alpha: 0.12),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(veriRadiusMd),
-                  border: Border.all(color: veriRoyal.withValues(alpha: 0.10)),
+                  border: Border.all(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.10),
+                  ),
                 ),
-                child: Icon(icon, size: 24, color: veriRoyal),
+                child: Icon(
+                  icon,
+                  size: 24,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ),
               const SizedBox(height: 10),
               Text(

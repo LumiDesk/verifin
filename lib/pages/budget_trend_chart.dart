@@ -52,7 +52,7 @@ class _BudgetTrendCardState extends State<_BudgetTrendCard> {
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     _ChartLegendDot(
-                      color: veriRoyal,
+                      color: Theme.of(context).colorScheme.primary,
                       label: AppLocalizations.of(context).budgetLegend,
                     ),
                     const SizedBox(width: 8),
@@ -125,6 +125,7 @@ class _BudgetTrendCardState extends State<_BudgetTrendCard> {
                             ? null
                             : _tooltipFor(months[_selectedIndex!]),
                         brightness: Theme.of(context).brightness,
+                        primary: Theme.of(context).colorScheme.primary,
                       ),
                       child: const SizedBox.expand(),
                     ),
@@ -145,7 +146,7 @@ class _BudgetTrendCardState extends State<_BudgetTrendCard> {
           text: AppLocalizations.of(
             context,
           ).budgetTotalLabel(formatAmount(snapshot.budget)),
-          color: veriRoyal,
+          color: Theme.of(context).colorScheme.primary,
         ),
         ChartTooltipLine(
           text: AppLocalizations.of(
@@ -198,6 +199,7 @@ class _BudgetTrendPainter extends CustomPainter {
     this.selectedIndex,
     this.tooltip,
     required this.brightness,
+    required this.primary,
   });
 
   final List<BudgetMonthSnapshot> months;
@@ -211,6 +213,7 @@ class _BudgetTrendPainter extends CustomPainter {
 
   /// 画布不经过 Theme,语义色需按当前明暗取实际值,必须由调用方显式传入。
   final Brightness brightness;
+  final Color primary;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -250,11 +253,11 @@ class _BudgetTrendPainter extends CustomPainter {
         end: Alignment.bottomCenter,
       ).createShader(chartRect);
     final linePaint = Paint()
-      ..color = veriRoyal
+      ..color = primary
       ..strokeWidth = 2.2
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
-    final pointPaint = Paint()..color = veriRoyal;
+    final pointPaint = Paint()..color = primary;
     final path = Path();
 
     for (var i = 0; i < months.length; i += 1) {
@@ -369,6 +372,7 @@ class _BudgetTrendPainter extends CustomPainter {
         oldDelegate.yLabels != yLabels ||
         oldDelegate.selectedIndex != selectedIndex ||
         oldDelegate.tooltip != tooltip ||
-        oldDelegate.brightness != brightness;
+        oldDelegate.brightness != brightness ||
+        oldDelegate.primary != primary;
   }
 }

@@ -370,7 +370,9 @@ Future<T?> showOptionSheet<T>({
             padding: const EdgeInsets.only(bottom: 6),
             child: Material(
               color: showSelectedMarker && value == selected
-                  ? veriRoyal.withValues(alpha: 0.12)
+                  ? Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.12)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(veriRadiusSm),
               child: ListTile(
@@ -389,7 +391,11 @@ Future<T?> showOptionSheet<T>({
                   ),
                 ),
                 trailing: showSelectedMarker && value == selected
-                    ? const Icon(Icons.check, color: veriRoyal, size: 18)
+                    ? Icon(
+                        Icons.check,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 18,
+                      )
                     : null,
                 onTap: () => Navigator.of(context).pop(value),
               ),
@@ -587,9 +593,11 @@ class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
                               ),
                             ),
                             trailing: selected
-                                ? const Icon(
+                                ? Icon(
                                     Icons.check_circle,
-                                    color: veriRoyal,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
                                   )
                                 : null,
                             onTap: () => Navigator.of(context).pop(currency),
@@ -1147,7 +1155,9 @@ class _AccountPickerRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? veriRoyal.withValues(alpha: 0.12) : Colors.transparent,
+      color: selected
+          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
+          : Colors.transparent,
       borderRadius: BorderRadius.circular(veriRadiusSm),
       child: ListTile(
         minTileHeight: 48,
@@ -1192,7 +1202,11 @@ class _AccountPickerRow extends StatelessWidget {
             ),
             if (selected) ...<Widget>[
               const SizedBox(width: 6),
-              const Icon(Icons.check, color: veriRoyal, size: 18),
+              Icon(
+                Icons.check,
+                color: Theme.of(context).colorScheme.primary,
+                size: 18,
+              ),
             ],
           ],
         ),
@@ -1217,7 +1231,9 @@ class _NoneAccountRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? veriRoyal.withValues(alpha: 0.12) : Colors.transparent,
+      color: selected
+          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
+          : Colors.transparent,
       borderRadius: BorderRadius.circular(veriRadiusSm),
       child: ListTile(
         minTileHeight: 48,
@@ -1248,7 +1264,11 @@ class _NoneAccountRow extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall,
               ),
         trailing: selected
-            ? const Icon(Icons.check, color: veriRoyal, size: 18)
+            ? Icon(
+                Icons.check,
+                color: Theme.of(context).colorScheme.primary,
+                size: 18,
+              )
             : null,
         onTap: () => Navigator.of(context).pop(
           const Account(
@@ -1279,7 +1299,9 @@ class _AllAccountsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? veriRoyal.withValues(alpha: 0.12) : Colors.transparent,
+      color: selected
+          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
+          : Colors.transparent,
       borderRadius: BorderRadius.circular(veriRadiusSm),
       child: ListTile(
         minTileHeight: 48,
@@ -1302,7 +1324,11 @@ class _AllAccountsRow extends StatelessWidget {
           ),
         ),
         trailing: selected
-            ? const Icon(Icons.check, color: veriRoyal, size: 18)
+            ? Icon(
+                Icons.check,
+                color: Theme.of(context).colorScheme.primary,
+                size: 18,
+              )
             : null,
         onTap: () => Navigator.of(context).pop(_accountPickerAllSentinel),
       ),
@@ -1568,7 +1594,7 @@ class _IconChoiceCell extends StatelessWidget {
           borderRadius: BorderRadius.circular(veriRadiusMd),
           border: Border.all(
             color: selected
-                ? veriRoyal
+                ? Theme.of(context).colorScheme.primary
                 : Theme.of(
                     context,
                   ).colorScheme.onSurface.withValues(alpha: 0.10),

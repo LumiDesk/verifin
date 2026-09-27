@@ -109,7 +109,7 @@ class _LedgerBookRow extends StatelessWidget {
               VeriIconBox(
                 icon: book.isDefault ? Icons.book : Icons.book_outlined,
                 color: selected
-                    ? veriRoyal
+                    ? Theme.of(context).colorScheme.primary
                     : Theme.of(context).colorScheme.onSurface,
               ),
               const SizedBox(width: 10),
@@ -141,7 +141,11 @@ class _LedgerBookRow extends StatelessWidget {
                 ),
               ),
               if (selected)
-                const Icon(Icons.check_circle, color: veriRoyal, size: 18),
+                Icon(
+                  Icons.check_circle,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 18,
+                ),
               VeriAnchoredMenuButton(
                 icon: Icons.more_vert,
                 tooltip: l10n.bookActions,

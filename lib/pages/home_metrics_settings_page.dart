@@ -111,7 +111,10 @@ class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
                         dense: true,
                         title: Text(homeMetricLabel(l10n, metric)),
                         trailing: metric == current
-                            ? const Icon(Icons.check, color: veriRoyal)
+                            ? Icon(
+                                Icons.check,
+                                color: Theme.of(context).colorScheme.primary,
+                              )
                             : null,
                         onTap: () => Navigator.of(context).pop(metric),
                       ),
@@ -341,7 +344,7 @@ class _SlotField extends StatelessWidget {
                 Text(
                   value,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: veriRoyal,
+                    color: Theme.of(context).colorScheme.primary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),

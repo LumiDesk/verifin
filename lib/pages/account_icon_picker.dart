@@ -102,7 +102,9 @@ class _AccountIconPickerBodyState extends State<_AccountIconPickerBody> {
               selected: _groupKey == item.$2,
               showCheckmark: false,
               materialTapTargetSize: MaterialTapTargetSize.padded,
-              selectedColor: veriRoyal.withValues(alpha: 0.14),
+              selectedColor: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.14),
               onSelected: (_) => setState(() => _groupKey = item.$2),
             ),
             if (item.$1 < keys.length - 1) const SizedBox(width: 8),
@@ -133,7 +135,7 @@ class _AccountIconPickerBodyState extends State<_AccountIconPickerBody> {
           label: choice.label,
           child: Material(
             color: selected
-                ? veriRoyal.withValues(alpha: 0.10)
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.10)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(veriRadiusMd),
             child: InkWell(
@@ -146,7 +148,7 @@ class _AccountIconPickerBodyState extends State<_AccountIconPickerBody> {
                   borderRadius: BorderRadius.circular(veriRadiusMd),
                   border: Border.all(
                     color: selected
-                        ? veriRoyal
+                        ? Theme.of(context).colorScheme.primary
                         : Theme.of(
                             context,
                           ).colorScheme.onSurface.withValues(alpha: 0.10),
@@ -179,13 +181,13 @@ class _AccountIconPickerBodyState extends State<_AccountIconPickerBody> {
                       ),
                     ),
                     if (selected)
-                      const Positioned(
+                      Positioned(
                         top: 0,
                         right: 0,
                         child: Icon(
                           Icons.check_circle,
                           size: 15,
-                          color: veriRoyal,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                   ],
@@ -254,7 +256,11 @@ class _AccountIconPickerBodyState extends State<_AccountIconPickerBody> {
           ),
           subtitle: Text(choice.groupLabel),
           trailing: selected
-              ? const Icon(Icons.check_circle, color: veriRoyal, size: 18)
+              ? Icon(
+                  Icons.check_circle,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 18,
+                )
               : null,
           onTap: () => Navigator.of(context).pop(choice.code),
         );

@@ -495,14 +495,18 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                         day == now.day &&
                             _visibleMonth.year == now.year &&
                             _visibleMonth.month == now.month
-                        ? veriRoyal.withValues(alpha: 0.12)
+                        ? Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.12)
                         : Colors.transparent,
                     border: Border.all(
                       color:
                           day == now.day &&
                               _visibleMonth.year == now.year &&
                               _visibleMonth.month == now.month
-                          ? veriRoyal.withValues(alpha: 0.16)
+                          ? Theme.of(
+                              context,
+                            ).colorScheme.primary.withValues(alpha: 0.16)
                           : Colors.transparent,
                     ),
                     borderRadius: BorderRadius.circular(veriRadiusSm),
@@ -519,7 +523,7 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                                     day == now.day &&
                                         _visibleMonth.year == now.year &&
                                         _visibleMonth.month == now.month
-                                    ? veriRoyal
+                                    ? Theme.of(context).colorScheme.primary
                                     : null,
                                 fontWeight: FontWeight.w700,
                               ),

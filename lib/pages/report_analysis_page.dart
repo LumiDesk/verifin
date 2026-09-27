@@ -339,7 +339,7 @@ class _SummaryCard extends StatelessWidget {
                   label: AppLocalizations.of(context).netLabel,
                   value: formatSignedAmount(summary.net),
                   color: summary.net >= 0
-                      ? veriRoyal
+                      ? Theme.of(context).colorScheme.primary
                       : veriSemantic(context, veriExpense),
                 ),
               ),

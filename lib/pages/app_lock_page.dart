@@ -118,9 +118,13 @@ class _PinDot extends StatelessWidget {
       height: 14,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: filled ? veriRoyal : Colors.transparent,
+        color: filled
+            ? Theme.of(context).colorScheme.primary
+            : Colors.transparent,
         border: Border.all(
-          color: filled ? veriRoyal : base.withValues(alpha: 0.32),
+          color: filled
+              ? Theme.of(context).colorScheme.primary
+              : base.withValues(alpha: 0.32),
           width: 1.6,
         ),
       ),
@@ -320,7 +324,7 @@ class _PatternInputViewState extends State<PatternInputView> {
               painter: _PatternPainter(
                 selected: _selected,
                 pointer: _pointer,
-                accent: veriRoyal,
+                accent: Theme.of(context).colorScheme.primary,
                 dotColor: dotColor,
               ),
             ),
@@ -543,7 +547,11 @@ class _AppLockScreenState extends State<AppLockScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                const Icon(Icons.lock_outline, size: 40, color: veriRoyal),
+                Icon(
+                  Icons.lock_outline,
+                  size: 40,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 const SizedBox(height: 12),
                 Text(
                   AppLocalizations.of(context).enterPassword,

@@ -24,7 +24,7 @@ class SettingsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final iconColor = contentColor ?? veriRoyal;
+    final iconColor = contentColor ?? Theme.of(context).colorScheme.primary;
     final content = Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -330,14 +330,18 @@ class EntryTagField extends StatelessWidget {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: veriRoyal.withValues(alpha: 0.12),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.primary.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
                                 label,
                                 style: Theme.of(context).textTheme.labelMedium
                                     ?.copyWith(
-                                      color: veriRoyal,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
                                       fontWeight: FontWeight.w700,
                                     ),
                               ),
