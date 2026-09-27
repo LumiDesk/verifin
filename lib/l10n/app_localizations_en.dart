@@ -2513,6 +2513,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeMode => 'Theme';
 
   @override
+  String get themeColorLabel => 'Theme color';
+
+  @override
+  String get themeColorSystem => 'System dynamic color';
+
+  @override
+  String get themeColorCustom => 'Custom color';
+
+  @override
+  String get themeColorPickerTitle => 'Adjust theme color';
+
+  @override
+  String get themeColorHex => 'HEX color';
+
+  @override
+  String get themeColorHue => 'Hue';
+
+  @override
+  String get themeColorSaturation => 'Saturation';
+
+  @override
+  String get themeColorBrightness => 'Brightness';
+
+  @override
   String get hapticsLabel => 'Haptic feedback';
 
   @override

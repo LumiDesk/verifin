@@ -59,6 +59,7 @@ const Set<String> _knownBackupDataKeys = <String>{
 // 应用锁 `verifin.app_lock.v1` 的哈希格式在 app_lock.dart、键仍在下表。
 // 新增偏好键一律加进本表，并确认「初始化清除/备份豁免」清单是否需要覆盖它。
 const String _themeKey = 'verifin.theme.v1';
+const String _themeColorKey = 'verifin.theme_color.v1';
 const String _localeKey = 'verifin.locale.v1';
 const String _profileKey = 'verifin.profile.v1';
 const String _activeBookKey = 'verifin.active_book.v1';
@@ -128,6 +129,9 @@ class VeriFinController extends ChangeNotifier
     themePreferenceListenable = ValueNotifier<ThemePreference>(
       _themePreference,
     );
+    themeColorPreferenceListenable = ValueNotifier<ThemeColorPreference>(
+      _themeColorPreference,
+    );
     localePreferenceListenable = ValueNotifier<LocalePreference>(
       _localePreference,
     );
@@ -170,6 +174,7 @@ class VeriFinController extends ChangeNotifier
   @override
   void dispose() {
     themePreferenceListenable.dispose();
+    themeColorPreferenceListenable.dispose();
     localePreferenceListenable.dispose();
     aiCapabilityListenable.dispose();
     super.dispose();

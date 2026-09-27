@@ -4526,6 +4526,54 @@ abstract class AppLocalizations {
   /// **'主题模式'**
   String get themeMode;
 
+  /// No description provided for @themeColorLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'主题色'**
+  String get themeColorLabel;
+
+  /// No description provided for @themeColorSystem.
+  ///
+  /// In zh, this message translates to:
+  /// **'跟随系统动态色'**
+  String get themeColorSystem;
+
+  /// No description provided for @themeColorCustom.
+  ///
+  /// In zh, this message translates to:
+  /// **'自定义颜色'**
+  String get themeColorCustom;
+
+  /// No description provided for @themeColorPickerTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整主题色'**
+  String get themeColorPickerTitle;
+
+  /// No description provided for @themeColorHex.
+  ///
+  /// In zh, this message translates to:
+  /// **'HEX 颜色'**
+  String get themeColorHex;
+
+  /// No description provided for @themeColorHue.
+  ///
+  /// In zh, this message translates to:
+  /// **'色相'**
+  String get themeColorHue;
+
+  /// No description provided for @themeColorSaturation.
+  ///
+  /// In zh, this message translates to:
+  /// **'饱和度'**
+  String get themeColorSaturation;
+
+  /// No description provided for @themeColorBrightness.
+  ///
+  /// In zh, this message translates to:
+  /// **'明度'**
+  String get themeColorBrightness;
+
   /// No description provided for @hapticsLabel.
   ///
   /// In zh, this message translates to:

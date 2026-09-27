@@ -30,6 +30,8 @@ class _SettingsPageState extends State<SettingsPage> {
   final EditorExitController _exitController = EditorExitController();
   late ThemePreference _initialTheme;
   late ThemePreference _theme;
+  late ThemeColorPreference _initialThemeColor;
+  late ThemeColorPreference _themeColor;
   late LocalePreference _initialLocale;
   late LocalePreference _locale;
   late bool _initialHaptics;
@@ -60,6 +62,7 @@ class _SettingsPageState extends State<SettingsPage> {
     }
     final controller = VeriFinScope.of(context);
     _initialTheme = _theme = controller.themePreference;
+    _initialThemeColor = _themeColor = controller.themeColorPreference;
     _initialLocale = _locale = controller.localePreference;
     _initialHaptics = _haptics = controller.hapticsEnabled;
     _initialTwoDecimals = _twoDecimals = controller.amountForceTwoDecimals;
@@ -128,6 +131,56 @@ class _SettingsPageState extends State<SettingsPage> {
                           onTap: openMenu,
                         ),
                       ),
+                      const Divider(height: 1),
+                      VeriAnchoredChoice<ThemeColorMode>(
+                        values: ThemeColorMode.values,
+                        selected: _themeColor.mode,
+                        idOf: (value) => 'settings_theme_color_${value.name}',
+                        labelOf: (value) => switch (value) {
+                          ThemeColorMode.system => AppLocalizations.of(
+                            context,
+                          ).themeColorSystem,
+                          ThemeColorMode.custom => AppLocalizations.of(
+                            context,
+                          ).themeColorCustom,
+                        },
+                        iconOf: (value) => switch (value) {
+                          ThemeColorMode.system => Icons.auto_awesome,
+                          ThemeColorMode.custom => Icons.palette_outlined,
+                        },
+                        onSelected: (value) => setState(
+                          () => _themeColor = _themeColor.copyWith(mode: value),
+                        ),
+                        semanticLabel: AppLocalizations.of(
+                          context,
+                        ).themeColorLabel,
+                        builder: (context, openMenu, menuOpen) => SettingsRow(
+                          icon: Icons.color_lens_outlined,
+                          title: AppLocalizations.of(context).themeColorLabel,
+                          trailing: switch (_themeColor.mode) {
+                            ThemeColorMode.system => AppLocalizations.of(
+                              context,
+                            ).themeColorSystem,
+                            ThemeColorMode.custom => AppLocalizations.of(
+                              context,
+                            ).themeColorCustom,
+                          },
+                          trailingIcon: Icons.chevron_right,
+                          onTap: openMenu,
+                        ),
+                      ),
+                      if (_themeColor.mode ==
+                          ThemeColorMode.custom) ...<Widget>[
+                        const Divider(height: 1),
+                        SettingsRow(
+                          icon: Icons.palette_outlined,
+                          title: AppLocalizations.of(context).themeColorCustom,
+                          trailing: _themeColorHex,
+                          trailingIcon: Icons.chevron_right,
+                          onTap: _editThemeColor,
+                          contentColor: Theme.of(context).colorScheme.primary,
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -466,6 +519,34 @@ class _SettingsPageState extends State<SettingsPage> {
         MoneyUnitStyle.code => l10n.moneyUnitStyleCode,
       };
 
+  String get _themeColorHex {
+    final color = Color(_themeColor.customColorValue);
+    return '#${_colorByte(color.r).toRadixString(16).padLeft(2, '0')}'
+            '${_colorByte(color.g).toRadixString(16).padLeft(2, '0')}'
+            '${_colorByte(color.b).toRadixString(16).padLeft(2, '0')}'
+        .toUpperCase();
+  }
+
+  Future<void> _editThemeColor() async {
+    final picked = await showThemeColorPickerSheet(
+      context: context,
+      initialColor: Color(_themeColor.customColorValue),
+    );
+    if (!mounted || picked == null) return;
+    setState(
+      () => _themeColor = _themeColor.copyWith(
+        mode: ThemeColorMode.custom,
+        customColorValue:
+            (_colorByte(picked.a) << 24) |
+            (_colorByte(picked.r) << 16) |
+            (_colorByte(picked.g) << 8) |
+            _colorByte(picked.b),
+      ),
+    );
+  }
+
+  int _colorByte(double channel) => (channel * 255).round().clamp(0, 255);
+
   String _defaultAccountTrailing(
     BuildContext context,
     VeriFinController controller,
@@ -529,6 +610,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   bool get _isDirty =>
       _theme != _initialTheme ||
+      _themeColor != _initialThemeColor ||
       _locale != _initialLocale ||
       _haptics != _initialHaptics ||
       _twoDecimals != _initialTwoDecimals ||
@@ -544,6 +626,7 @@ class _SettingsPageState extends State<SettingsPage> {
     if (await _save() && mounted) {
       setState(() {
         _initialTheme = _theme;
+        _initialThemeColor = _themeColor;
         _initialLocale = _locale;
         _initialHaptics = _haptics;
         _initialTwoDecimals = _twoDecimals;
@@ -562,6 +645,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<bool> _save() {
     return VeriFinScope.of(context).saveAppPreferencesDraft(
       themePreference: _theme,
+      themeColorPreference: _themeColor,
       localePreference: _locale,
       hapticsEnabled: _haptics,
       amountForceTwoDecimals: _twoDecimals,

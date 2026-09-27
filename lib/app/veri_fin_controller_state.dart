@@ -102,6 +102,8 @@ mixin _ControllerState on ChangeNotifier {
 
   late final ValueNotifier<ThemePreference> themePreferenceListenable;
 
+  late final ValueNotifier<ThemeColorPreference> themeColorPreferenceListenable;
+
   /// 语言偏好通知器：驱动 `MaterialApp.locale` 即时切换。
   late final ValueNotifier<LocalePreference> localePreferenceListenable;
 
@@ -109,6 +111,8 @@ mixin _ControllerState on ChangeNotifier {
   late final ValueNotifier<AiCapabilityProfile?> aiCapabilityListenable;
 
   ThemePreference _themePreference = ThemePreference.system;
+  ThemeColorPreference _themeColorPreference =
+      ThemeColorPreference.defaultValue;
   LocalePreference _localePreference = LocalePreference.system;
   UserProfile _profile = defaultUserProfile;
   String _activeBookId = defaultLedgerBookId;
@@ -196,6 +200,9 @@ mixin _ControllerState on ChangeNotifier {
 
   void _loadPreferences() {
     _themePreference = ThemePreference.fromStorage(_store.read(_themeKey));
+    _themeColorPreference = ThemeColorPreference.fromStorage(
+      _store.read(_themeColorKey),
+    );
     _localePreference = LocalePreference.fromStorage(_store.read(_localeKey));
     _loadProfile();
     _activeBookId = _store.read(_activeBookKey) ?? defaultLedgerBookId;
