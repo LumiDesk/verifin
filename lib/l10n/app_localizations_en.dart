@@ -2525,6 +2525,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeColorPickerTitle => 'Adjust theme color';
 
   @override
+  String get themeColorEffectivePrimary => 'Effective theme color';
+
+  @override
   String get themeColorHex => 'HEX color';
 
   @override

@@ -895,6 +895,7 @@
   "themeColorSystem": "System dynamic color",
   "themeColorCustom": "Custom color",
   "themeColorPickerTitle": "Adjust theme color",
+  "themeColorEffectivePrimary": "Effective theme color",
   "themeColorHex": "HEX color",
   "themeColorHue": "Hue",
   "themeColorSaturation": "Saturation",

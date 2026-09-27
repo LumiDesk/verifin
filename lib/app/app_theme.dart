@@ -81,6 +81,11 @@ const double veriRadiusXl = 24;
 const double veriHeaderHeight = veriUnifiedDesignPreview ? 56 : 52;
 const double veriPageMaxWidth = 440;
 
+/// Material 3 actual primary generated from a user seed. The seed and the
+/// rendered primary are intentionally different values for some hues/tones.
+Color veriThemePrimaryForSeed(Color seedColor, Brightness brightness) =>
+    ColorScheme.fromSeed(seedColor: seedColor, brightness: brightness).primary;
+
 ThemeData buildVeriFinTheme(
   Brightness brightness, {
   ThemeColorPreference colorPreference = ThemeColorPreference.defaultValue,

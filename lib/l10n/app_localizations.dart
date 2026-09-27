@@ -4550,6 +4550,12 @@ abstract class AppLocalizations {
   /// **'调整主题色'**
   String get themeColorPickerTitle;
 
+  /// No description provided for @themeColorEffectivePrimary.
+  ///
+  /// In zh, this message translates to:
+  /// **'实际主题色'**
+  String get themeColorEffectivePrimary;
+
   /// No description provided for @themeColorHex.
   ///
   /// In zh, this message translates to:

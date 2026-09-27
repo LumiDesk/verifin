@@ -1666,6 +1666,7 @@
   "themeColorSystem": "跟随系统动态色",
   "themeColorCustom": "自定义颜色",
   "themeColorPickerTitle": "调整主题色",
+  "themeColorEffectivePrimary": "实际主题色",
   "themeColorHex": "HEX 颜色",
   "themeColorHue": "色相",
   "themeColorSaturation": "饱和度",
