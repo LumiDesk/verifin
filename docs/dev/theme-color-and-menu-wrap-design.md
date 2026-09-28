@@ -92,7 +92,7 @@ Text(
 新增一个明确的偏好模型，建议放入 [`lib/app/models/preferences.dart`](../../lib/app/models/preferences.dart)：
 
 ```dart
-enum ThemeColorMode { system, custom }
+enum ThemeColorMode { defaultColor, system, custom }
 
 class ThemeColorPreference {
   const ThemeColorPreference({

@@ -137,6 +137,9 @@ class _SettingsPageState extends State<SettingsPage> {
                         selected: _themeColor.mode,
                         idOf: (value) => 'settings_theme_color_${value.name}',
                         labelOf: (value) => switch (value) {
+                          ThemeColorMode.defaultColor => AppLocalizations.of(
+                            context,
+                          ).themeColorDefault,
                           ThemeColorMode.system => AppLocalizations.of(
                             context,
                           ).themeColorSystem,
@@ -145,6 +148,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           ).themeColorCustom,
                         },
                         iconOf: (value) => switch (value) {
+                          ThemeColorMode.defaultColor => Icons.color_lens,
                           ThemeColorMode.system => Icons.auto_awesome,
                           ThemeColorMode.custom => Icons.palette_outlined,
                         },
@@ -158,6 +162,9 @@ class _SettingsPageState extends State<SettingsPage> {
                           icon: Icons.color_lens_outlined,
                           title: AppLocalizations.of(context).themeColorLabel,
                           trailing: switch (_themeColor.mode) {
+                            ThemeColorMode.defaultColor => AppLocalizations.of(
+                              context,
+                            ).themeColorDefault,
                             ThemeColorMode.system => AppLocalizations.of(
                               context,
                             ).themeColorSystem,

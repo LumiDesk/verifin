@@ -4532,6 +4532,12 @@ abstract class AppLocalizations {
   /// **'主题色'**
   String get themeColorLabel;
 
+  /// No description provided for @themeColorDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'默认主题色'**
+  String get themeColorDefault;
+
   /// No description provided for @themeColorSystem.
   ///
   /// In zh, this message translates to:
@@ -4553,7 +4559,7 @@ abstract class AppLocalizations {
   /// No description provided for @themeColorEffectivePrimary.
   ///
   /// In zh, this message translates to:
-  /// **'实际主题色'**
+  /// **'所选主题色'**
   String get themeColorEffectivePrimary;
 
   /// No description provided for @themeColorHex.

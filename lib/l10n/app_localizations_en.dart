@@ -2516,6 +2516,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeColorLabel => 'Theme color';
 
   @override
+  String get themeColorDefault => 'Default theme color';
+
+  @override
   String get themeColorSystem => 'System dynamic color';
 
   @override
@@ -2525,7 +2528,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeColorPickerTitle => 'Adjust theme color';
 
   @override
-  String get themeColorEffectivePrimary => 'Effective theme color';
+  String get themeColorEffectivePrimary => 'Selected theme color';
 
   @override
   String get themeColorHex => 'HEX color';
