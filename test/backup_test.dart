@@ -252,7 +252,7 @@ void main() {
       expect(data['currencyFractionStyle'], isNotNull);
       expect(data['moneyUnitStyle'], 'symbol');
       expect(data['themeColor'], <String, Object?>{
-        'mode': 'system',
+        'mode': 'defaultColor',
         'color': 0xFF346EDB,
       });
       expect(data['hideUnitInSingleCurrency'], isTrue);

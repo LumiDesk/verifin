@@ -2467,6 +2467,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeColorLabel => '主题色';
 
   @override
+  String get themeColorDefault => '默认主题色';
+
+  @override
   String get themeColorSystem => '跟随系统动态色';
 
   @override
@@ -2476,7 +2479,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeColorPickerTitle => '调整主题色';
 
   @override
-  String get themeColorEffectivePrimary => '实际主题色';
+  String get themeColorEffectivePrimary => '所选主题色';
 
   @override
   String get themeColorHex => 'HEX 颜色';

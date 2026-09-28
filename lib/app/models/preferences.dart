@@ -42,16 +42,16 @@ enum ThemePreference {
   }
 }
 
-/// 主题强调色来源。系统模式在支持的平台使用系统动态颜色，旧平台回退到
-/// [ThemeColorPreference.defaultValue] 的默认蓝色；自定义模式使用用户保存的
-/// 不透明 ARGB 颜色作为 Material 3 的 seed。
+/// 主题强调色来源。默认模式保留 Veri Fin 原有蓝色；系统模式在支持的平台
+/// 使用 Android 动态颜色；自定义模式使用用户保存的不透明 ARGB 颜色。
 enum ThemeColorMode {
+  defaultColor,
   system,
   custom;
 
   static ThemeColorMode fromStorage(String? value) => values.firstWhere(
     (mode) => mode.name == value,
-    orElse: () => ThemeColorMode.system,
+    orElse: () => ThemeColorMode.defaultColor,
   );
 }
 
@@ -64,7 +64,7 @@ class ThemeColorPreference {
   });
 
   static const ThemeColorPreference defaultValue = ThemeColorPreference(
-    mode: ThemeColorMode.system,
+    mode: ThemeColorMode.defaultColor,
     customColorValue: 0xFF346EDB,
   );
 

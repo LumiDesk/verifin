@@ -81,10 +81,10 @@ const double veriRadiusXl = 24;
 const double veriHeaderHeight = veriUnifiedDesignPreview ? 56 : 52;
 const double veriPageMaxWidth = 440;
 
-/// Material 3 actual primary generated from a user seed. The seed and the
-/// rendered primary are intentionally different values for some hues/tones.
-Color veriThemePrimaryForSeed(Color seedColor, Brightness brightness) =>
-    ColorScheme.fromSeed(seedColor: seedColor, brightness: brightness).primary;
+Color _onCustomPrimary(Color color) =>
+    ThemeData.estimateBrightnessForColor(color) == Brightness.light
+    ? Colors.black
+    : Colors.white;
 
 ThemeData buildVeriFinTheme(
   Brightness brightness, {
@@ -92,12 +92,20 @@ ThemeData buildVeriFinTheme(
 }) {
   final isDark = brightness == Brightness.dark;
   final useSystemColors = colorPreference.mode == ThemeColorMode.system;
+  final useExactPrimary = !useSystemColors;
   final seedColor = useSystemColors
       ? veriRoyal
-      : Color(colorPreference.customColorValue);
+      : colorPreference.mode == ThemeColorMode.custom
+      ? Color(colorPreference.customColorValue)
+      : veriRoyal;
   final seedScheme = ColorScheme.fromSeed(
     seedColor: seedColor,
     brightness: brightness,
+    // Default and custom modes keep the chosen primary exact. Material still
+    // generates supporting container/secondary roles from the same hue, while
+    // onPrimary is chosen for readable foreground text.
+    primary: useExactPrimary ? seedColor : null,
+    onPrimary: useExactPrimary ? _onCustomPrimary(seedColor) : null,
   );
   final canvas = isDark ? veriPreviewCanvasDark : veriPreviewCanvasLight;
   final colorScheme = veriUnifiedDesignPreview

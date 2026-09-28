@@ -16,7 +16,7 @@ void main() {
     expect(restored.customColorValue, 0xFF123456);
   });
 
-  test('非法主题色偏好回退到系统默认', () {
+  test('非法主题色偏好回退到默认主题色', () {
     expect(
       ThemeColorPreference.fromStorage('{"mode":"custom","color":"x"}'),
       ThemeColorPreference.defaultValue,
@@ -27,7 +27,8 @@ void main() {
     );
   });
 
-  test('自定义主题色会生成不同的 Material 主色', () {
+  test('默认主题色保留原有 Veri Royal， 自定义主题色精确使用用户颜色', () {
+    final defaultTheme = buildVeriFinTheme(Brightness.light);
     final theme = buildVeriFinTheme(
       Brightness.light,
       colorPreference: const ThemeColorPreference(
@@ -36,11 +37,12 @@ void main() {
       ),
     );
 
-    expect(theme.colorScheme.primary, isNot(veriRoyal));
+    expect(defaultTheme.colorScheme.primary, veriRoyal);
+    expect(theme.colorScheme.primary, const Color(0xFFB3261E));
     expect(theme.colorScheme.onPrimary.a, 1);
   });
 
-  test('主题色编辑器预览使用 Material 实际主色而不是原始 seed', () {
+  test('自定义主题色的明暗前景保持可读', () {
     const seed = Color(0xFFB3261E);
     final theme = buildVeriFinTheme(
       Brightness.light,
@@ -50,10 +52,7 @@ void main() {
       ),
     );
 
-    expect(
-      veriThemePrimaryForSeed(seed, Brightness.light),
-      theme.colorScheme.primary,
-    );
-    expect(theme.colorScheme.primary, isNot(seed));
+    expect(theme.colorScheme.primary, seed);
+    expect(theme.colorScheme.onPrimary, Colors.white);
   });
 }

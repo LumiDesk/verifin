@@ -415,7 +415,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // 颜色编辑仍然只改设置页草稿，保存前 Controller 保持原值。
-    expect(controller.themeColorPreference.mode, ThemeColorMode.system);
+    expect(controller.themeColorPreference.mode, ThemeColorMode.defaultColor);
     await tester.fling(firstVerticalScrollable(), const Offset(0, 1200), 1000);
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('保存'));
