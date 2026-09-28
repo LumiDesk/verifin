@@ -992,12 +992,17 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
               const SizedBox(height: 8),
               Row(
                 children: <Widget>[
-                  MonthSwitcher(
-                    label: _rangeLabel(l10n, window),
-                    onPrevious: () => _shiftFocus(-1),
-                    onNext: () => _shiftFocus(1),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: MonthSwitcher(
+                        label: _rangeLabel(l10n, window),
+                        onPrevious: () => _shiftFocus(-1),
+                        onNext: () => _shiftFocus(1),
+                      ),
+                    ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 4),
                   VeriAnchoredChoice<EntryType>(
                     values: EntryType.userSelectable,
                     selected: _type,
