@@ -68,12 +68,13 @@ Text(
 
 建议在设置页“外观”分组中增加“主题色”一行，继续遵循设置页现有的草稿保存模式：用户在设置页选择或调整颜色只更新页面草稿，点击统一“保存”后才写入 Controller、KV 和全局主题；取消或返回并选择“不保存”时丢弃草稿。
 
-主题色提供两个模式：
+主题色提供三个模式：
 
 | 模式 | 行为 |
 |---|---|
+| 默认主题色 | 保留原有 Veri Royal 蓝色，并作为新安装和缺失配置时的默认值。 |
 | 跟随系统 | Android 12 及以上使用系统壁纸生成的 Material 动态颜色；系统不提供动态颜色时回退到 Veri Fin 默认蓝色。 |
-| 自定义 | 用户选择一个种子颜色，由 Material 3 `ColorScheme.fromSeed` 为浅色和深色模式生成配套颜色。 |
+| 自定义 | 用户选择的不透明颜色直接作为 `ColorScheme.primary`；Material 3 只生成配套的容器/次要角色，不能替换用户选中的主色。 |
 
 “自由调整”建议使用一个项目内的颜色编辑 Sheet，而不是引入依赖。编辑器包含：
 
@@ -83,9 +84,9 @@ Text(
 - 可选的十六进制颜色输入，用于精确复现颜色；
 - 确定、取消两个明确动作。
 
-颜色编辑器只返回颜色值，不直接写 Controller。非法或透明颜色在输入层归一化/拒绝，持久化只保存不透明 ARGB 值。
+颜色编辑器只返回颜色值，不直接写 Controller。顶部预览显示用户最终选中的颜色；非法或透明颜色在输入层归一化/拒绝，持久化只保存不透明 ARGB 值。
 
-系统动态颜色建议优先使用 Flutter 3.47.2 已提供的 `ThemeData(useSystemColors: true)`，不先新增第三方依赖。该参数在当前 Flutter SDK 中会让支持的平台系统颜色覆盖 `ColorScheme` 及主要 Material 按钮主题；Android 12 以下或不支持的平台自然回退。自定义模式使用 `ColorScheme.fromSeed(seedColor: ...)`。
+系统动态颜色建议优先使用 Flutter 3.47.2 已提供的 `ThemeData(useSystemColors: true)`，不先新增第三方依赖。该参数在当前 Flutter SDK 中会让支持的平台系统颜色覆盖 `ColorScheme` 及主要 Material 按钮主题；Android 12 以下或不支持的平台自然回退。自定义模式直接把用户颜色设为 `ColorScheme.primary`，同时生成配套角色。
 
 ### 2. 数据模型与持久化
 
@@ -137,11 +138,12 @@ ThemeData buildVeriFinTheme(
 
 构建规则：
 
-1. `system` 模式：保留默认 seed 作为不支持动态色设备的回退，并启用 `useSystemColors: true`。
-2. `custom` 模式：以用户颜色作为 `colorSchemeSeed`，不启用系统动态色覆盖。
-3. 页面背景、卡片、导航和弹层仍然保持不透明实色；主题色只改变强调色角色，不重新引入玻璃、透明叠层或渐变材质。
-4. `onPrimary`、`primaryContainer`、`onPrimaryContainer` 等配套角色由 Material 3 方案生成，并对按钮、选中态和文字进行对比度检查。
-5. 收入、支出、转账、提醒等领域语义色继续保持独立的 `veriSemantic` 体系，不因为主题色改变而把支出红色或收入青绿色误染成主题色。
+1. `defaultColor` 模式：使用原有 Veri Royal 作为实际 `primary`，保持旧版默认视觉。
+2. `system` 模式：启用 `useSystemColors: true`；不支持动态色时回退默认主题色。
+3. `custom` 模式：以用户颜色直接作为 `primary`，不启用系统动态色覆盖；`onPrimary` 自动选择黑/白以保持可读性。
+4. 页面背景、卡片、导航和弹层仍然保持不透明实色；主题色只改变强调色角色，不重新引入玻璃、透明叠层或渐变材质。
+5. `primaryContainer`、`onPrimaryContainer` 等配套角色由 Material 3 方案生成，并对按钮、选中态和文字进行对比度检查。
+6. 收入、支出、转账、提醒等领域语义色继续保持独立的 `veriSemantic` 体系，不因为主题色改变而把支出红色或收入青绿色误染成主题色。
 
 `VeriFinApp` 需要在现有主题/语言 `ValueListenableBuilder` 外或同层监听主题色偏好，并把同一个快照传入 light/dark 两个 `buildVeriFinTheme`。数据库错误页和独立小组件配置入口没有 Controller 时继续使用默认主题；如果产品希望它们也跟随用户主题色，再单独读取共享 KV，不能复制另一套主题逻辑。
 
@@ -185,7 +187,7 @@ ThemeData buildVeriFinTheme(
 
 - 模型/存储：默认值、非法值、ARGB 往返、冷启动读取、重置；
 - Controller：设置页保存前不改变 Controller，保存后更新 Controller 和 `ValueNotifier`，重启后保持；
-- 主题构建：默认蓝色、自定义种子色、浅色/深色的 `primary` 和 `onPrimary`，系统模式启用回退路径；
+- 主题构建：默认蓝色、自定义精确主色、浅色/深色的 `primary` 和 `onPrimary`，系统模式启用回退路径；
 - Widget：底栏选中文字、菜单选中标题/勾、FAB、主按钮和输入框焦点边框随主题色变化；收入/支出/错误语义色不随主题色误变；
 - 备份：新字段导出/导入，旧备份缺字段仍能恢复默认；
 - Android：API 36 模拟器修改系统壁纸/系统颜色后重启应用，验证系统模式实际变化；无动态色支持的环境验证固定回退；
@@ -256,7 +258,7 @@ ThemeData buildVeriFinTheme(
 
 ### 主题色
 
-- 设置页可以在“跟随系统”和“自定义”之间切换；自定义颜色可调整并保存。
+- 设置页可以在“默认主题色”“跟随系统”和“自定义”之间切换；自定义颜色可调整并保存。
 - 应用重启、切换浅色/深色主题后设置仍然有效；旧版本/旧备份缺少字段时回退到当前 Veri Royal 默认色。
 - Android 12+ 系统动态色可驱动 Material 主色；不支持动态色时无异常且有固定回退。
 - 底部导航选中图标和文字、菜单选中项、勾选图标、FAB、主按钮、焦点边框等主要交互使用当前主题色。
