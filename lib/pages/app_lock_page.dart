@@ -945,7 +945,7 @@ class _AppLockSettingsPageState extends State<AppLockSettingsPage> {
 
   /// 选择锁定方式（数字密码 / 图案）。
   Future<AppLockKind?> _pickKind() {
-    return showModalBottomSheet<AppLockKind>(
+    return showVeriModalSheet<AppLockKind>(
       context: context,
       showDragHandle: true,
       builder: (context) => SafeArea(

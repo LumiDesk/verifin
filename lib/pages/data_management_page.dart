@@ -898,7 +898,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
       }
       return bt.compareTo(at);
     });
-    final chosen = await showModalBottomSheet<WebdavRemoteFile>(
+    final chosen = await showVeriModalSheet<WebdavRemoteFile>(
       context: context,
       showDragHandle: true,
       builder: (context) => SafeArea(
@@ -1185,7 +1185,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
         ),
       ),
     );
-    return showModalBottomSheet<ImportPlatform>(
+    return showVeriModalSheet<ImportPlatform>(
       context: context,
       showDragHandle: true,
       // 平台较多时弹窗内容可能超过默认高度：开启可滚动并把列表放进滚动区，

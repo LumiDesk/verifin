@@ -5,6 +5,7 @@ import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
 import '../app/icon_catalog.dart';
 import '../l10n/app_localizations.dart';
+import 'sheets.dart';
 
 /// 账户图标选择器的具体实现；对外仍经 `sheets.dart` 的
 /// `showAccountIconSheet` 稳定入口打开。
@@ -32,14 +33,11 @@ Future<String?> showAccountIconPickerSheet({
       ),
   ];
 
-  return showModalBottomSheet<String>(
+  return showVeriModalSheet<String>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
     backgroundColor: Theme.of(context).colorScheme.surface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(veriRadiusLg)),
-    ),
     builder: (context) =>
         _AccountIconPickerBody(selected: selected, choices: choices),
   );

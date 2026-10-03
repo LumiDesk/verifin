@@ -4,6 +4,7 @@ import '../app/ai/ai_client.dart';
 import '../app/ai/ai_entry_parser.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
+import 'sheets.dart';
 import 'capture_entry.dart';
 import 'entry_detail_page.dart';
 
@@ -18,7 +19,7 @@ Future<void> startAiEntry(BuildContext context) async {
     return;
   }
 
-  final result = await showModalBottomSheet<Object>(
+  final result = await showVeriModalSheet<Object>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,

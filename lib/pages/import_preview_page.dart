@@ -346,7 +346,7 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
     List<Account> existing,
   ) async {
     final l10n = AppLocalizations.of(context);
-    final result = await showModalBottomSheet<String>(
+    final result = await showVeriModalSheet<String>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
@@ -398,7 +398,7 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
     List<Category> existing,
   ) async {
     final l10n = AppLocalizations.of(context);
-    final result = await showModalBottomSheet<String>(
+    final result = await showVeriModalSheet<String>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
@@ -453,7 +453,7 @@ class _ImportPreviewPageState extends State<ImportPreviewPage> {
   // ── 标签映射 ────────────────────────────────────────────────
   Future<void> _pickTagDecision(Tag provisional, List<Tag> existing) async {
     final l10n = AppLocalizations.of(context);
-    final result = await showModalBottomSheet<String>(
+    final result = await showVeriModalSheet<String>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,

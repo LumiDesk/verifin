@@ -33,8 +33,9 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   flutter_svg: ^2.2.3
-  # 版本由 flutter_localizations 固定,供 gen-l10n 生成代码使用。
-  intl: any
+  # Flutter 版本会给 flutter_localizations 选择同一 minor 系列；显式下限避免
+  # 日常 pub get 在不同 SDK 间把 intl 任意切换到不相关的主版本。
+  intl: ^0.20.2
 
   shared_preferences: ^2.5.5
   image_picker: ^1.2.3

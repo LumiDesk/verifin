@@ -18,11 +18,12 @@ import '../l10n/app_localizations.dart';
 import 'account_icon_picker.dart';
 
 /// 统一的底部弹层外壳：实色表面 + 顶部圆角 + 内置拖拽把手。
-Future<T?> _showVeriModalSheet<T>({
+Future<T?> showVeriModalSheet<T>({
   required BuildContext context,
   required WidgetBuilder builder,
   bool? showDragHandle,
   bool isScrollControlled = false,
+  bool useSafeArea = false,
   Color? backgroundColor,
   ShapeBorder? shape,
 }) => showModalBottomSheet<T>(
@@ -30,6 +31,7 @@ Future<T?> _showVeriModalSheet<T>({
   // 拖拽把手在内容内部渲染（见下方 Column），与弹层表面成一体。
   showDragHandle: false,
   isScrollControlled: isScrollControlled,
+  useSafeArea: useSafeArea,
   backgroundColor: backgroundColor,
   shape: shape,
   builder: (context) => Material(
@@ -88,7 +90,7 @@ class _VeriSheetDragHandle extends StatelessWidget {
 Future<Color?> showThemeColorPickerSheet({
   required BuildContext context,
   required Color initialColor,
-}) => _showVeriModalSheet<Color>(
+}) => showVeriModalSheet<Color>(
   context: context,
   isScrollControlled: true,
   showDragHandle: true,
@@ -344,7 +346,7 @@ Future<T?> showOptionSheet<T>({
   bool showSelectedMarker = true,
   String Function(T value)? sectionOf,
 }) {
-  return _showVeriModalSheet<T>(
+  return showVeriModalSheet<T>(
     context: context,
     showDragHandle: true,
     backgroundColor: Theme.of(context).colorScheme.surface,
@@ -454,7 +456,7 @@ Future<CurrencyDefinition?> showCurrencyPickerSheet({
   Iterable<String> preferredCodes = const <String>[],
   Iterable<String> excludedCodes = const <String>[],
 }) {
-  return _showVeriModalSheet<CurrencyDefinition>(
+  return showVeriModalSheet<CurrencyDefinition>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
@@ -634,7 +636,7 @@ Future<({String name, String currencyCode})?> showLedgerBookEditorSheet({
   required BuildContext context,
   required String initialCurrencyCode,
 }) {
-  return _showVeriModalSheet<({String name, String currencyCode})>(
+  return showVeriModalSheet<({String name, String currencyCode})>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
@@ -923,7 +925,7 @@ Future<double?> showNumberPadSheet(
       (currencyCode == null
           ? 2
           : CurrencyCatalog.require(currencyCode).minorUnit);
-  return _showVeriModalSheet<double>(
+  return showVeriModalSheet<double>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
@@ -954,7 +956,7 @@ Future<String?> showCategoryPickerSheet(
   String? topLevelLabel,
   String? allLabel,
 }) {
-  return _showVeriModalSheet<String>(
+  return showVeriModalSheet<String>(
     context: context,
     showDragHandle: true,
     backgroundColor: Theme.of(context).colorScheme.surface,
@@ -1003,7 +1005,7 @@ Future<Account?> showAccountPickerSheet({
   String? noneHint,
   String? allLabel,
 }) {
-  return _showVeriModalSheet<Account>(
+  return showVeriModalSheet<Account>(
     context: context,
     showDragHandle: true,
     backgroundColor: Theme.of(context).colorScheme.surface,
@@ -1431,7 +1433,7 @@ Future<String?> showCategoryIconPickerSheet({
   required BuildContext context,
   required String selected,
 }) {
-  return _showVeriModalSheet<String>(
+  return showVeriModalSheet<String>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
@@ -1848,7 +1850,7 @@ Future<List<String>?> pickEntryTags({
     ...controller.tags,
     ...extraTags.where((tag) => !existingIds.contains(tag.id)),
   ];
-  return _showVeriModalSheet<List<String>>(
+  return showVeriModalSheet<List<String>>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,

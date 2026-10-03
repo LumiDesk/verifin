@@ -244,14 +244,11 @@ Future<RefundEditResult?> showRefundSheet({
   LedgerEntry? existing,
   bool markSettled = false,
 }) {
-  return showModalBottomSheet<RefundEditResult>(
+  return showVeriModalSheet<RefundEditResult>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
     backgroundColor: Theme.of(context).colorScheme.surface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(veriRadiusLg)),
-    ),
     builder: (_) => _RefundSheet(
       expense: expense,
       refunds: refunds,
