@@ -369,7 +369,13 @@ void main() {
     );
 
     // 支出 150、预算 100：剩余应显示 -50（负数），而不再夹到 0。
-    expect(find.text('-50'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(BudgetPanel),
+        matching: find.text('-50'),
+      ),
+      findsOneWidget,
+    );
   });
 
   test('category budget rolls up sub-category spending into parent', () async {
