@@ -107,13 +107,23 @@ class AccountSectionCard extends StatelessWidget {
               ),
             ),
           ),
-          AnimatedSize(
+          AnimatedSwitcher(
             duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOutCubic,
-            alignment: Alignment.topCenter,
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SizeTransition(
+                sizeFactor: animation,
+                axis: Axis.vertical,
+                alignment: Alignment.topCenter,
+                child: child,
+              ),
+            ),
             child: collapsed
-                ? const SizedBox.shrink()
+                ? const SizedBox.shrink(key: ValueKey<String>('collapsed'))
                 : Column(
+                    key: const ValueKey<String>('expanded'),
                     children: <Widget>[
                       const SizedBox(height: 10),
                       ReorderableListView.builder(
@@ -339,7 +349,10 @@ class _CalendarPreviewState extends State<CalendarPreview> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final now = DateTime.now();
+    final isCurrentMonth =
+        _visibleMonth.year == now.year && _visibleMonth.month == now.month;
     final days = DateUtils.getDaysInMonth(
       _visibleMonth.year,
       _visibleMonth.month,
@@ -383,6 +396,18 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
+                  if (!isCurrentMonth)
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(44, 36),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      onPressed: () => setState(() {
+                        _visibleMonth = DateTime(now.year, now.month);
+                      }),
+                      child: Text(l10n.thisMonth),
+                    ),
                   IconButton(
                     constraints: const BoxConstraints.tightFor(
                       width: 32,
@@ -390,7 +415,7 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                     ),
                     padding: EdgeInsets.zero,
                     visualDensity: VisualDensity.compact,
-                    tooltip: AppLocalizations.of(context).calendarPrevMonth,
+                    tooltip: l10n.calendarPrevMonth,
                     onPressed: () => setState(() {
                       _visibleMonth = DateTime(
                         _visibleMonth.year,
@@ -417,7 +442,7 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                       ),
                     ),
                     child: Text(
-                      '${_visibleMonth.year}.${_visibleMonth.month.toString().padLeft(2, '0')}',
+                      l10n.yearMonth(_visibleMonth),
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         fontWeight: FontWeight.w800,
@@ -431,7 +456,7 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                     ),
                     padding: EdgeInsets.zero,
                     visualDensity: VisualDensity.compact,
-                    tooltip: AppLocalizations.of(context).calendarNextMonth,
+                    tooltip: l10n.calendarNextMonth,
                     onPressed: () => setState(() {
                       _visibleMonth = DateTime(
                         _visibleMonth.year,
