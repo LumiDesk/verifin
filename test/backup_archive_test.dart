@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/backup/backup_archive.dart';
 
@@ -97,6 +98,15 @@ void main() {
     final jsonBytes = utf8.encode('{"app":"verifin"}');
     expect(looksLikeZipBytes(jsonBytes), isFalse);
     expect(looksLikeZipBytes(<int>[1, 2]), isFalse);
+  });
+
+  test('拒绝包含过多条目的压缩包', () {
+    final archive = Archive();
+    for (var i = 0; i < maxBackupArchiveFileCount + 1; i++) {
+      archive.addFile(ArchiveFile.bytes('attachments/$i', const <int>[]));
+    }
+    final zip = ZipEncoder().encode(archive);
+    expect(() => unpackBackupArchive(zip), throwsA(isA<FormatException>()));
   });
 
   test('backup.json 里附件 dataUrl 被剥离（不含 base64）', () {

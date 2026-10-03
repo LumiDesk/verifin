@@ -154,8 +154,18 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
       );
       return;
     }
-    await _scheduler.showTest(l10n: l10n);
+    final sent = await _scheduler.showTest(l10n: l10n);
     if (!mounted) {
+      return;
+    }
+    if (!sent) {
+      unawaited(
+        feedback.showMessage(
+          message: l10n.reminderTestFailed,
+          tone: VeriFeedbackTone.error,
+          duration: VeriFeedbackDuration.long,
+        ),
+      );
       return;
     }
     unawaited(

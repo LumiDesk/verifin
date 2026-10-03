@@ -20,6 +20,7 @@ const String _archiveMimeKey = '_archiveMime';
 const int maxBackupArchiveBytes = 256 * 1024 * 1024;
 const int maxBackupArchiveUncompressedBytes = 512 * 1024 * 1024;
 const int maxBackupAttachmentCount = 2000;
+const int maxBackupArchiveFileCount = 2048;
 
 /// 是否为 zip 字节流（魔数 `PK\x03\x04`）。用于导入时区分新版 zip 备份与旧版
 /// 纯 JSON / 加密信封文本。
@@ -70,13 +71,26 @@ String unpackBackupArchive(List<int> zipBytes) {
   final attachmentFiles = <String, List<int>>{};
   var uncompressedBytes = 0;
   var attachmentCount = 0;
+  var fileCount = 0;
   for (final file in archive) {
     if (!file.isFile) {
       continue;
     }
+    fileCount++;
+    if (fileCount > maxBackupArchiveFileCount) {
+      throw const FormatException('备份条目数量过多');
+    }
+    // ArchiveFile.size comes from the ZIP header. Check declared sizes before
+    // touching file.content so a single highly-compressed entry cannot allocate
+    // its full decompressed payload before the cumulative limit is enforced.
+    if (file.size > maxBackupArchiveUncompressedBytes ||
+        uncompressedBytes > maxBackupArchiveUncompressedBytes - file.size) {
+      throw const FormatException('备份解压后过大');
+    }
+    uncompressedBytes += file.size;
     final content = file.content as List<int>;
-    uncompressedBytes += content.length;
-    if (uncompressedBytes > maxBackupArchiveUncompressedBytes) {
+    if (content.length > maxBackupArchiveUncompressedBytes ||
+        content.length > file.size) {
       throw const FormatException('备份解压后过大');
     }
     if (file.name == backupJsonEntryName) {
