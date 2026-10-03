@@ -24,5 +24,5 @@ class NotificationScheduler {
   Future<void> cancel() async {}
 
   /// 立即发一条测试通知。占位无操作。
-  Future<void> showTest({AppLocalizations? l10n}) async {}
+  Future<bool> showTest({AppLocalizations? l10n}) async => false;
 }

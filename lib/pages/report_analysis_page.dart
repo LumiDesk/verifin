@@ -10,6 +10,7 @@ import '../app/series_math.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
 import 'transactions_pages.dart';
+import 'sheets.dart';
 
 /// 排行分组维度：顶级分类 / 子分类（按记账所选分类）/ 标签。
 enum _ReportGrouping { topCategory, subCategory, tag }
@@ -180,13 +181,10 @@ class _ReportAnalysisPageState extends State<ReportAnalysisPage> {
     final color = _dimension == EntryType.expense
         ? veriSemantic(context, veriExpense)
         : veriSemantic(context, veriIncome);
-    return showModalBottomSheet<void>(
+    return showVeriModalSheet<void>(
       context: context,
       showDragHandle: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(veriRadiusLg)),
-      ),
       // 命名为 sheetContext 与外层页面 context 区分：跳转前先 pop 弹层（用
       // sheetContext），再用页面 context push 交易列表。
       builder: (sheetContext) {

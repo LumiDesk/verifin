@@ -7,6 +7,7 @@ import '../app/ledger_math.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
 import 'home_page.dart';
+import 'sheets.dart';
 
 /// 首页走势卡片自定义页：点击每个槽位在底部弹窗里挑选要展示的数据 / 曲线序列，
 /// 顶部实时预览。改动先进入页面草稿，点击保存后写入设备本地偏好。
@@ -68,7 +69,7 @@ class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
 
   Future<HomeMetric?> _showMetricPicker(HomeMetric current) {
     final l10n = AppLocalizations.of(context);
-    return showModalBottomSheet<HomeMetric>(
+    return showVeriModalSheet<HomeMetric>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,

@@ -142,6 +142,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `UnsavedChangesGuard` / `EditorExitController` | Widget / Controller | `common_widgets.dart` | 统一拦截编辑页 Header、系统与预测性返回；仅 `onSave` 成功后放行，未修改时不拦截；显式保存成功后用 `EditorExitController.exit()` 走同一受控退出路径，避免同帧旧 dirty 状态拦截程序化返回 |
 | `showTextInputDialog` | Dialog 函数 | `sheets.dart` | **统一文本输入**；`allowEmpty`、`keyboardType`；返回 trim 后 `String?` |
 | `showOptionSheet<T>` | Sheet 函数 | `sheets.dart` | 动态、较长或需 `sectionOf` 分区的通用单选底部弹窗；2–8 项静态受控单选优先用 `VeriAnchoredChoice<T>`；返回 `T?` |
+| `showVeriModalSheet<T>` | Sheet 函数 | `sheets.dart` | 领域弹窗的统一 chrome 入口；页面需要自定义内容时使用它，不得直接调用 `showModalBottomSheet`；支持拖拽把手、滚动控制、安全区、表面色和泛型返回值 |
 | `showLedgerBookEditorSheet` | Sheet 函数 | `sheets.dart` | 新建账本统一表单，同时收集名称与本位币，返回命名 record；取消返回 `null` |
 | `confirmLegacyLedgerCurrency` | Sheet/Dialog 流程 | `sheets.dart` | 旧单币种账本的一次性确认/重解释流程：选币、展示影响数量、二次确认，并调用 Controller 原子迁移；取消或失败返回 `false` |
 | `showMonthlyBudgetOverrideSheet` | Sheet 函数 | `sheets.dart` | 总预算的单期覆盖管理；按自然月/自定义周期显示“本月/本期”，可设置或调整所选期额度，有覆盖时可清除并恢复默认；内部复用 `showOptionSheet` + `showNumberPadSheet` |

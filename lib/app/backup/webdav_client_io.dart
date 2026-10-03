@@ -23,6 +23,8 @@ const Duration _connectTimeout = Duration(seconds: 30);
 /// 上传 / 下载因 body 可能很大（含图片附件的大备份）不设总超时，仅靠
 /// [_connectTimeout] 与协调器层的兜底超时防挂死。
 const Duration _responseTimeout = Duration(seconds: 60);
+const int _maxWebdavListingBytes = 4 * 1024 * 1024;
+const int _maxWebdavDownloadBytes = 256 * 1024 * 1024;
 
 HttpClient _newClient() => HttpClient()..connectionTimeout = _connectTimeout;
 
@@ -137,6 +139,23 @@ Future<void> webdavTestConnection(WebdavConfig config) async {
   }
 }
 
+Future<Uint8List> _readResponseLimited(
+  HttpClientResponse response, {
+  required int maxBytes,
+  required String tooLargeMessage,
+}) async {
+  final builder = BytesBuilder(copy: false);
+  var total = 0;
+  await for (final chunk in response) {
+    total += chunk.length;
+    if (total > maxBytes) {
+      throw WebdavException(tooLargeMessage);
+    }
+    builder.add(chunk);
+  }
+  return builder.takeBytes();
+}
+
 Future<void> webdavUpload(
   WebdavConfig config,
   String filename,
@@ -179,10 +198,13 @@ Future<List<WebdavRemoteFile>> webdavList(WebdavConfig config) async {
     );
     request.write(_propfindBody);
     final response = await request.close().timeout(_responseTimeout);
-    final body = await response
-        .transform(utf8.decoder)
-        .join()
-        .timeout(_responseTimeout);
+    final body = utf8.decode(
+      await _readResponseLimited(
+        response,
+        maxBytes: _maxWebdavListingBytes,
+        tooLargeMessage: 'WebDAV 文件列表响应过大',
+      ).timeout(_responseTimeout),
+    );
     if (response.statusCode >= 400) {
       throw WebdavException(_statusMessage(response.statusCode));
     }
@@ -234,11 +256,11 @@ Future<Uint8List> webdavDownload(WebdavConfig config, String href) async {
     if (response.statusCode >= 400) {
       throw WebdavException(_statusMessage(response.statusCode));
     }
-    final builder = BytesBuilder(copy: false);
-    await for (final chunk in response) {
-      builder.add(chunk);
-    }
-    return builder.toBytes();
+    return await _readResponseLimited(
+      response,
+      maxBytes: _maxWebdavDownloadBytes,
+      tooLargeMessage: 'WebDAV 备份文件过大',
+    ).timeout(_responseTimeout);
   } catch (error) {
     _fail(error);
   } finally {

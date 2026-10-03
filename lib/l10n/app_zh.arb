@@ -2468,6 +2468,7 @@
   "reminderTestButton": "发送测试通知",
   "reminderTestBody": "这是一条测试通知——能看到它就说明通知功能正常。",
   "reminderTestSent": "已发送测试通知，请下拉通知栏查看。若收不到每日提醒，多为系统后台限制：请在系统设置里为本应用允许通知，并加入省电 / 自启动白名单。",
+  "reminderTestFailed": "测试通知发送失败，请检查通知权限和系统后台限制后重试。",
   "backupFileTypeLabel": "备份文件",
   "cropAdjustHint": "调整图片位置",
   "cropDone": "完成裁剪",

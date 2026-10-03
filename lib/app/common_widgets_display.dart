@@ -50,7 +50,8 @@ class FilterPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         onTap: onTap,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 36),
+          // Keep the pill visually compact while preserving a 44dp touch row.
+          constraints: const BoxConstraints(minHeight: 44),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           decoration: BoxDecoration(
             color: isDark ? veriSurfaceAltDark : veriSurfaceLight,
@@ -413,8 +414,8 @@ class VeriSectionAction extends StatelessWidget {
       tooltip: tooltip,
       onPressed: onPressed,
       style: IconButton.styleFrom(
-        fixedSize: const Size(32, 32),
-        minimumSize: const Size(32, 32),
+        fixedSize: const Size(44, 44),
+        minimumSize: const Size(44, 44),
         padding: EdgeInsets.zero,
         backgroundColor: veriSemantic(
           context,

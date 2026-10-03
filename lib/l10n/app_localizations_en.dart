@@ -4158,6 +4158,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Test notification sent — check your notification shade. If daily reminders never arrive, it\'s usually background restrictions: allow notifications for this app and add it to battery / autostart allowlists in system settings.';
 
   @override
+  String get reminderTestFailed =>
+      'The test notification could not be sent. Check notification permission and system background restrictions, then try again.';
+
+  @override
   String get backupFileTypeLabel => 'Backup file';
 
   @override

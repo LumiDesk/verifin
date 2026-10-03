@@ -40,7 +40,7 @@ class BackupCoordinator {
       return;
     }
     _running = true;
-    var anySucceeded = false;
+    var allTargetsSucceeded = true;
     try {
       // 只准备一次备份内容（未加密→zip、加密→文本信封），本地与 WebDAV 共用同一份，
       // 避免重复导出/加密（加密时 PBKDF2 迭代很贵）。
@@ -56,8 +56,8 @@ class BackupCoordinator {
             settings: settings,
             prepared: prepared,
           );
-          anySucceeded = true;
         } catch (error) {
+          allTargetsSucceeded = false;
           // 本地目录失败（授权失效、写坏被回读校验拦下等）不影响 WebDAV 尝试；
           // 记日志便于诊断，但不打断用户。
           controller.logger?.error('本地自动备份失败', source: 'backup', error: error);
@@ -73,10 +73,10 @@ class BackupCoordinator {
             prepared.filename,
             prepared.bytes,
           ).timeout(const Duration(minutes: 5));
-          anySucceeded = true;
           // 与本地一致：按保留份数清理远端旧的自动备份，避免无限累积。
           await _pruneWebdav(webdav, settings.retention);
         } catch (error) {
+          allTargetsSucceeded = false;
           // WebDAV 失败不打断，但记日志便于诊断（网络 / 认证 / 服务器错误等）。
           controller.logger?.error(
             'WebDAV 自动备份失败',
@@ -85,7 +85,10 @@ class BackupCoordinator {
           );
         }
       }
-      if (anySucceeded) {
+      // Only advance the shared timestamp when every configured target has
+      // succeeded. A partial success must remain due so the failed target is
+      // retried and the UI does not imply that both destinations are current.
+      if (allTargetsSucceeded) {
         controller.recordBackupTime(now);
       }
     } catch (error) {

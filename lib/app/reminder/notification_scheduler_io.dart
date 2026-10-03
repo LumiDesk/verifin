@@ -175,20 +175,21 @@ class NotificationScheduler {
 
   /// 立即发一条测试通知：用于让用户当场确认「通知到底能不能显示」，把权限/渠道
   /// 问题与「定时不触发」问题区分开。
-  Future<void> showTest({AppLocalizations? l10n}) async {
+  Future<bool> showTest({AppLocalizations? l10n}) async {
     if (!supported) {
-      return;
+      return false;
     }
-    await init();
     try {
+      await init();
       await _plugin.show(
         id: _testId,
         title: l10n?.reminderTitle ?? _channelName,
         body: l10n?.reminderTestBody ?? '这是一条测试通知——能看到它就说明通知功能正常。',
         notificationDetails: _details(l10n),
       );
+      return true;
     } catch (_) {
-      // 显示失败（无权限等）静默处理。
+      return false;
     }
   }
 

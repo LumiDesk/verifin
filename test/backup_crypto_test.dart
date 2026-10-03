@@ -48,6 +48,24 @@ void main() {
       expect(isEncryptedBackup('not json'), isFalse);
     });
 
+    test('拒绝超出范围的 KDF 参数和密钥材料长度', () async {
+      final envelope = await encryptBackup('payload', 'key');
+      final map = Map<String, Object?>.from(jsonDecode(envelope) as Map);
+
+      map['iter'] = 1;
+      expect(
+        () => decryptBackup(jsonEncode(map), 'key'),
+        throwsA(isA<BackupCryptoException>()),
+      );
+
+      final valid = Map<String, Object?>.from(jsonDecode(envelope) as Map);
+      valid['salt'] = base64Encode(List<int>.filled(15, 0));
+      expect(
+        () => decryptBackup(jsonEncode(valid), 'key'),
+        throwsA(isA<BackupCryptoException>()),
+      );
+    });
+
     test('空口令加密被拒绝', () {
       expect(
         () => encryptBackup('x', ''),

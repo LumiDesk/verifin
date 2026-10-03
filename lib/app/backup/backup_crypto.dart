@@ -15,7 +15,11 @@ class BackupCryptoException implements Exception {
 
 const String _encName = 'aes-gcm';
 const int _pbkdf2Iterations = 120000;
+const int _minPbkdf2Iterations = 10000;
+const int _maxPbkdf2Iterations = 1000000;
 const int _saltLength = 16;
+const int _macLength = 16;
+const int _maxCiphertextBytes = 256 * 1024 * 1024;
 
 final AesGcm _aesGcm = AesGcm.with256bits();
 
@@ -103,6 +107,14 @@ Future<String> decryptBackup(String envelopeJson, String passphrase) async {
     // 按信封里记录的迭代数派生密钥，而非固定常量：将来若调整 _pbkdf2Iterations，
     // 用旧迭代数加密的备份仍能解开。缺失时回退到当前常量（兼容早期信封）。
     final iterations = (envelope['iter'] as num?)?.toInt() ?? _pbkdf2Iterations;
+    if (salt.length != _saltLength ||
+        nonce.length != _aesGcm.nonceLength ||
+        mac.length != _macLength ||
+        cipher.length > _maxCiphertextBytes ||
+        iterations < _minPbkdf2Iterations ||
+        iterations > _maxPbkdf2Iterations) {
+      throw const BackupCryptoException('加密备份参数无效或过大');
+    }
     final key = await _deriveKey(passphrase, salt, iterations);
     final box = SecretBox(cipher, nonce: nonce, mac: Mac(mac));
     final clear = await _aesGcm.decrypt(box, secretKey: key);

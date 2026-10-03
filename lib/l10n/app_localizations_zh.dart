@@ -4052,6 +4052,9 @@ class AppLocalizationsZh extends AppLocalizations {
       '已发送测试通知，请下拉通知栏查看。若收不到每日提醒，多为系统后台限制：请在系统设置里为本应用允许通知，并加入省电 / 自启动白名单。';
 
   @override
+  String get reminderTestFailed => '测试通知发送失败，请检查通知权限和系统后台限制后重试。';
+
+  @override
   String get backupFileTypeLabel => '备份文件';
 
   @override
