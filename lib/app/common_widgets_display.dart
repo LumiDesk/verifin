@@ -49,46 +49,39 @@ class FilterPill extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(999),
         onTap: onTap,
-        child: SizedBox(
-          height: 44,
-          child: Center(
-            child: Container(
-              constraints: const BoxConstraints(minHeight: 36),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-              decoration: BoxDecoration(
-                color: isDark ? veriSurfaceAltDark : veriSurfaceLight,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.10)
-                      : veriLine,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 36),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: isDark ? veriSurfaceAltDark : veriSurfaceLight,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: isDark ? Colors.white.withValues(alpha: 0.10) : veriLine,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              if (icon != null) ...<Widget>[
+                Icon(icon, size: 16),
+                const SizedBox(width: 5),
+              ],
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.78),
                 ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  if (icon != null) ...<Widget>[
-                    Icon(icon, size: 16),
-                    const SizedBox(width: 5),
-                  ],
-                  Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.78),
-                    ),
-                  ),
-                  if (showChevron) ...<Widget>[
-                    const SizedBox(width: 4),
-                    const Icon(Icons.keyboard_arrow_down, size: 16),
-                  ],
-                ],
-              ),
-            ),
+              if (showChevron) ...<Widget>[
+                const SizedBox(width: 4),
+                const Icon(Icons.keyboard_arrow_down, size: 16),
+              ],
+            ],
           ),
         ),
       ),
