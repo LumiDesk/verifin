@@ -60,6 +60,7 @@ class VeriBottomBarItem {
 ///
 /// 与库的差别是**选中状态完全由 [selectedIndex] 驱动**（单一数据源），组件不再自己
 /// 记住选中项、也不再延迟回调。父级改变 [selectedIndex] 即触发切换动画。
+/// 颜色默认跟随 `Theme.of(context).colorScheme.primary`，不会写死成品牌蓝。
 class VeriBottomBar extends StatefulWidget {
   const VeriBottomBar({
     super.key,
@@ -67,9 +68,9 @@ class VeriBottomBar extends StatefulWidget {
     required this.selectedIndex,
     this.onSelect,
     this.height = 71,
-    this.color = veriRoyal,
-    this.circle1Color = veriRoyal,
-    this.circle2Color = veriRoyal,
+    this.color,
+    this.circle1Color,
+    this.circle2Color,
     this.backgroundColor = Colors.transparent,
   });
 
@@ -81,9 +82,14 @@ class VeriBottomBar extends StatefulWidget {
   final int selectedIndex;
   final ValueChanged<int>? onSelect;
   final double height;
-  final Color color;
-  final Color circle1Color;
-  final Color circle2Color;
+
+  /// 选中项、圆弧与圆点的主色。省略时取当前主题的 `colorScheme.primary`，这样
+  /// 用户切换动态色或自定义主题色时底栏会一起跟随，不会被默认值锁成品牌蓝。
+  final Color? color;
+
+  /// 切换时两枚圆点的颜色；省略时跟随 [color]。
+  final Color? circle1Color;
+  final Color? circle2Color;
   final Color backgroundColor;
 
   @override
@@ -186,6 +192,9 @@ class _VeriBottomBarState extends State<VeriBottomBar>
 
   @override
   Widget build(BuildContext context) {
+    final accent = widget.color ?? Theme.of(context).colorScheme.primary;
+    final circle1 = widget.circle1Color ?? accent;
+    final circle2 = widget.circle2Color ?? accent;
     return SizedBox(
       height: widget.height,
       child: ColoredBox(
@@ -197,8 +206,9 @@ class _VeriBottomBarState extends State<VeriBottomBar>
             final iconWidth = constraints.maxWidth / widget.items.length;
             return Stack(
               children: <Widget>[
-                if (_animating) ..._sweepLayers(iconWidth),
-                Row(children: _iconWidgets()),
+                if (_animating)
+                  ..._sweepLayers(iconWidth, accent, circle1, circle2),
+                Row(children: _iconWidgets(accent)),
               ],
             );
           },
@@ -208,7 +218,12 @@ class _VeriBottomBarState extends State<VeriBottomBar>
   }
 
   /// 切换过程中飞过的两条圆弧与两枚圆点。静止时全部不绘制（与原库一致）。
-  List<Widget> _sweepLayers(double iconWidth) {
+  List<Widget> _sweepLayers(
+    double iconWidth,
+    Color accent,
+    Color circle1,
+    Color circle2,
+  ) {
     final startX = _centerOf(_fromIndex, iconWidth);
     final endX = _centerOf(_selectedIndex, iconWidth);
     final reverse = _fromIndex > _selectedIndex;
@@ -232,7 +247,7 @@ class _VeriBottomBarState extends State<VeriBottomBar>
           animation: _controller,
           builder: (context, _) => ClipPath(
             clipper: _SweepClipper(_progress(), startX, endX, reverse),
-            child: CustomPaint(painter: _BulletLinePainter(path, widget.color)),
+            child: CustomPaint(painter: _BulletLinePainter(path, accent)),
           ),
         ),
       );
@@ -262,9 +277,9 @@ class _VeriBottomBarState extends State<VeriBottomBar>
 
     return <Widget>[
       sweep(path1),
-      dot(path1, widget.circle1Color),
+      dot(path1, circle1),
       sweep(path2),
-      dot(path2, widget.circle2Color),
+      dot(path2, circle2),
     ];
   }
 
@@ -305,7 +320,7 @@ class _VeriBottomBarState extends State<VeriBottomBar>
       ..cubicTo(c1x, c1y, c2x, c2y, endX, quarter * endQuarter);
   }
 
-  List<Widget> _iconWidgets() {
+  List<Widget> _iconWidgets(Color accent) {
     return <Widget>[
       for (var index = 0; index < widget.items.length; index++)
         Expanded(
@@ -328,7 +343,7 @@ class _VeriBottomBarState extends State<VeriBottomBar>
                   child: _VeriBottomBarIcon(
                     key: _iconKeys[index],
                     item: widget.items[index],
-                    color: widget.color,
+                    color: accent,
                     selected: _selectedIndex == index,
                   ),
                 ),

@@ -75,6 +75,25 @@ void main() {
     expect(find.byType(BackdropFilter), findsNothing);
   });
 
+  testWidgets('底栏颜色跟随主题主色，不写死品牌蓝', (tester) async {
+    const customPrimary = Color(0xFFB3261E);
+    final baseTheme = buildVeriFinTheme(Brightness.light);
+    final theme = baseTheme.copyWith(
+      colorScheme: baseTheme.colorScheme.copyWith(primary: customPrimary),
+    );
+
+    await tester.pumpWidget(_NavigationHarness(theme: theme));
+
+    // 选中项（首页）用主题主色而非 veriRoyal；未选中项保持灰阶。
+    final selectedIcon = tester.widget<Icon>(find.byIcon(Icons.home_rounded));
+    expect(selectedIcon.color, customPrimary);
+    expect(selectedIcon.color, isNot(veriRoyal));
+    final unselectedIcon = tester.widget<Icon>(
+      find.byIcon(Icons.account_balance_wallet_outlined),
+    );
+    expect(unselectedIcon.color, isNot(customPrimary));
+  });
+
   testWidgets('底栏条目向无障碍暴露选中状态', (tester) async {
     final handle = tester.ensureSemantics();
     try {
@@ -111,9 +130,10 @@ void main() {
 }
 
 class _NavigationHarness extends StatefulWidget {
-  const _NavigationHarness({this.onSelected});
+  const _NavigationHarness({this.onSelected, this.theme});
 
   final ValueChanged<int>? onSelected;
+  final ThemeData? theme;
 
   @override
   State<_NavigationHarness> createState() => _NavigationHarnessState();
@@ -148,7 +168,7 @@ class _NavigationHarnessState extends State<_NavigationHarness> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: buildVeriFinTheme(Brightness.dark),
+      theme: widget.theme ?? buildVeriFinTheme(Brightness.dark),
       home: Scaffold(
         body: Center(child: Text('page:$_index')),
         bottomNavigationBar: VeriRootNavigation(
