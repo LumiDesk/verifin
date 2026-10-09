@@ -200,6 +200,18 @@ abstract class AppLocalizations {
   /// **'整宽贴底的不透明底栏，切换时图标扫过'**
   String get navigationStyleDockedDesc;
 
+  /// 液态玻璃底栏样式名称
+  ///
+  /// In zh, this message translates to:
+  /// **'液态玻璃'**
+  String get navigationStyleLiquidGlassName;
+
+  /// 液态玻璃底栏样式说明
+  ///
+  /// In zh, this message translates to:
+  /// **'浮动胶囊，背景模糊并轻微折射，内容从玻璃下滚过'**
+  String get navigationStyleLiquidGlassDesc;
+
   /// 快速记账入口(FAB 提示与数字键盘标题)
   ///
   /// In zh, this message translates to:

@@ -1,5 +1,6 @@
 import 'root_navigation.dart';
 import 'root_navigation_docked.dart';
+import 'root_navigation_liquid_glass.dart';
 
 /// 默认样式：新安装、偏好缺失或读到未知标识时的回退。
 ///
@@ -13,7 +14,10 @@ const VeriRootNavigationStyle veriRootDefaultNavigationStyle =
 /// 枚举值、在这里登记，并让测试覆盖新样式的契约（不透明表面、无模糊、条目 key、
 /// 安全区下限、避让自洽）。
 const List<VeriRootNavigationStyle> veriRootNavigationStyles =
-    <VeriRootNavigationStyle>[VeriDockedRootNavigationStyle()];
+    <VeriRootNavigationStyle>[
+      VeriDockedRootNavigationStyle(),
+      VeriLiquidGlassRootNavigationStyle(),
+    ];
 
 /// 按持久化标识取样式；缺失或未知标识一律回退 [veriRootDefaultNavigationStyle]。
 VeriRootNavigationStyle veriRootNavigationStyleFor(String? id) {

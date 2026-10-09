@@ -64,6 +64,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Full-width opaque bar pinned to the bottom; icons sweep as you switch';
 
   @override
+  String get navigationStyleLiquidGlassName => 'Liquid glass';
+
+  @override
+  String get navigationStyleLiquidGlassDesc =>
+      'Floating capsule with a blurred glass surface and a sliding highlight';
+
+  @override
   String get quickEntry => 'Quick Entry';
 
   @override

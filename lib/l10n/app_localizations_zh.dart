@@ -60,6 +60,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get navigationStyleDockedDesc => '整宽贴底的不透明底栏，切换时图标扫过';
 
   @override
+  String get navigationStyleLiquidGlassName => '液态玻璃';
+
+  @override
+  String get navigationStyleLiquidGlassDesc => '浮动胶囊，背景模糊并轻微折射，内容从玻璃下滚过';
+
+  @override
   String get quickEntry => '快速记账';
 
   @override
