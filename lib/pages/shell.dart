@@ -119,9 +119,12 @@ class _VeriFinShellState extends State<VeriFinShell> {
   }
 
   void _handleNavigationStyleChanged() {
-    final value =
-        _navigationStyleListenable?.value ?? NavigationStylePreference.docked;
-    if (!mounted || value == _navigationStylePreference) {
+    final listenable = _navigationStyleListenable;
+    if (!mounted || listenable == null) {
+      return;
+    }
+    final value = listenable.value;
+    if (value == _navigationStylePreference) {
       return;
     }
     setState(() => _navigationStylePreference = value);

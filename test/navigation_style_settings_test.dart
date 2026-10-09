@@ -108,7 +108,33 @@ void main() {
       find.byType(VeriRootNavigationHost),
     );
     expect(host.style.id, controller.navigationStylePreference.name);
-    expect(host.spec.destinations.length, 4);
+    // 四个根目的地与顺序在所有样式下都不变，是样式解耦的硬约束。
+    expect(
+      host.spec.destinations.map((destination) => destination.label).toList(),
+      <String>['首页', '资产', '看板', '我的'],
+    );
+  });
+
+  test('样式偏好经通知器发布，重复设置同一值不通知也不写 KV', () async {
+    final store = LocalKeyValueStore();
+    final controller = await makeController(store);
+    var notifications = 0;
+    void listener() => notifications++;
+    controller.navigationStylePreferenceListenable.addListener(listener);
+    addTearDown(
+      () => controller.navigationStylePreferenceListenable.removeListener(
+        listener,
+      ),
+    );
+
+    controller.setNavigationStylePreference(NavigationStylePreference.docked);
+
+    expect(notifications, 0, reason: '值没变就不该通知，否则每次重建都会连累整条导航');
+    expect(
+      store.read('verifin.nav_style.v1'),
+      isNull,
+      reason: '默认样式保持"缺失即默认"，不占 KV 键',
+    );
   });
 
   testWidgets('未修改就返回时设置页保持原样、不写 KV', (tester) async {
@@ -132,7 +158,7 @@ void main() {
     expect(store.read('verifin.nav_style.v1'), isNull);
   });
 
-  testWidgets('样式选择页预览不绘制模糊', (tester) async {
+  testWidgets('样式选择页渲染名称、说明与真机同源预览，且不绘制模糊', (tester) async {
     await tester.pumpWidget(
       zhMaterialApp(
         home: const NavigationStyleSettingsPage(initialStyleId: 'docked'),
@@ -142,6 +168,16 @@ void main() {
 
     expect(find.text('停靠底栏'), findsOneWidget);
     expect(find.text('整宽贴底的不透明底栏，切换时图标扫过'), findsOneWidget);
+    // 预览就是样式自己的 buildBar：四个条目与常显标签一起渲染，不是另画的缩略图。
+    for (final label in <String>['首页', '资产', '看板', '我的']) {
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey<String>('navigation_style_docked')),
+          matching: find.text(label),
+        ),
+        findsOneWidget,
+      );
+    }
     expect(find.byType(BackdropFilter), findsNothing);
   });
 
@@ -156,9 +192,12 @@ void main() {
     expect(find.text('停靠底栏'), findsOneWidget);
     expect(find.text('备用样式'), findsOneWidget);
 
-    await tester.tap(
+    // 点卡片上缘、也就是预览区域：预览整块 IgnorePointer，点击要穿到卡片自己的
+    // onTap，即"点预览也能选中这个样式"。
+    final card = tester.getRect(
       find.byKey(const ValueKey<String>('navigation_style_alternate')),
     );
+    await tester.tapAt(Offset(card.center.dx, card.top + 8));
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.save_outlined));
     await tester.pumpAndSettle();

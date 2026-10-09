@@ -108,19 +108,6 @@ class VeriRootNavigationSpec {
 
   /// 生成该前缀下的稳定 key，例如 `keyOf('nav_item_2')`。
   String keyOf(String suffix) => '${keyPrefix}_$suffix';
-
-  VeriRootNavigationSpec copyWith({
-    int? currentIndex,
-    ValueChanged<int>? onSelect,
-    bool clearOnSelect = false,
-  }) {
-    return VeriRootNavigationSpec(
-      currentIndex: currentIndex ?? this.currentIndex,
-      destinations: destinations,
-      onSelect: clearOnSelect ? null : (onSelect ?? this.onSelect),
-      keyPrefix: keyPrefix,
-    );
-  }
 }
 
 /// 一种根导航样式。

@@ -114,12 +114,6 @@ class VeriRootNavigationSpec {
   /// 稳定 key 前缀。每个样式必须产出 `<prefix>_bottom_nav`、`<prefix>_nav_bar`
   /// 与 `<prefix>_nav_item_<index>`，供测试与无障碍使用。
   final String keyPrefix;
-
-  VeriRootNavigationSpec copyWith({
-    int? currentIndex,
-    ValueChanged<int>? onSelect,
-    bool clearOnSelect = false,
-  });
 }
 
 abstract interface class VeriRootNavigationStyle {
@@ -262,7 +256,8 @@ SettingsRow(
   不认识偏好枚举，因此任何实现都能单独预览与测试。
 - 列表每个样式一张 `VeriCard`：
   - 上半为预览：固定高度容器 + `MediaQuery.removePadding(removeBottom: true)`（预览不需要系统手势条留白）
-    + `IgnorePointer(child: style.buildBar(context, spec.copyWith(onSelect: null)))`，
+    + `IgnorePointer(child: style.buildBar(context, spec))`（预览用的 spec 直接把
+    `onSelect` 置空、`keyPrefix` 取 `nav_style_preview_<样式标识>`），
     预览使用真实 l10n 标签与真实表面色。
   - 下半为名称 + 说明 + 选中标记（`Icons.check_circle`，颜色取 `colorScheme.primary`）。
   - 整卡可点，点选只更新页面草稿。
@@ -318,7 +313,8 @@ SettingsRow(
 
 - 设置页选择后返回，「外观」行 trailing 显示新样式名，但 Controller/KV 未变；
 - 设置页保存后才落 KV；不保存退出则丢弃；
-- 选择页预览不可点击、无模糊；
+- 选择页预览渲染真实标签与表面色、不绘制模糊；预览整块 `IgnorePointer`
+  （条目没有回调），点预览区域等于选中该样式；
 - 选择页未修改直接返回不弹提示；修改后返回弹出保存/不保存/取消，三者行为符合 Guard 规范。
 
 ### 命令
@@ -379,8 +375,8 @@ SettingsRow(
   只按 `extendBody ? occupiedHeight : 0` 抬升，停靠样式下仍是原来的 `bottom: 16`。
 - `VeriBottomBarItem` 新增 `itemKey`；条目 key 统一为 `main_nav_item_<下标>`，
   测试脚手架 `rootTabCenter` 与相关断言改为按 key 定位，不再依赖等宽几何。
-- 用户可见行为零变化：`flutter analyze` 无问题，全量 `flutter test` 通过（1073 项，
-  5 项按既有条件跳过）。
+- 用户可见行为零变化：`flutter analyze` 无问题，全量 `flutter test` 通过
+  （含 5 项按既有条件跳过）。
 
 ### 13.2 阶段 2：持久化 + 设置页入口 + 样式选择页
 
@@ -391,11 +387,14 @@ SettingsRow(
   `NavigationStyleSettingsPage`；选择结果回传设置页草稿，保存后才落盘。
 - 选择页对每个样式渲染同源预览（`IgnorePointer` + 独立 key 前缀 + `Material` 宿主），
   无模糊、无渐变；条目不可点击。
-- 新增 `test/navigation_style_settings_test.dart`（8 项）：注册表与偏好一一对应、
-  默认/非法值/重置、设置页入口与当前样式名、壳层样式与偏好一致、未修改返回不写 KV、
-  预览无模糊、选择后保存回传标识、修改后返回弹未保存询问。
-- 设置页新增一行后比一屏更长，`test/navigation_settings_test.dart` 中三处断言补了滚动。
-- 全量测试通过（1081 项，5 项跳过）。
+- 新增 `test/navigation_style_settings_test.dart`（9 项）：注册表与偏好一一对应、
+  默认/非法值/重置、设置页入口与当前样式名、壳层样式与四目的地一致、重复设置同一值
+  不通知也不写 KV、未修改返回不写 KV、预览渲染真实标签且不绘制模糊、
+  点预览区域选中样式、选择后保存回传标识、修改后返回弹未保存询问。
+- 设置页新增一行后比一屏更长，而 widget 测试视口是 800×600、`ListView` 懒构建，
+  `test/navigation_settings_test.dart` 中三处断言补了 `scrollUntilVisible`
+  （应用代码没有为此改动；真机上只是页面变长可滚动）。
+- 全量测试通过（含 5 项按既有条件跳过）。
 
 ### 13.3 实现期与本文草稿的差异
 

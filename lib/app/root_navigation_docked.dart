@@ -22,6 +22,9 @@ class VeriDockedRootNavigationStyle implements VeriRootNavigationStyle {
   static const double barHeight = 64;
 
   /// 列表末项在 `Scaffold` 让位之外保留的呼吸空间，取值与迁移前一致。
+  ///
+  /// 同一个数值也是条目 `SafeArea` 的最小底部间距（迁移前两者就是同一个 12dp）：
+  /// 系统导航条留白为 0 的 ROM 上，条目因此不会贴住屏幕下边缘。
   static const double listBottomGap = 12;
 
   static const VeriRootNavigationLayout _layout = VeriRootNavigationLayout(
@@ -61,10 +64,6 @@ class VeriDockedRootNavigation extends StatelessWidget {
 
   final VeriRootNavigationSpec spec;
 
-  /// 系统导航条留白为 0 时的最小底部间距（手势提示线关闭的部分 ROM 会这样报）。
-  static const double _minBottomGap =
-      VeriDockedRootNavigationStyle.listBottomGap;
-
   @override
   Widget build(BuildContext context) {
     assert(spec.destinations.isNotEmpty, '根导航至少要有一个目的地');
@@ -93,7 +92,9 @@ class VeriDockedRootNavigation extends StatelessWidget {
       child: SafeArea(
         top: false,
         maintainBottomViewPadding: true,
-        minimum: const EdgeInsets.only(bottom: _minBottomGap),
+        minimum: const EdgeInsets.only(
+          bottom: VeriDockedRootNavigationStyle.listBottomGap,
+        ),
         child: VeriBottomBar(
           key: ValueKey<String>(spec.keyOf('nav_bar')),
           selectedIndex: spec.currentIndex,

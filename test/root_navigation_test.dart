@@ -45,24 +45,6 @@ void main() {
       // 停靠样式由 Scaffold 让位，列表末项只保留呼吸留白。
       expect(layout.contentBottomPadding, 12);
     });
-
-    test('预览副本可以清空点击回调', () {
-      const destinations = <VeriNavigationDestination>[
-        VeriNavigationDestination(
-          icon: Icons.home_outlined,
-          selectedIcon: Icons.home_rounded,
-          label: '首页',
-        ),
-      ];
-      const spec = VeriRootNavigationSpec(
-        currentIndex: 0,
-        destinations: destinations,
-        onSelect: _noopSelect,
-      );
-
-      expect(spec.copyWith(clearOnSelect: true).onSelect, isNull);
-      expect(spec.copyWith(currentIndex: 0).onSelect, _noopSelect);
-    });
   });
 
   testWidgets('停靠底栏在 360dp 视口下整宽贴底', (tester) async {
@@ -245,6 +227,3 @@ class _NavigationHarnessState extends State<_NavigationHarness> {
     );
   }
 }
-
-/// 供契约测试比较回调身份的空实现。
-void _noopSelect(int index) {}

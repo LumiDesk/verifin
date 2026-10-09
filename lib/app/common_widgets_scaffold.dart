@@ -55,7 +55,7 @@ class VeriCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final borderRadius = BorderRadius.circular(
-      compact ? veriCompactCardRadius : veriCardRadius,
+      veriCardRadiusFor(compact: compact),
     );
     final decoration = BoxDecoration(
       color: veriContentSurfaceColor(Theme.of(context).brightness),
