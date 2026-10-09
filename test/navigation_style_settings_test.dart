@@ -158,7 +158,7 @@ void main() {
     expect(store.read('verifin.nav_style.v1'), isNull);
   });
 
-  testWidgets('样式选择页渲染名称、说明与真机同源预览，且不绘制模糊', (tester) async {
+  testWidgets('样式选择页渲染名称、说明与真机同源预览；停靠预览不绘制模糊', (tester) async {
     await tester.pumpWidget(
       zhMaterialApp(
         home: const NavigationStyleSettingsPage(initialStyleId: 'docked'),
@@ -178,7 +178,33 @@ void main() {
         findsOneWidget,
       );
     }
-    expect(find.byType(BackdropFilter), findsNothing);
+    // 停靠预览仍是不透明实色；液态玻璃预览是唯一会绘制背景模糊的已注册样式。
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey<String>('navigation_style_docked')),
+        matching: find.byType(BackdropFilter),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey<String>('navigation_style_liquidGlass')),
+        matching: find.byType(BackdropFilter),
+      ),
+      findsWidgets,
+    );
+    // 玻璃预览同样复用 buildBar：四个条目与常显标签一起渲染。
+    for (final label in <String>['首页', '资产', '看板', '我的']) {
+      expect(
+        find.descendant(
+          of: find.byKey(
+            const ValueKey<String>('navigation_style_liquidGlass'),
+          ),
+          matching: find.text(label),
+        ),
+        findsOneWidget,
+      );
+    }
   });
 
   testWidgets('样式选择页选中后保存会回传该样式标识', (tester) async {

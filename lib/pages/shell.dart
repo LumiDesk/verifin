@@ -291,10 +291,14 @@ class _VeriFinShellState extends State<VeriFinShell> {
     // 记账按钮与导航栏解耦，但不能落在栏的占用范围里：内容延伸到栏背后时
     // （样式声明 extendBody），按钮要抬到栏上方；停靠样式由 Scaffold 让位，
     // 维持原来的 16dp。
+    // 悬浮样式的栏体会一直铺到屏幕最底（含系统安全区），记账按钮要抬到
+    // 「安全区 + occupiedHeight」之上才算真正让开；停靠样式由 Scaffold 让位，
+    // 仍维持原来的 16dp。
     final quickEntryBottom =
         16.0 +
         (navigationStyle.layout.extendBody
-            ? navigationStyle.layout.occupiedHeight
+            ? navigationStyle.layout.occupiedHeight +
+                  MediaQuery.viewPaddingOf(context).bottom
             : 0);
 
     return PopScope(

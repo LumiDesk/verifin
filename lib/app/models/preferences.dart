@@ -160,7 +160,8 @@ enum LocalePreference {
 /// （`test/navigation_style_settings_test.dart` 会断言两者不许漂移）。
 /// 设备本地偏好：不进 JSON 备份，初始化数据时保留。
 enum NavigationStylePreference {
-  docked;
+  docked,
+  liquidGlass;
 
   static NavigationStylePreference fromStorage(String? value) {
     return NavigationStylePreference.values.firstWhere(

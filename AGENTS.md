@@ -2,9 +2,11 @@
 
 2026-09-10 材质方向调整：磨砂玻璃与「高级材质」（方向高光、导航折射透镜、全局背景渐变）经用户判定为设计败笔，已整体移除。卡片、导航、快捷按钮、菜单与弹层一律使用**不透明实色**表面，页面背景为单一纯色；界面目标是高效率、干净直接，不再引入模糊、折射或光效层。`GLASS_DESIGN_PREVIEW` 已删除，构建命令不应再出现该参数。CI 固定 Flutter 3.47.2；正式包仍由 CI 构建，须用户明确授权发版，禁止要求清除应用数据。
 
+2026-10-09 追加：底部导航新增可选的**液态玻璃**样式（用户明确要求，只作用于底部导航这一处）。不透明实色仍是默认停靠底栏与其余全部界面的规则；玻璃实现必须局部化在 `root_navigation_liquid_glass.dart`、`liquid_glass_material.dart` 与 `shaders/liquid_glass_refraction.frag`，不得扩散到卡片、菜单、弹层或页面背景，并必须在着色器不可用时降级为模糊或实色玻璃。
+
 v1.16.0 发布说明：CI Android 两渠道显式带 `--dart-define=UNIFIED_DESIGN_PREVIEW=true`，保证手机包含已评审外观。该参数现在**只控制布局密度与排版**，与材质无关。本地与发布包对照时必须使用相同参数；无参数构建保留旧外观用于回归。
 
-界面调整必读 [统一设计与交互规范](docs/design-system.md)：集中记录已确认布局、表面材质（不透明实色，无玻璃）、设置持久化与验收约定；历史研究稿不得覆盖该规范。候选统一排版现覆盖全部页面；导航静止必须显示实时文字，预算环禁止内外白线。
+界面调整必读 [统一设计与交互规范](docs/design-system.md)：集中记录已确认布局、表面材质（默认与其余界面为不透明实色，唯一例外是可选液态玻璃底栏）、设置持久化与验收约定；历史研究稿不得覆盖该规范。候选统一排版现覆盖全部页面；导航静止必须显示实时文字，预算环禁止内外白线。
 
 ## 文档作用与工作语言
 
@@ -27,7 +29,7 @@ v1.16.0 发布说明：CI Android 两渠道显式带 `--dart-define=UNIFIED_DESI
 ### 文档阅读路线
 
 - `docs/dev/architecture.md`：架构与源码导航。`CLAUDE.md` 仅链接本文件，不维护第二份规范。
-- `docs/dev/components.md`：组件、弹窗、格式化与纯函数注册表；写相关代码前必读。根导航的当前约定见其中 `VeriRootNavigationStyle` 与 `VeriDockedRootNavigationStyle` 条目（默认停靠样式 + 可注册样式，样式选择页见 `NavigationStyleSettingsPage`），底栏绘制组件的抄写修复记录见 `VeriBottomBar` 条目。新增样式前另读 `docs/dev/navigation-style-decoupling-design.md`。`docs/dev/liquid-glass-navigation.md` 已是历史留档（浮动胶囊与拖动状态机已废弃）。
+- `docs/dev/components.md`：组件、弹窗、格式化与纯函数注册表；写相关代码前必读。根导航的当前约定见其中 `VeriRootNavigationStyle`、`VeriDockedRootNavigationStyle` 与 `VeriLiquidGlassRootNavigationStyle` 条目（默认停靠样式 + 可选的液态玻璃样式，样式选择页见 `NavigationStyleSettingsPage`），底栏绘制组件的抄写修复记录见 `VeriBottomBar` 条目。新增样式前另读 `docs/dev/navigation-style-decoupling-design.md`。`docs/dev/liquid-glass-navigation.md` 已是历史留档（浮动胶囊与拖动状态机已废弃；2026-10-09 新增的液态玻璃样式与它无关，只点击、不拖动）。
 - `docs/ui-guidelines.md`：页面骨架、交互、图表和视觉规范。
 - `docs/dev/tech-decisions.md`：数据口径、备份范围和关键技术取舍；个别历史背景可能已被新实现取代，仍需与代码和测试核对。
 - `docs/dev/known-limitations.md`：已接受技术债及触发整改的阈值。

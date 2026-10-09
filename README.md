@@ -193,7 +193,7 @@ Veri Fin 是自由软件，基于 **GNU 通用公共许可证 v3.0 或更高版�
 
 </div>
 
-开发界面前请阅读 [统一设计与交互规范](docs/design-system.md)。材质自 2026-09-10 起统一为不透明实色：无磨砂玻璃、无方向高光、无背景渐变。
+开发界面前请阅读 [统一设计与交互规范](docs/design-system.md)。材质自 2026-09-10 起统一为不透明实色：无磨砂玻璃、无方向高光、无背景渐变；2026-10-09 起底部导航额外提供一个可选的液态玻璃样式（设置 → 外观 → 导航栏样式），其余界面不变。
 
 v1.16.0 起发布包包含统一设计。复现手机外观时，Flutter 运行/构建命令附加 `--dart-define=UNIFIED_DESIGN_PREVIEW=true`（该参数只控制布局密度与排版）；Android 同时指定 `--flavor github`。CI 与本地验收统一使用 Flutter **3.47.2**；真机命令见 [Android 开发与环境自动补齐](docs/dev/android-development.md)。正式更新仍须通过 CI 发版。
 

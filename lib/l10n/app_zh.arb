@@ -65,6 +65,14 @@
   "@navigationStyleDockedDesc": {
     "description": "停靠式底栏样式说明"
   },
+  "navigationStyleLiquidGlassName": "液态玻璃",
+  "@navigationStyleLiquidGlassName": {
+    "description": "液态玻璃底栏样式名称"
+  },
+  "navigationStyleLiquidGlassDesc": "浮动胶囊，背景模糊并轻微折射，内容从玻璃下滚过",
+  "@navigationStyleLiquidGlassDesc": {
+    "description": "液态玻璃底栏样式说明"
+  },
   "quickEntry": "快速记账",
   "@quickEntry": {
     "description": "快速记账入口(FAB 提示与数字键盘标题)"
