@@ -170,6 +170,36 @@ abstract class AppLocalizations {
   /// **'我的'**
   String get tabProfile;
 
+  /// 设置页外观分组:导航栏样式入口标题(兼样式选择页标题)
+  ///
+  /// In zh, this message translates to:
+  /// **'导航栏样式'**
+  String get navigationStyleLabel;
+
+  /// 导航栏样式选择页副标题
+  ///
+  /// In zh, this message translates to:
+  /// **'四个入口在所有样式下保持不变'**
+  String get navigationStylePickerHint;
+
+  /// 导航栏样式选择页:当前启用样式的标记
+  ///
+  /// In zh, this message translates to:
+  /// **'使用中'**
+  String get navigationStyleInUse;
+
+  /// 停靠式底栏样式名称
+  ///
+  /// In zh, this message translates to:
+  /// **'停靠底栏'**
+  String get navigationStyleDockedName;
+
+  /// 停靠式底栏样式说明
+  ///
+  /// In zh, this message translates to:
+  /// **'整宽贴底的不透明底栏，切换时图标扫过'**
+  String get navigationStyleDockedDesc;
+
   /// 快速记账入口(FAB 提示与数字键盘标题)
   ///
   /// In zh, this message translates to:

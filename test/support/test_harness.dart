@@ -107,15 +107,14 @@ class _LocalizedTestAppState extends State<_LocalizedTestApp> {
 
 /// 底栏第 [index] 个条目的中心点。
 ///
-/// 底栏条目等宽铺满整宽，所以按底栏矩形算位置即可。不用
-/// `find.byType(Text).at(i)` 定位条目：底栏把标签和图标裹在不参与命中测试的图层里
+/// 按条目的稳定 key 定位：根导航样式契约要求每个样式为条目产出
+/// `<前缀>_nav_item_<下标>`，因此这里不依赖任何样式的几何形状（等宽、间距、外边距）。
+/// 不用 `find.byType(Text).at(i)` 定位条目：底栏把标签和图标裹在不参与命中测试的图层里
 /// （`VeriBottomBar` 里是 `IgnorePointer` / 原库的同类处理），直接 tap 那个 Text 会
 /// 触发 "would not hit test on the specified widget" 警告（虽然点击位置仍落在条目
 /// 点击区，功能是对的）。
 Offset rootTabCenter(WidgetTester tester, int index) {
-  final rect = tester.getRect(find.byKey(const Key('main_bottom_nav')));
-  const count = 4;
-  return Offset(rect.left + rect.width * (index + 0.5) / count, rect.center.dy);
+  return tester.getCenter(find.byKey(ValueKey<String>('main_nav_item_$index')));
 }
 
 Future<void> tapBottomTab(WidgetTester tester, int index) async {

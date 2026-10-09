@@ -12,15 +12,19 @@
 
 ## 根导航
 
-四个根页面统一使用 `VeriRootNavigation`。底栏是**停靠式**：整宽、不透明、贴底，条目由自有的 `VeriBottomBar` 绘制（未选中线框图标、选中填充图标，中文标签常显）；右下角的记账按钮是独立的浮动圆角方形，只在首页显示。选中项用 `colorScheme.primary`（默认 Veri Royal）强调，底栏表面和未选中项保持中性，不给整条导航背景染色。
+四个根页面使用同一条底部导航，样式经 `VeriRootNavigationStyle` 注册、由 `VeriRootNavigationHost` 渲染。当前默认样式是**停靠式**：整宽、不透明、贴底，条目由自有的 `VeriBottomBar` 绘制（未选中线框图标、选中填充图标，中文标签常显）。选中项用 `colorScheme.primary`（默认 Veri Royal）强调，底栏表面和未选中项保持中性，不给整条导航背景染色。
 
-承载根导航的 Shell 必须关闭 `Scaffold.extendBody`（停靠底栏不透明，内容延伸到它背后会被盖住半截），并关闭 body 外层 `SafeArea` 的 bottom 裁切。PageView 外必须套 `VeriRootNavigationBody`，隔离 Scaffold 注入的 bottom padding，避免页面内未显式 padding 的 GridView（日历、功能宫格等）被底栏高度撑大。底栏内容用 `SafeArea(minimum: 12, maintainBottomViewPadding: true)` 让开系统导航条；根页面列表用 `veriRootPageListPadding(context)` 取统一内边距。
+**记账按钮与导航栏无关**：它是右下角的独立浮动圆角方形，只在首页显示，由 Shell 自己渲染；样式不参与，也不得占用它的区域（内容延伸到栏背后时，Shell 按样式声明的 `occupiedHeight` 把按钮抬到栏上方）。
 
-底栏只响应点击。点击后底栏的扫过动效与页面过渡同时起步、同时收住：页面由弹簧驱动、**没有固定时长**，弹簧的收敛时间与距离无关，底栏取同一时间尺度（`VeriRootNavigation.switchDuration`）即可对齐。切页动画被用户交互打断（在页面区域点击或滑动）时，底栏按页面实际停靠的页对齐，不能停留在点击时的目标页。底栏条目用 `Semantics(selected:)` 向读屏软件报告选中态。完整时序见 `docs/dev/components.md` 的组件条目。
+承载根导航的 Shell 取当前样式的 `layout` 决定 `Scaffold.extendBody`（停靠底栏不透明，内容延伸到它背后会被盖住半截）与列表避让，并关闭 body 外层 `SafeArea` 的 bottom 裁切。PageView 外必须套 `VeriRootNavigationBody`，隔离 Scaffold 注入的 bottom padding，避免页面内未显式 padding 的 GridView（日历、功能宫格等）被底栏高度撑大。停靠样式的条目内容用 `SafeArea(minimum: 12, maintainBottomViewPadding: true)` 让开系统导航条；根页面列表用 `veriRootPageListPadding(context)` 取统一内边距。
+
+底栏只响应点击。点击后底栏的扫过动效与页面过渡同时起步、同时收住：页面由弹簧驱动、**没有固定时长**，弹簧的收敛时间与距离无关，底栏取同一时间尺度（`VeriRootNavigationStyle.switchDuration`）即可对齐。切页动画被用户交互打断（在页面区域点击或滑动）时，底栏按页面实际停靠的页对齐，不能停留在点击时的目标页。样式必须为每个条目产出稳定的 `<前缀>_nav_item_<下标>` key，并用 `Semantics(selected:)` 向读屏软件报告选中态。完整时序见 `docs/dev/components.md` 的组件条目。
 
 底栏与记账按钮都使用不透明表面色加一条顶部描边，不绘制渐变、不做背景模糊或折射。品牌色只用于底栏选中项和记账按钮等明确主操作，不用于底栏背景。
 
 导航触发 PageView 跨页动画时，Shell 只认最终目的地，不得用 `onPageChanged` 途经的中间页覆盖导航状态；用户直接左右滑动 PageView 时才逐页同步。否则跨页动画会被中间页重启，看起来像选中态从原 Tab 重新出发。
+
+新增或替换导航样式前先读 [底部导航样式解耦与选择页实施方案](dev/navigation-style-decoupling-design.md)：哪里可以变（几何、动效、绘制），哪里不能变（四个目的地、切页状态机、返回语义、记账按钮），以及每个样式都要通过的契约测试。
 
 ## 顶部 Header 与页面骨架
 **副标题放什么**：`subtitle` 只承载与标题互补的上下文——账本名、账户名/类型、日期或统计区间。要带「单位：x」时必须经 `currencyUnitSubtitle(l10n, prefix, code)` 拼接，不要手写 `'$prefix · 单位：¥'`（首页、看板、资产、预算总览、预算设置、预算历史、统计分析、收支统计、交易明细、账户详情、账户报告都曾各自抄一份模板）。该 helper 在隐藏单位时只返回前缀；没有前缀时返回 `null`，`subtitle` 为 `null` 时整行不渲染，所以直接把返回值交过去即可，不要传空串、也不要留下只剩「·」的残句。完整口径（含卡片角标、AI 结果卡与豁免清单）见 [设计与交互规范](design-system.md) 的「货币单位的显示口径」。

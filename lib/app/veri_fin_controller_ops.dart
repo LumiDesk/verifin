@@ -978,6 +978,20 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
+  NavigationStylePreference get navigationStylePreference =>
+      _navigationStylePreference;
+
+  /// 底部导航栏样式是设备本地偏好：不进 JSON 备份，初始化数据时保留。
+  void setNavigationStylePreference(NavigationStylePreference preference) {
+    if (_navigationStylePreference == preference) {
+      return;
+    }
+    _navigationStylePreference = preference;
+    navigationStylePreferenceListenable.value = preference;
+    _store.write(_navigationStyleKey, preference.name);
+    notifyListeners();
+  }
+
   ReminderSettings get reminderSettings => _reminderSettings;
 
   /// 记账提醒配置变化时的回调（由 `main.dart` 注入，用于重排本地通知）。
@@ -1240,6 +1254,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     required ThemePreference themePreference,
     required ThemeColorPreference themeColorPreference,
     required LocalePreference localePreference,
+    required NavigationStylePreference navigationStylePreference,
     required bool hapticsEnabled,
     required bool amountForceTwoDecimals,
     required MoneyUnitStyle moneyUnitStyle,
@@ -1260,6 +1275,10 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       await _store.writeAndFlush(_themeKey, themePreference.name);
       await _store.writeAndFlush(_themeColorKey, themeColorPreference.encode());
       await _store.writeAndFlush(_localeKey, localePreference.name);
+      await _store.writeAndFlush(
+        _navigationStyleKey,
+        navigationStylePreference.name,
+      );
       await _store.writeAndFlush(_hapticsKey, hapticsEnabled.toString());
       await _store.writeAndFlush(
         _amountFormatKey,
@@ -1292,6 +1311,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _themePreference = themePreference;
     _themeColorPreference = themeColorPreference;
     _localePreference = localePreference;
+    _navigationStylePreference = navigationStylePreference;
     _hapticsEnabled = hapticsEnabled;
     _amountForceTwoDecimals = amountForceTwoDecimals;
     amount_format.amountForceTwoDecimals = amountForceTwoDecimals;
@@ -1307,6 +1327,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     themePreferenceListenable.value = themePreference;
     themeColorPreferenceListenable.value = themeColorPreference;
     localePreferenceListenable.value = localePreference;
+    navigationStylePreferenceListenable.value = navigationStylePreference;
     notifyListeners();
     return true;
   }
@@ -3928,6 +3949,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     for (final key in <String>[
       _themeKey,
       _themeColorKey,
+      _navigationStyleKey,
       _profileKey,
       _activeBookKey,
       _assetCoverKey,
@@ -3964,6 +3986,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _profile = _seedProfile;
     _themePreference = ThemePreference.system;
     _themeColorPreference = ThemeColorPreference.defaultValue;
+    _navigationStylePreference = NavigationStylePreference.docked;
     _activeBookId = defaultLedgerBookId;
     _assetCoverUrl = '';
     _hapticsEnabled = true;
@@ -3984,6 +4007,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _persistAllLedgerData();
     themePreferenceListenable.value = _themePreference;
     themeColorPreferenceListenable.value = _themeColorPreference;
+    navigationStylePreferenceListenable.value = _navigationStylePreference;
     notifyListeners();
   }
 

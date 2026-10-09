@@ -15,6 +15,15 @@ const double veriCardRadius = veriUnifiedDesignPreview ? 16 : veriRadiusMd;
 const double veriCompactCardRadius = 16;
 const double veriCompactHeaderHeight = 56;
 
+/// 卡片圆角半径，与 [VeriCard] 的默认取值同源。
+///
+/// 需要在卡内自行裁圆角（例如样式预览这类整宽内容）时用它，不要在调用点重写
+/// `veriUnifiedDesignPreview ? veriCompactCardRadius : veriCardRadius`。
+double veriCardRadiusFor({bool? compact}) {
+  final useCompact = compact ?? veriUnifiedDesignPreview;
+  return useCompact ? veriCompactCardRadius : veriCardRadius;
+}
+
 /// 内容卡片与资产封面共用的实体基色。
 Color veriContentSurfaceColor(Brightness brightness) =>
     brightness == Brightness.dark

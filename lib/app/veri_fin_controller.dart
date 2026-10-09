@@ -61,6 +61,7 @@ const Set<String> _knownBackupDataKeys = <String>{
 const String _themeKey = 'verifin.theme.v1';
 const String _themeColorKey = 'verifin.theme_color.v1';
 const String _localeKey = 'verifin.locale.v1';
+const String _navigationStyleKey = 'verifin.nav_style.v1';
 const String _profileKey = 'verifin.profile.v1';
 const String _activeBookKey = 'verifin.active_book.v1';
 const String _assetCoverKey = 'verifin.asset_cover.v1';
@@ -135,6 +136,8 @@ class VeriFinController extends ChangeNotifier
     localePreferenceListenable = ValueNotifier<LocalePreference>(
       _localePreference,
     );
+    navigationStylePreferenceListenable =
+        ValueNotifier<NavigationStylePreference>(_navigationStylePreference);
     aiCapabilityListenable = ValueNotifier<AiCapabilityProfile?>(
       _aiCapabilityProfile,
     );
@@ -176,6 +179,7 @@ class VeriFinController extends ChangeNotifier
     themePreferenceListenable.dispose();
     themeColorPreferenceListenable.dispose();
     localePreferenceListenable.dispose();
+    navigationStylePreferenceListenable.dispose();
     aiCapabilityListenable.dispose();
     super.dispose();
   }

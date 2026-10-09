@@ -11,11 +11,13 @@ import '../app/legal_content.dart';
 import '../l10n/app_localizations.dart';
 import '../app/models.dart';
 import '../app/platform_bridge.dart';
+import '../app/root_navigation_styles.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
 import 'ai_settings_page.dart';
 import 'app_lock_page.dart';
 import 'legal_pages.dart';
+import 'navigation_style_settings_page.dart';
 import 'reminder_settings_page.dart';
 import 'sheets.dart';
 
@@ -34,6 +36,8 @@ class _SettingsPageState extends State<SettingsPage> {
   late ThemeColorPreference _themeColor;
   late LocalePreference _initialLocale;
   late LocalePreference _locale;
+  late NavigationStylePreference _initialNavigationStyle;
+  late NavigationStylePreference _navigationStyle;
   late bool _initialHaptics;
   late bool _haptics;
   late bool _initialTwoDecimals;
@@ -64,6 +68,8 @@ class _SettingsPageState extends State<SettingsPage> {
     _initialTheme = _theme = controller.themePreference;
     _initialThemeColor = _themeColor = controller.themeColorPreference;
     _initialLocale = _locale = controller.localePreference;
+    _initialNavigationStyle = _navigationStyle =
+        controller.navigationStylePreference;
     _initialHaptics = _haptics = controller.hapticsEnabled;
     _initialTwoDecimals = _twoDecimals = controller.amountForceTwoDecimals;
     _initialMoneyUnitStyle = _moneyUnitStyle = controller.moneyUnitStyle;
@@ -189,6 +195,19 @@ class _SettingsPageState extends State<SettingsPage> {
                           contentColor: Theme.of(context).colorScheme.primary,
                         ),
                       ],
+                      const Divider(height: 1),
+                      SettingsRow(
+                        key: const ValueKey('settings_navigation_style'),
+                        icon: Icons.dashboard_outlined,
+                        title: AppLocalizations.of(
+                          context,
+                        ).navigationStyleLabel,
+                        trailing: veriRootNavigationStyleFor(
+                          _navigationStyle.name,
+                        ).label(AppLocalizations.of(context)),
+                        trailingIcon: Icons.chevron_right,
+                        onTap: _pickNavigationStyle,
+                      ),
                     ],
                   ),
                 ),
@@ -535,6 +554,25 @@ class _SettingsPageState extends State<SettingsPage> {
         .toUpperCase();
   }
 
+  /// 进入导航栏样式选择页。
+  ///
+  /// 选择结果只回写本页草稿：真正的 KV 写入仍由本页统一保存完成，所以「换样式」
+  /// 与「改主题」等其它外观偏好是同一种保存语义。
+  Future<void> _pickNavigationStyle() async {
+    final selected = await Navigator.of(context).push<String>(
+      MaterialPageRoute<String>(
+        builder: (context) =>
+            NavigationStyleSettingsPage(initialStyleId: _navigationStyle.name),
+      ),
+    );
+    if (!mounted || selected == null) {
+      return;
+    }
+    setState(
+      () => _navigationStyle = NavigationStylePreference.fromStorage(selected),
+    );
+  }
+
   Future<void> _editThemeColor() async {
     final picked = await showThemeColorPickerSheet(
       context: context,
@@ -620,6 +658,7 @@ class _SettingsPageState extends State<SettingsPage> {
       _theme != _initialTheme ||
       _themeColor != _initialThemeColor ||
       _locale != _initialLocale ||
+      _navigationStyle != _initialNavigationStyle ||
       _haptics != _initialHaptics ||
       _twoDecimals != _initialTwoDecimals ||
       _moneyUnitStyle != _initialMoneyUnitStyle ||
@@ -636,6 +675,7 @@ class _SettingsPageState extends State<SettingsPage> {
         _initialTheme = _theme;
         _initialThemeColor = _themeColor;
         _initialLocale = _locale;
+        _initialNavigationStyle = _navigationStyle;
         _initialHaptics = _haptics;
         _initialTwoDecimals = _twoDecimals;
         _initialMoneyUnitStyle = _moneyUnitStyle;
@@ -655,6 +695,7 @@ class _SettingsPageState extends State<SettingsPage> {
       themePreference: _theme,
       themeColorPreference: _themeColor,
       localePreference: _locale,
+      navigationStylePreference: _navigationStyle,
       hapticsEnabled: _haptics,
       amountForceTwoDecimals: _twoDecimals,
       moneyUnitStyle: _moneyUnitStyle,

@@ -45,6 +45,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tabProfile => '我的';
 
   @override
+  String get navigationStyleLabel => '导航栏样式';
+
+  @override
+  String get navigationStylePickerHint => '四个入口在所有样式下保持不变';
+
+  @override
+  String get navigationStyleInUse => '使用中';
+
+  @override
+  String get navigationStyleDockedName => '停靠底栏';
+
+  @override
+  String get navigationStyleDockedDesc => '整宽贴底的不透明底栏，切换时图标扫过';
+
+  @override
   String get quickEntry => '快速记账';
 
   @override

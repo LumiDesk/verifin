@@ -107,6 +107,10 @@ mixin _ControllerState on ChangeNotifier {
   /// 语言偏好通知器：驱动 `MaterialApp.locale` 即时切换。
   late final ValueNotifier<LocalePreference> localePreferenceListenable;
 
+  /// 导航样式通知器：驱动根导航换样式即时生效，不触发全应用重建。
+  late final ValueNotifier<NavigationStylePreference>
+  navigationStylePreferenceListenable;
+
   /// AI 能力缓存只驱动设置页和 Agent 协议选择，不触发全应用重建。
   late final ValueNotifier<AiCapabilityProfile?> aiCapabilityListenable;
 
@@ -114,6 +118,8 @@ mixin _ControllerState on ChangeNotifier {
   ThemeColorPreference _themeColorPreference =
       ThemeColorPreference.defaultValue;
   LocalePreference _localePreference = LocalePreference.system;
+  NavigationStylePreference _navigationStylePreference =
+      NavigationStylePreference.docked;
   UserProfile _profile = defaultUserProfile;
   String _activeBookId = defaultLedgerBookId;
   String _assetCoverUrl = '';
@@ -204,6 +210,9 @@ mixin _ControllerState on ChangeNotifier {
       _store.read(_themeColorKey),
     );
     _localePreference = LocalePreference.fromStorage(_store.read(_localeKey));
+    _navigationStylePreference = NavigationStylePreference.fromStorage(
+      _store.read(_navigationStyleKey),
+    );
     _loadProfile();
     _activeBookId = _store.read(_activeBookKey) ?? defaultLedgerBookId;
     _assetCoverUrl = _store.read(_assetCoverKey) ?? '';

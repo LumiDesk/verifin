@@ -154,6 +154,22 @@ enum LocalePreference {
   }
 }
 
+/// 底部导航栏样式偏好：四个根目的地固定，只切换导航栏的呈现方式。
+///
+/// 枚举名即持久化标识，必须与 `VeriRootNavigationStyle.id` 一一对应
+/// （`test/navigation_style_settings_test.dart` 会断言两者不许漂移）。
+/// 设备本地偏好：不进 JSON 备份，初始化数据时保留。
+enum NavigationStylePreference {
+  docked;
+
+  static NavigationStylePreference fromStorage(String? value) {
+    return NavigationStylePreference.values.firstWhere(
+      (preference) => preference.name == value,
+      orElse: () => NavigationStylePreference.docked,
+    );
+  }
+}
+
 enum AssetAccountViewMode {
   group,
   type;
