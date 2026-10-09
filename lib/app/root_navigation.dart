@@ -88,10 +88,11 @@ class VeriRootNavigation extends StatefulWidget {
     this.keyPrefix = 'main',
   });
 
-  /// 选中切换的动画时长，供调用方对齐切页动画。
+  /// 选中切换的动画时间尺度，供调用方对齐切页动画。
   ///
-  /// 与 [VeriBottomBar.switchDuration] 同值；调用方用同一时长驱动页面切换，底栏
-  /// 动画与页面过渡才会同时起步、同时结束。跨多页（跨度大于一页）同样播这段过场。
+  /// 与 [VeriBottomBar.switchDuration] 同值；调用方以同一尺度驱动页面切换（页面
+  /// 由弹簧驱动、没有固定时长），底栏动画与页面过渡才会同时起步、同时收住。
+  /// 跨多页（跨度大于一页）同样播这段过场。
   static const Duration switchDuration = VeriBottomBar.switchDuration;
 
   final int currentIndex;
@@ -119,7 +120,6 @@ class _VeriRootNavigationState extends State<VeriRootNavigation> {
     // 表面色要一直铺到屏幕最底（含系统导航条背后），否则那一条会露出页面底色、
     // 和底栏分成两块。因此底衬在最外，条目内容再用内边距让开。
     final surface = veriElevatedSurfaceColor(Theme.of(context).brightness);
-    final accent = Theme.of(context).colorScheme.primary;
     final outline = Theme.of(context).brightness == Brightness.dark
         ? Colors.white.withValues(alpha: 0.07)
         : Colors.black.withValues(alpha: 0.07);
@@ -159,11 +159,8 @@ class _VeriRootNavigationState extends State<VeriRootNavigation> {
                 ),
               ),
           ],
-          color: accent,
-          // 库默认 circle1=蓝、circle2=红，切换时飞过两个异色圆点。统一成
-          // 品牌色，动效才和整体配色一致。
-          circle1Color: accent,
-          circle2Color: accent,
+          // 主色与圆点色都不传：VeriBottomBar 内部取当前主题的 primary，
+          // 主题色（动态色 / 自定义色）切换后底栏自动跟随。
           backgroundColor: Colors.transparent,
         ),
       ),

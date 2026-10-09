@@ -16,7 +16,7 @@
 ## 一、切换与持久化（5 分钟）
 
 1. 打开应用（中文界面）→ 我的 → 设置 → 语言，确认三个选项显示为「跟随系统 / 简体中文 / English」。
-2. 选 **English**：设置页立即变英文（Theme / Language / App lock / Check for updates…），返回后底部导航长按气泡为 Home / Assets / Reports / Me。
+2. 选 **English**：设置页立即变英文（Theme / Language / App lock / Check for updates…），返回后底部导航文字为 Home / Assets / Reports / Me。
 3. **杀掉进程重开**：仍是英文，且应用锁（若开启）锁屏文案为英文（Enter password / Biometric unlock）。
 4. 切回**简体中文**，确认即时恢复中文。
 5. 选**跟随系统**：把手机系统语言切到英文 → 应用显示英文；切回中文 → 应用中文。

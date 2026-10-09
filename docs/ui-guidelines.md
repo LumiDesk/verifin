@@ -10,7 +10,7 @@
 视觉方案使用独立 diagnostic flavor 的正式入口在手机上评审；保留桌面 widget 布局测试。
 环境检测、缺失工具自动安装、日志和 release/R8 验收见 [Android 开发](dev/android-development.md)。
 
-## 浮动根导航
+## 根导航
 
 四个根页面统一使用 `VeriRootNavigation`。底栏是**停靠式**：整宽、不透明、贴底，条目由自有的 `VeriBottomBar` 绘制（未选中线框图标、选中填充图标，中文标签常显）；右下角的记账按钮是独立的浮动圆角方形，只在首页显示。选中项用中性强调，不给整条导航染品牌蓝。
 

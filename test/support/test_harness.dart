@@ -121,7 +121,7 @@ Offset rootTabCenter(WidgetTester tester, int index) {
 Future<void> tapBottomTab(WidgetTester tester, int index) async {
   // 按位置点而不是按文案：测试可能已把界面切成英文，中文标签会找不到。
   await tester.tapAt(rootTabCenter(tester, index));
-  // 先推进固定帧数把底栏的 500ms 选中动效和切页动画走完（两者同时长），再 settle
+  // 先推进固定帧数把底栏的 250ms 选中动效和弹簧切页动画走完（同一时间尺度），再 settle
   // 等页面首帧内容（懒加载的列表项等）构建完。`pumpAndSettle` 单用也能收敛，这里
   // 显式推进是为了不依赖「动画恰好自行停下」这一点。
   await tester.pump();
