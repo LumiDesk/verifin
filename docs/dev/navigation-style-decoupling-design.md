@@ -124,19 +124,36 @@ class VeriRootNavigationSpec {
 abstract interface class VeriRootNavigationStyle {
   const VeriRootNavigationStyle();
 
+  /// 壳层切页的默认时间尺度；样式没有自己的选中动效时返回该值即可。
+  static const Duration defaultSwitchDuration = Duration(milliseconds: 250);
+
   /// 持久化标识，写入 KV；一旦发布不得更名（改名须提供迁移或别名）。
   String get id;
 
-  /// 选择页展示名与说明。
-  String label(AppLocalizations l10n);
+  /// 选择页卡片上的说明。展示名由 NavigationStylePreference 提供，避免两处维护。
   String description(AppLocalizations l10n);
 
   VeriRootNavigationLayout get layout;
 
-  /// 与页面切换动画对齐的时间尺度。无切换动效的样式返回 Duration.zero。
+  /// 选中动效的时间尺度；壳层用它驱动切页弹簧，两者同时起步、同时收住。
   Duration get switchDuration;
 
   Widget buildBar(BuildContext context, VeriRootNavigationSpec spec);
+}
+
+/// 壳层渲染导航栏的固定锚点：测试与诊断从它读取 spec，不依赖具体样式。
+class VeriRootNavigationHost extends StatelessWidget {
+  const VeriRootNavigationHost({
+    super.key,
+    required this.style,
+    required this.spec,
+  });
+
+  final VeriRootNavigationStyle style;
+  final VeriRootNavigationSpec spec;
+
+  @override
+  Widget build(BuildContext context) => style.buildBar(context, spec);
 }
 ```
 
@@ -145,8 +162,10 @@ abstract interface class VeriRootNavigationStyle {
 - `buildBar` 只接收纯数据快照，**不接触 Controller、KV 或 Navigator**；选择页预览因此可以直接复用同一实现，不会出现「预览和真实不一致」。
 - `onSelect` 可空，预览即天然不可交互，无需另写 `IgnorePointer` 包层（包裹层仍建议保留，避免误触）。
 - 契约不含条目数量、排序或自定义能力，避免变成配置怪物。
-- 契约不含记账按钮：按钮与导航栏解耦（第六节），样式只声明自己的底部占用高度，
-  由壳层统一推算列表避让与按钮偏移。
+- 契约不含记账按钮（第六节）：样式只声明自己的底部占用高度，列表避让由
+  `contentBottomPadding` 统一推算。
+- 展示名（选择页标题、设置页 trailing）由 `NavigationStylePreference` 提供，
+  样式实现只提供说明文案，避免同一个名称维护两份。
 
 ### 4.3 注册表与稳定标识
 
@@ -189,50 +208,19 @@ VeriRootNavigationStyle veriRootNavigationStyleFor(String? id) =>
    样式无动效时退化为极短弹簧而非零时长，避免 `SpringSimulation` 的退化参数。
 4. 状态保持：切换样式**不得**重置 `_index`、`_programmaticPageTarget` 或 `PageController`；
    实现后必须补「切换样式后仍停在同一 Tab、页面滚动位置不丢」的测试。
-5. 记账按钮：与导航栏完全解耦（第六节）。按钮继续由壳层渲染为右下角浮动按钮，
-   底部偏移按样式声明的 `occupiedHeight` 推算；样式不得在按钮落点上安排内容。
+5. 记账按钮：本方案不改动它（D5），详见第六节。
 
-## 六、记账按钮与底部导航的关系（已确认解耦）
+## 六、记账按钮与底部导航的关系
 
-**决策（D5）：记账按钮与底部导航栏完全分开。** 按钮是按钮，导航是导航；样式实现不得在栏内
-或栏上安排记账按钮，后续新增样式也必须避开按钮区域、不占用其落点。这条边界同时排除了
-「底部凸起/内嵌按钮」这一类会与记账按钮抢占同一区域的样式设计。
+**决策（D5）：两者无关，本方案不改动记账按钮。** 记账按钮只在「显示在哪个页面」和「切页」
+上与根导航有交集，其余部分（外观、落点、点击语义）都由壳层自己负责。
 
-因此样式契约里**不提供**「主操作落点」字段：按钮始终由壳层渲染为右下角浮动按钮，
-样式只声明自己的几何事实，壳层据此推算两处偏移，从而在「按钮与导航解耦」的前提下
-仍然不会互相遮挡。
-
-### 6.1 壳层如何避免与样式重叠
-
-| 壳层用途 | 计算方式 |
-|---|---|
-| 根页面列表避让（`veriRootPageListPadding`） | `(extendBody ? occupiedHeight : 0) + listBottomGap` |
-| 记账按钮底部偏移 | `(extendBody ? occupiedHeight : 0) + 16` |
-
-- **停靠样式**：`extendBody = false`，`Scaffold` 已为栏让位，按钮维持现在的 `bottom: 16`，
-  行为与观感零变化。
-- **悬浮样式（未来）**：`extendBody = true`，内容延伸到栏背后，按钮被抬到栏上方，
-  不会压在胶囊或浮层上。
-
-保持不变、且样式无法触及的按钮语义：
-
-- 点击按 `FabActionMode` 决定手动记账或 AI，长按走 AI；
-- 仅首页显示，进出带缩放淡入；
-- 圆角方形 + `colorScheme.primary` + `add_rounded` + tooltip；
-- 样式实现不接收按钮回调，也不持有 Controller。
-
-### 6.2 记账按钮自身造型
-
-「按钮长什么样」属于独立的外观项，与导航样式正交，两者互不影响。本轮**不做**造型偏好，
-按钮维持现状；若后续要做（圆形、纯图标、长条等），按新的外观设置项单独设计，
-不放进导航样式契约，也不要求更换导航样式。
-
-### 6.3 已排除的方案
-
-- 按钮嵌进导航栏（栏内居中、栏上凸起或缺口）：与 D5 冲突，不再考虑；
-- 按钮造型随导航样式变化：会让「换按钮形状」被迫换整条导航，把两个独立偏好绑在一起；
-- 样式声明按钮落点、按钮造型另设偏好（本方案早期草案 S2）：虽然技术上可行，
-  但与 D5 的「按钮不进导航栏区域」相比多一层无收益的抽象，已废弃。
+- 样式契约不含记账按钮的任何字段；样式实现不接收按钮回调，也不持有 Controller。
+- 按钮的点击/长按语义（`FabActionMode`）、仅首页显示、缩放淡入与现有外观保持不变。
+- 唯一的必要交集是避让：根页面列表末项的底部内边距由 `veriRootPageListPadding` 按样式的
+  `contentBottomPadding` 下发，保证内容不被栏遮住。
+- 若将来出现 `extendBody: true` 的样式（内容延伸到栏背后），届时需要把浮动按钮抬到栏上方，
+  按 `occupiedHeight` 计算；该样式落地时一并确认。
 
 ## 七、设置页入口与样式选择页
 
