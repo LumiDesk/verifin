@@ -73,7 +73,8 @@ class VeriBottomBar extends StatefulWidget {
     this.backgroundColor = Colors.transparent,
   });
 
-  /// 切换动画时长。调用方用同一时长驱动页面切换，两者才会同时起步、同时结束。
+  /// 切换动画的时间尺度。调用方以同一尺度驱动页面切换（页面是弹簧，没有固定
+  /// 时长），两者才会同时起步、同时收住。
   static const Duration switchDuration = Duration(milliseconds: 250);
 
   final List<VeriBottomBarItem> items;
