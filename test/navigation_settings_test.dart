@@ -308,6 +308,42 @@ void main() {
     expect(barIndex(), 1, reason: '底栏要跟着落到资产页');
   });
 
+  testWidgets('切页动画被页面点击打断后底栏仍与页面一致', (WidgetTester tester) async {
+    await pumpApp(tester);
+    await tapBottomTab(tester, 3);
+    await tester.pumpAndSettle();
+
+    final controller = tester
+        .widget<PageView>(find.byType(PageView))
+        .controller!;
+    int barIndex() => tester
+        .widget<VeriRootNavigation>(find.byType(VeriRootNavigation))
+        .currentIndex;
+
+    // 从「我的」点「首页」，动画跑到一半时在页面区域轻点一下。按下会打断
+    // 正在跑的切页动画（`DrivenScrollActivity.done` 随之完成），页面停在半路
+    // 并按当前页吸附；底栏必须跟着页面实际落点，而不是停在点击时的目标页。
+    await tester.tapAt(rootTabCenter(tester, 0));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 60));
+    expect(controller.page, greaterThan(0));
+    expect(controller.page, lessThan(3));
+
+    await tester.tapAt(tester.getCenter(find.byType(PageView)));
+    await tester.pumpAndSettle();
+
+    expect(
+      controller.page!.round(),
+      lessThan(3),
+      reason: '这次点击应确实打断了动画，页面没有跑到首页',
+    );
+    expect(
+      barIndex(),
+      controller.page!.round(),
+      reason: '动画被打断后底栏必须回到页面实际落点，否则会一直显示错误的 Tab',
+    );
+  });
+
   testWidgets('快速连点不同 Tab 时页面跟着滚动', (WidgetTester tester) async {
     await pumpApp(tester);
     await tapBottomTab(tester, 3);

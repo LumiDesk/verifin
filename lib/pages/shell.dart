@@ -189,7 +189,13 @@ class _VeriFinShellState extends State<VeriFinShell> {
     unawaited(activity.done.whenComplete(() => _finishTabSwitch(index)));
   }
 
-  /// 一次切页收尾：确认它仍是当前目标，再把底栏定到目标页。
+  /// 一次切页收尾：确认它仍是当前目标，再按页面实际停下的位置对齐底栏。
+  ///
+  /// `DrivenScrollActivity.done` 既在动画自然跑完时完成，也在动画被用户交互
+  /// （在页面区域点击或拖动）打断时完成。这里若无条件写 `_index = index`，
+  /// 动画被打断后页面停在半路、底栏却已经钉在目标上；只要页面最终落点取整后
+  /// 与上一次上报的页码相同，`onPageChanged` 就不会再触发，错位会一直保留。
+  /// 因此收尾一律以滚动位置为准，目标只有在页面真正停到它上面时才算达成。
   void _finishTabSwitch(int index) {
     // `hasClients` 之外还要看 `mounted`：子树被拆掉后 `_pageController`
     // 会直接断言失败。
@@ -200,8 +206,9 @@ class _VeriFinShellState extends State<VeriFinShell> {
     if (_programmaticPageTarget != index) {
       return;
     }
+    final settled = (_pageController.page ?? index.toDouble()).round();
     setState(() {
-      _index = index;
+      _index = settled;
       _programmaticPageTarget = null;
     });
   }
