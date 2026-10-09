@@ -10,6 +10,7 @@ import '../app/models.dart';
 import '../app/feedback.dart';
 import '../app/platform_bridge.dart';
 import '../app/root_navigation.dart';
+import '../app/root_navigation_styles.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
 import 'ai_entry_sheet.dart';
@@ -42,19 +43,34 @@ class _VeriFinShellState extends State<VeriFinShell> {
   Duration? _lastScrollAt;
   double _scrollVelocity = 0;
 
+  /// 当前根导航样式。
+  ///
+  /// 阶段一是纯解耦重构，固定使用默认的停靠样式；样式偏好接入后改读 Controller，
+  /// 但弹簧时长与页面避让继续从样式拿，壳层不再认识任何具体样式类型。
+  VeriRootNavigationStyle get _navigationStyle =>
+      veriRootDefaultNavigationStyle;
+
   /// 切页动画的弹簧。
   ///
   /// 刻意**不用固定时长**：固定时长的动画每次改目标都得从头重新计时，连点时页面被
   /// 反复「重新起步」，看起来就像没动。弹簧只由「当前位置 + 当前速度 + 目标」决定，
   /// 改目标时顺着当前速度接着跑，所以连点是连续的。
   ///
-  /// 用感知时长描述（语义同 SwiftUI 的 `spring(duration:bounce:)`）：250ms、无回弹。
-  /// 弹簧的收敛时间与距离无关，跨 1 页和跨 3 页手感一致；底栏那段扫过动效取同一个
-  /// 数值（`VeriBottomBar.switchDuration`），两者因此自然同时收住。
-  static final SpringDescription _kTabSwitchSpring =
-      SpringDescription.withDurationAndBounce(
-        duration: VeriRootNavigation.switchDuration,
-      );
+  /// 用感知时长描述（语义同 SwiftUI 的 `spring(duration:bounce:)`）：默认 250ms、无回弹。
+  /// 弹簧的收敛时间与距离无关，跨 1 页和跨 3 页手感一致；时间尺度取当前样式的
+  /// [VeriRootNavigationStyle.switchDuration]，底栏选中动效与页面过渡因此同时起步、
+  /// 同时收住。
+  ///
+  /// 样式返回非正时长属于契约违规，这里回退到默认尺度，避免把退化参数传给
+  /// [SpringSimulation]。
+  SpringDescription get _tabSwitchSpring {
+    final duration = _navigationStyle.switchDuration;
+    return SpringDescription.withDurationAndBounce(
+      duration: duration > Duration.zero
+          ? duration
+          : VeriRootNavigationStyle.defaultSwitchDuration,
+    );
+  }
 
   @override
   void initState() {
@@ -172,7 +188,7 @@ class _VeriFinShellState extends State<VeriFinShell> {
     final activity = DrivenScrollActivity.simulation(
       position,
       SpringSimulation(
-          _kTabSwitchSpring,
+          _tabSwitchSpring,
           position.pixels,
           // 弹簧结束时精确落到目标（`snapToEnd`），页面正好停在一页的边界上。
           index * position.viewportDimension,
@@ -229,6 +245,7 @@ class _VeriFinShellState extends State<VeriFinShell> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final navigationStyle = _navigationStyle;
     final pages = <Widget>[
       const HomePage(),
       const AssetsPage(),
@@ -258,6 +275,15 @@ class _VeriFinShellState extends State<VeriFinShell> {
       ),
     ];
 
+    // 记账按钮与导航栏解耦，但不能落在栏的占用范围里：内容延伸到栏背后时
+    // （样式声明 extendBody），按钮要抬到栏上方；停靠样式由 Scaffold 让位，
+    // 维持原来的 16dp。
+    final quickEntryBottom =
+        16.0 +
+        (navigationStyle.layout.extendBody
+            ? navigationStyle.layout.occupiedHeight
+            : 0);
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -268,8 +294,9 @@ class _VeriFinShellState extends State<VeriFinShell> {
       },
       child: Scaffold(
         key: const Key('main_shell_scaffold'),
-        // 停靠底栏是不透明的，内容不再延伸到它背后（否则会被底栏盖住半截）。
-        extendBody: false,
+        // 停靠底栏不透明且已由 Scaffold 让位，内容不延伸到它背后（否则会被盖住半截）；
+        // 悬浮样式由样式自己在 layout 里声明 extendBody。
+        extendBody: navigationStyle.layout.extendBody,
         // 四个主页面横向 PageView：左右滑动切换。图表（onHorizontalDrag）与
         // 交易行 Dismissible 都是更深层的手势消费者，会在竞技场里本地胜出，
         // 故在图表/可滑删行上拖动仍走各自交互，仅空白区滑动才切页。
@@ -279,6 +306,7 @@ class _VeriFinShellState extends State<VeriFinShell> {
           child: Stack(
             children: <Widget>[
               VeriRootNavigationBody(
+                layout: navigationStyle.layout,
                 child: RepaintBoundary(
                   child: PageView(
                     controller: _pageController,
@@ -299,7 +327,7 @@ class _VeriFinShellState extends State<VeriFinShell> {
               Positioned(
                 key: const Key('quick_entry_fab_slot'),
                 right: 16,
-                bottom: 16,
+                bottom: quickEntryBottom,
                 child: IgnorePointer(
                   ignoring: _index != 0,
                   child: AnimatedScale(
@@ -347,10 +375,13 @@ class _VeriFinShellState extends State<VeriFinShell> {
             ],
           ),
         ),
-        bottomNavigationBar: VeriRootNavigation(
-          currentIndex: _index,
-          destinations: destinations,
-          onDestinationSelected: _goToTab,
+        bottomNavigationBar: VeriRootNavigationHost(
+          style: navigationStyle,
+          spec: VeriRootNavigationSpec(
+            currentIndex: _index,
+            destinations: destinations,
+            onSelect: _goToTab,
+          ),
         ),
       ),
     );

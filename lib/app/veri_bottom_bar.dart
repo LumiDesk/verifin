@@ -45,12 +45,19 @@ const double _kDotFadeAt = 0.6;
 class VeriBottomBarItem {
   const VeriBottomBarItem({
     required this.iconData,
+    this.itemKey,
     this.iconSize = 30,
     this.label,
     this.labelTextStyle,
   });
 
   final IconData iconData;
+
+  /// 条目的稳定 key，供测试与无障碍按条目定位，不依赖等宽几何。
+  ///
+  /// 契约（见 `root_navigation.dart`）要求每个样式为条目产出 `<前缀>_nav_item_<下标>`。
+  final Key? itemKey;
+
   final double iconSize;
   final String? label;
   final TextStyle? labelTextStyle;
@@ -324,6 +331,7 @@ class _VeriBottomBarState extends State<VeriBottomBar>
     return <Widget>[
       for (var index = 0; index < widget.items.length; index++)
         Expanded(
+          key: widget.items[index].itemKey,
           // MergeSemantics + selected：条目对 TalkBack 的语义是「一个已选中/未
           // 选中的按钮」，而不是只有名字和点击。缺少 selected 时读屏能念出标签，
           // 却无法告诉用户当前停在第几个 Tab。

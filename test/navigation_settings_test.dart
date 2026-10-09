@@ -82,15 +82,15 @@ void main() {
         .widget<PageView>(find.byType(PageView))
         .controller!;
     final position = controller.position;
-    final navigation = tester.widget<VeriRootNavigation>(
-      find.byType(VeriRootNavigation),
+    final navigation = tester.widget<VeriRootNavigationHost>(
+      find.byType(VeriRootNavigationHost),
     );
 
     // 模拟 PageView 暂未 attach 的生命周期窗口，随后恢复同一个滚动位置。
     controller.detach(position);
     try {
-      navigation.onDestinationSelected(1);
-      navigation.onDestinationSelected(2);
+      navigation.spec.onSelect!(1);
+      navigation.spec.onSelect!(2);
     } finally {
       controller.attach(position);
     }
@@ -99,7 +99,8 @@ void main() {
     expect(controller.page, closeTo(2, 0.001));
     expect(
       tester
-          .widget<VeriRootNavigation>(find.byType(VeriRootNavigation))
+          .widget<VeriRootNavigationHost>(find.byType(VeriRootNavigationHost))
+          .spec
           .currentIndex,
       2,
     );
@@ -155,12 +156,8 @@ void main() {
     addTearDown(tester.view.reset);
     await pumpApp(tester);
 
-    final navRect = tester.getRect(find.byKey(const Key('main_bottom_nav')));
-    final slotWidth = navRect.width / 4;
     // 第四个条目的中心：点「我的」。
-    await tester.tapAt(
-      Offset(navRect.left + slotWidth * 3.5, navRect.center.dy),
-    );
+    await tester.tapAt(rootTabCenter(tester, 3));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pump(const Duration(milliseconds: 400));
@@ -188,7 +185,7 @@ void main() {
     expect(page, greaterThan(2), reason: '此时应还在过渡中，未到看板');
 
     // 走完整段动画后应正好落在看板页。
-    await tester.pump(VeriRootNavigation.switchDuration);
+    await tester.pump(VeriRootNavigationStyle.defaultSwitchDuration);
     await tester.pumpAndSettle();
     expect(controller.page!.round(), 2);
   });
@@ -212,7 +209,7 @@ void main() {
     expect(controller.page, lessThan(3), reason: '返回后页面应已开始滚动');
     expect(controller.page, greaterThan(0), reason: '100ms 后应还在过渡中，不能直接落位');
 
-    await tester.pump(VeriRootNavigation.switchDuration);
+    await tester.pump(VeriRootNavigationStyle.defaultSwitchDuration);
     await tester.pumpAndSettle();
     expect(controller.page!.round(), 0);
     expect(find.text('日常账本'), findsOneWidget);
@@ -235,7 +232,7 @@ void main() {
     expect(controller.page, lessThan(3), reason: '跨多页点按也要滚动，不能瞬移');
     expect(controller.page, greaterThan(0), reason: '100ms 后应还在途中');
 
-    await tester.pump(VeriRootNavigation.switchDuration);
+    await tester.pump(VeriRootNavigationStyle.defaultSwitchDuration);
     await tester.pumpAndSettle();
     expect(controller.page!.round(), 0);
   });
@@ -260,7 +257,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     expect(controller.page, greaterThan(0), reason: '改目标后仍在过渡途中');
 
-    await tester.pump(VeriRootNavigation.switchDuration);
+    await tester.pump(VeriRootNavigationStyle.defaultSwitchDuration);
     await tester.pumpAndSettle();
     expect(controller.page!.round(), 0, reason: '应落在最后点选的首页');
     expect(find.text('日常账本'), findsOneWidget);
@@ -275,7 +272,8 @@ void main() {
         .widget<PageView>(find.byType(PageView))
         .controller!;
     int barIndex() => tester
-        .widget<VeriRootNavigation>(find.byType(VeriRootNavigation))
+        .widget<VeriRootNavigationHost>(find.byType(VeriRootNavigationHost))
+        .spec
         .currentIndex;
 
     // 在两个相距最远的 Tab 之间连点，让切页动画反复被打断。此时底栏下标是点击时
@@ -286,7 +284,7 @@ void main() {
       await tester.tapAt(rootTabCenter(tester, 3));
       await tester.pump(const Duration(milliseconds: 30));
     }
-    await tester.pump(VeriRootNavigation.switchDuration);
+    await tester.pump(VeriRootNavigationStyle.defaultSwitchDuration);
     await tester.pumpAndSettle();
 
     expect(
@@ -302,7 +300,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     expect(controller.page, lessThan(3), reason: '连点之后点击仍应立刻开始切页');
 
-    await tester.pump(VeriRootNavigation.switchDuration);
+    await tester.pump(VeriRootNavigationStyle.defaultSwitchDuration);
     await tester.pumpAndSettle();
     expect(controller.page!.round(), 1);
     expect(barIndex(), 1, reason: '底栏要跟着落到资产页');
@@ -317,7 +315,8 @@ void main() {
         .widget<PageView>(find.byType(PageView))
         .controller!;
     int barIndex() => tester
-        .widget<VeriRootNavigation>(find.byType(VeriRootNavigation))
+        .widget<VeriRootNavigationHost>(find.byType(VeriRootNavigationHost))
+        .spec
         .currentIndex;
 
     // 从「我的」点「首页」，动画跑到一半时在页面区域轻点一下。按下会打断

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:verifin/app/app_theme.dart';
 import 'package:verifin/app/root_navigation.dart';
+import 'package:verifin/app/root_navigation_styles.dart';
 
 /// 停靠底栏的布局与契约。
 ///
@@ -10,6 +11,60 @@ import 'package:verifin/app/root_navigation.dart';
 /// `lib/app/veri_bottom_bar.dart` 头注释）；快捷记账按钮已移出底栏，改由 Shell 在
 /// 右下角浮动（见 navigation_settings_test 中的壳层断言），因此这里只覆盖底栏自身。
 void main() {
+  group('根导航样式契约', () {
+    test('默认样式已登记，标识唯一', () {
+      expect(veriRootNavigationStyles, isNotEmpty);
+      expect(
+        veriRootNavigationStyles,
+        contains(veriRootDefaultNavigationStyle),
+        reason: '默认样式必须出现在注册表里，否则样式选择页无法展示它',
+      );
+      final ids = <String>[
+        for (final style in veriRootNavigationStyles) style.id,
+      ];
+      expect(ids.toSet().length, ids.length, reason: '样式标识会写入 KV，必须唯一');
+    });
+
+    test('未知或缺失标识回退默认样式', () {
+      expect(veriRootNavigationStyleFor(null), veriRootDefaultNavigationStyle);
+      expect(veriRootNavigationStyleFor(''), veriRootDefaultNavigationStyle);
+      expect(
+        veriRootNavigationStyleFor('not-a-style'),
+        veriRootDefaultNavigationStyle,
+      );
+      expect(
+        veriRootNavigationStyleFor(veriRootDefaultNavigationStyle.id),
+        veriRootDefaultNavigationStyle,
+      );
+    });
+
+    test('停靠样式的避让由布局推导，取值与迁移前一致', () {
+      final layout = veriRootDefaultNavigationStyle.layout;
+      expect(layout.extendBody, isFalse);
+      expect(layout.occupiedHeight, 64);
+      // 停靠样式由 Scaffold 让位，列表末项只保留呼吸留白。
+      expect(layout.contentBottomPadding, 12);
+    });
+
+    test('预览副本可以清空点击回调', () {
+      const destinations = <VeriNavigationDestination>[
+        VeriNavigationDestination(
+          icon: Icons.home_outlined,
+          selectedIcon: Icons.home_rounded,
+          label: '首页',
+        ),
+      ];
+      const spec = VeriRootNavigationSpec(
+        currentIndex: 0,
+        destinations: destinations,
+        onSelect: _noopSelect,
+      );
+
+      expect(spec.copyWith(clearOnSelect: true).onSelect, isNull);
+      expect(spec.copyWith(currentIndex: 0).onSelect, _noopSelect);
+    });
+  });
+
   testWidgets('停靠底栏在 360dp 视口下整宽贴底', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(360, 800);
@@ -30,7 +85,10 @@ void main() {
     // 条目内容让开系统导航条。
     final barRect = tester.getRect(find.byKey(const Key('main_nav_bar')));
     expect(barRect.bottom, lessThanOrEqualTo(800 - 20));
-    expect(barRect.height, lessThanOrEqualTo(VeriRootNavigationBody.barHeight));
+    expect(
+      barRect.height,
+      lessThanOrEqualTo(veriRootDefaultNavigationStyle.layout.occupiedHeight),
+    );
   });
 
   testWidgets('系统不留白时底栏仍有最小底部间距，不贴屏幕下边缘', (tester) async {
@@ -118,9 +176,10 @@ void main() {
     final selected = <int>[];
     await tester.pumpWidget(_NavigationHarness(onSelected: selected.add));
 
-    final navRect = tester.getRect(find.byKey(const Key('main_bottom_nav')));
-    final slot = navRect.width / 4;
-    await tester.tapAt(Offset(navRect.left + slot * 2.5, navRect.center.dy));
+    // 按条目 key 定位而不是按等宽几何：同一套断言对将来的其它样式也成立。
+    await tester.tapAt(
+      tester.getCenter(find.byKey(const ValueKey<String>('main_nav_item_2'))),
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pump(const Duration(milliseconds: 400));
@@ -171,15 +230,21 @@ class _NavigationHarnessState extends State<_NavigationHarness> {
       theme: widget.theme ?? buildVeriFinTheme(Brightness.dark),
       home: Scaffold(
         body: Center(child: Text('page:$_index')),
-        bottomNavigationBar: VeriRootNavigation(
-          currentIndex: _index,
-          destinations: _destinations,
-          onDestinationSelected: (index) {
-            widget.onSelected?.call(index);
-            setState(() => _index = index);
-          },
+        bottomNavigationBar: VeriRootNavigationHost(
+          style: veriRootDefaultNavigationStyle,
+          spec: VeriRootNavigationSpec(
+            currentIndex: _index,
+            destinations: _destinations,
+            onSelect: (index) {
+              widget.onSelected?.call(index);
+              setState(() => _index = index);
+            },
+          ),
         ),
       ),
     );
   }
 }
+
+/// 供契约测试比较回调身份的空实现。
+void _noopSelect(int index) {}

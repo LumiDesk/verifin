@@ -47,6 +47,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabProfile => 'Me';
 
   @override
+  String get navigationStyleLabel => 'Navigation bar style';
+
+  @override
+  String get navigationStylePickerHint =>
+      'The four destinations stay the same in every style';
+
+  @override
+  String get navigationStyleInUse => 'In use';
+
+  @override
+  String get navigationStyleDockedDesc =>
+      'Full-width opaque bar pinned to the bottom; icons sweep as you switch';
+
+  @override
   String get quickEntry => 'Quick Entry';
 
   @override

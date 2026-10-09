@@ -45,6 +45,22 @@
   "@tabProfile": {
     "description": "底部导航:我的"
   },
+  "navigationStyleLabel": "导航栏样式",
+  "@navigationStyleLabel": {
+    "description": "设置页外观分组:导航栏样式入口标题(兼样式选择页标题)"
+  },
+  "navigationStylePickerHint": "四个入口在所有样式下保持不变",
+  "@navigationStylePickerHint": {
+    "description": "导航栏样式选择页副标题"
+  },
+  "navigationStyleInUse": "使用中",
+  "@navigationStyleInUse": {
+    "description": "导航栏样式选择页:当前启用样式的标记"
+  },
+  "navigationStyleDockedDesc": "整宽贴底的不透明底栏，切换时图标扫过",
+  "@navigationStyleDockedDesc": {
+    "description": "停靠式底栏样式说明"
+  },
   "quickEntry": "快速记账",
   "@quickEntry": {
     "description": "快速记账入口(FAB 提示与数字键盘标题)"
