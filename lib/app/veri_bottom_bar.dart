@@ -308,16 +308,29 @@ class _VeriBottomBarState extends State<VeriBottomBar>
     return <Widget>[
       for (var index = 0; index < widget.items.length; index++)
         Expanded(
-          child: InkWell(
-            onTap: widget.onSelect == null
-                ? null
-                : () => widget.onSelect!(index),
-            child: IgnorePointer(
-              child: _VeriBottomBarIcon(
-                key: _iconKeys[index],
-                item: widget.items[index],
-                color: widget.color,
-                selected: _selectedIndex == index,
+          // MergeSemantics + selected：条目对 TalkBack 的语义是「一个已选中/未
+          // 选中的按钮」，而不是只有名字和点击。缺少 selected 时读屏能念出标签，
+          // 却无法告诉用户当前停在第几个 Tab。
+          child: MergeSemantics(
+            child: Semantics(
+              selected: _selectedIndex == index,
+              child: InkWell(
+                onTap: widget.onSelect == null
+                    ? null
+                    : () => widget.onSelect!(index),
+                // 底栏表面是不透明的，Material 的溅墨只会画在它下面、永远看不见；
+                // 关掉不可见的涟漪，选中反馈完全交给图标动效。
+                splashFactory: NoSplash.splashFactory,
+                highlightColor: Colors.transparent,
+                hoverColor: Colors.transparent,
+                child: IgnorePointer(
+                  child: _VeriBottomBarIcon(
+                    key: _iconKeys[index],
+                    item: widget.items[index],
+                    color: widget.color,
+                    selected: _selectedIndex == index,
+                  ),
+                ),
               ),
             ),
           ),

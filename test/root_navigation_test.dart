@@ -75,6 +75,26 @@ void main() {
     expect(find.byType(BackdropFilter), findsNothing);
   });
 
+  testWidgets('底栏条目向无障碍暴露选中状态', (tester) async {
+    final handle = tester.ensureSemantics();
+    try {
+      await tester.pumpWidget(const _NavigationHarness());
+
+      // 选中态由 currentIndex 驱动，条目语义要同时带上标签、点击与选中标记，
+      // 否则 TalkBack 只能念出名字，说不出当前停在第几个 Tab。
+      expect(
+        tester.getSemantics(find.text('首页')),
+        isSemantics(label: '首页', isSelected: true, hasTapAction: true),
+      );
+      expect(
+        tester.getSemantics(find.text('资产')),
+        isSemantics(label: '资产', isSelected: false, hasTapAction: true),
+      );
+    } finally {
+      handle.dispose();
+    }
+  });
+
   testWidgets('点按条目回调对应下标', (tester) async {
     final selected = <int>[];
     await tester.pumpWidget(_NavigationHarness(onSelected: selected.add));
