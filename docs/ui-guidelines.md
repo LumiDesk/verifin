@@ -12,13 +12,13 @@
 
 ## 根导航
 
-四个根页面统一使用 `VeriRootNavigation`。底栏是**停靠式**：整宽、不透明、贴底，条目由自有的 `VeriBottomBar` 绘制（未选中线框图标、选中填充图标，中文标签常显）；右下角的记账按钮是独立的浮动圆角方形，只在首页显示。选中项用中性强调，不给整条导航染品牌蓝。
+四个根页面统一使用 `VeriRootNavigation`。底栏是**停靠式**：整宽、不透明、贴底，条目由自有的 `VeriBottomBar` 绘制（未选中线框图标、选中填充图标，中文标签常显）；右下角的记账按钮是独立的浮动圆角方形，只在首页显示。选中项用 `colorScheme.primary`（默认 Veri Royal）强调，底栏表面和未选中项保持中性，不给整条导航背景染色。
 
 承载根导航的 Shell 必须关闭 `Scaffold.extendBody`（停靠底栏不透明，内容延伸到它背后会被盖住半截），并关闭 body 外层 `SafeArea` 的 bottom 裁切。PageView 外必须套 `VeriRootNavigationBody`，隔离 Scaffold 注入的 bottom padding，避免页面内未显式 padding 的 GridView（日历、功能宫格等）被底栏高度撑大。底栏内容用 `SafeArea(minimum: 12, maintainBottomViewPadding: true)` 让开系统导航条；根页面列表用 `veriRootPageListPadding(context)` 取统一内边距。
 
-底栏只响应点击。点击后底栏的扫过动效与页面过渡同时起步、同时收住：页面由弹簧驱动、**没有固定时长**，弹簧的收敛时间与距离无关，底栏取同一时间尺度（`VeriRootNavigation.switchDuration`）即可对齐。完整时序见 `docs/dev/components.md` 的组件条目。
+底栏只响应点击。点击后底栏的扫过动效与页面过渡同时起步、同时收住：页面由弹簧驱动、**没有固定时长**，弹簧的收敛时间与距离无关，底栏取同一时间尺度（`VeriRootNavigation.switchDuration`）即可对齐。切页动画被用户交互打断（在页面区域点击或滑动）时，底栏按页面实际停靠的页对齐，不能停留在点击时的目标页。底栏条目用 `Semantics(selected:)` 向读屏软件报告选中态。完整时序见 `docs/dev/components.md` 的组件条目。
 
-底栏与记账按钮都使用不透明表面色加一条顶部描边，不绘制渐变、不做背景模糊或折射。品牌蓝只用于记账按钮等明确主操作，不用于选中 Tab。
+底栏与记账按钮都使用不透明表面色加一条顶部描边，不绘制渐变、不做背景模糊或折射。品牌色只用于底栏选中项和记账按钮等明确主操作，不用于底栏背景。
 
 导航触发 PageView 跨页动画时，Shell 只认最终目的地，不得用 `onPageChanged` 途经的中间页覆盖导航状态；用户直接左右滑动 PageView 时才逐页同步。否则跨页动画会被中间页重启，看起来像选中态从原 Tab 重新出发。
 
