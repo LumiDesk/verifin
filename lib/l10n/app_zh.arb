@@ -57,6 +57,10 @@
   "@navigationStyleInUse": {
     "description": "导航栏样式选择页:当前启用样式的标记"
   },
+  "navigationStyleDockedName": "停靠底栏",
+  "@navigationStyleDockedName": {
+    "description": "停靠式底栏样式名称"
+  },
   "navigationStyleDockedDesc": "整宽贴底的不透明底栏，切换时图标扫过",
   "@navigationStyleDockedDesc": {
     "description": "停靠式底栏样式说明"

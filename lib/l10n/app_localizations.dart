@@ -188,6 +188,12 @@ abstract class AppLocalizations {
   /// **'使用中'**
   String get navigationStyleInUse;
 
+  /// 停靠式底栏样式名称
+  ///
+  /// In zh, this message translates to:
+  /// **'停靠底栏'**
+  String get navigationStyleDockedName;
+
   /// 停靠式底栏样式说明
   ///
   /// In zh, this message translates to:

@@ -376,6 +376,7 @@ void main() {
       themePreference: controller2.themePreference,
       themeColorPreference: controller2.themeColorPreference,
       localePreference: controller2.localePreference,
+      navigationStylePreference: controller2.navigationStylePreference,
       hapticsEnabled: controller2.hapticsEnabled,
       amountForceTwoDecimals: controller2.amountForceTwoDecimals,
       moneyUnitStyle: controller2.moneyUnitStyle,

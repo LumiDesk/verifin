@@ -34,6 +34,9 @@ class VeriDockedRootNavigationStyle implements VeriRootNavigationStyle {
   String get id => styleId;
 
   @override
+  String label(AppLocalizations l10n) => l10n.navigationStyleDockedName;
+
+  @override
   String description(AppLocalizations l10n) => l10n.navigationStyleDockedDesc;
 
   @override

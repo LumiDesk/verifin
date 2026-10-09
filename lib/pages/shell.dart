@@ -43,12 +43,16 @@ class _VeriFinShellState extends State<VeriFinShell> {
   Duration? _lastScrollAt;
   double _scrollVelocity = 0;
 
-  /// 当前根导航样式。
-  ///
-  /// 阶段一是纯解耦重构，固定使用默认的停靠样式；样式偏好接入后改读 Controller，
-  /// 但弹簧时长与页面避让继续从样式拿，壳层不再认识任何具体样式类型。
+  /// 导航样式偏好的通知器；[didChangeDependencies] 里挂监听，dispose 时摘掉。
+  ValueNotifier<NavigationStylePreference>? _navigationStyleListenable;
+
+  /// 当前导航样式偏好。控制器外部改动（例如恢复或其它页面保存）也会同步到这里。
+  NavigationStylePreference _navigationStylePreference =
+      NavigationStylePreference.docked;
+
+  /// 当前根导航样式：只由偏好标识决定，壳层不认识任何具体样式类型。
   VeriRootNavigationStyle get _navigationStyle =>
-      veriRootDefaultNavigationStyle;
+      veriRootNavigationStyleFor(_navigationStylePreference.name);
 
   /// 切页动画的弹簧。
   ///
@@ -99,7 +103,33 @@ class _VeriFinShellState extends State<VeriFinShell> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 样式偏好走独立通知器：只有它变化时才需要重建壳层，不必跟着全量账目通知走。
+    final listenable = VeriFinScope.of(
+      context,
+    ).navigationStylePreferenceListenable;
+    if (identical(listenable, _navigationStyleListenable)) {
+      return;
+    }
+    _navigationStyleListenable?.removeListener(_handleNavigationStyleChanged);
+    _navigationStyleListenable = listenable;
+    _navigationStylePreference = listenable.value;
+    listenable.addListener(_handleNavigationStyleChanged);
+  }
+
+  void _handleNavigationStyleChanged() {
+    final value =
+        _navigationStyleListenable?.value ?? NavigationStylePreference.docked;
+    if (!mounted || value == _navigationStylePreference) {
+      return;
+    }
+    setState(() => _navigationStylePreference = value);
+  }
+
+  @override
   void dispose() {
+    _navigationStyleListenable?.removeListener(_handleNavigationStyleChanged);
     AppCaptureBridge.clearQuickEntryHandler();
     AppCaptureBridge.clearSharedCaptureHandler();
     AppWidgetBridge.clearRouteHandler();
@@ -252,28 +282,8 @@ class _VeriFinShellState extends State<VeriFinShell> {
       const ReportsPage(),
       const ProfilePage(),
     ];
-    final destinations = <VeriNavigationDestination>[
-      VeriNavigationDestination(
-        icon: Icons.home_outlined,
-        selectedIcon: Icons.home_rounded,
-        label: l10n.tabHome,
-      ),
-      VeriNavigationDestination(
-        icon: Icons.account_balance_wallet_outlined,
-        selectedIcon: Icons.account_balance_wallet_rounded,
-        label: l10n.tabAssets,
-      ),
-      VeriNavigationDestination(
-        icon: Icons.bar_chart_outlined,
-        selectedIcon: Icons.bar_chart_rounded,
-        label: l10n.tabReports,
-      ),
-      VeriNavigationDestination(
-        icon: Icons.person_outline_rounded,
-        selectedIcon: Icons.person_rounded,
-        label: l10n.tabProfile,
-      ),
-    ];
+    // 目的地定义与样式选择页预览共用，避免两处各维护一套图标和标签。
+    final destinations = veriRootNavigationDestinations(l10n);
 
     // 记账按钮与导航栏解耦，但不能落在栏的占用范围里：内容延伸到栏背后时
     // （样式声明 extendBody），按钮要抬到栏上方；停靠样式由 Scaffold 让位，

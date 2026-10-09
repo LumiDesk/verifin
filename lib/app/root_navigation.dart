@@ -18,6 +18,34 @@ class VeriNavigationDestination {
   final String label;
 }
 
+/// 四个根目的地的标准定义（首页 / 资产 / 看板 / 我的）。
+///
+/// 壳层与样式选择页预览共用同一份定义，避免两处各写一套图标和标签。
+List<VeriNavigationDestination> veriRootNavigationDestinations(
+  AppLocalizations l10n,
+) => <VeriNavigationDestination>[
+  VeriNavigationDestination(
+    icon: Icons.home_outlined,
+    selectedIcon: Icons.home_rounded,
+    label: l10n.tabHome,
+  ),
+  VeriNavigationDestination(
+    icon: Icons.account_balance_wallet_outlined,
+    selectedIcon: Icons.account_balance_wallet_rounded,
+    label: l10n.tabAssets,
+  ),
+  VeriNavigationDestination(
+    icon: Icons.bar_chart_outlined,
+    selectedIcon: Icons.bar_chart_rounded,
+    label: l10n.tabReports,
+  ),
+  VeriNavigationDestination(
+    icon: Icons.person_outline_rounded,
+    selectedIcon: Icons.person_rounded,
+    label: l10n.tabProfile,
+  ),
+];
+
 /// 根导航样式的布局描述：壳层需要知道的全部几何信息。
 ///
 /// 样式只声明事实，避让高度由 [contentBottomPadding] 统一推算，避免每个样式各自
@@ -110,7 +138,10 @@ abstract interface class VeriRootNavigationStyle {
   /// 与 `NavigationStylePreference` 的枚举名一一对应，测试会断言两者不许漂移。
   String get id;
 
-  /// 设置页样式选择卡片上的说明文案；展示名由 `NavigationStylePreference` 提供。
+  /// 设置页入口与样式选择卡片上的名称。
+  String label(AppLocalizations l10n);
+
+  /// 设置页样式选择卡片上的说明文案。
   String description(AppLocalizations l10n);
 
   VeriRootNavigationLayout get layout;

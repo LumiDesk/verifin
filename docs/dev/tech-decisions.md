@@ -72,7 +72,7 @@ Veri Fin 关键技术选型与理由。变更相关实现时同步更新本表�
 **设备本地、不进备份**（换机需重设）：
 - **机密凭证**（进明文备份是安全倒退，坚决不备）：应用锁哈希 `app_lock`、备份加密口令 `backup_passphrase`、WebDAV 账号密码 `webdav`、AI `apiKey`（含在 `ai`）。
 - **设备专属**：备份目录路径 `backup_settings`、隐私同意 `privacy_consent`、新手引导 `onboarding`、软件日志 `logs`、AI 聊天历史 `ai_chat`、AI 能力探测缓存 `ai_capabilities`（按 endpoint + model 缓存协议能力，换设备重探即可，没有还原价值）。
-- **设备偏好，维持本地**（语义随设备/换机重设）：语言 `locale`、记账提醒 `reminder`、AI 的 baseUrl/model（`ai`）。
+- **设备偏好，维持本地**（语义随设备/换机重设）：语言 `locale`、底部导航样式 `nav_style`、记账提醒 `reminder`、AI 的 baseUrl/model（`ai`）。
 
 
 ## 账户类型能力矩阵

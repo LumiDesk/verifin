@@ -27,7 +27,7 @@ v1.16.0 发布说明：CI Android 两渠道显式带 `--dart-define=UNIFIED_DESI
 ### 文档阅读路线
 
 - `docs/dev/architecture.md`：架构与源码导航。`CLAUDE.md` 仅链接本文件，不维护第二份规范。
-- `docs/dev/components.md`：组件、弹窗、格式化与纯函数注册表；写相关代码前必读。根导航（停靠底栏）的当前约定见其中 `VeriRootNavigation` 条目，底栏绘制组件的抄写修复记录见 `VeriBottomBar` 条目。`docs/dev/liquid-glass-navigation.md` 已是历史留档（浮动胶囊与拖动状态机已废弃）。
+- `docs/dev/components.md`：组件、弹窗、格式化与纯函数注册表；写相关代码前必读。根导航的当前约定见其中 `VeriRootNavigationStyle` 与 `VeriDockedRootNavigationStyle` 条目（默认停靠样式 + 可注册样式，样式选择页见 `NavigationStyleSettingsPage`），底栏绘制组件的抄写修复记录见 `VeriBottomBar` 条目。新增样式前另读 `docs/dev/navigation-style-decoupling-design.md`。`docs/dev/liquid-glass-navigation.md` 已是历史留档（浮动胶囊与拖动状态机已废弃）。
 - `docs/ui-guidelines.md`：页面骨架、交互、图表和视觉规范。
 - `docs/dev/tech-decisions.md`：数据口径、备份范围和关键技术取舍；个别历史背景可能已被新实现取代，仍需与代码和测试核对。
 - `docs/dev/known-limitations.md`：已接受技术债及触发整改的阈值。

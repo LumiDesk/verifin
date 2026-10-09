@@ -54,6 +54,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get navigationStyleInUse => '使用中';
 
   @override
+  String get navigationStyleDockedName => '停靠底栏';
+
+  @override
   String get navigationStyleDockedDesc => '整宽贴底的不透明底栏，切换时图标扫过';
 
   @override

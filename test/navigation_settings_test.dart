@@ -18,11 +18,16 @@ void main() {
     await tapBottomTab(tester, 3);
     await tester.tap(find.byIcon(Icons.settings_outlined));
     await tester.pumpAndSettle();
+    expect(find.text('外观'), findsOneWidget);
+    expect(find.text('金额显示'), findsOneWidget);
     for (final item in {
       '主题模式': 'settingsSectionAppearance',
       '金额保留两位小数': 'settingsSectionAmountDisplay',
       '触感反馈': 'settingsSectionGeneral',
     }.entries) {
+      // 设置页比一屏长，分组行要滚到可见之后才被构建出来。
+      await tester.scrollUntilVisible(find.text(item.key), 120);
+      await tester.pumpAndSettle();
       expect(
         find.descendant(
           of: find.byKey(ValueKey(item.value)),
@@ -31,8 +36,6 @@ void main() {
         findsOneWidget,
       );
     }
-    expect(find.text('外观'), findsOneWidget);
-    expect(find.text('金额显示'), findsOneWidget);
   });
 
   testWidgets('shows the main tabs and switches between pages', (
@@ -403,7 +406,7 @@ void main() {
     await tapBottomTab(tester, 3);
     await tester.tap(find.byIcon(Icons.settings_outlined));
     await tester.pumpAndSettle();
-    expect(find.text('触感反馈'), findsOneWidget);
+    expect(find.text('主题模式'), findsOneWidget);
     expect(find.text('同步方式'), findsNothing);
     expect(find.text('Android 打包'), findsNothing);
     await tester.scrollUntilVisible(find.text('VeriFin $appVersionLabel'), 120);
@@ -474,12 +477,11 @@ void main() {
     await tester.tap(find.byIcon(Icons.settings_outlined));
     await tester.pumpAndSettle();
 
-    expect(find.text('语言'), findsOneWidget);
-    expect(find.text('简体中文'), findsOneWidget);
-
     // 设置页比一屏长，先滚到「语言」再点，否则点击会落在屏幕外。
     await tester.scrollUntilVisible(find.text('语言'), 120);
     await tester.pumpAndSettle();
+    expect(find.text('语言'), findsOneWidget);
+    expect(find.text('简体中文'), findsOneWidget);
     await tester.tap(find.text('语言'));
     await tester.pumpAndSettle();
     expect(

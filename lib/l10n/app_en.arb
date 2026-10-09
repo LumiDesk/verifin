@@ -15,6 +15,7 @@
   "navigationStyleLabel": "Navigation bar style",
   "navigationStylePickerHint": "The four destinations stay the same in every style",
   "navigationStyleInUse": "In use",
+  "navigationStyleDockedName": "Docked bar",
   "navigationStyleDockedDesc": "Full-width opaque bar pinned to the bottom; icons sweep as you switch",
   "quickEntry": "Quick Entry",
   "pressBackAgainToExit": "Press back again to exit",

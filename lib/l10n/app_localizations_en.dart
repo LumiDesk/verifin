@@ -57,6 +57,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navigationStyleInUse => 'In use';
 
   @override
+  String get navigationStyleDockedName => 'Docked bar';
+
+  @override
   String get navigationStyleDockedDesc =>
       'Full-width opaque bar pinned to the bottom; icons sweep as you switch';
 
