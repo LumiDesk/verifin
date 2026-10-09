@@ -18,7 +18,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 
 **表面材质（2026-09-10 起）**：`VeriGlassSurface` / `VeriGlassBackdrop` / `VeriMaterialScope` /
 `VeriGlassLightPainter` / `VeriNavigationGlassLens` 与其 Shader 已全部删除。
-卡片、导航、快捷按钮、菜单与弹层一律用不透明实色：
+除可选的液态玻璃底栏样式外，卡片、导航、快捷按钮、菜单与弹层一律用不透明实色：
 `VeriCard`（`common_widgets_scaffold.dart`）走 `veriContentSurfaceColor(brightness)` + 圆角 + 细描边；
 页面背景取 `scaffoldBackgroundColor` 的画布纯色；弹层由 `sheets.dart` 的 `_showVeriModalSheet`
 统一为实色表面 + 顶部圆角 + 内置拖拽把手，外部仍使用各领域 `show…Sheet`。
