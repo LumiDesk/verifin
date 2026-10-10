@@ -25,23 +25,6 @@ class ChartTooltipLine {
 const Color _chartTooltipBackground = Color(0xF21F2937);
 const Color _chartTooltipText = Colors.white;
 
-/// 组合图气泡的最大宽度；宽度本身按内容自适应，这里只作为上限与越界保护的基准。
-const double _comboTooltipMaxWidth = 190;
-const double _comboTooltipPadding = 10;
-
-/// 组合图气泡文案样式；宽度预测量与渲染必须共用同一份样式。
-const TextStyle _comboTooltipTitleStyle = TextStyle(
-  color: _chartTooltipText,
-  fontWeight: FontWeight.w800,
-  fontSize: 12,
-);
-const TextStyle _comboTooltipLineStyle = TextStyle(
-  // 与历史气泡一致的 86% 白；仅未指定系列色的行使用。
-  color: Color(0xDBFFFFFF),
-  fontWeight: FontWeight.w600,
-  fontSize: 11,
-);
-
 /// 按数据计算 y 轴范围；全部相等时给一个安全的上下浮动，避免除零。
 ({double min, double max}) _yRange(List<double> values) {
   if (values.isEmpty) {
@@ -456,6 +439,10 @@ class InteractiveTrendChart extends StatelessWidget {
         borderData: FlBorderData(show: false),
         lineTouchData: LineTouchData(
           handleBuiltInTouches: true,
+          // 默认阈值是 10dp 且只比较横轴距离：点数少的图（7 天、12 个月）大部分
+          // 区域都点不中，横向按住拖动也就时灵时不灵。这里让整片绘图区都命中
+          // 最近的横轴位置，仍保留库默认的「按住查看、松手收起」。
+          touchSpotThreshold: double.infinity,
           touchTooltipData: _lineTooltipData(tooltipOf),
           getTouchedSpotIndicator: (barData, spotIndexes) =>
               _touchedIndicators(context, color, spotIndexes),
@@ -504,179 +491,106 @@ class InteractiveTrendChart extends StatelessWidget {
   }
 }
 
-/// 可交互柱状图：内部由 `fl_chart` 渲染，点击/拖动查看数据气泡。
-class InteractiveBarChart extends StatelessWidget {
+/// 柱状图的一条序列。传入多条约 [InteractiveBarChart.series] 时，同一插槽内
+/// 会并排绘制成一组柱子（双柱/分组柱）。
+class VeriBarSeries {
+  const VeriBarSeries({required this.values, required this.color});
+
+  final List<double> values;
+  final Color color;
+}
+
+/// 可交互柱状图：内部由 `fl_chart` 渲染，按住或横向滑动查看数据气泡。
+///
+/// 命中由适配层按插槽自己算，而不是用库自带的矩形命中：零值月份和柱子上方的
+/// 空白在矩形命中里都点不中，横向按住拖动会时灵时不灵。按插槽取最近一根柱子后
+/// 整片绘图区都能响应，横向拖动可连续查看，仍保留「按住查看、松手收起」。
+class InteractiveBarChart extends StatefulWidget {
   const InteractiveBarChart({
     super.key,
-    required this.values,
+    this.values = const <double>[],
+    this.series,
     this.xLabels = const <String>[],
     this.yLabels = const <String>[],
     this.labelColor,
     required this.tooltipOf,
     this.semanticsLabel,
-  });
+  }) : assert(
+         (values.length == 0 ? 0 : 1) + (series == null ? 0 : 1) == 1,
+         '单序列传 values，多序列传 series，二选一',
+       );
 
+  /// 单序列数据；与 [series] 二选一。
   final List<double> values;
+
+  /// 多序列数据；同一插槽内并排绘制，按最短序列对齐。
+  final List<VeriBarSeries>? series;
+
   final List<String> xLabels;
   final List<String> yLabels;
   final Color? labelColor;
+
+  /// 按插槽索引生成气泡内容；分组柱的气泡一次展示该插槽的全部序列。
   final ChartTooltip Function(int index) tooltipOf;
   final String? semanticsLabel;
 
   @override
-  Widget build(BuildContext context) {
-    if (values.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    final range = _yRange(values);
-    final muted =
-        labelColor ??
-        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.50);
-    final barWidth = (240 / math.max(values.length, 1))
-        .clamp(5.0, 18.0)
-        .toDouble();
-    final chart = BarChart(
-      BarChartData(
-        minY: math.min(0.0, range.min),
-        maxY: range.max,
-        alignment: BarChartAlignment.spaceAround,
-        groupsSpace: 4,
-        barGroups: <BarChartGroupData>[
-          for (var i = 0; i < values.length; i++)
-            BarChartGroupData(
-              x: i,
-              barRods: <BarChartRodData>[
-                BarChartRodData(
-                  toY: values[i],
-                  color: Theme.of(context).colorScheme.primary,
-                  width: barWidth,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ],
-            ),
-        ],
-        titlesData: _titlesData(
-          context: context,
-          xLabels: xLabels,
-          xValueCount: values.length,
-          labelColor: muted,
-        ),
-        gridData: _noGridData,
-        borderData: FlBorderData(show: false),
-        barTouchData: BarTouchData(
-          handleBuiltInTouches: true,
-          touchTooltipData: _barTooltipData(tooltipOf),
-        ),
-      ),
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOutCubic,
-    );
-    final reserved = _axisReservedSize(context, yLabels);
-    return Semantics(
-      container: true,
-      label:
-          semanticsLabel ??
-          AppLocalizations.of(context).chartBarSemantics(values.length),
-      child: LayoutBuilder(
-        builder: (context, constraints) => Stack(
-          children: <Widget>[
-            Positioned(
-              left: reserved,
-              top: 0,
-              right: 0,
-              bottom: 0,
-              child: _ChartGridLines(
-                labelCount: yLabels.isEmpty ? 3 : yLabels.length,
-                color: muted.withValues(alpha: 0.16),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.only(left: reserved),
-              child: chart,
-            ),
-            if (reserved > 0)
-              Positioned(
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: reserved,
-                child: _YAxisLabels(labels: yLabels, color: muted),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
+  State<InteractiveBarChart> createState() => _InteractiveBarChartState();
 }
 
-/// 柱线组合图：柱状图与折线图共用坐标区；气泡由适配层绘制在图表最上层，避免被曲线遮挡。
-class InteractiveComboChart extends StatefulWidget {
-  const InteractiveComboChart({
-    super.key,
-    required this.barValues,
-    required this.lineValues,
-    this.xLabels = const <String>[],
-    this.yLabels = const <String>[],
-    required this.barColor,
-    required this.lineColor,
-    this.labelColor,
-    required this.tooltipOf,
-  });
+class _InteractiveBarChartState extends State<InteractiveBarChart> {
+  /// 当前按住查看的插槽；松手即收起，保持库默认的「按住看数据」手感。
+  int? _pressedIndex;
 
-  final List<double> barValues;
-  final List<double> lineValues;
-  final List<String> xLabels;
-  final List<String> yLabels;
-  final Color barColor;
-  final Color lineColor;
-  final Color? labelColor;
-  final ChartTooltip Function(int index) tooltipOf;
-
-  @override
-  State<InteractiveComboChart> createState() => _InteractiveComboChartState();
-}
-
-class _InteractiveComboChartState extends State<InteractiveComboChart> {
-  int? _selectedIndex;
-
-  /// 按气泡实际文案测量宽度：与 [_ComboTooltipCard] 的 padding、字号、字重一致，
-  /// 用于把气泡居中在选中槽位上，同时避免越出卡片右缘。
-  double _tooltipWidth(BuildContext context, ChartTooltip tooltip) {
-    final textScaler = MediaQuery.textScalerOf(context);
-    double measure(String text, TextStyle style) {
-      final painter = TextPainter(
-        text: TextSpan(text: text, style: style),
-        textDirection: TextDirection.ltr,
-        textScaler: textScaler,
-        maxLines: 1,
-      )..layout();
-      return painter.width;
+  List<VeriBarSeries> _resolvedSeries(BuildContext context) {
+    final series = widget.series;
+    if (series != null) {
+      return series;
     }
-
-    var width = measure(tooltip.title, _comboTooltipTitleStyle);
-    for (final line in tooltip.lines) {
-      width = math.max(width, measure(line.text, _comboTooltipLineStyle));
-    }
-    return (width + _comboTooltipPadding * 2).clamp(0.0, _comboTooltipMaxWidth);
+    return <VeriBarSeries>[
+      VeriBarSeries(
+        values: widget.values,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+    ];
   }
 
   @override
-  void didUpdateWidget(covariant InteractiveComboChart oldWidget) {
+  void didUpdateWidget(covariant InteractiveBarChart oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!listEquals(oldWidget.barValues, widget.barValues) ||
-        !listEquals(oldWidget.lineValues, widget.lineValues)) {
-      _selectedIndex = null;
+    if (!listEquals(oldWidget.values, widget.values) ||
+        !_sameSeries(oldWidget.series, widget.series)) {
+      _pressedIndex = null;
     }
+  }
+
+  bool _sameSeries(List<VeriBarSeries>? a, List<VeriBarSeries>? b) {
+    if (identical(a, b)) {
+      return true;
+    }
+    if (a == null || b == null || a.length != b.length) {
+      return false;
+    }
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].color != b[i].color || !listEquals(a[i].values, b[i].values)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @override
   Widget build(BuildContext context) {
-    final barValues = widget.barValues;
-    final lineValues = widget.lineValues;
-    if (barValues.isEmpty && lineValues.isEmpty) {
+    final series = _resolvedSeries(context);
+    final groupCount = series.isEmpty
+        ? 0
+        : series.map((item) => item.values.length).reduce(math.min);
+    if (groupCount == 0) {
       return const SizedBox.shrink();
     }
-    final allValues = <double>[...barValues, ...lineValues];
+    final allValues = <double>[
+      for (final item in series) ...item.values.take(groupCount),
+    ];
     final range = _yRange(allValues);
     final minY = math.min(0.0, range.min);
     final maxY = math.max(0.0, range.max);
@@ -684,216 +598,143 @@ class _InteractiveComboChartState extends State<InteractiveComboChart> {
         widget.labelColor ??
         Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.50);
     final reserved = _axisReservedSize(context, widget.yLabels);
-    final barWidth = (240 / math.max(barValues.length, 1))
-        .clamp(6.0, 20.0)
-        .toDouble();
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        final plotWidth = math.max(0.0, width - reserved);
-        final count = math.max(barValues.length, 1);
-
-        final barChart = BarChart(
-          BarChartData(
-            minY: minY,
-            maxY: maxY,
-            alignment: BarChartAlignment.spaceAround,
-            groupsSpace: 4,
-            barGroups: <BarChartGroupData>[
-              for (var i = 0; i < barValues.length; i++)
-                BarChartGroupData(
-                  x: i,
-                  barRods: <BarChartRodData>[
-                    BarChartRodData(
-                      toY: barValues[i],
-                      color: widget.barColor,
-                      width: barWidth,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ],
-                ),
-            ],
-            titlesData: _titlesData(
-              context: context,
-              xLabels: widget.xLabels,
-              xValueCount: barValues.length,
-              labelColor: muted,
-            ),
-            gridData: _noGridData,
-            borderData: FlBorderData(show: false),
-            barTouchData: const BarTouchData(enabled: false),
-          ),
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-        );
-
-        // 折线坐标直接使用「第 i 个槽位中心 = i + 0.5」的数据坐标，
-        // 与 BarChartAlignment.spaceAround 的柱子中心像素位置一一对应，
-        // 这样预算折线点会落在柱子正上方。
-        final lineChart = LineChart(
-          LineChartData(
-            minX: 0,
-            maxX: count.toDouble(),
-            minY: minY,
-            maxY: maxY,
-            lineBarsData: <LineChartBarData>[
-              LineChartBarData(
-                spots: <FlSpot>[
-                  for (
-                    var i = 0;
-                    i < lineValues.length && i < barValues.length;
-                    i++
-                  )
-                    FlSpot(i + 0.5, lineValues[i]),
-                ],
-                color: widget.lineColor,
-                barWidth: 2.2,
-                isCurved: true,
-                curveSmoothness: 0.35,
-                preventCurveOverShooting: true,
-                isStrokeCapRound: true,
-                isStrokeJoinRound: true,
-                dotData: const FlDotData(show: false),
-                belowBarData: BarAreaData(
-                  show: true,
-                  gradient: LinearGradient(
-                    colors: <Color>[
-                      widget.lineColor.withValues(alpha: 0.24),
-                      widget.lineColor.withValues(alpha: 0.0),
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
-              ),
-            ],
-            titlesData: _titlesData(
-              context: context,
-              xLabels: widget.xLabels,
-              xValueCount: barValues.length,
-              labelColor: muted,
-              renderTitles: false,
-            ),
-            gridData: const FlGridData(show: false),
-            borderData: FlBorderData(show: false),
-            lineTouchData: const LineTouchData(enabled: false),
-          ),
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-        );
-
-        final selected = _selectedIndex;
-        final slot = plotWidth / count;
-        final tooltipWidth = selected == null
-            ? 0.0
-            : _tooltipWidth(context, widget.tooltipOf(selected));
-        final left = selected == null
-            ? 0.0
-            : (reserved + slot * (selected + 0.5) - tooltipWidth / 2)
-                  .clamp(0.0, math.max(0.0, width - tooltipWidth))
+    return Semantics(
+      container: true,
+      label:
+          widget.semanticsLabel ??
+          AppLocalizations.of(context).chartBarSemantics(groupCount),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final plotWidth = math.max(0.0, constraints.maxWidth - reserved);
+          final slot = plotWidth / groupCount;
+          // 一个插槽内先给整组柱子留出宽度，再平分给每条序列。
+          final groupWidth = (slot * (series.length == 1 ? 0.68 : 0.56))
+              .clamp(5.0, 56.0)
+              .toDouble();
+          final rodsSpace = series.length > 1 ? 2.0 : 0.0;
+          final rodWidth =
+              ((groupWidth - rodsSpace * (series.length - 1)) / series.length)
+                  .clamp(2.5, 24.0)
                   .toDouble();
-        void selectAt(double localX) {
-          if (localX < reserved || barValues.isEmpty) {
-            return;
-          }
-          final index = ((localX - reserved) / slot).floor().clamp(
-            0,
-            barValues.length - 1,
-          );
-          setState(
-            () => _selectedIndex = index == _selectedIndex ? null : index,
-          );
-        }
+          final pressed = _pressedIndex;
 
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapDown: (details) => selectAt(details.localPosition.dx),
-          onHorizontalDragUpdate: (details) =>
-              selectAt(details.localPosition.dx),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: <Widget>[
-              Positioned.fill(
-                child: Padding(
-                  padding: EdgeInsets.only(left: reserved),
-                  child: Stack(
-                    children: <Widget>[
-                      Positioned.fill(
-                        child: _ChartGridLines(
-                          labelCount: widget.yLabels.isEmpty
-                              ? 3
-                              : widget.yLabels.length,
-                          color: muted.withValues(alpha: 0.16),
+          final chart = BarChart(
+            BarChartData(
+              minY: minY,
+              maxY: maxY,
+              alignment: BarChartAlignment.spaceAround,
+              groupsSpace: 4,
+              barGroups: <BarChartGroupData>[
+                for (var i = 0; i < groupCount; i++)
+                  BarChartGroupData(
+                    x: i,
+                    barsSpace: rodsSpace,
+                    // 气泡挂在同组最高的一根柱子上，避免压在数据上；
+                    // 内容由调用方一次给出整组的全部序列。
+                    showingTooltipIndicators: pressed == i
+                        ? <int>[_highestRodIndex(series, i)]
+                        : const <int>[],
+                    barRods: <BarChartRodData>[
+                      for (final item in series)
+                        BarChartRodData(
+                          toY: item.values[i],
+                          color: item.color,
+                          width: rodWidth,
+                          borderRadius: BorderRadius.circular(4),
                         ),
-                      ),
-                      Positioned.fill(child: barChart),
-                      Positioned.fill(child: IgnorePointer(child: lineChart)),
                     ],
                   ),
-                ),
+              ],
+              titlesData: _titlesData(
+                context: context,
+                xLabels: widget.xLabels,
+                xValueCount: groupCount,
+                labelColor: muted,
               ),
-              if (reserved > 0)
+              gridData: _noGridData,
+              borderData: FlBorderData(show: false),
+              // 气泡由适配层按插槽驱动，关闭库自带的矩形命中。
+              barTouchData: BarTouchData(
+                handleBuiltInTouches: false,
+                touchTooltipData: _barTooltipData(widget.tooltipOf),
+              ),
+            ),
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+          );
+
+          void selectAt(double localX) {
+            final index = ((localX - reserved) / slot).floor().clamp(
+              0,
+              groupCount - 1,
+            );
+            if (index != _pressedIndex) {
+              setState(() => _pressedIndex = index);
+            }
+          }
+
+          return Listener(
+            behavior: HitTestBehavior.opaque,
+            onPointerDown: (event) {
+              // 按在纵轴刻度区不算选中；横向拖出绘图区则贴住首尾插槽。
+              if (event.localPosition.dx < reserved) {
+                _clearSelection();
+                return;
+              }
+              selectAt(event.localPosition.dx);
+            },
+            onPointerMove: (event) => selectAt(event.localPosition.dx),
+            onPointerUp: (_) => _clearSelection(),
+            onPointerCancel: (_) => _clearSelection(),
+            child: Stack(
+              children: <Widget>[
                 Positioned(
-                  left: 0,
+                  left: reserved,
                   top: 0,
+                  right: 0,
                   bottom: 0,
-                  width: reserved,
-                  child: _YAxisLabels(labels: widget.yLabels, color: muted),
-                ),
-              if (selected != null)
-                Positioned(
-                  left: left,
-                  top: 0,
-                  child: IgnorePointer(
-                    child: _ComboTooltipCard(
-                      tooltip: widget.tooltipOf(selected),
-                    ),
+                  child: _ChartGridLines(
+                    labelCount: widget.yLabels.isEmpty
+                        ? 3
+                        : widget.yLabels.length,
+                    color: muted.withValues(alpha: 0.16),
                   ),
                 ),
-            ],
-          ),
-        );
-      },
+                Padding(
+                  padding: EdgeInsets.only(left: reserved),
+                  child: chart,
+                ),
+                if (reserved > 0)
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: reserved,
+                    child: _YAxisLabels(labels: widget.yLabels, color: muted),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
-}
 
-class _ComboTooltipCard extends StatelessWidget {
-  const _ComboTooltipCard({required this.tooltip});
+  int _highestRodIndex(List<VeriBarSeries> series, int groupIndex) {
+    var best = 0;
+    for (var i = 1; i < series.length; i++) {
+      if (series[i].values[groupIndex] > series[best].values[groupIndex]) {
+        best = i;
+      }
+    }
+    return best;
+  }
 
-  final ChartTooltip tooltip;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(maxWidth: _comboTooltipMaxWidth),
-      padding: const EdgeInsets.symmetric(
-        horizontal: _comboTooltipPadding,
-        vertical: 8,
-      ),
-      decoration: BoxDecoration(
-        color: _chartTooltipBackground,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Text(tooltip.title, style: _comboTooltipTitleStyle),
-          for (final line in tooltip.lines)
-            Padding(
-              padding: const EdgeInsets.only(top: 3),
-              child: Text(
-                line.text,
-                style: line.color == null
-                    ? _comboTooltipLineStyle
-                    : _comboTooltipLineStyle.copyWith(color: line.color),
-              ),
-            ),
-        ],
-      ),
-    );
+  void _clearSelection() {
+    if (_pressedIndex != null) {
+      setState(() => _pressedIndex = null);
+    }
   }
 }
 

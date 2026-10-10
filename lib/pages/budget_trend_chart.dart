@@ -58,19 +58,27 @@ class _BudgetTrendCard extends StatelessWidget {
           else
             SizedBox(
               height: 132,
-              child: InteractiveComboChart(
-                barValues: months
-                    .map((item) => item.expense)
-                    .toList(growable: false),
-                lineValues: months
-                    .map((item) => item.budget)
-                    .toList(growable: false),
+              // 预算与支出都用柱子并排比较：曲线压在柱子上不好读数，
+              // 双柱能一眼看出「预算 vs 实际」的差距。
+              child: InteractiveBarChart(
+                series: <VeriBarSeries>[
+                  VeriBarSeries(
+                    values: months
+                        .map((item) => item.budget)
+                        .toList(growable: false),
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  VeriBarSeries(
+                    values: months
+                        .map((item) => item.expense)
+                        .toList(growable: false),
+                    color: veriSemantic(context, veriExpense),
+                  ),
+                ],
                 xLabels: months
                     .map((item) => l10n.monthNumber(item.month.month))
                     .toList(growable: false),
                 yLabels: reportAxisLabels(maxValue),
-                barColor: veriSemantic(context, veriExpense),
-                lineColor: Theme.of(context).colorScheme.primary,
                 labelColor: Theme.of(
                   context,
                 ).colorScheme.onSurface.withValues(alpha: 0.50),

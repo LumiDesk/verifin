@@ -302,10 +302,12 @@
 项目内新增图表适配层，页面只依赖项目 API；适配层内部使用外部图表库，项目不再新增自绘数据图表：
 
 > 落地名称与本节草案不同，以实际实现为准：折线 `InteractiveTrendChart`、柱状
-> `InteractiveBarChart`、组合 `InteractiveComboChart`、环形 `VeriDonutChart`、
+> `InteractiveBarChart`（含 `VeriBarSeries` 分组双柱）、环形 `VeriDonutChart`、
 > 进度环 `VeriBudgetRing`，气泡模型 `ChartTooltip` / `ChartTooltipLine`。
 > 草案里的 `VeriLineChart` / `VeriBarChart` / `VeriComboChart` / `VeriChartCard` /
-> `VeriChartLegend` / `VeriChartInteraction` 都没有落地，不要按草案名字找代码。
+> `VeriChartLegend` / `VeriChartInteraction` 都没有落地，不要按草案名字找代码；
+> `VeriComboChart` 曾以 `InteractiveComboChart` 实现过一版，预算近 6 期趋势改成
+> 双柱后已删除。
 
 - `VeriLineChart`：折线图；
 - `VeriBarChart`：柱状图；
@@ -546,7 +548,7 @@
 - `pubspec.yaml` 已加入 `fl_chart 1.2.0` 与 `lottie 3.6.1`（均 MIT）。
 - `lib/app/chart_painters.dart` 已从自绘实现重写为 `fl_chart` 适配层，保留
   `InteractiveTrendChart` / `InteractiveBarChart` 公共名称，新增
-  `InteractiveComboChart`、`VeriDonutChart`、`VeriBudgetRing`；自绘绘制器与
+  `VeriBarSeries`（分组双柱）、`VeriDonutChart`、`VeriBudgetRing`；自绘绘制器与
   命中计算（`TrendLinePainter`、`BarChartPainter`、`BudgetRingPainter`、
   `trendChartRect`、`barChartRect`、`chartNearestIndex`、`chartSlotIndex`、
   `drawChartTooltip`）以及 `chart_hit_test.dart` 已删除。
@@ -560,13 +562,17 @@
   系统开启减少动态效果时回退图标。
 - 视觉与交互收口：折线只保留平滑曲线 + 渐隐填充（不画节点圆点）；纵轴刻度由
   适配层绘制并与横向参考线同源对齐；纵轴刻度同档格式化，不再混排「-1682」与
-  「0.00」；组合图预算点与柱心同列；组合气泡按内容自适应宽度并居中在选中槽位；
-  分析页长序列横轴改为等距抽样并保留首尾，末两个刻度不再重叠。
+  「0.00」；分析页长序列横轴改为等距抽样并保留首尾，末两个刻度不再重叠。
+- 命中方式统一按插槽取最近横轴位置：折线图把 `touchSpotThreshold` 放宽到整片
+  绘图区，柱状图关掉库自带矩形命中、由适配层按插槽驱动气泡，因此点数少的折线
+  （7 天、12 个月）和零值月份也能按住拖动连续查看，不再时灵时不灵。
+- 预算近 6 期趋势从「预算线 + 支出柱」改成预算 / 支出**双柱**（`VeriBarSeries`），
+  曲线压在柱子上不好读数的问题一并消失；`InteractiveComboChart` 因此删除。
 - 示例数据已导入 diagnostic 应用：77 条交易、13 个账户、3 个标签、8 期月预算、
   9 条分类预算，覆盖 2026 年 1–7 月、收入、转账、退款、报销、预算外与多币种。
 - 模拟器时钟已临时设置为 2026-07-15 以匹配样例数据；恢复方法：
   `adb shell date <当前日期时间>`。
-- `dart format`、`flutter analyze` 与 `flutter test`（全量 1093 项）均通过，
+- `dart format`、`flutter analyze` 与 `flutter test`（全量 1096 项）均通过，
   并在模拟器逐卡复核。
 
 尚未完成：

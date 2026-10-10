@@ -87,7 +87,7 @@ void main() {
     expect(chart.data.lineBarsData.single.isCurved, isTrue);
   });
 
-  testWidgets('组合图预算点与柱子中心同列，点按选中对应槽位', (tester) async {
+  testWidgets('双柱图每个插槽两根柱子，按住空白处也能选中最近插槽', (tester) async {
     await tester.pumpWidget(
       zhMaterialApp(
         home: Scaffold(
@@ -95,13 +95,21 @@ void main() {
             child: SizedBox(
               width: 300,
               height: 160,
-              child: InteractiveComboChart(
-                barValues: const <double>[1, 2, 3],
-                lineValues: const <double>[3, 3, 3],
-                xLabels: const <String>['a', 'b', 'c'],
+              child: InteractiveBarChart(
+                // 第 3 个月支出为 0：矩形命中永远点不中零值柱，
+                // 必须靠插槽命中才能查看这个月的数据。
+                series: const <VeriBarSeries>[
+                  VeriBarSeries(
+                    values: <double>[3, 3, 3],
+                    color: Color(0xFF346EDB),
+                  ),
+                  VeriBarSeries(
+                    values: <double>[2, 1, 0],
+                    color: Color(0xFFC2334F),
+                  ),
+                ],
+                xLabels: const <String>['1', '2', '3'],
                 yLabels: const <String>['0', '2', '4'],
-                barColor: const Color(0xFFC2334F),
-                lineColor: const Color(0xFF346EDB),
                 tooltipOf: tooltipOf,
               ),
             ),
@@ -111,19 +119,36 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // BarChartAlignment.spaceAround 把第 i 根柱子放在 (i + 0.5) / count 处；
-    // 折线必须用同一套坐标，否则预算点会整体偏到柱子左侧。
-    final lineChart = tester.widget<LineChart>(find.byType(LineChart));
-    expect(lineChart.data.minX, 0);
-    expect(lineChart.data.maxX, 3);
-    expect(
-      lineChart.data.lineBarsData.single.spots.map((spot) => spot.x).toList(),
-      <double>[0.5, 1.5, 2.5],
-    );
+    BarChart chart() => tester.widget<BarChart>(find.byType(BarChart));
+    int? pressedGroup() {
+      for (final group in chart().data.barGroups) {
+        if (group.showingTooltipIndicators.isNotEmpty) {
+          return group.x;
+        }
+      }
+      return null;
+    }
 
-    // 点按图表水平中心落在中间槽位上：气泡内容对应该槽位。
-    await tester.tapAt(tester.getCenter(find.byType(InteractiveComboChart)));
+    expect(chart().data.barGroups.first.barRods.length, 2);
+    expect(pressedGroup(), isNull);
+
+    // 按住最右侧（第 3 个月那一列的空白处）：仍要选中第 3 个插槽。
+    final gesture = await tester.startGesture(
+      tester.getTopRight(find.byType(InteractiveBarChart)) -
+          const Offset(4, 0) +
+          const Offset(0, 80),
+    );
+    await tester.pump();
+    expect(pressedGroup(), 2);
+
+    // 横向拖动到最左侧：连续跟随下一个插槽。
+    await gesture.moveBy(const Offset(-280, 0));
+    await tester.pump();
+    expect(pressedGroup(), 0);
+
+    // 松手收起，保持「按住查看」的手感。
+    await gesture.up();
     await tester.pumpAndSettle();
-    expect(find.text('第 1 天'), findsOneWidget);
+    expect(pressedGroup(), isNull);
   });
 }

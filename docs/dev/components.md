@@ -160,13 +160,13 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | 名称 | 类型 | 位置 | 用途 |
 |---|---|---|---|
 | `InteractiveTrendChart` | Widget | `chart_painters.dart` | 可交互折线图；`values, xLabels, yLabels, glow, tooltipOf`。平滑曲线 + 渐隐填充，**不画节点圆点**；按住或横向拖动查看气泡，自带 `Semantics` 摘要；位于可跳转卡片内时拦截点击 |
-| `InteractiveBarChart` | Widget | `chart_painters.dart` | 可交互柱状图；`values, xLabels, yLabels, tooltipOf`。交互与无障碍同上 |
-| `InteractiveComboChart` | Widget | `chart_painters.dart` | 预算线 + 支出柱组合图；`barValues, lineValues, xLabels, yLabels, barColor, lineColor, tooltipOf`。两条序列共用同一 x 槽位（预算点落在柱心正上方）；点按选中并保持，气泡按内容自适应宽度 |
+| `InteractiveBarChart` | Widget | `chart_painters.dart` | 可交互柱状图；单序列传 `values`，多序列传 `series`（`List<VeriBarSeries>`，同插槽并排成组，如预算/支出双柱）。命中按插槽取最近一根柱子，整片绘图区可按住拖动，零值柱也能查看；松手收起 |
+| `VeriBarSeries` | 值类 | `chart_painters.dart` | 柱状图的一条序列（`values, color`）；配合 `InteractiveBarChart.series` 使用 |
 | `VeriDonutChart` | Widget | `chart_painters.dart` | 环形分段图；`segments, center, ringWidth, selectedIndex, onSelected`。点击分段回传索引，中心空区回传 `null` |
 | `VeriBudgetRing` | Widget | `chart_painters.dart` | 预算/额度进度环；`value, trackColor, progressColor, center, strokeWidth`。中心内容忽略指针事件 |
 | `ChartTooltip` / `ChartTooltipLine` | 值类 | `chart_painters.dart` | 气泡数据模型；所有图表的气泡内容都由它生成 |
 
-适配层硬性规则：页面与卡片不得直接 `import 'package:fl_chart/...'`；不得再新增自绘数据图表；纵轴刻度（`_YAxisLabels`）与横向参考线（`_ChartGridLines`）由适配层共同绘制以保证对齐，`fl_chart` 自带网格恒为关闭（`_noGridData`）。历史自绘实现（`TrendLinePainter`、`BarChartPainter`、`BudgetRingPainter`、`trendChartRect`、`barChartRect`、`chartNearestIndex`、`chartSlotIndex`、`drawChartTooltip` 及 `chart_hit_test.dart`）已全部删除，不要再按旧接口新建调用。
+适配层硬性规则：页面与卡片不得直接 `import 'package:fl_chart/...'`；不得再新增自绘数据图表；纵轴刻度（`_YAxisLabels`）与横向参考线（`_ChartGridLines`）由适配层共同绘制以保证对齐，`fl_chart` 自带网格恒为关闭（`_noGridData`）。历史自绘实现（`TrendLinePainter`、`BarChartPainter`、`BudgetRingPainter`、`trendChartRect`、`barChartRect`、`chartNearestIndex`、`chartSlotIndex`、`drawChartTooltip` 及 `chart_hit_test.dart`）已全部删除，不要再按旧接口新建调用。曾为「预算线 + 支出柱」加入的 `InteractiveComboChart` 已随预算卡改成双柱而删除，不要再复活它的调用；折线 + 柱组合若确有需求，先确认视觉方案再按 `InteractiveTrendChart` / `InteractiveBarChart` 的约定重做。
 
 ## 族 10 — 纯计算（领域逻辑，无 Flutter 依赖或仅叶子级）
 
