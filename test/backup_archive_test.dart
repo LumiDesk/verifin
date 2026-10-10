@@ -197,4 +197,47 @@ void main() {
       );
     });
   });
+
+  test('附件内容被篡改时按损坏拒绝', () async {
+    await withTempDir((dir) async {
+      final store = await storeWithImage();
+      final archivePath = '$dir/backup.zip';
+      await packBackupArchiveToFile(
+        exportJson: buildExportJson(withAttachments: true),
+        store: store,
+        outputPath: archivePath,
+      );
+      final bytes = await File(archivePath).readAsBytes();
+      // 附件以 store 模式原样存储，直接定位其字节并翻转一位模拟损坏。
+      final index = _indexOfSequence(bytes, imageBytes);
+      expect(index, greaterThan(0));
+      bytes[index] = bytes[index] ^ 0xFF;
+      final tamperedPath = '$dir/tampered.zip';
+      await File(tamperedPath).writeAsBytes(bytes);
+
+      await expectLater(
+        unpackBackupArchiveFile(
+          archivePath: tamperedPath,
+          sink: InMemoryAttachmentStore(),
+        ),
+        throwsA(isA<FormatException>()),
+      );
+    });
+  });
+}
+
+int _indexOfSequence(List<int> haystack, List<int> needle) {
+  for (var start = 0; start + needle.length <= haystack.length; start++) {
+    var matched = true;
+    for (var offset = 0; offset < needle.length; offset++) {
+      if (haystack[start + offset] != needle[offset]) {
+        matched = false;
+        break;
+      }
+    }
+    if (matched) {
+      return start;
+    }
+  }
+  return -1;
 }

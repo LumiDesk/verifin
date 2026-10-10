@@ -159,6 +159,12 @@ Future<String> unpackBackupArchiveFile({
       if (content.isEmpty) {
         continue;
       }
+      // 完整性校验：zip 条目的 CRC-32 与内容不符即判定损坏（`archive` 的解码器
+      // 不校验 CRC，必须自己比对，否则截断/篡改会静默变成坏图）。
+      final expectedCrc = file.crc32;
+      if (expectedCrc != 0 && getCrc32(content) != expectedCrc) {
+        throw const FormatException('备份附件已损坏');
+      }
       await sink.writeBytes(id, content);
       sizes[id] = content.length;
       onProgress?.call(attachmentCount, archive.length);
@@ -170,7 +176,8 @@ Future<String> unpackBackupArchiveFile({
     throw const FormatException('备份压缩包缺少 backup.json');
   }
   final root = jsonDecode(utf8.decode(jsonBytes));
-  // 用实际解出的字节数校正元数据（旧包没有 byteSize），顺带反映真实体积。
+  // 用实际解出的字节数校正元数据（旧包没有 byteSize）；声明值与实际值不一致说明
+  // 包已损坏，直接拒绝而不是留下坏图。
   for (final attachment in _attachmentsOf(root)) {
     final id = attachment['id'];
     if (id is! String) {
@@ -178,6 +185,10 @@ Future<String> unpackBackupArchiveFile({
     }
     final size = sizes[id];
     if (size != null) {
+      final declared = (attachment['byteSize'] as num?)?.toInt();
+      if (declared != null && declared > 0 && declared != size) {
+        throw const FormatException('备份附件已损坏');
+      }
       attachment['byteSize'] = size;
     }
   }
