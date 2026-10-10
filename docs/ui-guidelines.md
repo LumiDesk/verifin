@@ -14,7 +14,7 @@
 
 四个根页面使用同一条底部导航，样式经 `VeriRootNavigationStyle` 注册、由 `VeriRootNavigationHost` 渲染。当前默认样式是**停靠式**：整宽、不透明、贴底，条目由自有的 `VeriBottomBar` 绘制（未选中线框图标、选中填充图标，中文标签常显）。选中项用 `colorScheme.primary`（默认 Veri Royal）强调，底栏表面和未选中项保持中性，不给整条导航背景染色。
 
-第二个已注册样式是**液态玻璃**（`root_navigation_liquid_glass.dart`）：浮动胶囊 + 背景模糊 + SDF 折射，指示块随选中项滑动并在按压时轻微放大。它声明 `extendBody: true`，因此页面内容会从胶囊下方滚过，玻璃背后才有可折射的内容；`ImageFilter.shader` 只在 Impeller 下可用，不可用时自动降级为模糊玻璃，条目、标签与读屏语义不受影响。玻璃实现必须留在该样式自己的文件与着色器内，其他样式与界面不得引用。
+第二个已注册样式是**液态玻璃**（`root_navigation_liquid_glass.dart` + `liquid_glass_surface.dart` + `liquid_glass_lens.dart`）：浮动胶囊（高 60、左右 12、底部留白 24）+ 背景模糊 + 沿边方向高光，透镜只在拖动/按压时对导航自身内容做形变。它声明 `extendBody: true`，页面内容从胶囊下方滚过；按下即滑向目标、拖动跟手、松手吸附最近一项，纯点击与拖动都会把目标交给 Shell。`ImageFilter.shader` 只在 Impeller 下可用，不可用时自动降级为不含折射的玻璃面板，条目、标签与读屏语义不受影响。玻璃实现必须留在该样式自己的文件与着色器内，其他样式与界面不得引用。
 
 **记账按钮与导航栏无关**：它是右下角的独立浮动圆角方形，只在首页显示，由 Shell 自己渲染；样式不参与，也不得占用它的区域（内容延伸到栏背后时，Shell 按样式声明的 `occupiedHeight` 把按钮抬到栏上方）。
 

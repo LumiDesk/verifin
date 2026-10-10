@@ -188,15 +188,21 @@ class _NavigationStylePreview extends StatelessWidget {
       onSelect: null,
       keyPrefix: 'nav_style_preview_${style.id}',
     );
+    // 悬浮胶囊会紧贴预览上沿，补一段顶部留白，让浮空导航在卡片里有正常呼吸
+    // 空间；整宽贴底样式同样适用，只是上方多出一条卡片底色。
+    const topGap = 12.0;
     return SizedBox(
-      height: style.layout.occupiedHeight,
+      height: style.layout.occupiedHeight + topGap,
       child: MediaQuery.removePadding(
         context: context,
         removeBottom: true,
-        child: IgnorePointer(
-          child: Material(
-            type: MaterialType.transparency,
-            child: style.buildBar(context, spec),
+        child: Padding(
+          padding: const EdgeInsets.only(top: topGap),
+          child: IgnorePointer(
+            child: Material(
+              type: MaterialType.transparency,
+              child: style.buildBar(context, spec),
+            ),
           ),
         ),
       ),

@@ -89,6 +89,21 @@ void main() {
       handle.dispose();
     }
   });
+
+  testWidgets('液态玻璃底栏支持横向拖动并吸附到最近一项', (tester) async {
+    final selected = <int>[];
+    await tester.pumpWidget(_LiquidGlassHarness(onSelected: selected.add));
+
+    final bar = tester.getRect(find.byKey(const Key('main_nav_bar')));
+    await tester.dragFrom(
+      Offset(bar.left + 12, bar.center.dy),
+      Offset(bar.width * 0.6, 0),
+    );
+    await tester.pumpAndSettle();
+
+    expect(selected, isNotEmpty, reason: '拖动松手后应把目标下标交给 Shell');
+    expect(selected.last, inInclusiveRange(1, 3));
+  });
 }
 
 class _LiquidGlassHarness extends StatefulWidget {

@@ -15,13 +15,15 @@
 ### 玻璃候选材质的渲染开销 —— 已解决（2026-09-10），2026-10-09 定向重启
 
 磨砂玻璃、方向高光与导航折射透镜已按用户判定整体移除（见 `docs/design-system.md` 的表面材质一节）。
-2026-10-09 用户明确要求只对底部导航恢复一个可选的液态玻璃样式，因此重新引入背景模糊与 SDF 折射：
+2026-10-09 用户明确要求只对底部导航恢复一个可选的液态玻璃样式，因此重新引入背景模糊与透镜：
 
 - 实现限定在 `root_navigation_liquid_glass.dart`、`liquid_glass_material.dart` 与
-  `shaders/liquid_glass_refraction.frag`，不扩散到其他界面或样式；
-- 折射依赖 `ImageFilter.shader`（仅 Impeller），不可用时自动降级为纯模糊玻璃；
-- 历史崩溃根因是逐段 `MaskFilter.blur` 的自定义高光，新实现保持单次背景滤镜与单层折射，
-  不重复该写法；
+  `liquid_glass_surface.dart`、`liquid_glass_lens.dart` 与 `shaders/liquid_glass_lens.frag`，
+  不扩散到其他界面或样式；
+- 透镜依赖 `ImageFilter.shader`（仅 Impeller），不可用时自动降级为不含折射的玻璃面板；
+- 玻璃只做一次背景模糊，透镜作用于导航自身图层，不折射页面背景（Flutter 的
+  `BackdropFilter` 无法把模糊结果再交给着色器，强行折射背景会产生坐标错位伪影）；
+- 历史崩溃根因是逐段 `MaskFilter.blur` 的自定义高光，新实现沿用连续网格高光，
 - 仍需在真机 release/R8 上补滚动帧率与长时稳定性验收，桌面 widget 测试不覆盖这一点。
 
 历史排查记录保留在 `docs/dev/android-glass-investigation.md`。
