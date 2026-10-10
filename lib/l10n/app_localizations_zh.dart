@@ -1095,6 +1095,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get balanceEditConfirmTitle => '是否确认修改余额？';
 
   @override
+  String get balanceEditNegativeHint => '负余额表示欠款，信用卡、贷款这类负债账户通常为负。';
+
+  @override
   String balanceEditConfirmMessage(String name, String amount) {
     return '将把「$name」的余额调整为 $amount。';
   }

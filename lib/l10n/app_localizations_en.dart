@@ -1120,6 +1120,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get balanceEditConfirmTitle => 'Confirm balance change?';
 
   @override
+  String get balanceEditNegativeHint =>
+      'A negative balance means money owed — credit cards and loans usually sit below zero.';
+
+  @override
   String balanceEditConfirmMessage(String name, String amount) {
     return 'This sets the balance of \"$name\" to $amount.';
   }

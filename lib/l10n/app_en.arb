@@ -370,6 +370,7 @@
   "deletableLabel": "Deletable",
   "hasEntriesLabel": "Has transactions",
   "balanceEditConfirmTitle": "Confirm balance change?",
+  "balanceEditNegativeHint": "A negative balance means money owed — credit cards and loans usually sit below zero.",
   "balanceEditConfirmMessage": "This sets the balance of \"{name}\" to {amount}.",
   "balanceEditRecord": "Record as entry",
   "balanceEditRecordDesc": "Creates a balance-adjustment entry; if unchecked, the initial balance is changed directly without affecting statistics.",

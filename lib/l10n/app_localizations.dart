@@ -2150,6 +2150,12 @@ abstract class AppLocalizations {
   /// **'是否确认修改余额？'**
   String get balanceEditConfirmTitle;
 
+  /// No description provided for @balanceEditNegativeHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'负余额表示欠款，信用卡、贷款这类负债账户通常为负。'**
+  String get balanceEditNegativeHint;
+
   /// No description provided for @balanceEditConfirmMessage.
   ///
   /// In zh, this message translates to:
