@@ -62,6 +62,10 @@ Directory findRepoRoot() {
 /// 运行外部命令并实时转发 stdout/stderr；非零退出抛 [ScriptException]。
 ///
 /// Windows 上必须 `runInShell`，否则无法解析 `flutter` / `gh` 这类 `.bat`/`.cmd`。
+///
+/// 转发时必须逐块 `add`，不能用 `Stream.pipe`：`pipe` 在子进程流结束时会
+/// **关闭父进程的 stdout/stderr**，于是第二次调用 `run()` 写日志就会
+/// 「Bad state: StreamSink is closed」崩掉（发布脚本要连续跑 8 条命令）。
 Future<void> run(List<String> command, {Directory? workingDirectory}) async {
   final process = await Process.start(
     command.first,
@@ -69,11 +73,13 @@ Future<void> run(List<String> command, {Directory? workingDirectory}) async {
     workingDirectory: workingDirectory?.path,
     runInShell: Platform.isWindows,
   );
-  final out = process.stdout.pipe(stdout);
-  final err = process.stderr.pipe(stderr);
+  final out = process.stdout.forEach(stdout.add);
+  final err = process.stderr.forEach(stderr.add);
   final code = await process.exitCode;
   await out;
   await err;
+  await stdout.flush();
+  await stderr.flush();
   if (code != 0) {
     throw ScriptException('命令失败（退出码 $code）：${command.join(' ')}');
   }
