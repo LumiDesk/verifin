@@ -657,7 +657,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
               return true;
             }
             // Android 10 以下或桌面：回退到系统「保存到」选择器（需要整份字节）。
-            return downloadBytesFile(
+            return await downloadBytesFile(
               filename: prepared.filename,
               bytes: await File(prepared.cachePath).readAsBytes(),
               mimeType: mimeType,
