@@ -218,10 +218,14 @@ Android 侧用 `ContentResolver.openInputStream/openOutputStream` 边读边写�
 
 ### 加密
 
-- **新格式**：对 zip 容器整体做流式 AES-GCM（`cryptography` 的 `encryptStream` /
-  `decryptStream`），保留 KDF 参数与口令校验。
-- **旧格式**：现有 JSON 信封继续可解密导入（口令仍在设备 KV）。
-- 加密与解密都按分块处理，不整卷进内存。
+- **新格式（已落地）**：`.verifin` 流式加密容器，布局为
+  `VERIFIN-ENC2\n` + 一行 JSON 参数（`kdf` / `iter` / `salt` / `nonce`）+ `\n`
+  + AES-GCM 密文 + 16 字节 MAC；密文里就是上面那个 zip。加解密走
+  `cryptography` 的 `encryptStream` / `decryptStream`，按分块处理，不整卷进内存。
+  口令错误或篡改由 GCM 认证失败捕获，映射为可读错误并允许重试。
+- **旧格式**：现有 JSON 信封继续可解密导入（口令仍在设备 KV）；该路径仍需整份读入
+  内存，作为历史格式记入 [已知限制 L8](known-limitations.md)。
+- 文件名后缀用 `.verifin`：备份目录列表、文件选择器与 WebDAV 列表的过滤规则同步包含它。
 
 ### WebDAV
 
@@ -259,7 +263,7 @@ class BackupProgress { final BackupPhase phase; final int done; final int total;
 
 | 依赖 | 现状 | 计划 | 理由 |
 | --- | --- | --- | --- |
-| `archive` | `^4.0.9` | 升到 `^4.2.0`（不取当天发布的 4.4.0） | 4.1.0 起修复了大文件相关的 `file_buffer`、路径分隔符问题；`ZipFileEncoder` 提供磁盘流式打包 |
+| `archive` | `^4.0.9` | 锁定 `4.3.0` | 4.1.0 起修复了大文件相关的 `file_buffer`、路径分隔符问题；不跟随当天发布的 4.4.0。流式写用 `ZipEncoder.startEncode/add/endEncode` + `ArchiveFile.stream`，读用 `ZipDecoder.decodeStream(InputFileStream)` |
 | `path_provider` | 未显式声明 | 新增 `^2.1.6` | 官方插件，解析应用支持目录；不自行拼接数据库目录 |
 | `json_events` | 无 | 新增 `^1.2.2` | 仅用于旧明文 JSON 的流式解析；JSON 规范稳定，风险可控 |
 | `cryptography` | `^2.7.0` | 不变 | 已有 `encryptStream` / `decryptStream` |
@@ -296,9 +300,21 @@ class BackupProgress { final BackupPhase phase; final int done; final int total;
 - `README.md`、`docs/product.md`、`docs/acceptance-checklist.md`：附件与备份说明。
 - `CHANGELOG.md`：用户可见的存储格式、迁移、进度与损坏提示变化。
 
-## 待确认
+## 已确认的取舍
 
-1. 备份容器保持 v3 形状（额外校验字段由旧版本忽略）还是提升到 v4 并放弃旧版本可读？
-   本文推荐保持 v3 形状。
-2. 新加密备份改为「加密 zip 容器」、旧信封仅保留只读兼容，是否认可？
-3. 存量迁移采用「后台转换 + 非阻塞进度提示 + 混合读取兜底」，而非首启动阻塞式全量转换，是否认可？
+1. **备份容器保持 v3 形状**（附件条目名、`dataUrl: ''` 与 `_archiveMime` 都不变，只新增
+   `byteSize` 字段），保证「新版本导出的备份旧版本仍能导入」，也就是双向兼容。
+2. **新加密备份改为流式加密容器**（`.verifin`），旧 JSON 信封只保留读取兼容。
+3. **存量迁移走后台转换 + 非阻塞提示 + 混合读取兜底**，不做首启动阻塞式全量转换。
+
+## 落地状态
+
+| 部分 | 状态 |
+| --- | --- |
+| 附件文件化（`AttachmentStore`、schema v18、迁移任务、孤儿回收） | 已实现 |
+| 备份/恢复流式（增量 zip 写盘、流式解包、原生流式复制、SHA-256 校验） | 已实现 |
+| 加密备份流式容器 + 旧信封读取兼容 | 已实现 |
+| 旧版明文 JSON 流式重写（`json_events`） | 已实现 |
+| 进度条、取消、成功/失败/损坏提示 | 已实现 |
+| WebDAV 流式上传/下载 | 已实现 |
+| Android 真机与 CI release APK 验收 | 待 CI 与真机执行（本机无 Android SDK） |

@@ -98,20 +98,6 @@ class MainActivity : FlutterFragmentActivity() {
                     result,
                 )
                 "pickBackupDirectory" -> pickBackupDirectory(result)
-                "writeBackupFile" -> writeBackupFile(
-                    call.argument<String>("directoryUri") ?: "",
-                    call.argument<String>("filename") ?: "verifin-backup.json",
-                    call.argument<String>("content") ?: "",
-                    call.argument<String>("mimeType") ?: "application/json",
-                    result,
-                )
-                "writeBackupBytes" -> writeBackupBytes(
-                    call.argument<String>("directoryUri") ?: "",
-                    call.argument<String>("filename") ?: "verifin-backup.zip",
-                    call.argument<ByteArray>("bytes") ?: ByteArray(0),
-                    call.argument<String>("mimeType") ?: "application/zip",
-                    result,
-                )
                 "stageBackupFile" -> stageBackupFile(
                     call.argument<String>("fileUri") ?: "",
                     result,
@@ -133,16 +119,8 @@ class MainActivity : FlutterFragmentActivity() {
                     call.argument<String>("path") ?: "",
                     result,
                 )
-                "readBackupBytes" -> readBackupBytes(
-                    call.argument<String>("fileUri") ?: "",
-                    result,
-                )
                 "listBackupFiles" -> listBackupFiles(
                     call.argument<String>("directoryUri") ?: "",
-                    result,
-                )
-                "readBackupFile" -> readBackupFile(
-                    call.argument<String>("fileUri") ?: "",
                     result,
                 )
                 "deleteBackupFile" -> deleteBackupFile(
@@ -1091,73 +1069,6 @@ class MainActivity : FlutterFragmentActivity() {
         return DocumentFile.fromTreeUri(this, Uri.parse(directoryUri))
     }
 
-    private fun writeBackupFile(
-        directoryUri: String,
-        filename: String,
-        content: String,
-        mimeType: String,
-        result: MethodChannel.Result,
-    ) {
-        Thread {
-            try {
-                val tree = backupTree(directoryUri)
-                    ?: throw IllegalStateException("备份目录不可用，请重新选择。")
-                tree.findFile(filename)?.delete()
-                val file = tree.createFile(mimeType, filename)
-                    ?: throw IllegalStateException("无法在备份目录创建文件。")
-                contentResolver.openOutputStream(file.uri)?.use { output ->
-                    output.write(content.toByteArray(Charsets.UTF_8))
-                } ?: throw IllegalStateException("无法写入备份文件。")
-                runOnUiThread { result.success(file.uri.toString()) }
-            } catch (error: Exception) {
-                runOnUiThread {
-                    result.error("BACKUP_FAILED", error.message ?: "写入备份失败。", null)
-                }
-            }
-        }.start()
-    }
-
-    private fun writeBackupBytes(
-        directoryUri: String,
-        filename: String,
-        bytes: ByteArray,
-        mimeType: String,
-        result: MethodChannel.Result,
-    ) {
-        Thread {
-            try {
-                val tree = backupTree(directoryUri)
-                    ?: throw IllegalStateException("备份目录不可用，请重新选择。")
-                tree.findFile(filename)?.delete()
-                val file = tree.createFile(mimeType, filename)
-                    ?: throw IllegalStateException("无法在备份目录创建文件。")
-                contentResolver.openOutputStream(file.uri)?.use { output ->
-                    output.write(bytes)
-                } ?: throw IllegalStateException("无法写入备份文件。")
-                runOnUiThread { result.success(file.uri.toString()) }
-            } catch (error: Exception) {
-                runOnUiThread {
-                    result.error("BACKUP_FAILED", error.message ?: "写入备份失败。", null)
-                }
-            }
-        }.start()
-    }
-
-    private fun readBackupBytes(fileUri: String, result: MethodChannel.Result) {
-        Thread {
-            try {
-                val bytes = contentResolver.openInputStream(Uri.parse(fileUri))?.use { input ->
-                    readLimitedBytes(input)
-                } ?: throw IllegalStateException("无法读取备份文件。")
-                runOnUiThread { result.success(bytes) }
-            } catch (error: Exception) {
-                runOnUiThread {
-                    result.error("BACKUP_READ_FAILED", error.message ?: "读取备份文件失败。", null)
-                }
-            }
-        }.start()
-    }
-
     // ---- 大文件流式复制 ----
     //
     // 备份/恢复/导出可能是 GB 级。MethodChannel 传 ByteArray 会把整包放进 Java 堆，
@@ -1393,21 +1304,6 @@ class MainActivity : FlutterFragmentActivity() {
         }.start()
     }
 
-    private fun readBackupFile(fileUri: String, result: MethodChannel.Result) {
-        Thread {
-            try {
-                val text = contentResolver.openInputStream(Uri.parse(fileUri))?.use { input ->
-                    readLimitedBytes(input).toString(Charsets.UTF_8)
-                } ?: throw IllegalStateException("无法读取备份文件。")
-                runOnUiThread { result.success(text) }
-            } catch (error: Exception) {
-                runOnUiThread {
-                    result.error("BACKUP_READ_FAILED", error.message ?: "读取备份文件失败。", null)
-                }
-            }
-        }.start()
-    }
-
     private fun deleteBackupFile(fileUri: String, result: MethodChannel.Result) {
         Thread {
             try {
@@ -1420,24 +1316,6 @@ class MainActivity : FlutterFragmentActivity() {
                 }
             }
         }.start()
-    }
-
-    /// 备份可能来自用户选择的任意 SAF 文件，读取前后都限制大小，避免把异常大文件
-    /// 一次性装入 Dart/Android 内存。zip 解包层还会检查解压后的累计大小。
-    private fun readLimitedBytes(input: java.io.InputStream): ByteArray {
-        val output = ByteArrayOutputStream(DEFAULT_BUFFER_SIZE)
-        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-        var total = 0
-        while (true) {
-            val read = input.read(buffer)
-            if (read == -1) break
-            total += read
-            if (total > MAX_BACKUP_BYTES) {
-                throw IllegalStateException("备份文件过大")
-            }
-            output.write(buffer, 0, read)
-        }
-        return output.toByteArray()
     }
 
     private fun isNewerVersion(latest: String, current: String): Boolean {
@@ -1499,7 +1377,6 @@ class MainActivity : FlutterFragmentActivity() {
         const val EXTRA_CAPTURE_IMAGE_URI = "imageUri"
         private const val MAX_CAPTURE_TEXT_LENGTH = 8_000
         private const val MAX_CAPTURE_IMAGE_BYTES = 25 * 1024 * 1024
-        private const val MAX_BACKUP_BYTES = 256 * 1024 * 1024
         private const val CHANNEL_NAME = "verifin/app"
         private const val REQUEST_WRITE_DOWNLOADS = 4301
         private const val REQUEST_PICK_BACKUP_DIR = 4302

@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:file_selector/file_selector.dart';
@@ -37,58 +35,6 @@ Future<PickedBackupDirectory?> pickBackupDirectory() async {
   return PickedBackupDirectory(uri: path, label: p.basename(path));
 }
 
-Future<String?> writeBackupFile({
-  required String directoryUri,
-  required String filename,
-  required String content,
-  String mimeType = 'application/json',
-}) async {
-  if (Platform.isAndroid) {
-    return AppStorageBridge.writeBackupFile(
-      directoryUri: directoryUri,
-      filename: filename,
-      content: content,
-      mimeType: mimeType,
-    );
-  }
-  final file = File(p.join(directoryUri, filename));
-  await file.writeAsString(content, flush: true);
-  return file.uri.toString();
-}
-
-/// 向备份目录写入字节文件（zip 备份）。Android 走 SAF、桌面走 dart:io。
-Future<String?> writeBackupBytesFile({
-  required String directoryUri,
-  required String filename,
-  required Uint8List bytes,
-  String mimeType = 'application/zip',
-}) async {
-  if (Platform.isAndroid) {
-    return AppStorageBridge.writeBackupBytes(
-      directoryUri: directoryUri,
-      filename: filename,
-      bytes: bytes,
-      mimeType: mimeType,
-    );
-  }
-  final file = File(p.join(directoryUri, filename));
-  await file.writeAsBytes(bytes, flush: true);
-  return file.uri.toString();
-}
-
-/// 读取备份文件原始字节（zip 与旧版 JSON 统一按字节读入，调用方再判别格式）。
-Future<Uint8List?> readBackupBytesFile(String fileUri) async {
-  if (Platform.isAndroid) {
-    return AppStorageBridge.readBackupBytes(fileUri);
-  }
-  final file = File.fromUri(Uri.parse(fileUri));
-  if (!file.existsSync()) {
-    return null;
-  }
-  // 不再做固定大小上限：内存有界由逐条流式处理保证，桌面端读取走 dart:io 分块。
-  return file.readAsBytes();
-}
-
 Future<List<BackupFileInfo>> listBackupFiles(String directoryUri) async {
   if (Platform.isAndroid) {
     final raw = await AppStorageBridge.listBackupFiles(directoryUri);
@@ -120,17 +66,6 @@ Future<List<BackupFileInfo>> listBackupFiles(String directoryUri) async {
     );
   }
   return result;
-}
-
-Future<String?> readBackupFile(String fileUri) async {
-  if (Platform.isAndroid) {
-    return AppStorageBridge.readBackupFile(fileUri);
-  }
-  final file = File.fromUri(Uri.parse(fileUri));
-  if (!file.existsSync()) {
-    return null;
-  }
-  return utf8.decode(await file.readAsBytes());
 }
 
 Future<bool> deleteBackupFile(String fileUri) async {

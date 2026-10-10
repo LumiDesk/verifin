@@ -51,8 +51,12 @@ dependencies:
   crypto: ^3.0.6
   # 备份加密：AES-GCM 认证加密 + PBKDF2 密钥派生（纯 Dart，全平台）。
   cryptography: ^2.7.0
-  # 备份打包：把图片附件从 JSON 里剥离、与 data.json 一起打进 zip，控制备份体积。
-  archive: ^4.0.9
+  # 备份打包/解包：流式 zip（附件逐张写盘、整包不进内存）。
+  # 4.1.0 起修复了大文件的 file_buffer 与 zip 路径分隔符问题；显式锁 4.3.0，
+  # 不跟随当天发布的 4.4.0（观察一段时间再评估）。
+  archive: 4.3.0
+  # 旧版明文备份（内嵌 base64）的前向事件流解析，避免整份文档进内存。
+  json_events: ^1.2.2
   # 支付平台账单导入的多编码解码（支付宝导出为 GBK、薄荷为 UTF-16），纯 Dart。
   charset: ^2.0.1
   # 生物识别（仅指纹）快捷解锁，调用系统能力，不保存任何生物特征数据。
@@ -70,7 +74,6 @@ dependencies:
   # 统一分段控件（滑块式选中胶囊）的底层实现。
   animated_toggle_switch: ^0.8.7
   home_widget: 0.10.0
-  json_events: ^1.2.2
   # 底栏不再依赖 bottom_bar_matu：其选中动效有多处缺陷（图标 State 被反复重建、
   # 动画进度可越界、回调延迟 200ms），已抄写进 lib/app/veri_bottom_bar.dart 并修复。
 dev_dependencies:

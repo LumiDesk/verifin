@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/backup/backup_archive.dart';
 import 'package:verifin/app/backup/backup_service.dart';
 import 'package:verifin/app/backup/backup_settings.dart';
-import 'package:verifin/app/backup/backup_storage.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/app/veri_fin_scope.dart';
 import 'package:verifin/local_storage/local_storage.dart';
@@ -328,16 +327,17 @@ void main() {
         );
         expect(result.filename.endsWith('.zip'), isTrue);
 
-        final bytes = await readBackupBytesFile(result.fileUri!);
-        expect(bytes, isNotNull);
-        expect(looksLikeZipBytes(bytes!), isTrue);
+        final written = await File.fromUri(
+          Uri.parse(result.fileUri!),
+        ).readAsBytes();
+        expect(looksLikeZipBytes(written), isTrue);
 
         final target = await makeController();
         final staging = await target.attachmentStore.createStagingStore();
         try {
           // 模拟 Android 侧把外部备份文件流式落到缓存后再解析。
           final restorePath = '${dir.path}${Platform.pathSeparator}restore.zip';
-          await File(restorePath).writeAsBytes(bytes);
+          await File(restorePath).writeAsBytes(written);
           final decoded =
               await BackupService.decodeBackupFile(
                     cachePath: restorePath,

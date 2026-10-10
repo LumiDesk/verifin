@@ -28,6 +28,7 @@
 
 - `docs/dev/architecture.md`：架构与源码导航。`CLAUDE.md` 仅链接本文件，不维护第二份规范。
 - `docs/dev/components.md`：组件、弹窗、格式化与纯函数注册表；写相关代码前必读。根导航的当前约定见其中 `VeriRootNavigationStyle`、`VeriDockedRootNavigationStyle` 与 `VeriLiquidGlassRootNavigationStyle` 条目（默认停靠样式 + 可选的液态玻璃样式，样式选择页见 `NavigationStyleSettingsPage`），底栏绘制组件见 `VeriBottomBar` 条目。新增样式前另读 `docs/dev/navigation-style-decoupling-design.md`。
+- `docs/dev/attachment-storage-and-streaming-backup-design.md`：图片附件文件化存储、备份/恢复全链路流式化、加密容器与进度反馈的当前实现与验收。
 - `docs/ui-guidelines.md`：页面骨架、交互、图表和视觉规范。
 - `docs/dev/tech-decisions.md`：数据口径、备份范围和关键技术取舍；判断当前实现仍以源码、测试与工作流为准。
 - `docs/dev/known-limitations.md`：已接受的限制与技术债及触发整改的阈值。
@@ -72,7 +73,7 @@
 - Controller 物理拆为 `veri_fin_controller.dart`、`veri_fin_controller_state.dart`、`veri_fin_controller_ops.dart`。`VeriFinController.create()` 是生产异步创建入口。
 - UI 只调用 Controller 的公共读取/操作 API，不直接访问 repository、SQLite 或 KV；Controller 内部再经 `_persistX` 等路径持久化。
 - 账本、交易、账户、分组、分类、标签、附件、周期规则和预算等核心数据只认 SQLite。Controller 的内存集合是运行时读取源，不存在 KV 回退。
-- `LedgerRepository.saveX` 的对外语义是“落库后该表内容等于传入集合”。生产实现把“读取行快照、计算 `_incrementalReplace` 差分、事务写入、更新快照”整体串行化；单次失败不得阻塞后续写。附件大 blob 与小型预算表仍可整表覆盖；导入、恢复、重置、删账本及跨表删除走 `replaceAllLedgerData` 原子整替，显式删除命令落库成功后才替换 Controller 内存。
+- `LedgerRepository.saveX` 的对外语义是“落库后该表内容等于传入集合”。生产实现把“读取行快照、计算 `_incrementalReplace` 差分、事务写入、更新快照”整体串行化；单次失败不得阻塞后续写。附件表只存元数据（小行，可整表覆盖，但写路径必须保留未迁移的 `data_url`）与小型预算表仍可整表覆盖；导入、恢复、重置、删账本及跨表删除走 `replaceAllLedgerData` 原子整替，显式删除命令落库成功后才替换 Controller 内存。
 - 主题、语言、触感、面板配置、备份设置、AI 配置等偏好类小数据走 `LocalKeyValueStore`。新增偏好优先参考主题/语言的独立 `ValueNotifier`，避免继续扩大全树 `notifyListeners()`。
 - 只维护 Android；保留生产原生实现与测试注入/stub 边界，禁止重新引入浏览器适配。真实存储、图片、文件能力不得落到测试 stub。
 
@@ -196,7 +197,7 @@ dart format .
 
 ### 备份与导入
 
-- `BackupService` 是字节格式编解码唯一入口；Controller 只接收/产出明文 JSON。未加密备份为 zip（`backup.json` + 独立附件），加密备份为 JSON 信封；不要在 UI/Controller 复制格式判定。
+- `BackupService` 是字节格式编解码唯一入口；Controller 只接收/产出明文 JSON。未加密备份为 zip（`backup.json` + 独立附件），新版加密备份为流式加密容器（`.verifin`，密文里是同一个 zip），旧版 JSON 信封仍可读取导入；不要在 UI/Controller 复制格式判定。
 - 哪些数据进备份、哪些仅设备本地，必须以当前 `exportDataJson` / `importDataJson`、备份测试和实际字段共同核验，并同步维护 `docs/dev/tech-decisions.md` 的“备份范围”表。应用锁、备份口令、WebDAV 凭证、AI Key 等机密不得进入备份。
 - 改备份字段时同步 `exportDataJson` / `importDataJson`、初始化逻辑、旧备份兼容和 `docs/dev/verifin-sample-backup.json`，并让测试真实导入样例备份。
 - 第三方账单各自使用独立 parser，统一产出强类型 `RawImportRecord`；共享领域逻辑只放 `plan_builder.dart`。新增平台要同步枚举、注册表、parser、fixtures 和测试。
