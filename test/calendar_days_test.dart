@@ -6,10 +6,9 @@ import 'package:verifin/app/report_analysis.dart';
 
 /// 跨夏令时（DST）的日期算术回归。
 ///
-/// 这些用例在无夏令时的时区（含中国）与 UTC 下恒绿——CI 正是 UTC，所以此类
-/// 缺陷此前一直没被拦住，只在欧美时区的开发机 / 用户手机上暴露。选用的日期都
-/// 跨过 America/Los_Angeles 的切换日（2026-03-08 拨快、2026-11-01 拨慢），
-/// 在该时区下跑修复前会红。断言的是「日历日」语义，因此在任何时区都应成立。
+/// 这些用例在无夏令时的时区（含中国）与 UTC 下恒绿，只在欧美时区暴露问题。选用的
+/// 日期都跨过 America/Los_Angeles 的切换日（2026-03-08 拨快、2026-11-01 拨慢）。
+/// 断言的是「日历日」语义，因此在任何时区都应成立。
 void main() {
   group('calendarDaysBetween', () {
     test('counts calendar days across a spring-forward boundary', () {

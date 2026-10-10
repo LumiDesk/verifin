@@ -643,7 +643,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     final controller = VeriFinScope.of(context);
     // 本页只能表达用户可选的类型：退款不在此选择（只能从「原支出 → 添加退款」创建），
     // 且没有退款分类。任何来路（自动识别、草稿）带进来的非可选类型都归一化回支出，
-    // 否则下方分类列表为空、类型选择器也会选不中任何一段（issue #26）。
+    // 否则下方分类列表为空、类型选择器也会选不中任何一段。
     if (!EntryType.userSelectable.contains(_type)) {
       _type = EntryType.expense;
     }
@@ -727,7 +727,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                   ),
                   children: <Widget>[
                     VeriHeader(
-                      // 标题展示当前账本名（此前误为固定文案）。
+                      // 标题展示当前账本名。
                       title: controller.activeBook.name,
                       subtitle: AppLocalizations.of(
                         context,
@@ -2066,8 +2066,7 @@ class _EntryTypeSelector extends StatelessWidget {
       selected: selected,
       semanticLabel: l10n.commonType,
       labelOf: (type) => type.label(l10n),
-      // 支出/收入用语义色强调；转账用语义蓝——与本页下方的大金额、分类图标取同一支
-      // 颜色。此前转账留中性色，深色下选中文字近乎全白，和下面的蓝色金额对不上。
+      // 支出/收入用语义色强调；转账用语义蓝——与本页下方的大金额、分类图标取同一支颜色。
       accentOf: (type) => switch (type) {
         EntryType.expense => veriSemantic(context, veriExpense),
         EntryType.income ||

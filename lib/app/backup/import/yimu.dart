@@ -22,7 +22,7 @@ ParsedImport parseYimuBill(Uint8List bytes) {
     throw const FormatException('未找到一木「账单导出」表头（日期/收支类型/金额），请确认选择的是一木账单导出的 xls');
   }
   final cols = columnIndex(rows[headerIndex]);
-  // 子分类列名随一木版本不同：6.5.7 叫「二级分类」、5.9.1 叫「子类」（issue #12）。
+  // 子分类列名随一木版本不同：6.5.7 叫「二级分类」、5.9.1 叫「子类」。
   // 认这两个别名，读不到就当无子分类（只落主分类）。
   final subCategoryCol = columnOf(cols, const <String>['二级分类', '子类']);
   final records = <RawImportRecord>[];
@@ -37,8 +37,8 @@ ParsedImport parseYimuBill(Uint8List bytes) {
     final refund = typeText == '支出' ? cellAt(row, cols['退款']) : '';
     // 一木「金额」列导出的是净额 = 原价 − 优惠 − 退款。原始应付额 = |净额| + 退款：优惠是
     // 没花出去的钱不计入支出（不加回）、退款是先付后退需加回。plan_builder 语义为「金额 −
-    // 退款 = 净额」，故把应付额放金额、退款单列——避免退款被减两次（issue #10），且全额退款
-    // 净额=0 也不会被判非法而整单失败。
+    // 退款 = 净额」，故把应付额放金额、退款单列，避免退款被减两次，且全额退款净额=0 也不会
+    // 被判非法而整单失败。
     final gross = _yimuGrossAmount(cellAt(row, cols['金额']), refund);
     // 应付额为 0（净额 0 且无退款）= 一木里的空/无效记录，直接忽略、不导入也不报错。
     if (gross <= 0) {
@@ -112,7 +112,7 @@ ParsedImport parseYimuTransfer(Uint8List bytes) {
 }
 
 /// 把一木账单的净额（「金额」列 = 原价 − 优惠 − 退款）还原成原始应付额 = |净额| + 退款。
-/// 修复 issue #10：退款被减两次、全额退款净额为 0 触发「金额无效」而整单失败。优惠不加回
+/// 只把应付额放金额、退款单列，避免退款被减两次；全额退款（净额 0）仍能导入。优惠不加回
 /// （没花出去的钱）。非数字按 0 处理。
 double _yimuGrossAmount(String netRaw, String refundRaw) {
   double num(String raw) =>

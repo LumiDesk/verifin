@@ -77,7 +77,7 @@ final RegExp _punctuationOrSymbolPattern = RegExp(
 ///
 /// 刻意窄于 [EntryType.userSelectable]：
 /// - [EntryType.refund] 压根不是可选类型（退款只能从「原支出 → 添加退款」创建），
-///   记账页也没有退款分类——推断出它会让记账页拿不到任何分类而崩溃白屏（issue #26）；
+///   记账页也没有退款分类——推断出它会让记账页拿不到任何分类而崩溃白屏；
 /// - [EntryType.transfer] 虽可手动选，但转账不计入收支统计、还需转入账户，
 ///   仅凭金额接近就把一笔账悄悄翻成转账，错得隐蔽（金额直接从统计里消失）。
 ///

@@ -29,8 +29,7 @@ const List<String> csvTemplateColumns = <String>[
 ];
 
 /// 表头列名 → 列键的别名。CSV 模板列 + 可选的 子分类/标签/手续费/退款（规范中文列名）。
-/// **不兼容第三方软件的原生表头**（钱迹「账户1/账户2」、随手记「交易类型」等通用识别
-/// 已下线，各软件走各自 parser）。
+/// **不兼容第三方软件的原生表头**，各软件走各自 parser。
 const Map<String, List<String>> _headerAliases = <String, List<String>>{
   'date': <String>['日期'],
   'type': <String>['类型'],
@@ -185,7 +184,7 @@ String _csvCell(String value) {
 /// 使用本应用下载的模板。必需列是否齐全交由 [parseCsvTemplateRows] 统一报错，不在此重复。
 ///
 /// 用白名单而非「表头必须完全等于模板列」，是为了在严格拒绝第三方文件的同时，仍允许模板
-/// 省略可选列、或补上 子分类/标签 列（issue #11 的层级分类与多标签导入）。
+/// 省略可选列、或补上 子分类/标签 列。
 void validateCsvTemplateHeader(List<List<String>> rows) {
   if (rows.isEmpty) {
     throw const FormatException('文件为空');

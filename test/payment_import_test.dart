@@ -639,10 +639,9 @@ void main() {
     });
   });
 
-  group('一木记账 账单 xls（一木 5.9.1 子分类列名为「子类」，issue #12）', () {
-    // 报告人 PlatoMml 的真实导出（一木 v5.9.1）：子分类列叫「子类」而非「二级分类」
-    // （6.5.7 的叫法）。此前精确匹配「二级分类」→ 读不到「子类」→ 只落主分类。
-    // 现在两名都认，父子层级应正确还原（回归守卫）。
+  group('一木记账 账单 xls（一木 5.9.1 子分类列名为「子类」）', () {
+    // 真实导出（一木 v5.9.1）：子分类列叫「子类」而非「二级分类」（6.5.7 的叫法）。
+    // 两名都认，父子层级应正确还原。
     late ImportPlan plan;
     setUp(() {
       final bytes = File(
@@ -722,7 +721,7 @@ void main() {
       expect(e.netAmount, 5);
     });
 
-    test('全额退款：净额0 + 退款20 → 原始金额20、退款20、净额0（旧版会崩）', () {
+    test('全额退款：净额0 + 退款20 → 原始金额20、退款20、净额0', () {
       final e = plan.entries.firstWhere((e) => e.refundedAmount == 20);
       expect(e.type, EntryType.expense);
       expect(e.amount, 20);

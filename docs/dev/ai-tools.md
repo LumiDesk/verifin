@@ -1,8 +1,5 @@
 # AI Agent · 工具登记与维护
 
-> Issue #32 的双协议 Agent、工具步骤展示与可靠性整改已经实现。设计背景、边界和分阶段
-> 方案保留在 [ai-agent-design.md](ai-agent-design.md)，当前实现事实以本文和源码为准。
-
 「和 AI 对话查询账目」功能里，AI 通过调用一组**只读工具**来查询本地账目数据，再把结果以图表 / 列表 / 卡片 + Markdown 文字呈现给用户。本文件是**工具注册表的活文档**：新增工具、修改工具、修复工具问题都必须同步更新此处。
 
 - 协议与注册表：[lib/app/ai/ai_query_tool.dart](../../lib/app/ai/ai_query_tool.dart)
@@ -17,7 +14,7 @@
 - **Agent 同时支持两种协议**：优先使用 OpenAI 兼容的原生 Tool Calls；端点明确不支持时，自动模式在本次请求内安全降级到带边界标记的兼容提示词协议。用户也可在 AI 设置中固定协议。
 - **工具 schema 是单一事实来源**：每个工具通过 `AiToolSchema` / `AiToolParameter` 声明参数，同时生成原生 function definition 和兼容协议说明，避免两套协议的参数约定漂移。
 - **工具全部只读、纯函数**：输入 `AiToolContext` 数据快照（当前活动账本的交易 / 账户 / 汇率 + 全局分类 / 标签 + 余额查询 + 账本本位币 + `l10n` 语言 + `currencyDisplay` 币种显示口径 + 预算回调 + 当前时间），不触达 controller，便于单测。**绝不提供任何写数据的工具。**
-- **新增 `AiToolContext` 字段**：① 同步更新上一条的输入清单；② 在「变更记录」补一行，写明字段含义、默认值（默认值须保留改动前的行为，供只关心金额口径的单测使用）与注入点（`lib/pages/ai_chat_page.dart` 的 `_send`，从 controller 快照组装）；③ 若字段影响展示或回喂文本，补一条单测钉住两种形态（多币种 / 单币种隐藏单位）。
+- **新增 `AiToolContext` 字段**：① 同步更新上一条的输入清单；② 在本文件的架构约定与工具清单里写明字段含义、默认值（默认值须保留改动前的行为，供只关心金额口径的单测使用）与注入点（`lib/pages/ai_chat_page.dart` 的 `_send`，从 controller 快照组装）；③ 若字段影响展示或回喂文本，补一条单测钉住两种形态（多币种 / 单币种隐藏单位）。
 - **每个工具产出 `AiToolResult`**：
   - `summary`：紧凑的结构化文本，**回喂模型**继续推理（含关键数字）。
   - `display`：给聊天页渲染的规格（`AiResultDisplay` 的子类），可为 null。
@@ -37,7 +34,7 @@
 
 ## 修复工具问题
 
-修 bug / 调整口径时：改实现 → 更新/补单测 → **在本文档对应行或下方「变更记录」写一句**（改了什么、为什么），保证「工具当前行为」始终可从本文档查到。
+修 bug / 调整口径时：改实现 → 更新/补单测 → **更新本文件对应行**，保证「工具当前行为」始终可从本文档查到。
 
 ## 结果渲染类型（`AiResultDisplay`）
 
@@ -51,7 +48,7 @@
 
 > `display` 里的 `title`、统计项 `label` 与表头，以及回喂模型的 `summary`，都经 `AiToolContext.l10n`（`AppLocalizations`）按当前语言解析；工具层仍无 `BuildContext`，语言由上层（聊天页）传入。`description` 与参数 schema 保持中文——它们只给模型看，不随界面语言变化。
 
-## 工具清单（当前已实现）
+## 工具清单
 
 | 工具名 | 作用 | 主要参数 | 底层 | 展示 |
 |--------|------|---------|------|------|
@@ -69,17 +66,3 @@
 
 **时间窗参数 `range` 预设**：`thisMonth` / `lastMonth` / `thisYear` / `lastYear` / `last7Days` / `last30Days` / `last3Months` / `last6Months` / `last12Months` / `all`；或用 `start`+`end`（`YYYY-MM-DD`）指定显式区间。
 
-## 待实现工具（下一批）
-
-当前批次已全部落地，暂无计划中的工具。新增按上面的「三步」流程走。
-
-## 变更记录
-
-- 初版：建立工具协议 + 注册表 + 通用交易筛选纯函数，首批工具 `summary` / `categoryRanking` / `tagRanking` / `queryTransactions` / `largestTransactions`。
-- Agent 升级（issue #32）：旧的文本猜测循环替换为 `AiAgentEngine`；原生 Tool Calls 与兼容标记协议共用强类型消息、工具 schema、执行边界和结构化事件。传输层新增完整 SSE 结束校验、空闲超时、错误分类、安全重试与非流式回退；聊天页展示并持久化已完成的工具步骤，不渲染推理文本、原始工具 JSON 或底层异常。
-- UI 打磨 + 结果卡片可持久化：`AiResultDisplay` 增加 `toJson`/`aiResultDisplayFromJson`，聊天历史每条可带 `displays`（序列化的结果卡片），**重开时连同图表一并还原**（交易列表仍只存 id、按当前数据实时解析）；聊天页改用通用 `VeriHeader`、输入栏/发送按钮/间距/字号/图表纵轴/表格样式全面优化；AI 设置页加「清空配置」。
-- 多币种：`AiToolContext` 增加账本本位币；统计与金额筛选明确采用冻结本位币口径；工具回馈模型的摘要与用户可见结果卡片都跟随货币单位偏好——多币种或未隐藏单位时摘要按「单位样式」写符号或 ISO 代码、卡片标题右侧标本位币，单币种隐藏单位时两者都不出现；AI 记账草稿可解析 ISO 4217 原币并在保存前继续由用户复核。
-- 单币种隐藏单位（v1.17.5）：`AiToolContext` 新增 `currencyDisplay`（`MoneyCodeDisplay`，默认 `code`，保留改动前行为供只关心金额口径的单测使用），由聊天页按 `activeMoneyCodeDisplay` 注入，工具层不读 `amount_format` 的全局闸门（工具是纯函数、按数据快照单测）。`_baseMoney`、转账两端金额、账户表币种列、信用卡欠款句全部跟随它：隐藏单位时摘要整句不带币种、账户表整列去掉「币种」、同币种转账只报一次金额。`buildAgentSystemPrompt` 同步：隐藏单位时只写「使用账本本位币，回答里不要写出币种代码或货币符号」，不再把 `baseCurrencyCode` 告诉模型，避免模型在回答正文里写出与卡片矛盾的「合计 CNY 4,300」。多币种账本不受影响。
-- 工具扩展：新增 `trend` / `compare` / `accountsOverview` / `netWorth` / `creditCardBill`；`AiToolContext` 增加 `bookId`（折算账户余额需要按账本定位汇率）。`netWorth` 与 `accountsOverview` 在缺汇率时明确说明缺哪种币、不给部分和。工具步骤标题同步登记在 `ai_tool_presentation.dart`。
-- `budgetStatus`：预算聚合与「超支 / 接近上限」判定抽到 `lib/app/budget_status.dart` 的纯函数 `computeBudgetStatus`；预算键月、单期覆盖等口径仍留在 controller，通过 `AiToolContext.budget`（`AiBudgetContext`）以回调注入，避免两处各写一套 key 规则。该工具与界面共用同一套预算口径，因此自动排除标记「不计入预算」的支出（见 `tech-decisions.md`）；回答里的预算执行数始终与预算页一致，而 `summary` / `categoryRanking` 这类收支统计工具仍按实际发生计入。
-- i18n：`AiToolContext` 新增 `required AppLocalizations l10n`（聊天页传 `AppLocalizations.of(context)`，单测传 `lookupAppLocalizations(const Locale('zh'))`）。工具产出的卡片标题、统计项标签、表头与回喂模型的 summary 全部改为按当前语言解析，新增键统一加 `ai` 前缀并同步写入 `app_zh.arb` / `app_en.arb`。工具 `description` 与参数 schema 仍为中文（给模型看，不随界面语言变化）。

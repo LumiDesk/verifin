@@ -1,9 +1,8 @@
 # Veri Fin UI 规范
 
-当前约定统一收录于 [设计与交互规范](design-system.md)。材质自 2026-09-10 起为不透明实色：无磨砂玻璃、无方向高光、无导航折射透镜；2026-10-09 起额外提供**可选的液态玻璃底栏样式**，只作用于底部导航这一处。
+当前约定统一收录于 [设计与交互规范](design-system.md)。材质统一为不透明实色：无磨砂玻璃、无方向高光、无导航折射透镜；唯一例外是**可选的液态玻璃底栏样式**，只作用于底部导航这一处。
 
-当前默认规范继续有效。[统一设计候选方案](dev/unified-design-preview.md) 仅在显式
-预览构建中改变间距和字号，等待用户确认后再提升为正式规范；它不改变材质。
+统一排版的候选方案见 [统一设计预览参数](dev/unified-design-preview.md)：只在显式开启 `UNIFIED_DESIGN_PREVIEW` 的构建中改变间距和字号，不改变材质。
 
 ## Android 真机评审
 
@@ -20,9 +19,9 @@
 
 承载根导航的 Shell 取当前样式的 `layout` 决定 `Scaffold.extendBody`（停靠底栏不透明，内容延伸到它背后会被盖住半截）与列表避让，并关闭 body 外层 `SafeArea` 的 bottom 裁切。PageView 外必须套 `VeriRootNavigationBody`，隔离 Scaffold 注入的 bottom padding，避免页面内未显式 padding 的 GridView（日历、功能宫格等）被底栏高度撑大。停靠样式的条目内容用 `SafeArea(minimum: 12, maintainBottomViewPadding: true)` 让开系统导航条；根页面列表用 `veriRootPageListPadding(context)` 取统一内边距。
 
-底栏只响应点击。点击后底栏的扫过动效与页面过渡同时起步、同时收住：页面由弹簧驱动、**没有固定时长**，弹簧的收敛时间与距离无关，底栏取同一时间尺度（`VeriRootNavigationStyle.switchDuration`）即可对齐。切页动画被用户交互打断（在页面区域点击或滑动）时，底栏按页面实际停靠的页对齐，不能停留在点击时的目标页。样式必须为每个条目产出稳定的 `<前缀>_nav_item_<下标>` key，并用 `Semantics(selected:)` 向读屏软件报告选中态。完整时序见 `docs/dev/components.md` 的组件条目。
+停靠底栏只响应点击；液态玻璃样式额外支持拖动切换。点击后底栏的选中动效与页面过渡同时起步、同时收住：页面由弹簧驱动、**没有固定时长**，弹簧的收敛时间与距离无关，底栏取同一时间尺度（`VeriRootNavigationStyle.switchDuration`）即可对齐。切页动画被用户交互打断（在页面区域点击或滑动）时，底栏按页面实际停靠的页对齐，不能停留在点击时的目标页。样式必须为每个条目产出稳定的 `<前缀>_nav_item_<下标>` key，并用 `Semantics(selected:)` 向读屏软件报告选中态。完整时序见 `docs/dev/components.md` 的组件条目。
 
-底栏与记账按钮都使用不透明表面色加一条顶部描边，不绘制渐变、不做背景模糊或折射。品牌色只用于底栏选中项和记账按钮等明确主操作，不用于底栏背景。
+停靠底栏与记账按钮都使用不透明表面色加一条顶部描边，不绘制渐变、不做背景模糊或折射。品牌色只用于底栏选中项和记账按钮等明确主操作，不用于底栏背景。
 
 导航触发 PageView 跨页动画时，Shell 只认最终目的地，不得用 `onPageChanged` 途经的中间页覆盖导航状态；用户直接左右滑动 PageView 时才逐页同步。否则跨页动画会被中间页重启，看起来像选中态从原 Tab 重新出发。
 

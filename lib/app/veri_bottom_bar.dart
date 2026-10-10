@@ -1,32 +1,12 @@
-// 底栏条目绘制组件。抄写自 `bottom_bar_matu` 1.5.0 的 `BottomBarDoubleBullet`
-// （MIT License, Copyright (c) 2021 Tuannvm），并在本项目内修复了四处缺陷。
+// 底栏条目绘制组件。基于 `bottom_bar_matu` 1.5.0 的 `BottomBarDoubleBullet`
+// （MIT License, Copyright (c) 2021 Tuannvm）在本项目内自持维护。
 //
-// 原库的问题（均已在本文件内修复）：
-// 1. `didUpdateWidget` 无条件调用 `_handleTextChangeFromOutside()`，每次都把全部
-//    图标的 GlobalKey 清空重建。父级每重建一次（切页过程中会有两三次）四个图标的
-//    State 就被整体卸载重建，图标颜色与旋转动画从零开始——表现为图标毫无理由地
-//    重新抖一下，快速切换时动画直接断掉。这是最要命的一处。
-// 2. `_onChangeIndex` 用同一个 AnimationController 交替 `forward()` / `reverse()`
-//    来凑出 0→1 的进度（`_getAnimationValue()` 在 reverse 时返回 `1 - value`）。
-//    只有「上一段动画已经跑完」时才会走 `reverse()`，所以动画没播完就再次点击会落到
-//    `forward()` 分支：控制器值本身连续，但按状态取值的那层映射会一帧内从 `1-v`
-//    跳回 `v`，动效断档。
-// 3. `_onChangeIndex` 先把 `_oldSelectedIndex = _selectedIndex` 赋值掉，再在延迟回调里
-//    用 `_oldSelectedIndex < _selectedIndex` 判方向——此时两边已经相等，比较恒为
-//    false，被取消选中的那个图标永远按同一个方向旋转。
-// 4. `_onChangeIndex` 里 `await Future.delayed(200ms)` 之后才回调 `onSelect`。这个续体
-//    没有任何 mounted / 世代守卫：被后一次切换顶掉时，它会拿着最新的下标再回调一次，
-//    被跳过那次点击的回调永远不会送达，最终下标则被送达两次。
-//
-// 修复方式：key 只在条目数变化时重建；只在 selectedIndex 真变化时播动画；进度只用
-// 一次 `forward(from: 0)`；方向在改下标之前算好并同步传给两端图标；选中态同步更新，
-// 不再有延迟回调，`onSelect` 每次点击恰好触发一次。
-//
-// 另有一处**不是**缺陷、但容易误判：原库取切线点用 `length * (进度 * 1.5)`，进度过
-// 2/3 时距离确实越过了路径长度，但 `PathMetric.getTangentForOffset` 会把距离截断到
-// 当前轮廓长度（见 Flutter SDK `painting.dart` 该方法的文档），既不返回 null 也不抛
-// 异常；实际效果只是圆点在约 67% 处到达终点后停住。本文件仍显式截断一次，以免依赖
-// 这条隐式行为。
+// 设计要点：
+// - key 只在条目数变化时重建，父级重建不影响图标 State 与动画；
+// - 只在 `selectedIndex` 真变化时播动画，进度用一次 `forward(from: 0)`；
+// - 方向在改下标之前算好并同步传给两端图标；选中态同步更新，
+//   `onSelect` 每次点击恰好触发一次；
+// - 取切线点距离显式截断到轮廓长度，不依赖 `getTangentForOffset` 的隐式截断。
 
 import 'dart:math';
 
@@ -34,11 +14,10 @@ import 'package:flutter/material.dart';
 
 import 'app_theme.dart';
 
-/// 底栏条目的未选中灰阶。沿用 `bottom_bar_matu` 的 `colorGrey5`；改这个值会改变
-/// 底栏观感，不属于本次修复范围，故原样保留并集中在此处。
+/// 底栏条目的未选中灰阶，集中在此处；改动会影响底栏观感。
 const Color _kUnselectedGrey = veriNavigationUnselected;
 
-/// 飞过的圆点在进度过了这个值后淡出（原库的 `value * 1.5 >= 0.9`）。
+/// 飞过的圆点在进度过了这个值后淡出。
 const double _kDotFadeAt = 0.6;
 
 @immutable
@@ -224,7 +203,7 @@ class _VeriBottomBarState extends State<VeriBottomBar>
     );
   }
 
-  /// 切换过程中飞过的两条圆弧与两枚圆点。静止时全部不绘制（与原库一致）。
+  /// 切换过程中飞过的两条圆弧与两枚圆点。静止时全部不绘制。
   List<Widget> _sweepLayers(
     double iconWidth,
     Color accent,
@@ -306,7 +285,7 @@ class _VeriBottomBarState extends State<VeriBottomBar>
   }
 
   /// 从 [startX] 到 [endX] 的一段三次贝塞尔。[startQuarter] / [endQuarter] 是端点
-  /// 在条高四等分中的位置（1.5 与 2.5 分列中线两侧）。与原库的两条路径同构。
+  /// 在条高四等分中的位置（1.5 与 2.5 分列中线两侧）。
   Path _arcPath(
     double startX,
     double endX,
@@ -459,7 +438,7 @@ class _VeriBottomBarIconState extends State<_VeriBottomBarIcon>
     super.dispose();
   }
 
-  /// 由 [VeriBottomBar] 在切换时同步调用（原库是延迟 200ms 的异步回调）。
+  /// 由 [VeriBottomBar] 在切换时同步调用。
   void updateSelect(bool isSelected, bool isLeftToRight) {
     if (_isSelected == isSelected && _isLeftToRight == isLeftToRight) {
       return;
@@ -481,8 +460,7 @@ class _VeriBottomBarIconState extends State<_VeriBottomBarIcon>
       height: double.infinity,
       child: Stack(
         children: <Widget>[
-          // 标签固定在条底 5dp（沿用原库）；图标区从条顶到条底 10dp。
-          // 原库声明过一个 `labelMarginTop`，但从未参与布局，这里不再保留这个死参数。
+          // 标签固定在条底 5dp，图标区从条顶到条底 10dp。
           Positioned(bottom: 5, left: 0, right: 0, child: _labelWidget()),
           Positioned(
             bottom: widget.item.label != null ? 10 : 0,
@@ -501,7 +479,7 @@ class _VeriBottomBarIconState extends State<_VeriBottomBarIcon>
       animation: _controller,
       builder: (context, _) {
         final progress = _controller.value;
-        // 颜色在动画前半程就插值完（原库的 `value * 2` 截断）。
+        // 颜色在动画前半程就插值完。
         final color = Color.lerp(
           _kUnselectedGrey,
           widget.color,
@@ -510,10 +488,8 @@ class _VeriBottomBarIconState extends State<_VeriBottomBarIcon>
 
         // 摆动幅度：0 → 18° → 0，中点最明显。
         //
-        // 原库写的是 `-pi / (8 * scaleValue)`，其中 `scaleValue = 5v(1-v)`。分母在
-        // 进度接近 0 和 1 时趋近 0，图标会在动画头尾各瞬间旋转好几圈才停下，看起来
-        // 就是「抖一下」；中点的 18° 才是原意。这里用同一个凸包函数直接作角度比例，
-        // 保留中点的姿态、去掉两端的退化旋转。
+        // 用凸包函数 5v(1-v) 直接作角度比例：0 → 18° → 0，中点最明显；不在进度
+        // 接近 0/1 时发散，避免头尾多圈旋转。
         final wobble = 5 * progress * (1 - progress) / 1.25;
         final angle = (pi / 10) * wobble * (_isLeftToRight ? -1 : 1);
 

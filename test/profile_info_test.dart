@@ -38,7 +38,7 @@ void main() {
     await tester.tap(find.byTooltip('保存'));
     await tester.pumpAndSettle();
 
-    // 昵称非空 → 直接保存，简介为空字符串（此前 bug 会被替换成默认简介）。
+    // 昵称非空 → 直接保存，简介为空字符串，不回填默认简介。
     expect(controller.profile.bio, '');
     expect(controller.profile.nickname, '张三');
   });

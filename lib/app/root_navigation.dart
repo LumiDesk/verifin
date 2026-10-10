@@ -113,7 +113,7 @@ class VeriRootNavigationSpec {
 /// 一种根导航样式。
 ///
 /// 实现只负责「画成什么样」：不接触 Controller、KV 或 Navigator，也不负责记账按钮
-/// ——按钮与导航栏解耦，见 `docs/dev/navigation-style-decoupling-design.md` 第六节。
+/// ——按钮与导航栏解耦，见 `docs/dev/navigation-style-decoupling-design.md`。
 abstract interface class VeriRootNavigationStyle {
   const VeriRootNavigationStyle();
 

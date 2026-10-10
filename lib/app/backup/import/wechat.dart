@@ -52,7 +52,6 @@ ParsedImport parseWechat(Uint8List bytes) {
         amount: amount,
         // 微信没有用户自定义分类，「交易类型」（商户消费/微信红包/转账…）是最接近
         // 分类语义的列：作为分类候选导入，交预览页映射区归到用户自己的分类体系。
-        // 此前该列被丢弃，交易落成空分类、显示「已删除分类」（issue #16）。
         category: cellAt(row, cols['交易类型']),
         account: account,
         note: joinNote(<String>[cellAt(row, cols['交易对方']), usefulProduct]),

@@ -1,7 +1,6 @@
 # Android 本地开发与真机验收
 
-2026-09-05 起只维护 Android 应用，移除 Web 工程、WASM/浏览器存储、下载适配和浏览器门禁。
-电脑上的单元/widget/ffi 测试继续保留；WebDAV 是 Android 备份能力，不在移除范围内。
+Veri Fin 只维护 Android 应用；电脑上的单元/widget/ffi 测试保留。
 设计评审直接使用正式 `lib/main.dart`，不复制页面。公共规范由 `AGENTS.md` 和 docs 维护，
 `CLAUDE.md` 只链接 AGENTS。
 
@@ -79,8 +78,7 @@ debug 支持 hot reload；最终图形/OCR/插件行为必须另外用 release/R
 
 采集日志先保存历史 crash buffer，再启动目标应用；记录 package、pid、版本、引擎和时间。
 按目标 pid 保存本次 logcat，避免把其他应用日志混入结论。日志和截图放在被忽略的
-`build/`，不提交账目、凭证或原始敏感内容。图形问题分离绘制路径复现，见
-[图形问题排查方法](android-glass-investigation.md)（历史记录，玻璃已移除）。
+`build/`，不提交账目、凭证或原始敏感内容。图形问题分离绘制路径复现。
 
 需要持续亮屏时，先记录 `adb shell settings get global stay_on_while_plugged_in`，
 可临时 `adb shell svc power stayon usb`；任务结束恢复原值，不改变用户永久息屏习惯。

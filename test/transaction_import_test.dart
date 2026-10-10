@@ -118,7 +118,7 @@ void main() {
 
     test('现有「未分类」（固定 id 或用户手建同名）直接复用、不进候选', () {
       const rows = '日期,类型,金额,分类,账户,转入账户,备注\n2026-01-05,支出,10,,现金,,x';
-      // 固定 id 已存在（此前导入 / 自愈建出）→ 复用。
+      // 固定 id 已存在 → 复用。
       final withFixed = buildImportPlan(
         rows: parseCsv(rows),
         bookId: 'book_default',

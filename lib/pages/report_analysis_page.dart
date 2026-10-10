@@ -135,7 +135,7 @@ class _ReportAnalysisPageState extends State<ReportAnalysisPage> {
                   dimension: _dimension,
                   // 顶级分类模式点行下钻看子分类拆分；子分类模式点行直接跳到
                   // 按该分类筛选的交易列表（与分类管理「查看交易」同一路径，
-                  // 「未分类」等也能一键定位到交易去批量归类，issue #16）。
+                  // 「未分类」等也能一键定位到交易去批量归类）。
                   onTapCategory: _grouping == _ReportGrouping.topCategory
                       ? (stat) => _showCategoryDrill(
                           context,

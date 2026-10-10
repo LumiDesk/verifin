@@ -215,8 +215,7 @@ void main() {
     await tester.tap(find.text('转账'));
     await tester.pumpAndSettle();
 
-    // 转账此前留中性色（浅色主题下近乎全黑、深色下近乎全白），与下方的大金额
-    // （veriSemantic(context, veriBlue)）对不上。
+    // 转账用语义蓝，与下方的大金额（veriSemantic(context, veriBlue)）一致。
     expect(
       accentOf('transfer'),
       veriSemanticFor(Brightness.light, veriBlue),

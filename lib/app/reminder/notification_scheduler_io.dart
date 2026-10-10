@@ -123,7 +123,7 @@ class NotificationScheduler {
     final scheduled = _nextInstanceOf(settings.hour, settings.minute);
     final details = _details(l10n);
     // 优先精确闹钟（Doze 下也能准时触发、更可靠）；精确权限缺失会抛异常，则回退
-    // inexact，至少仍有机会触发，不至于像以前那样彻底不响。
+    // inexact，至少仍有机会触发。
     final ok = await _schedule(
       scheduled,
       details,

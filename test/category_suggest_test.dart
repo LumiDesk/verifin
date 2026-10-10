@@ -149,8 +149,8 @@ void main() {
       expect(s.categoryId, 'dining');
     });
 
-    // issue #26：退款条目也在 `controller.entries` 里，此前会被投票成主导类型，
-    // 记账页随即拿不到退款分类而崩溃白屏。退款历史必须整条不参与识别。
+    // 退款条目也在 `controller.entries` 里，而记账页拿不到退款分类；退款历史必须整条
+    // 不参与识别，否则会被投票成主导类型导致崩溃白屏。
     test('refund history never drives the suggestion', () {
       final history = <LedgerEntry>[
         _e(

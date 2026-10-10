@@ -58,7 +58,7 @@ void main() {
       expect(find.text(label), findsOneWidget, reason: '缺分组: $label');
     }
     expect(find.text('信用'), findsWidgets, reason: '缺信用分组');
-    // 卡号入口改名为「卡号」，不再叫「卡号后四位」。
+    // 卡号入口名为「卡号」。
     expect(find.text('卡号'), findsWidgets);
     expect(find.text('卡号后四位'), findsNothing);
     // 信用信息卡：已用/可用/本期账单 + 可用额度数值（5000-3200=1800）。
@@ -136,7 +136,7 @@ void main() {
       note: '还款',
       occurredAt: DateTime(2026, 7, 11, 10),
     );
-    // 对照：空分类会回退成「已删除分类」（修复前还款的样子）。
+    // 对照：空分类会回退成「已删除分类」。
     final broken = repayment.copyWith(id: 'r2', categoryId: '');
 
     await tester.pumpWidget(

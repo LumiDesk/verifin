@@ -34,4 +34,4 @@
 - 新增或替换 SVG 时同步 `account_icon_assets.dart`，并保持已发布 code 稳定。
 - 不在页面直接解析 SVG 路径或调用 `iconForCode` 渲染账户图标。
 - 资源不得包含脚本、外链图片或网络引用；`test/account_icon_test.dart` 会检查目录与注册表一一对应及安全边界。
-- 历史 `alipay`、`wechat`、`folder` 仅在 SQLite v16 迁移与导入/读取边界转换为当前 code；渲染层不保留历史分支。
+- `alipay`、`wechat`、`folder` 等早期 code 只在 SQLite v16 迁移与导入/读取边界转换为当前 code；渲染层不保留兼容分支。

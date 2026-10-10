@@ -11,7 +11,7 @@ void main() {
     }
   });
 
-  test('Scaffold 背景是不透明画布色，不再走透明+全屏玻璃层', () {
+  test('Scaffold 背景是不透明画布色', () {
     for (final brightness in Brightness.values) {
       expect(
         buildVeriFinTheme(brightness).scaffoldBackgroundColor.a,
@@ -49,7 +49,7 @@ void main() {
     expect(input.errorBorder!.borderSide.color, veriExpense);
   });
 
-  test('材质预览保留 v1.15 移动端全局字号', () {
+  test('全局字号保持移动端基线', () {
     final text = buildVeriFinTheme(Brightness.dark).textTheme;
     expect(text.displayLarge!.fontSize, 38);
     expect(text.displaySmall!.fontSize, 26);

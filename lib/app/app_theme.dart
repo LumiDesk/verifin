@@ -32,9 +32,8 @@ Color veriContentSurfaceColor(Brightness brightness) =>
 
 /// 浮动元件（底部导航、快捷按钮、锚点菜单）的实体基色。
 ///
-/// 必须比画布和内容卡片更亮一档：此前它们直接用卡片表面色，深色下与页面
-/// 背景几乎同色，导航胶囊看起来像“没有了边框的凹陷块”。抬高一层后靠
-/// 表面色差 + 描边 + 阴影表达层级，不需要模糊或渐变。
+/// 比画布和内容卡片更亮一档，靠表面色差 + 描边 + 阴影表达层级，
+/// 不需要模糊或渐变。
 Color veriElevatedSurfaceColor(Brightness brightness) =>
     brightness == Brightness.dark ? veriSurfaceRaisedDark : veriSurfaceLight;
 

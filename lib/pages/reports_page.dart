@@ -426,9 +426,7 @@ class _BudgetExecutionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          // 与其他面板共用 SectionTitle：此前这里手写标题 + titleSmall(13sp)，
-          // 而其余面板走 SectionTitle 的 titleMedium(14sp)，导致「预算执行」的
-          // 标题比同页其它卡片小一号。
+          // 与其他面板共用 SectionTitle，保证「预算执行」标题与同页其它卡片同级。
           SectionTitle(
             title: AppLocalizations.of(context).panelBudgetExecutionLabel,
             trailing: periodBadge,
@@ -508,9 +506,8 @@ class _BudgetExecutionCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          // 与本页顶部的收支摘要卡共用 SummaryMetric：三块指标的标签/数值字号
-          // 必须与同页其它卡片一致，此前这里是自绘的 _BudgetExecutionMetric，
-          // 标签与数值各小一号，看起来像是另一套排版。
+          // 与本页顶部的收支摘要卡共用 SummaryMetric，保证三块指标的标签/数值字号
+          // 与同页其它卡片一致。
           Row(
             children: <Widget>[
               SummaryMetric(

@@ -9,9 +9,8 @@ import 'liquid_glass_surface.dart';
 
 /// 由引擎过滤当前帧的导航图标与文字：不截图、不读回纹理、不采样账目。
 ///
-/// 恢复自本项目此前的 `navigation_glass_lens.dart`：把导航自身的内容放大、
-/// 在胶囊内产生透镜形变，而不是去折射页面背景（Flutter 的 `BackdropFilter`
-/// 无法把模糊结果再交给着色器，强行折射背景会产生坐标错位伪影）。
+/// 把导航自身的内容放大、在胶囊内产生透镜形变，而不是去折射页面背景（Flutter 的
+/// `BackdropFilter` 无法把模糊结果再交给着色器，强行折射背景会产生坐标错位伪影）。
 class VeriLiquidGlassLens extends StatefulWidget {
   const VeriLiquidGlassLens({
     super.key,

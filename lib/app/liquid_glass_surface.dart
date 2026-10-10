@@ -12,8 +12,6 @@ Color veriLiquidGlassTint(Brightness brightness) =>
     : Colors.white.withValues(alpha: 0.14);
 
 /// 归一化边界位置与法线决定高光：左上/右下强，另外两个角衰减到零。
-///
-/// 恢复自本项目此前的玻璃材质实现（`glass_lighting.dart`）。
 double veriLiquidGlassEdgeLight(
   Offset point,
   Offset normal, {
@@ -187,7 +185,7 @@ _GlassOutline _outlineFor({
 
 /// 共用玻璃内容表面：背景模糊、中性填色与沿边缘的方向高光。
 ///
-/// 恢复自本项目此前的 `VeriGlassSurface`，只服务于可选的液态玻璃底栏样式。
+/// 只服务于可选的液态玻璃底栏样式。
 class VeriLiquidGlassSurface extends StatelessWidget {
   const VeriLiquidGlassSurface({
     super.key,

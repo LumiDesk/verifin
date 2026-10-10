@@ -359,7 +359,7 @@ class _CalendarPreviewState extends State<CalendarPreview> {
     );
     final leadingBlanks =
         DateTime(_visibleMonth.year, _visibleMonth.month).weekday - 1;
-    // 每格原本各自扫一遍全部交易（约 31 次全表遍历），先按天分桶一次。
+    // 先按天分桶一次，避免每格各扫一遍全部交易。
     final incomeByDay = <int, double>{};
     final expenseByDay = <int, double>{};
     for (final entry in widget.entries) {

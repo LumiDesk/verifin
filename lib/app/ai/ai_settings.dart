@@ -3,7 +3,7 @@ import 'dart:convert';
 /// Agent 选择工具协议的方式。
 ///
 /// 无论选择哪一种，AI 对话页都运行 Agent；[prompt] 只是为不支持原生
-/// Tool Calls 的兼容端点提供文本协议，不是旧版纯聊天模式。
+/// Tool Calls 的兼容端点提供文本协议。
 enum AiToolCallMode {
   auto,
   native,

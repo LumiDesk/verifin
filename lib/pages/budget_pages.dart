@@ -62,7 +62,7 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
     final l10n = AppLocalizations.of(context);
     _initCollapse(controller);
     // 预算按周期取数：_month 是周期的「键月」（预算存储键），窗口由账本的
-    // 周期起始日决定；起始日 = 1 时窗口即自然月，行为与旧版完全一致。
+    // 周期起始日决定；起始日 = 1 时窗口即自然月。
     final cyclic = controller.budgetCycleIsCustom;
     final window = controller.budgetWindow(_month);
     final monthEntries = entriesInWindow(controller.entries, window);

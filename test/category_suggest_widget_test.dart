@@ -210,8 +210,8 @@ void main() {
     expect(find.byKey(const Key('entry_category_interest')), findsNothing);
   });
 
-  // issue #26：历史里有金额相近的退款条目时，记账页此前会被自动识别翻成「退款」
-  // 类型，而退款没有任何分类，`categories.first` 抛 Bad state: No element → 白屏。
+  // 历史里有金额相近的退款条目时，自动识别不能把草稿翻成「退款」类型：退款没有任何
+  // 分类，`categories.first` 会抛 Bad state: No element → 白屏。
   testWidgets('refund history does not blank out the entry page', (
     tester,
   ) async {

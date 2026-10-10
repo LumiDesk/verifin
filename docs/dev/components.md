@@ -14,16 +14,13 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 
 ## 族 1 — 布局脚手架 / 页面容器
 
-`BudgetRingPainter` 仅保留 value/trackColor/progressColor，使用原常规渐变环；不再提供玻璃参数。
+`BudgetRingPainter` 使用常规 SweepGradient 进度环，参数为 value/trackColor/progressColor。
 
-**表面材质（2026-09-10 起）**：`VeriGlassSurface` / `VeriGlassBackdrop` / `VeriMaterialScope` /
-`VeriGlassLightPainter` / `VeriNavigationGlassLens` 与其 Shader 已全部删除。
-除可选的液态玻璃底栏样式外，卡片、导航、快捷按钮、菜单与弹层一律用不透明实色：
+**表面材质**：除可选的液态玻璃底栏样式外，卡片、导航、快捷按钮、菜单与弹层一律用不透明实色。
 `VeriCard`（`common_widgets_scaffold.dart`）走 `veriContentSurfaceColor(brightness)` + 圆角 + 细描边；
 页面背景取 `scaffoldBackgroundColor` 的画布纯色；弹层由 `sheets.dart` 的 `_showVeriModalSheet`
 统一为实色表面 + 顶部圆角 + 内置拖拽把手，外部仍使用各领域 `show…Sheet`。
 **除液态玻璃底栏样式外禁止**为了「做质感」引入 `BackdropFilter`、`ImageFilter.blur`、片元着色器滤镜或整屏渐变。
-历史实现与排查记录见 git 与 `docs/dev/glass-material-preview.md`。
 
 `OnboardingGate`（`onboarding_page.dart`）位于 PrivacyConsentGate / AppLockGate 内部，完成引导前不构建首页。
 
@@ -43,13 +40,13 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `VeriRootNavigationStyles` 注册表（`veriRootNavigationStyles` / `veriRootDefaultNavigationStyle` / `veriRootNavigationStyleFor`） | 常量 / 查表函数 | `root_navigation_styles.dart` | 样式注册表：顺序即样式选择列表顺序；`veriRootNavigationStyleFor` 对缺失/未知标识一律回退默认样式。新增样式须同时加同名 `NavigationStylePreference` 枚举值 |
 | `VeriDockedRootNavigationStyle` / `VeriDockedRootNavigation` | 样式实现 / Widget | `root_navigation_docked.dart` | **停靠式底栏**：整宽、不透明、贴底，底色铺到屏幕最底（含系统导航条背后，否则会分成两块）。条目由 `VeriBottomBar`（`veri_bottom_bar.dart`）绘制，**未选中用 `destination.icon`（线框）、选中用 `selectedIcon`（填充）**，中文标签常显。**安全区**用 `SafeArea(minimum: 12, maintainBottomViewPadding: true)` 取 `max(系统留白, 12)`：系统留白可能是 0，不给下限条目会贴边；`maintainBottomViewPadding` 让键盘弹起时底栏不跳。这是**默认样式**（另有可选的液态玻璃样式），几何参数与迁移前一致（条高 64、列表留白 12） |
 | `VeriLiquidGlassRootNavigationStyle` / `VeriLiquidGlassRootNavigation` | 样式实现 / Widget | `root_navigation_liquid_glass.dart` | **液态玻璃底栏（可选样式）**：浮动胶囊（高 60、左右外边距 12、底部留白 24）+ 玻璃面板 + 透镜。`layout` 声明 `extendBody: true`（列表留白 16），内容从胶囊下方滚过。拖动由 `Listener` 指针状态机驱动：按下即滑向目标项、拖动跟手、松手吸附最近一项、甩动跨格，纯点击走同一条回落动画；只在松手时调用 `spec.onSelect`，因此 Shell 切页状态机不变。条目为自绘图标 + 常显标签，沿用未选中线框、选中填充，`MergeSemantics` + `Semantics(selected:)` 上报选中态，稳定 key 与其他样式一致。拖动时用 `RepaintBoundary` 隔离整屏重绘 |
-| `VeriLiquidGlassSurface` / `VeriLiquidGlassLightPainter` / `veriLiquidGlassTint` | Widget / Painter / 纯函数 | `liquid_glass_surface.dart` | 玻璃面板：`BackdropFilter` 模糊 + 中性填色 + 沿边缘的方向高光（顶点网格连续绘制，不走逐段 `MaskFilter.blur`）。恢复自本项目此前的 `glass_material.dart` / `glass_lighting.dart`，高对比度下退回实色表面 |
-| `VeriLiquidGlassLens` | Widget | `liquid_glass_lens.dart` | 透镜：用 `ImageFilter.shader` 对**导航自身内容**做放大折射，按下/拖动时随 activity 与移动方向形变，并叠加弹起高光。不折射页面背景——Flutter 的 `BackdropFilter` 无法把模糊结果再交给着色器，强行折射背景会产生坐标错位伪影。恢复自本项目此前的 `navigation_glass_lens.dart` |
+| `VeriLiquidGlassSurface` / `VeriLiquidGlassLightPainter` / `veriLiquidGlassTint` | Widget / Painter / 纯函数 | `liquid_glass_surface.dart` | 玻璃面板：`BackdropFilter` 模糊 + 中性填色 + 沿边缘的方向高光（顶点网格连续绘制，不走逐段 `MaskFilter.blur`）；高对比度下退回实色表面 |
+| `VeriLiquidGlassLens` | Widget | `liquid_glass_lens.dart` | 透镜：用 `ImageFilter.shader` 对**导航自身内容**做放大折射，按下/拖动时随 activity 与移动方向形变，并叠加弹起高光。不折射页面背景——Flutter 的 `BackdropFilter` 无法把模糊结果再交给着色器，强行折射背景会产生坐标错位伪影 |
 | `veriLiquidGlassLensAvailable` / `VeriLiquidGlassProgram` / `shaders/liquid_glass_lens.frag` | 纯函数 / 着色器持有器 / 片元着色器 | `liquid_glass_material.dart` | 液态玻璃透镜的运行时能力判定与共享着色器：只在 Android 且 `ui.ImageFilter.isShaderFilterSupported`（Impeller）时可用，`FragmentProgram.fromAsset` 幂等加载一次，失败后静默降级为不含折射的玻璃面板 |
 | `NavigationStyleSettingsPage` | 页面 Widget | `navigation_style_settings_page.dart` | 导航栏样式选择页（设置 → 外观 → 导航栏样式）。逐样式渲染**冻结预览**：直接复用 `buildBar`，因此预览与真机同源（真实标签、真实表面色；玻璃样式预览会绘制它自己的模糊与折射）；预览整块 `IgnorePointer`（条目没有回调），点预览区域等于选中该样式。点选只改页面草稿，保存经 `UnsavedChangesGuard` 回传**样式标识字符串**；页面不写 Controller/KV，落盘由设置页统一保存完成。`styles` 参数默认取注册表，测试或画廊可传子集。 |
 | `veriRootNavigationDestinations` | 纯函数 | `root_navigation.dart` | 四个根目的地（首页/资产/看板/我的）的**唯一定义**：Shell 与样式选择页预览共用，新增样式不要再各写一套图标与标签 |
 | `NavigationStylePreference` | 枚举 | `models/preferences.dart` | 导航样式偏好（当前 `docked` 默认、`liquidGlass` 可选），枚举名即样式标识、存 KV `verifin.nav_style.v1`；设备本地、不进备份、初始化数据时保留、`resetAllData` 恢复默认。新增样式须同时加枚举值与注册项（测试断言两者一一对应） |
-| `VeriBottomBar` / `VeriBottomBarItem` | Widget / 值类 | `veri_bottom_bar.dart` | 停靠样式的条目绘制：切换时两条圆弧扫过、两枚圆点飞过，图标由灰渐变为主题主色并轻微摆动。颜色缺省取 `Theme.of(context).colorScheme.primary`（`circle1Color` / `circle2Color` 缺省跟随主色），不写死品牌蓝；每个条目用 `MergeSemantics` + `Semantics(selected:)` 向读屏软件报告选中态，并按 `itemKey` 暴露稳定条目 key。**抄写自 `bottom_bar_matu` 1.5.0 并在本项目内修复后自持**（依赖已移除）；原库的四处缺陷——父级每次重建都重置图标 State、进度 forward/reverse 往返断档、旋转方向判断恒为 false、延迟 200ms 才回调 `onSelect`——逐条记在源文件头注释里。选中态完全由 `selectedIndex` 驱动并同步更新，`onSelect` 每次点击恰好一次 |
+| `VeriBottomBar` / `VeriBottomBarItem` | Widget / 值类 | `veri_bottom_bar.dart` | 停靠样式的条目绘制：切换时两条圆弧扫过、两枚圆点飞过，图标由灰渐变为主题主色并轻微摆动。颜色缺省取 `Theme.of(context).colorScheme.primary`（`circle1Color` / `circle2Color` 缺省跟随主色），不写死品牌蓝；每个条目用 `MergeSemantics` + `Semantics(selected:)` 向读屏软件报告选中态，并按 `itemKey` 暴露稳定条目 key。**自持实现，不依赖上游包**：选中态完全由 `selectedIndex` 驱动并同步更新，`onSelect` 每次点击恰好一次；父级重建不重置图标状态，进度动画不断档，旋转方向随切换方向，`onSelect` 立即回调 |
 | `VeriFeedbackHost` / `VeriFeedbackController` / `VeriFeedbackRequest` / `VeriFeedbackResult` | 根级 Widget / Controller / 模型 | `feedback.dart` | 跨路由应用内轻提示：内容自适应宽高与三行正文（`error` 六行）、四条可见栈、优先级等待队列、2/4/8 秒与常驻、单操作 Future 结果、显式去重、前后台暂停；完整规范见 `feedback-system.md` |
 | `SectionTitle` | Widget | `common_widgets.dart` | 区块标题 + 可选 trailing |
 | `EmptyState` | Widget | `common_widgets.dart` | 空状态（图标+标题+描述+可选 `action` 操作入口） |
@@ -191,7 +188,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 
 ## 族 11 — AI 对话查询 UI
 
-桌面小组件只提供四个固定模板。原生渲染使用 `home_widget` 的 Jetpack Glance Provider；首次添加使用默认配置，Android Launcher 的重新配置入口启动独立 `WidgetConfigurationActivity`。Flutter 只推送账本投影，实例配置按 `appWidgetId` 存在插件共享存储。应用内页面和旧 Launcher 的 `previewImage` 都由同一套 Glance 组合渲染/导出，不再手绘第二套样式。`widget_presentation.dart` 仅负责真实指标投影；资产曲线不得复用支出数据。验收见 `docs/dev/widget-preview-parity.md`。
+桌面小组件只提供四个固定模板。原生渲染使用 `home_widget` 的 Jetpack Glance Provider；首次添加使用默认配置，Android Launcher 的重新配置入口启动独立 `WidgetConfigurationActivity`。Flutter 只推送账本投影，实例配置按 `appWidgetId` 存在插件共享存储。应用内页面和旧 Launcher 的 `previewImage` 都由同一套 Glance 组合渲染/导出，不维护第二套手绘样式。`widget_presentation.dart` 仅负责真实指标投影；资产曲线不得复用支出数据。验收见 `docs/dev/home-widgets.md`。
 
 | 名称 | 类型 | 位置 | 用途 |
 |---|---|---|---|
@@ -206,8 +203,8 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 - `app_theme.dart` 维护内容表面令牌与纯函数 `veriContentSurfaceColor(Brightness)`，供 `VeriCard` 和资产封面共用；`veriUnifiedDesignPreview` 默认关闭，只控制布局密度与排版。既有组件的布局分支见 [统一设计候选方案](unified-design-preview.md)。
 
 - 新增可复用件 → 归入对应族、加进本表、放对的文件（通用叶子组件→`common_widgets.dart`，跨路由反馈 Host→`feedback.dart`，弹窗 helper→`sheets.dart`，记账相关 widget→`entry_sheets.dart`，纯计算→对应 `*_math`/`*_tree` 模块）。
-- **收起单位要连间距一起收**：调用方为「单位：x」单独加的 `SizedBox`／`Padding` 必须与单位同时消失。只让组件自己渲染为空会把那段间距留在版面里，看起来像空了一块（2026-09-10 日历卡底部就是这个症状）。判断条件用 `textCurrencyUnitHidden`。
-- **新增任何显示货币的位置**：先判断它是「金额自带单位」（走 `formatUserMoney` 族，已自动跟随偏好）还是「单位单独占位」（走 `currencyUnitSubtitle` / `MoneyUnitLabel`）。不要直接调 `displayCurrencyUnit` 或裸拼 model 的 `currencyCode`——那是 2026-09-10 那轮 17 处泄漏里 14 处的成因（其余 3 处是 `forceUnit: true` 误用与漏币种守卫），见 [单币种隐藏单位失效点审查](../reviews/2026-09-10-single-currency-unit-leak-audit.md)。
+- **收起单位要连间距一起收**：调用方为「单位：x」单独加的 `SizedBox`／`Padding` 必须与单位同时消失。只让组件自己渲染为空会把那段间距留在版面里，看起来像空了一块。判断条件用 `textCurrencyUnitHidden`。
+- **新增任何显示货币的位置**：先判断它是「金额自带单位」（走 `formatUserMoney` 族，已自动跟随偏好）还是「单位单独占位」（走 `currencyUnitSubtitle` / `MoneyUnitLabel`）。不要直接调 `displayCurrencyUnit` 或裸拼 model 的 `currencyCode`；确需单独占位的币种文字时先判空。
 - **改货币显示口径要补双向测试**：单币种 + 开关打开断言该处不出现单位（`find.textContaining('单位：')`），多币种账本断言单位仍在，见 `test/single_currency_unit_test.dart`；只测一侧会把收口做成隐藏过度。
 - 同一 UI 片段或逻辑在 **≥2 个文件**出现 → 立即抽共享件，变体用参数表达。
 - 删除/重命名可复用件 → 同步改本表与所有调用点。

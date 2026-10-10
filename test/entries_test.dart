@@ -947,8 +947,8 @@ void main() {
     );
     expect(find.textContaining('keep-39'), findsOneWidget);
 
-    // 一个与列表无关的通知（例如在别处改了个偏好）：此前会重置派生签名、把分页
-    // 打回第一批，用户正在看的内容被顶掉。
+    // 一个与列表无关的通知（例如在别处改了个偏好）不应重置派生签名、把分页打回
+    // 第一批，以免顶掉用户正在看的内容。
     app.setDefaultAccountId(null);
     await tester.pumpAndSettle();
 

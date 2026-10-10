@@ -63,8 +63,8 @@ String formatMoney(
 
 /// 用户界面的金额格式：遵循设置中的单位样式，并可在单币种账本隐藏重复单位。
 ///
-/// [forceUnit] 用于同一控件同时展示两个币种的换算字段；即使账本此前还是单币种，
-/// 草稿中的两端金额也必须保留单位，不能产生歧义。
+/// [forceUnit] 用于同一控件同时展示两个币种的换算字段；单币种账本草稿中的两端金额
+/// 也必须保留单位，不能产生歧义。
 String formatUserMoney(
   num value,
   String currencyCode, {

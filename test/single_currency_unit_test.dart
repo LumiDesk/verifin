@@ -1,7 +1,7 @@
 // 「单币种隐藏单位」的界面覆盖：确认单位在单币种账本里真的不出现，
 // 并且**多币种账本下依然出现**（防止收口过度，把该显示的地方也隐藏掉）。
 //
-// 覆盖范围见 docs/reviews/2026-09-10-single-currency-unit-leak-audit.md。
+// 覆盖单币种账本隐藏单位后各展示位置不泄漏单位，口径见 docs/design-system.md。
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

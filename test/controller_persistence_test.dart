@@ -221,7 +221,7 @@ void main() {
     );
 
     final saved = await controller.saveEntryAggregateDraft(
-      // 模拟 Issue #31：交易编辑器仍持有 refundedAmount=0 的旧快照。
+      // 交易编辑器仍持有 refundedAmount=0 的旧快照。
       entry: original.copyWith(note: '修改后的备注', refundedAmount: 0),
       isNew: false,
       refunds: <LedgerEntry>[refund],

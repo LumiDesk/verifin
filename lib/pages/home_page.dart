@@ -483,8 +483,8 @@ class HomeTrendPanel extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // 摘要胶囊可收缩：大字号下英文标签比整行还宽，不能让整行溢出；
-                // 收缩后仍靠右对齐，常规字号下观感与原来一致。
+                // 摘要胶囊可收缩：大字号下英文标签可能比整行还宽，不能让整行溢出；
+                // 收缩后仍靠右对齐。
                 Flexible(
                   child: Align(
                     alignment: Alignment.centerRight,

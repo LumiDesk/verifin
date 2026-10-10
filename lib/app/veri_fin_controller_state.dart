@@ -45,10 +45,9 @@ mixin _ControllerState on ChangeNotifier {
   final List<Tag> _tags = <Tag>[];
   final List<ExchangeRate> _exchangeRates = <ExchangeRate>[];
 
-  // 派生视图缓存：按当前账本过滤（并排序/回退种子）后的不可变列表。原本每个
-  // getter 每次调用都做一次 O(n) 过滤 + 拷贝，一帧内多个 widget 反复读取会放大
-  // 成多次全量拷贝。改为惰性计算并缓存，任一状态变更经 notifyListeners 统一置空
-  // 重算——内部逻辑始终读私有列表（_entries/_accounts/…），UI 只在 notify 后
+  // 派生视图缓存：按当前账本过滤（并排序/回退种子）后的不可变列表，惰性计算并缓存，
+  // 避免每个 getter 每次调用都做一次 O(n) 过滤 + 拷贝。任一状态变更经 notifyListeners
+  // 统一置空重算——内部逻辑始终读私有列表（_entries/_accounts/…），UI 只在 notify 后
   // 重建，故这里以 notifyListeners 为唯一失效点是安全的。
   // **新增派生视图字段必须同步在 [_invalidateDerivedViews] 置空**，
   // 漏加不会报错、只会返回过期缓存。
@@ -386,10 +385,9 @@ mixin _ControllerState on ChangeNotifier {
   /// 2) 重复分类（同 type+parentId+label 的多条）→ 保留一条（系统分类优先），其余的交易 /
   ///    周期规则 / 子分类 parentId 改指向保留者后删除；
   /// 3) 悬空交易 / 周期规则引用（categoryId 指向不存在的分类），以及**空分类的收/支交易**
-  ///    （历史导入把缺失分类落成空串，issue #16）→ 归入按类型惰性创建的「未分类」分类
-  ///    （固定 id，保证幂等、重跑复用同一条）；
-  /// 4) 空分类的转账（早期导入把转账 categoryId 存成空串，issue #14）→ 归到「转账」分类，
-  ///    与 App 内记账/还款口径一致，避免被交易列表回退成「已删除分类」。
+  ///    → 归入按类型惰性创建的「未分类」分类（固定 id，保证幂等、重跑复用同一条）；
+  /// 4) 空分类的转账 → 归到「转账」分类，与 App 内记账/还款口径一致，
+  ///    避免被交易列表回退成「已删除分类」。
   bool _healCategoryData() {
     var everChanged = false;
     // 8 次足以让「重挂→合并→再合并」收敛；纯防御上限，正常一两轮即稳定。
@@ -490,10 +488,9 @@ mixin _ControllerState on ChangeNotifier {
         !_isProtectedCategory(categoryId) &&
         !liveIds.contains(categoryId);
 
-    // 空分类的收/支交易同样归入「未分类」：历史导入曾把缺失分类落成空串（issue #16，
-    // 微信账单未映射分类列），空 categoryId 会被展示层回退成「已删除分类」占位、且无法
-    // 在分类筛选 / 批量编辑中触达。转账的空分类由下方第 4 步归入「转账」分类；退款等
-    // 衍生条目本就不带分类，保持不动。
+    // 空分类的收/支交易同样归入「未分类」：空 categoryId 会被展示层回退成「已删除分类」
+    // 占位、且无法在分类筛选 / 批量编辑中触达。转账的空分类由下方第 4 步归入「转账」
+    // 分类；退款等衍生条目本就不带分类，保持不动。
     bool needsUncategorized(LedgerEntry entry) =>
         isDangling(entry.categoryId) ||
         (entry.categoryId.isEmpty &&
@@ -519,9 +516,9 @@ mixin _ControllerState on ChangeNotifier {
     }
 
     // ---- 4) 空分类的转账 → 归到「转账」分类（默认「转出」）----
-    // App 内记账/信用卡还款的转账都带「转出」类分类；早期导入曾把转账 categoryId 存成
-    // 空串（issue #14），空 categoryId 会被交易列表回退成「已删除分类」占位、也不计入
-    // 分类管理的转账分类下。这里把遗留的空分类转账补齐，与之对齐（幂等：补齐后不再为空）。
+    // App 内记账/信用卡还款的转账都带「转出」类分类；空 categoryId 会被交易列表回退成
+    // 「已删除分类」占位、也不计入分类管理的转账分类下。这里把遗留的空分类转账补齐，
+    // 与之对齐（幂等：补齐后不再为空）。
     final transferCategory = _categories.firstWhere(
       (c) => c.type == EntryType.transfer,
       orElse: () => const Category(
@@ -544,13 +541,13 @@ mixin _ControllerState on ChangeNotifier {
     return changed;
   }
 
-  /// 历史迁移：把旧版单标量退款（支出 `refundedBaseAmount > 0` 却没有关联退款条目）
-  /// 合成为一条「已到账」退款条目（金额=标量、日期/账户取原支出、备注空），让旧数据
-  /// 平滑升级到新模型并使历史退款可见。迁移后余额与净额恒等不变（支出改扣全额、退款
-  /// 条目补回同额），只是把「一个数」变成「一条可见事件」。返回是否合成了条目。
+  /// 迁移：把单标量退款（支出 `refundedBaseAmount > 0` 却没有关联退款条目）合成为一条
+  /// 「已到账」退款条目（金额=标量、日期/账户取原支出、备注空），让旧数据平滑升级到新
+  /// 模型并使历史退款可见。迁移后余额与净额恒等不变（支出改扣全额、退款条目补回同额），
+  /// 只是把「一个数」变成「一条可见事件」。返回是否合成了条目。
   ///
   /// **只在载入/导入时调用一次**——绝不在退款增删改后调用：删掉最后一笔退款时缓存尚未
-  /// 清零，若在此判「有标量却无条目」会把退款又合成回来（曾导致删退款后余额不减）。
+  /// 清零，若在此判「有标量却无条目」会把退款又合成回来。
   bool _migrateLegacyRefunds() {
     final expensesWithRefundEntry = <String>{
       for (final e in _entries)
@@ -821,7 +818,7 @@ mixin _ControllerState on ChangeNotifier {
 
   /// 刷盘所有挂起写入：偏好类 KV **与** 账目类 SQLite。应用切到后台时调用，
   /// 确保应用锁 / 隐私同意等关键偏好，以及用户刚记下的交易，在进程可能被系统
-  /// 回收前落盘（此前只刷 KV，SQLite 写入是 fire-and-forget，极端情况下会丢账）。
+  /// 回收前落盘。
   Future<void> flushPendingWrites() async {
     try {
       await _store.flush();

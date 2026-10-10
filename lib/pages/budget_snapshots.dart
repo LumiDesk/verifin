@@ -153,7 +153,7 @@ List<CategoryBudgetSnapshot> computeCategoryBudgetSnapshots({
   // 多级分类按层级聚合：每笔支出计入其所属分类**及所有上级分类**，
   // 这样父分类的预算会包含其子分类的支出。
   final all = controller.categories;
-  // 分类查找表只建一次：原实现每笔支出都经 ancestorIds 重建整张表。
+  // 分类查找表只建一次，避免每笔支出都重建整张表。
   final categoryIndexById = categoryIndex(all);
   void accumulate(Map<String, double> into, List<LedgerEntry> source) {
     // countsTowardBudget 同时覆盖「是支出」与「未标记不计入预算」两个条件。

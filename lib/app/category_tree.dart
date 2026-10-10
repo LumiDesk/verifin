@@ -64,7 +64,7 @@ List<String> ancestorIdsFrom(Map<String, Category> index, String id) {
 
 /// 顶级祖先的 id：自身即顶级（或 `parentId` 悬空的孤儿）时返回自身；交易引用的分类
 /// 本身不存在（悬空引用）时也返回该 id 本身——此时由展示层的 [categoryByIdFrom] 归为
-/// 「已删除分类」占位，不再冒名成列表首个分类。
+/// 「已删除分类」占位，不冒名成列表首个分类。
 String rootIdOf(List<Category> all, String id) {
   final ancestors = ancestorIds(all, id);
   return ancestors.isEmpty ? id : ancestors.last;

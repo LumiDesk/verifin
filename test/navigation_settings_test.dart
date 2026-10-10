@@ -43,7 +43,7 @@ void main() {
   ) async {
     await pumpApp(tester);
 
-    // 底栏已改为停靠式（不透明、整宽贴底），内容不再延伸到它背后。
+    // 停靠底栏不透明、整宽贴底，内容不延伸到它背后。
     expect(
       tester
           .widget<Scaffold>(find.byKey(const Key('main_shell_scaffold')))
@@ -296,8 +296,8 @@ void main() {
       reason: '停稳后底栏下标必须与页面实际页码一致，否则会看不出自己在哪一页',
     );
 
-    // 脱节状态下点「底栏已经显示在那儿的那个 Tab」曾被当成重复点击丢掉，表现是
-    // 点了没反应、卡在某个 Tab 上。这里连点之后必须仍然点得动。
+    // 脱节状态下点「底栏已经显示在那儿的那个 Tab」不应被当成重复点击丢掉；连点之后
+    // 必须仍然点得动。
     await tester.tapAt(rootTabCenter(tester, 1));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
@@ -357,10 +357,8 @@ void main() {
     const start = 3.0;
     var maxTravel = 0.0;
 
-    // 在两个相距最远的 Tab 之间以 40ms 间隔连点。切页动画改弹簧之前是固定时长的
-    // 曲线插值：每次点击都从头重新计时，连点越快、每次都只走到起步阶段——500ms 时
-    // 24 次连点只挪约 0.3 页，16ms 间隔（见 test 注释与提交记录）甚至纹丝不动。
-    // 弹簧按当前速度接着跑，同样 24 次能挪 1.6 页以上。
+    // 在两个相距最远的 Tab 之间以 40ms 间隔连点。弹簧按当前速度接着跑，同样 24 次
+    // 能挪 1.6 页以上；固定时长曲线插值在连点时会反复从头计时，几乎不移动。
     for (var i = 0; i < 24; i++) {
       await tester.tapAt(rootTabCenter(tester, i.isEven ? 0 : 3));
       await tester.pump();

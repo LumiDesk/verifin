@@ -103,7 +103,7 @@ String _panelsKeyFor(PanelPageKind page) {
   }
 }
 
-/// 交易列表排序：时间倒序（原为类静态方法，改为库级以便 part 共享）。
+/// 交易列表排序：时间倒序。
 int _compareEntriesLatestFirst(LedgerEntry a, LedgerEntry b) {
   final byDate = b.occurredAt.compareTo(a.occurredAt);
   if (byDate != 0) {
@@ -353,7 +353,7 @@ String _defaultCategoryBudgetKey(String bookId, String categoryId) =>
     '$bookId:$_budgetDefaultMonthSegment:$categoryId';
 
 /// 预算键按账本隔离,格式为 `bookId:yyyy-MM[:categoryId]`。
-/// 旧版本数据没有 bookId 前缀,加载/导入时归入默认账本。
+/// 早期数据没有 bookId 前缀时，加载/导入归入默认账本。
 Map<String, double> _bookScopedBudgets(Map<String, double> raw) {
   final legacyKey = RegExp(r'^\d{4}-\d{2}(:|$)');
   return raw.map(

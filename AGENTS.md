@@ -1,12 +1,10 @@
 # Veri Fin Agent 开发指南
 
-2026-09-10 材质方向调整：磨砂玻璃与「高级材质」（方向高光、导航折射透镜、全局背景渐变）经用户判定为设计败笔，已整体移除。卡片、导航、快捷按钮、菜单与弹层一律使用**不透明实色**表面，页面背景为单一纯色；界面目标是高效率、干净直接，不再引入模糊、折射或光效层。`GLASS_DESIGN_PREVIEW` 已删除，构建命令不应再出现该参数。CI 固定 Flutter 3.47.2；正式包仍由 CI 构建，须用户明确授权发版，禁止要求清除应用数据。
+材质规范：卡片、导航、快捷按钮、菜单与弹层一律使用**不透明实色**表面，页面背景为单一纯色；界面目标是高效率、干净直接。唯一例外是底部导航的**可选液态玻璃样式**，其实现必须局部化在 `root_navigation_liquid_glass.dart`、`liquid_glass_surface.dart`、`liquid_glass_lens.dart`、`liquid_glass_material.dart` 与 `shaders/liquid_glass_lens.frag`，不得扩散到卡片、菜单、弹层或页面背景，并在透镜着色器不可用时降级为不含折射的玻璃面板；其余样式与界面禁止引入背景模糊、折射、片元着色器滤镜或整屏渐变。
 
-2026-10-09 追加：底部导航新增可选的**液态玻璃**样式（用户明确要求，只作用于底部导航这一处）。不透明实色仍是默认停靠底栏与其余全部界面的规则；玻璃实现必须局部化在 `root_navigation_liquid_glass.dart`、`liquid_glass_surface.dart`、`liquid_glass_lens.dart`、`liquid_glass_material.dart` 与 `shaders/liquid_glass_lens.frag`，不得扩散到卡片、菜单、弹层或页面背景，并必须在透镜着色器不可用时降级为不含折射的玻璃面板。
+发布包参数：CI Android 两渠道显式带 `--dart-define=UNIFIED_DESIGN_PREVIEW=true`，保证手机包含已评审外观。该参数**只控制布局密度与排版**，与材质无关；本地与发布包对照时必须使用相同参数，无参数构建保留旧布局用于回归。CI 固定 Flutter 3.47.2；正式包由 CI 构建，须用户明确授权发版，禁止要求清除应用数据。
 
-v1.16.0 发布说明：CI Android 两渠道显式带 `--dart-define=UNIFIED_DESIGN_PREVIEW=true`，保证手机包含已评审外观。该参数现在**只控制布局密度与排版**，与材质无关。本地与发布包对照时必须使用相同参数；无参数构建保留旧外观用于回归。
-
-界面调整必读 [统一设计与交互规范](docs/design-system.md)：集中记录已确认布局、表面材质（默认与其余界面为不透明实色，唯一例外是可选液态玻璃底栏）、设置持久化与验收约定；历史研究稿不得覆盖该规范。候选统一排版现覆盖全部页面；导航静止必须显示实时文字，预算环禁止内外白线。
+界面调整必读 [统一设计与交互规范](docs/design-system.md)：集中记录布局、表面材质、设置持久化与验收约定。候选统一排版覆盖全部页面；导航静止必须显示实时文字，预算环禁止内外白线。
 
 ## 文档作用与工作语言
 
@@ -29,19 +27,22 @@ v1.16.0 发布说明：CI Android 两渠道显式带 `--dart-define=UNIFIED_DESI
 ### 文档阅读路线
 
 - `docs/dev/architecture.md`：架构与源码导航。`CLAUDE.md` 仅链接本文件，不维护第二份规范。
-- `docs/dev/components.md`：组件、弹窗、格式化与纯函数注册表；写相关代码前必读。根导航的当前约定见其中 `VeriRootNavigationStyle`、`VeriDockedRootNavigationStyle` 与 `VeriLiquidGlassRootNavigationStyle` 条目（默认停靠样式 + 可选的液态玻璃样式，样式选择页见 `NavigationStyleSettingsPage`），底栏绘制组件的抄写修复记录见 `VeriBottomBar` 条目。新增样式前另读 `docs/dev/navigation-style-decoupling-design.md`。`docs/dev/liquid-glass-navigation.md` 是 2026-09-10 的浮动导航历史留档；2026-10-09 新增的液态玻璃样式恢复了它的浮动胶囊与拖动吸附手感，但按新契约重写、不共用旧代码。
+- `docs/dev/components.md`：组件、弹窗、格式化与纯函数注册表；写相关代码前必读。根导航的当前约定见其中 `VeriRootNavigationStyle`、`VeriDockedRootNavigationStyle` 与 `VeriLiquidGlassRootNavigationStyle` 条目（默认停靠样式 + 可选的液态玻璃样式，样式选择页见 `NavigationStyleSettingsPage`），底栏绘制组件见 `VeriBottomBar` 条目。新增样式前另读 `docs/dev/navigation-style-decoupling-design.md`。
 - `docs/ui-guidelines.md`：页面骨架、交互、图表和视觉规范。
-- `docs/dev/tech-decisions.md`：数据口径、备份范围和关键技术取舍；个别历史背景可能已被新实现取代，仍需与代码和测试核对。
-- `docs/dev/known-limitations.md`：已接受技术债及触发整改的阈值。
+- `docs/dev/tech-decisions.md`：数据口径、备份范围和关键技术取舍；判断当前实现仍以源码、测试与工作流为准。
+- `docs/dev/known-limitations.md`：已接受的限制与技术债及触发整改的阈值。
 - `docs/dev/ai-tools.md`：AI 账目查询工具的注册和维护约定。
-- `docs/dev/category-budget-override-design.md`：分类默认预算与单期覆盖的职责、Issue #28 兼容方案和验收范围。
-- `docs/dev/multi-currency-design.md`：已落地的多币种、离线汇率、跨币种交易/退款、迁移与验收依据；后续修改须保持三层金额和历史冻结口径。
-- `docs/dev/refund-design.md`、`docs/dev/auto-capture-plan.md`、`docs/dev/i18n-verification.md`、`docs/automation.md`：对应领域的设计与验收资料。`refund-design.md` 含历史方案，退款当前行为以源码、测试和 `docs/dev/known-limitations.md` 为准。
+- `docs/dev/category-budget-override-design.md`：分类默认预算与单期覆盖的职责与验收范围。
+- `docs/dev/multi-currency-design.md`：多币种、离线汇率、跨币种交易/退款与迁移的当前依据。
+- `docs/dev/refund-design.md`：退款（关联条目、待到账/已到账、多币种冲减）的当前口径。
+- `docs/dev/auto-capture-plan.md`、`docs/dev/i18n-verification.md`、`docs/automation.md`：截图识账与外部意图接口、多语言、自动化接入的当前约定与验收资料。
 - `docs/dev/android-development.md`：真机开发、工具链检测和缺失时自动安装、日志、隔离验收及测试应用清理。
-- `docs/dev/unified-design-preview.md`：默认关闭的统一设计候选方案；用户确认前不得把 `UNIFIED_DESIGN_PREVIEW` 默认开启或移除旧外观路径。
-- `docs/dev/feedback-system.md`：根级轻提示 Host 的调用、时长、操作结果、去重、优先级队列与迁移规范；新增或替换短反馈前必读。
-- `docs/dev/ui-library-adoption-plan.md`：第三方 UI 组件库的评估与落地结果（哪些采用、哪些否决、为什么）。**打算引入新组件库前先读它**，避免重复评估已被否决的库；注意开头「实际落地结果」一节以源码与规范为准，下文分析是评估过程记录。
-- `README.md`、`docs/product.md`、`docs/acceptance-checklist.md`：用于理解产品和验收范围；其中少量历史描述可能落后，必须与当前实现交叉核对。
+- `docs/dev/unified-design-preview.md`：`UNIFIED_DESIGN_PREVIEW` 的当前语义与验证方式；默认关闭，用户确认前不得默认开启或移除旧布局路径。
+- `docs/dev/feedback-system.md`：根级轻提示 Host 的调用、时长、操作结果、去重与优先级队列规范；新增或替换短反馈前必读。
+- `docs/dev/home-widgets.md`：桌面小组件（Jetpack Glance Provider、配置 Activity、指标投影与预览）的当前实现与验收。
+- `docs/dev/save-interaction-consistency-design.md`、`docs/dev/navigation-style-decoupling-design.md`：草稿/保存/返回语义与底部导航样式契约。
+- `docs/dev/ui-library-adoption-plan.md`：第三方 UI 组件库的选型结论（哪些采用、哪些不采用及原因）。**打算引入新组件库前先读它**，避免重复评估已被否决的库。
+- `README.md`、`docs/product.md`、`docs/acceptance-checklist.md`：产品定位、能力范围与验收清单。
 
 ## 产品原则
 
@@ -106,7 +107,7 @@ dart format .
 视觉迭代保留首页预算圆环、支出/剩余日均、概览指标方块和“我的”四列宫格。
 
 - Android 运行/构建仍必须显式使用 `--flavor github`；验证 Play 时使用 `--flavor play --dart-define=SELF_UPDATE=false`。桌面 widget 测试不能替代 Android 原生能力、生命周期和性能验收。
-- 图形故障隔离是例外：仅本地使用独立 applicationId 的 `--flavor diagnostic`，可运行最小绘制入口或正式 `lib/main.dart` 验收，不能当作交付物。命令、工具链与历史原机证据见 `docs/dev/android-glass-investigation.md`（该文记录的玻璃问题已不再适用，仅保留排查方法）。
+- 图形故障隔离是例外：仅本地使用独立 applicationId 的 `--flavor diagnostic`，可运行最小绘制入口或正式 `lib/main.dart` 验收，不能当作交付物。
 - 提交前执行 `dart format .`、`flutter analyze` 和 `flutter test`。只改文档时至少做 diff/链接/路径校验，可不运行 Flutter 测试，但要在汇报中说明。
 - 不把本地 `flutter build apk` 当成交付依据；正式 APK/AAB 由 GitHub Actions 构建。
 

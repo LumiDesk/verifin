@@ -38,10 +38,10 @@ MoneyCodeDisplay get activeMoneyCodeDisplay =>
     ? MoneyCodeDisplay.none
     : preferredMoneyCodeDisplay;
 
-/// 旧版“两位小数”偏好的兼容入口。
+/// 「强制两位小数」布尔兼容入口。
 ///
-/// 迁移完成前保留该 getter/setter，避免旧设置、备份和调用点在同一阶段失效。多币种下
-/// 它表达的是“按货币标准小数位显示”，不再承诺固定两位。
+/// 旧设置、备份和部分调用点仍通过它读写；多币种下它表达的是“按货币标准小数位显示”，
+/// 不承诺固定两位。
 bool get amountForceTwoDecimals =>
     currencyFractionStyle == CurrencyFractionStyle.standard;
 

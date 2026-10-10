@@ -71,7 +71,7 @@
 - **账单导入**：平台优先（先选来源再选文件）导入**支付宝**（CSV）、**微信**（xlsx）、**薄荷记账**（CSV）、**一木记账**（.xls，账单与转账还款两个入口；账单还原一级 → 二级分类层级、导入逗号分隔的多标签与备注）、**钱迹**（完整明细 CSV，覆盖支出/收入/转账/还款/退款/报销：退款自动冲抵原支出；债务/借贷类记录不导入——本应用无债务功能）、**Tally 记账**（备份 zip，无损保留精确时间与收支/转账、二级分类，并一并导入各账户当前余额与类型、含无流水的账户）账单，以及本应用 **CSV 模板**；本应用 CSV 可导出/重新导入原币、账户币种、两端实际金额、本位币金额与派生汇率，外币缺率可在预览前手工补齐，导入汇率只有用户明确开启才保存。第三方软件与 CSV 模板各走独立解析入口；预览页可排除/编辑交易，并把待新建账户 / 分类 / 标签改名或映射到现有条目；
 - **应用锁**：6 位 PIN / 3×3 图案 + 生物解锁（密钥仅加盐哈希存本机，不保存任何生物特征数据）；启用后应用内容不可截屏、并从「最近任务」缩略图隐藏；
 - GitHub 自分发版支持应用内检查更新；APK 下载遇到锁屏断网、超时或网络切换时会保留进度并断点续传，完整后通过长度、摘要、包名和版本校验才打开系统安装器；
-- **备份范围**：JSON v2 备份包含账本本位币、账户币种、交易三层金额、周期汇率策略、本地汇率表及全部既有账目数据与偏好（含货币单位样式与单币种隐藏开关）；仍兼容 v1 旧备份并把旧数字原样解释为待确认 CNY。**不包含**机密凭证（应用锁、备份口令、WebDAV 与 AI 密钥）和设备本地设置（语言、记账提醒、备份目录）——换机后这些需重设（完整清单见 [`docs/dev/tech-decisions.md`](docs/dev/tech-decisions.md)）；
+- **备份范围**：JSON v3 备份包含账本本位币、账户币种、交易三层金额、周期汇率策略、本地汇率表及全部既有账目数据与偏好（含主题色、货币单位样式与单币种隐藏开关）；仍兼容 v1/v2 旧备份并把旧数字原样解释为待确认 CNY。**不包含**机密凭证（应用锁、备份口令、WebDAV 与 AI 密钥）、设备本地设置（语言、导航样式、记账提醒、备份目录）和桌面小组件实例配置——换机后这些需重设（完整清单见 [`docs/dev/tech-decisions.md`](docs/dev/tech-decisions.md)）；
 - 无账号、无自有服务器、无广告或统计遥测 SDK；隐私政策与用户协议应用内可查。
 
 ### 🌍 体验
@@ -162,8 +162,8 @@ lib/
 | [`docs/dev/components.md`](docs/dev/components.md) | 组件清单（写新组件前先查） |
 | [`docs/dev/tech-decisions.md`](docs/dev/tech-decisions.md) | 关键技术决策与选型理由 |
 | [`docs/dev/known-limitations.md`](docs/dev/known-limitations.md) | 已知限制与技术债台账 |
-| [`docs/dev/multi-currency-design.md`](docs/dev/multi-currency-design.md) | 多币种与离线汇率设计、实现结果及验收记录 |
-| [`docs/dev/feedback-system.md`](docs/dev/feedback-system.md) | 应用内轻提示组件、操作结果、队列与迁移规范 |
+| [`docs/dev/multi-currency-design.md`](docs/dev/multi-currency-design.md) | 多币种与离线汇率的口径与验收 |
+| [`docs/dev/feedback-system.md`](docs/dev/feedback-system.md) | 应用内轻提示组件、操作结果与队列规范 |
 
 ## ❤️ 支持项目
 
@@ -193,8 +193,8 @@ Veri Fin 是自由软件，基于 **GNU 通用公共许可证 v3.0 或更高版�
 
 </div>
 
-开发界面前请阅读 [统一设计与交互规范](docs/design-system.md)。材质自 2026-09-10 起统一为不透明实色：无磨砂玻璃、无方向高光、无背景渐变；2026-10-09 起底部导航额外提供一个可选的液态玻璃样式（设置 → 外观 → 导航栏样式），其余界面不变。
+开发界面前请阅读 [统一设计与交互规范](docs/design-system.md)。界面材质统一为不透明实色：卡片、导航、快捷按钮、菜单与弹层均无背景模糊、折射或渐变；底部导航另提供一个可选的「液态玻璃」样式（设置 → 外观 → 导航栏样式），是唯一例外。
 
-v1.16.0 起发布包包含统一设计。复现手机外观时，Flutter 运行/构建命令附加 `--dart-define=UNIFIED_DESIGN_PREVIEW=true`（该参数只控制布局密度与排版）；Android 同时指定 `--flavor github`。CI 与本地验收统一使用 Flutter **3.47.2**；真机命令见 [Android 开发与环境自动补齐](docs/dev/android-development.md)。正式更新仍须通过 CI 发版。
+复现手机外观时，Flutter 运行/构建命令附加 `--dart-define=UNIFIED_DESIGN_PREVIEW=true`（该参数只控制布局密度与排版）；Android 同时指定 `--flavor github`。CI 与本地验收统一使用 Flutter **3.47.2**；真机命令见 [Android 开发与环境自动补齐](docs/dev/android-development.md)。正式更新仍须通过 CI 发版。
 
-开发与评审仅使用 Android；Web 工程及浏览器适配已移除。规范入口为 [AGENTS.md](AGENTS.md)，架构导览见 [docs/dev/architecture.md](docs/dev/architecture.md)。
+开发与评审仅使用 Android。规范入口为 [AGENTS.md](AGENTS.md)，架构导览见 [docs/dev/architecture.md](docs/dev/architecture.md)。

@@ -7,11 +7,10 @@ import 'veri_bottom_bar.dart';
 
 /// 停靠式底栏样式：整宽、不透明、贴底（系统安全区之上）。
 ///
-/// 条目由本项目自有的 [VeriBottomBar] 绘制（抄写自 `bottom_bar_matu` 1.5.0 并在本项目内
-/// 修复了图标 State 被反复重建等问题，见 `veri_bottom_bar.dart` 头注释），选中项有扫过
-/// 动效。快捷记账按钮不在这里——它与导航栏解耦，由 Shell 放在右下角浮动。
+/// 条目由本项目自有的 [VeriBottomBar] 绘制，选中项有扫过动效。快捷记账按钮不在这里
+/// ——它与导航栏解耦，由 Shell 放在右下角浮动。
 ///
-/// 这是目前唯一的注册样式，也是默认样式；几何参数与迁移前的停靠底栏完全一致。
+/// 这是默认样式。
 class VeriDockedRootNavigationStyle implements VeriRootNavigationStyle {
   const VeriDockedRootNavigationStyle();
 

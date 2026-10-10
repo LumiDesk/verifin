@@ -99,7 +99,7 @@ enum ReimbursementFilter {
 
   bool matches(LedgerEntry entry, String baseCurrencyCode) {
     // 两个筛选互斥：一笔交易只会出现在其中一个结果里。部分到账的支出仍算「待报销」
-    // （还有钱没回来），不会同时出现在「已到账」里——这正是此前用户看不懂的地方。
+    // （还有钱没回来），不会同时出现在「已到账」里。
     final awaiting =
         entry.reimbursable &&
         !isZeroCurrencyAmount(entry.netBaseAmount, baseCurrencyCode);

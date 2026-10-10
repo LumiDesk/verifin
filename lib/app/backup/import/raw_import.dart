@@ -12,9 +12,8 @@ class ImportRowError {
 /// 日期、金额、类型都已是 Veri Fin 领域值（不再是「字符串位置行」），交由
 /// [buildImportPlanFromRecords] 统一按名建账户/分类/标签、构造 [LedgerEntry]。
 ///
-/// 取代旧的 `_canonicalHeader` 字符串行中间层：二进制来源（微信 Excel 序列号、Tally
-/// epoch 毫秒、金额 double）可直接构造强类型记录，不必「类型→字符串→类型」往返
-/// （那正是历史 bug 温床，如一木退款被二次相减的 issue #10）。
+/// 二进制来源（微信 Excel 序列号、Tally epoch 毫秒、金额 double）可直接构造强类型
+/// 记录，不必「类型→字符串→类型」往返。
 class RawImportRecord {
   const RawImportRecord({
     required this.date,

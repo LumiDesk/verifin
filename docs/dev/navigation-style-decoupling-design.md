@@ -1,418 +1,49 @@
-# 底部导航样式解耦与选择页实施方案
+# 底部导航样式契约
 
-状态：**阶段 1（解耦）与阶段 2（持久化 + 设置页入口 + 样式选择页）已实现**，见第十三节。
-阶段 3（第二种样式）等视觉方向确认后再做；实施过程中的取舍变化回写本文。
+根导航把「视觉实现」抽成可注册的**样式**：新增样式只需实现一个 `buildBar`，壳层（页面切换状态机、返回键、快捷入口路由、安全区与避让）保持单份实现。当前注册两个样式——默认的**停靠底栏**和可选的**液态玻璃**。本文件是新增或替换样式前必读的契约。
 
-关联背景：当前根导航是唯一的停靠底栏实现（`root_navigation.dart` + `veri_bottom_bar.dart`），
-产品设想是后续提供多种底部导航样式供用户选择，入口放在「我的 → 设置 → 外观」。
-本轮先做**解耦 + 设置页入口 + 样式选择页**，新样式的视觉方向另行确认后接入。
-
-参考先例：
-
-- [`docs/dev/theme-color-and-menu-wrap-design.md`](theme-color-and-menu-wrap-design.md)：
-  外观类偏好新增一项时，模型/KV/`ValueNotifier`/草稿提交/文档同步的完整清单。
-- [`docs/dev/save-interaction-consistency-design.md`](save-interaction-consistency-design.md)：
-  设置页草稿语义与「子页只回写父草稿、不绕过父页写 Controller」的规则。
-
-## 一、已确认的产品决策
-
-| 编号 | 决策 | 说明 |
-|---|---|---|
-| D1 | 选择页保存只**回写设置页草稿** | 用户在样式选择页确认后返回设置页，真正的 KV 写入仍由设置页的统一保存动作完成（方案 A）。不允许子页弹层/子页绕过父页直接调用 Controller，符合 `save-interaction-consistency-design.md` §3.2。 |
-| D2 | 导航样式偏好**不进 JSON 备份** | 与语言 `verifin.locale.v1`、数字键盘布局一致：设备本地偏好。导出备份不带该字段；导入他人/旧备份不改动本机导航样式。 |
-| D3 | 第一步只做**解耦 + 等价重构** | 用户可见行为零变化，可独立提交与回归；第二步再接选择页与新样式。 |
-| D4 | 目的地集合固定为四个 | 样式只改变视觉与呈现方式，不改变首页/资产/看板/我的四个根目的地、不改变转场状态机、不改变返回键与小组件路由语义。 |
-| D5 | 记账按钮与底部导航**完全解耦** | 按钮是按钮、导航是导航。样式实现不得在栏内或栏上安排记账按钮，新增样式必须为按钮留出区域；契约不提供「主操作落点」字段。详见第六节。 |
-
-## 二、目标与非目标
-
-### 目标
-
-- 把「根导航视觉实现」从壳层中抽离为可注册的样式，新增样式只需实现一个 `buildBar`。
-- 壳层（页面切换状态机、返回键、快捷入口路由、避让与安全区）保持单份实现，不随样式分叉。
-- 提供「设置 → 外观 → 导航栏样式」入口与独立的样式选择页，含可交互预览与明确保存。
-- 建立每个样式都必须通过的契约测试，避免样式数量增长后规范与测试碎片化。
-
-### 非目标
-
-- 不改变四个根目的地的数量、顺序、图标语义与 l10n 标签。
-- 不在本轮引入任何第二种样式的视觉实现（只准备接入点）。
-- 除 2026-10-09 追加的可选液态玻璃样式外，不引入模糊/玻璃/折射材质；其余样式继续遵守不透明实色表面规则。
-- 不把「条目集合可配置」「Tab 数量可变」纳入本次能力。
-- 不把记账按钮纳入导航样式，也不新增按钮造型偏好（见第六节）。
-
-## 三、现状耦合审计
-
-| 耦合点 | 现状位置 | 处理方式 |
-|---|---|---|
-| 底栏实现写死在壳层 | `shell.dart` 的 `bottomNavigationBar: VeriRootNavigation(...)` | 改为按当前样式 `buildBar` |
-| 内容避让高度写死 | `root_navigation.dart` 的 `VeriRootNavigationBody`（`listBottomPadding: 12`）与 `veriRootPageListPadding` | 避让参数改由样式提供 |
-| 是否延伸到栏背后写死 | `shell.dart` 的 `Scaffold.extendBody: false` | 改为读取样式的 `layout.extendBody` |
-| 切页弹簧时长写在底栏常量上 | `VeriRootNavigation.switchDuration` ← `VeriBottomBar.switchDuration` | 改为读取当前样式的 `switchDuration` |
-| 记账按钮落点写死 | `shell.dart` 的 `Positioned(right: 16, bottom: 16)` | 按钮仍归壳层，但底部偏移改为按样式的底部占用高度推算（见第六节） |
-| 测试按几何定位 Tab | `test/support/test_harness.dart` 的 `rootTabCenter`（`main_bottom_nav` 矩形 + 等宽四等分） | 改为按条目 key `main_nav_item_$i` 定位 |
-| 测试断言具体类型 | `navigation_settings_test.dart` 四处 `tester.widget<VeriRootNavigation>(...)`；`test/root_navigation_test.dart` 直接构造 `VeriRootNavigation` 并断言 `VeriRootNavigationBody.barHeight` | 改为读取样式无关的锚点组件或壳层状态；改名的同时更新测试脚手架 |
-| 规范把停靠特例写成全局规则 | `design-system.md` §导航与输入、`ui-guidelines.md` §根导航、`components.md` 条目 | 拆成「全局不可违反」与「停靠样式专属」两组 |
-
-与样式无关、可原样复用的部分：`_goToTab`、`_animateToTab`、`_finishTabSwitch`、
-`_handlePageChanged`、`_trackScrollVelocity`、`PageController` 保活、四个根页面挂载、
-`PopScope` 返回处理、`AppCaptureBridge`/`AppWidgetBridge` 路由、`_KeepAlivePage`。
-
-## 四、样式契约
-
-### 4.1 三层拆分
+## 三层拆分
 
 契约只覆盖**已确证存在差异**的维度，避免过度参数化：
 
-1. **条目数据**（已样式无关，保持不变）：`VeriNavigationDestination`。
-2. **布局描述**（壳层需要知道的全部信息）：`VeriRootNavigationLayout`。
-3. **样式实现**（视觉与动效）：`VeriRootNavigationStyle`。
+1. **条目数据**（样式无关）：`VeriNavigationDestination`，唯一定义在 `veriRootNavigationDestinations`（首页/资产/看板/我的）。
+2. **布局描述**（壳层需要知道的全部信息）：`VeriRootNavigationLayout`——`extendBody`、`occupiedHeight`、`listBottomGap`，避让高度由 `contentBottomPadding` 统一推导。
+3. **样式实现**（视觉与动效）：`VeriRootNavigationStyle`，实现 `id` / `label` / `description` / `layout` / `switchDuration` / `buildBar`。
 
-### 4.2 契约草案
+`buildBar` 只接收纯数据快照 `VeriRootNavigationSpec`（当前下标、目的地、可空 `onSelect`、`keyPrefix`），**不接触 Controller / KV / Navigator**；样式选择页的预览因此直接复用同一实现（预览把 `onSelect` 置空）。壳层经 `VeriRootNavigationHost` 渲染，测试从这里读 `spec`。
 
-```dart
-/// 根导航样式需要知道的全部布局信息。
-@immutable
-class VeriRootNavigationLayout {
-  const VeriRootNavigationLayout({
-    required this.extendBody,
-    required this.occupiedHeight,
-    this.listBottomGap = 12,
-  });
+## 注册表与持久化
 
-  /// 内容是否延伸到导航栏背后。停靠样式为 false；悬浮样式通常为 true。
-  final bool extendBody;
+- 注册表 `veriRootNavigationStyles` 的顺序即样式选择页展示顺序，第一项为默认样式；`veriRootNavigationStyleFor` 对缺失/未知标识一律回退默认样式。
+- 偏好枚举 `NavigationStylePreference` 的枚举名即样式标识，存 KV `verifin.nav_style.v1`；设备本地、不进备份、初始化账目时保留、`resetAllData` 恢复默认。新增样式须同时加枚举值与注册项（测试断言两者一一对应）。
+- 设置 → 外观 → 导航栏样式进入选择页；点选只改设置页草稿，设置页保存后才落盘。
 
-  /// 栏本体连同外边距在屏幕底部占用的高度，不含系统安全区。
-  /// 停靠样式 = 条目高度；悬浮样式 = 胶囊高度 + 上下外边距。
-  final double occupiedHeight;
+## 全局硬约束（所有样式必须满足）
 
-  /// 列表末项在避让之外额外保留的呼吸空间。
-  final double listBottomGap;
+- 四个根目的地、切页状态机、返回键与小组件路由完全一致，不随样式变化。
+- 停靠样式用不透明实色；液态玻璃是唯一允许模糊/折射的样式，且实现不得外溢到卡片、菜单、弹层或页面背景。
+- 选中态取 `colorScheme.primary`；尊重系统安全区下限；用 `Semantics(selected:)` 向读屏软件报告选中态。
+- 每个样式必须产出稳定 key：`<前缀>_bottom_nav`、`<前缀>_nav_bar`、`<前缀>_nav_item_<下标>`；测试与无障碍按 key 定位，不依赖几何。
+- 切页动画被用户交互打断时按页面实际落点对齐底栏，不能停留在点击时的目标页。
+- **记账按钮与导航栏无关**：它由 `shell.dart` 放在右下角浮动（首页才显示），样式不参与、也不得占用其区域；内容延伸到栏背后时，Shell 按样式声明的 `occupiedHeight` 把按钮抬到栏上方。
 
-  /// 根页面列表末项的底部内边距，由 veriRootPageListPadding 下发。
-  double get contentBottomPadding =>
-      (extendBody ? occupiedHeight : 0) + listBottomGap;
-}
-
-/// 一次渲染所需的纯数据快照，不依赖 Controller，可同时服务真实壳层与选择页预览。
-@immutable
-class VeriRootNavigationSpec {
-  const VeriRootNavigationSpec({
-    required this.currentIndex,
-    required this.destinations,
-    required this.onSelect,
-    this.keyPrefix = 'main',
-  });
-
-  final int currentIndex;
-  final List<VeriNavigationDestination> destinations;
-
-  /// 预览场景传 null：条目不可点击，也不会回调。
-  final ValueChanged<int>? onSelect;
-
-  /// 稳定 key 前缀。每个样式必须产出 `<prefix>_bottom_nav`、`<prefix>_nav_bar`
-  /// 与 `<prefix>_nav_item_<index>`，供测试与无障碍使用。
-  final String keyPrefix;
-}
-
-abstract interface class VeriRootNavigationStyle {
-  const VeriRootNavigationStyle();
-
-  /// 壳层切页的默认时间尺度；样式没有自己的选中动效时返回该值即可。
-  static const Duration defaultSwitchDuration = Duration(milliseconds: 250);
-
-  /// 持久化标识，写入 KV；一旦发布不得更名（改名须提供迁移或别名）。
-  String get id;
-
-  /// 设置页入口与选择页卡片上的名称。
-  String label(AppLocalizations l10n);
-
-  /// 选择页卡片上的说明。
-  String description(AppLocalizations l10n);
-
-  VeriRootNavigationLayout get layout;
-
-  /// 选中动效的时间尺度；壳层用它驱动切页弹簧，两者同时起步、同时收住。
-  Duration get switchDuration;
-
-  Widget buildBar(BuildContext context, VeriRootNavigationSpec spec);
-}
-
-/// 壳层渲染导航栏的固定锚点：测试与诊断从它读取 spec，不依赖具体样式。
-class VeriRootNavigationHost extends StatelessWidget {
-  const VeriRootNavigationHost({
-    super.key,
-    required this.style,
-    required this.spec,
-  });
-
-  final VeriRootNavigationStyle style;
-  final VeriRootNavigationSpec spec;
-
-  @override
-  Widget build(BuildContext context) => style.buildBar(context, spec);
-}
-```
-
-设计要点：
-
-- `buildBar` 只接收纯数据快照，**不接触 Controller、KV 或 Navigator**；选择页预览因此可以直接复用同一实现，不会出现「预览和真实不一致」。
-- `onSelect` 可空，预览即天然不可交互，无需另写 `IgnorePointer` 包层（包裹层仍建议保留，避免误触）。
-- 契约不含条目数量、排序或自定义能力，避免变成配置怪物。
-- 契约不含记账按钮（第六节）：样式只声明自己的底部占用高度，列表避让由
-  `contentBottomPadding` 统一推算。
-- 名称与说明都由样式实现提供（一个样式的全部文案与绘制都在自己文件里）；
-  `NavigationStylePreference` 只负责持久化标识，不维护展示文案。
-
-### 4.3 注册表与稳定标识
-
-```dart
-/// 顺序即选择页展示顺序；第一项为默认样式。
-const List<VeriRootNavigationStyle> veriRootNavigationStyles =
-    <VeriRootNavigationStyle>[VeriDockedRootNavigationStyle()];
-
-VeriRootNavigationStyle veriRootNavigationStyleFor(String? id) =>
-    veriRootNavigationStyles.firstWhere(
-      (style) => style.id == id,
-      orElse: () => veriRootNavigationStyles.first,
-    );
-```
-
-样式标识与持久化枚举必须一一对应，用测试锁定（见第八节），
-防止「KV 里存的 id 找不到实现」这类静默回退。
-
-### 4.4 文件划分
+## 文件划分
 
 | 文件 | 职责 |
-|---|---|
-| `lib/app/root_navigation.dart` | 样式契约、注册表、`VeriRootNavigationBody`、`veriRootPageListPadding`。保持为页面侧稳定入口（首页/资产/看板/我的继续只从这里取 padding）。 |
-| `lib/app/root_navigation_docked.dart` | 停靠样式实现：现有 `VeriRootNavigation` 的绘制逻辑整体迁移并改名为 `VeriDockedRootNavigation`（条目 key 增加 `main_nav_item_$i`）。 |
-| `lib/app/veri_bottom_bar.dart` | 保持不变，继续只被停靠样式使用（它是停靠样式的条内绘制件，不是通用契约的一部分）。 |
-| `lib/pages/navigation_style_settings_page.dart` | 样式选择页（预览列表 + 保存）。 |
+| --- | --- |
+| `lib/app/root_navigation.dart` | 样式契约、`VeriRootNavigationBody`、`veriRootPageListPadding`；页面侧稳定入口 |
+| `lib/app/root_navigation_styles.dart` | 样式注册表与查表函数 |
+| `lib/app/root_navigation_docked.dart` | 停靠样式实现 |
+| `lib/app/root_navigation_liquid_glass.dart` | 液态玻璃样式实现 |
+| `lib/app/veri_bottom_bar.dart` | 停靠样式的条内绘制件 |
+| `lib/app/liquid_glass_surface.dart`、`liquid_glass_lens.dart`、`liquid_glass_material.dart`、`shaders/liquid_glass_lens.frag` | 液态玻璃面板、透镜与着色器（只被该样式引用） |
+| `lib/pages/navigation_style_settings_page.dart` | 样式选择页 |
 
-改名 `VeriRootNavigation` → `VeriDockedRootNavigation` 属于共享件改名，
-必须同步 `docs/dev/components.md` 的组件条目与测试引用。
+## 测试矩阵
 
-## 五、壳层改造
+- **契约与注册表**：`NavigationStylePreference` 的每个 id 都在注册表找到实现；未知/空 id 回退默认；每个样式通过契约测试（非玻璃样式不出现 `BackdropFilter`，液态玻璃覆盖无着色器降级；条目稳定 key 与 `Semantics(selected:)`；360dp 与 393×852 不溢出；避让值与实际占用高度自洽）。
+- **持久化**：默认值、保存后落 KV、冷启动读取、非法值回退；保存前不改 Controller、取消不改动、改回原值后不弹未保存提示；`resetAllData` 后恢复默认；导入备份不改动本机样式。
+- **壳层与状态**：切换样式后当前 Tab、页面滚动位置与 `PageController` 状态不丢；`extendBody`、避让 padding、切页弹簧时长随样式变化；记账按钮在任一样式下不与导航栏重叠且仍只在首页显示；四目的地、返回键、小组件路由、快捷入口行为不变。
+- **设置页与选择页**：设置页选择后返回时「外观」行显示新样式名但 Controller/KV 未变；保存后才落 KV；选择页预览渲染真实标签与表面色、整块 `IgnorePointer`，点预览等于选中该样式；未修改返回不弹提示，修改后返回弹保存/不保存/取消。
 
-1. 样式来源：壳层从 `VeriFinScope.of(context)` 读取 `navigationStylePreference`，
-   并通过 `ValueListenableBuilder`/`AnimatedBuilder` 只重建**导航栏与布局参数**，
-   不重建整个 `MaterialApp`（避免切样式时重建 `PageController` 所在的子树）。
-2. 布局：`Scaffold.extendBody`、`VeriRootNavigationBody` 的避让值、
-   `bottomNavigationBar` 全部改为按当前样式取值。
-3. 动画：`_kTabSwitchSpring` 由 `static final` 改为按当前样式计算
-   （`SpringDescription.withDurationAndBounce(duration: style.switchDuration)`）。
-   样式无动效时退化为极短弹簧而非零时长，避免 `SpringSimulation` 的退化参数。
-4. 状态保持：切换样式**不得**重置 `_index`、`_programmaticPageTarget` 或 `PageController`；
-   实现后必须补「切换样式后仍停在同一 Tab、页面滚动位置不丢」的测试。
-5. 记账按钮：本方案不改动它（D5），详见第六节。
-
-## 六、记账按钮与底部导航的关系
-
-**决策（D5）：两者无关，本方案不改动记账按钮。** 记账按钮只在「显示在哪个页面」和「切页」
-上与根导航有交集，其余部分（外观、落点、点击语义）都由壳层自己负责。
-
-- 样式契约不含记账按钮的任何字段；样式实现不接收按钮回调，也不持有 Controller。
-- 按钮的点击/长按语义（`FabActionMode`）、仅首页显示、缩放淡入与现有外观保持不变。
-- 唯一的必要交集是避让：根页面列表末项的底部内边距由 `veriRootPageListPadding` 按样式的
-  `contentBottomPadding` 下发，保证内容不被栏遮住。
-- 若将来出现 `extendBody: true` 的样式（内容延伸到栏背后），届时需要把浮动按钮抬到栏上方，
-  按 `occupiedHeight` 计算；该样式落地时一并确认。
-
-## 七、设置页入口与样式选择页
-
-### 7.1 设置页改动（方案 A）
-
-- 「外观」分组的 `VeriCard` 内新增一行（位于主题色之后）：
-
-```dart
-SettingsRow(
-  icon: Icons.space_dashboard_outlined,
-  title: l10n.navigationStyleLabel,
-  trailing: _navStyle.label(l10n),
-  trailingIcon: Icons.chevron_right,
-  onTap: _pickNavigationStyle,
-)
-```
-
-- 页面状态新增 `_initialNavStyle` / `_navStyle` 两个字段，并同步三处：
-  `_isDirty`、`_save()`（经 `saveAppPreferencesDraft` 新参数）、`_saveAndExit()` 的基线更新。
-- `_pickNavigationStyle` 使用 `Navigator.push<String>` 等待选中样式的**标识**；
-  返回非空时经 `NavigationStylePreference.fromStorage` 归一化后只更新页面草稿，不写 Controller。
-- 设置页入口的 trailing 文案取 `veriRootNavigationStyleFor(preference.name).label(l10n)`：
-  未知标识会回退默认样式，界面不会出现空白名称。
-- 可选改进（需用户确认后再做）：设置页现有 12 个字段的草稿比较散落在三处，容易漏改。
-  可将其收敛为一个页面级草稿对象。该重构与本次需求无关，默认不做。
-
-### 7.2 样式选择页
-
-`NavigationStyleSettingsPage`，页面遵循全屏编辑页规范：
-
-- `Scaffold > SafeArea > VeriPage`，`VeriHeader(showBack: true)` +
-  `SaveHeaderAction`；`UnsavedChangesGuard(isDirty, onSave, popResult: () => _styleId, exitController)`，
-  保存动作经 `_exitController.exit(result: () => _styleId)` 回传选中样式的标识。
-  页面构造参数为 `initialStyleId` 与 `styles`（默认取注册表）：选择页只认样式标识，
-  不认识偏好枚举，因此任何实现都能单独预览与测试。
-- 列表每个样式一张 `VeriCard`：
-  - 上半为预览：固定高度容器 + `MediaQuery.removePadding(removeBottom: true)`（预览不需要系统手势条留白）
-    + `IgnorePointer(child: style.buildBar(context, spec))`（预览用的 spec 直接把
-    `onSelect` 置空、`keyPrefix` 取 `nav_style_preview_<样式标识>`），
-    预览使用真实 l10n 标签与真实表面色。
-  - 下半为名称 + 说明 + 选中标记（`Icons.check_circle`，颜色取 `colorScheme.primary`）。
-  - 整卡可点，点选只更新页面草稿。
-- 预览不得额外引入模糊/玻璃；卡片与预览容器保持不透明实色（液态玻璃样式预览绘制的是它自己的真实表面）。
-- 窄屏（360dp）与大字号下预览不得溢出：预览容器按 `LayoutBuilder` 约束宽度，
-  条目文案沿用底栏的省略策略。
-
-## 八、持久化
-
-| 项 | 内容 |
-|---|---|
-| 模型 | `lib/app/models/preferences.dart` 新增 `enum NavigationStylePreference { docked }`：枚举名即持久化标识，`fromStorage` 对未知值回退 `docked`；展示文案由样式实现提供 |
-| KV 键 | `verifin.nav_style.v1`（加入 `veri_fin_controller.dart` 顶部的键表） |
-| Controller | 内存字段 + 只读 getter + `ValueNotifier<NavigationStylePreference> navigationStyleListenable` |
-| 加载 | `_loadPreferences()` 读取并解析 |
-| 提交 | `saveAppPreferencesDraft(...)` 增加 `navigationStylePreference` 参数，与其它外观偏好同一批次原子写入 |
-| 重置 | `resetAllData()` 删除该键、恢复 `docked`、更新 notifier（与主题、触感一致） |
-| 备份 | **不进** `exportDataJson` / `importDataJson`；导入备份不改动本机样式（D2） |
-| 初始化数据 | 与语言一致：账目初始化不改动导航样式 |
-
-注意：`themePreference`、`hapticsEnabled`、`assetAccountViewMode` 等外观偏好目前在备份 JSON 内，
-导航样式选择「不进备份」属于有意偏离，理由是它没有任何数据语义、纯设备呈现偏好，
-与语言/数字键盘布局同类。实施时必须在 `docs/dev/tech-decisions.md` 的偏好与备份范围表里写明。
-
-## 九、测试矩阵
-
-### 契约与注册表
-
-- `NavigationStylePreference` 的每个 `id` 都能在注册表找到实现（防持久化标识漂移）；
-- 未知/空 id 回退默认样式；
-- 每个样式都必须通过的契约测试（对注册表逐项参数化）：
-  - 非玻璃样式不出现 `BackdropFilter`；液态玻璃样式是唯一例外，且必须覆盖无着色器降级；
-  - 条目带稳定 key `<prefix>_nav_item_<i>`，且 TalkBack 能读到选中态（`Semantics(selected:)`）；
-  - 360dp 与 393×852 下不溢出、不吃掉系统安全区下限；
-  - `layout` 的避让值与实际占用高度自洽（列表末项不被遮挡）。
-
-### 持久化
-
-- 默认值、保存后落 KV、冷启动读取、非法值回退；
-- 保存前不改变 Controller（草稿语义）、取消不改动、改回原值后不弹未保存提示；
-- `resetAllData()` 后恢复默认样式；
-- 导入旧备份/他人备份不会改动本机样式。
-
-### 壳层与状态
-
-- 切换样式后当前 Tab、页面滚动位置、`PageController` 状态不丢；
-- `extendBody`、避让 padding、切页弹簧时长随样式变化；
-- 记账按钮在任一样式下都不与导航栏重叠，且仍只在首页显示、点击与长按语义不变；
-- 四目的地、返回键、小组件路由、快捷入口行为在任一样式下不变；
-- 中断切页后底栏仍按实际落点对齐（现有回归用例改为样式无关定位后继续通过）。
-
-### 设置页与选择页
-
-- 设置页选择后返回，「外观」行 trailing 显示新样式名，但 Controller/KV 未变；
-- 设置页保存后才落 KV；不保存退出则丢弃；
-- 选择页预览渲染真实标签与表面色、不绘制模糊；预览整块 `IgnorePointer`
-  （条目没有回调），点预览区域等于选中该样式；
-- 选择页未修改直接返回不弹提示；修改后返回弹出保存/不保存/取消，三者行为符合 Guard 规范。
-
-### 命令
-
-提交前执行 `dart format .`、`flutter analyze`、`flutter test`。
-本机当前工具链为 Flutter 3.44.8 / Dart 3.12.2，而 CI 固定 Flutter 3.47.2；
-最终回归以 CI 版本为准，真机确认底栏安全区与流畅度。
-
-## 十、分阶段实施
-
-| 阶段 | 内容 | 交付与验证 |
-|---|---|---|
-| 阶段 1 | 契约 + 注册表 + 停靠样式登记 + 壳层按样式取布局/时长 + 测试改为样式无关定位 | **用户可见行为零变化**；`flutter analyze`、全量 `flutter test` 通过；独立提交 |
-| 阶段 2 | `NavigationStylePreference` 持久化 + 设置页入口 + 样式选择页（此时只有停靠样式可选） | 选择页流程可用、草稿语义正确；独立提交 |
-| 阶段 3 | 第二种样式视觉方向确认后实现 `buildBar`，并补该样式的契约测试 | 需用户先确认视觉方案 |
-
-阶段 1 与阶段 2 是本次授权范围；阶段 3 另行确认。记账按钮造型偏好不在本轮范围（见 6.2）。
-
-## 十一、文档同步清单（随实现提交）
-
-- `AGENTS.md`：根导航相关表述（现写作「停靠底栏」）改为「默认停靠样式 + 可注册样式」，
-  并保留材质与安全区硬约束。
-- `docs/design-system.md`：§导航与输入拆分为「全局不可违反」与「样式专属」；
-  更新表面材质表行与设置分组一行（外观组新增导航样式）。
-- `docs/ui-guidelines.md`：§根导航说明样式契约、避让来源与选择页入口。
-- `docs/dev/components.md`：新增 `VeriRootNavigationStyle` / `VeriRootNavigationLayout` /
-  `VeriRootNavigationSpec` / 选择页条目；改写 `VeriRootNavigation` 条目为 `VeriDockedRootNavigation`。
-- `docs/dev/tech-decisions.md`：偏好与备份范围表写明导航样式为设备本地、不进备份。
-- `docs/product.md`：「底部导航固定为四个 Tab」补充「样式可选、目的地固定」。
-- `docs/acceptance-checklist.md`：新增导航样式选择与切换验收项。
-- `CHANGELOG.md`：用户可见（设置入口与新样式能力）时写入 `## [Unreleased]`。
-
-## 十二、风险与反方意见
-
-- **过度设计风险**：当前只有一种样式，抽象可能覆盖不到真实差异。缓解：接口只覆盖已确证的
-  三类差异（底部占用与避让、`extendBody`、动画时长），且阶段 1 零行为变化、可低成本回滚。
-  若阶段 3 落地时发现接口缺项，属于正常迭代，不应反向把接口设计成「支持一切未来可能」。
-- **规范碎片化风险**：样式变多后，测试与文档容易各写一套。缓解：把全局硬约束
-  （不透明实色（液态玻璃为唯一例外）、`colorScheme.primary` 选中态、安全区下限、TalkBack 选中语义、
-  稳定条目 key）做成对全部样式参数化的契约测试。
-- **设计目标稀释风险**：多样式可能让界面失去「高效率、干净直接」的一致性。
-  建议把样式数量控制在同一设计语言的 2–3 个变体内，不做外观插件市场。
-- **状态回归风险**：换样式时若重建了 `PageController` 或壳层 State，会丢失当前 Tab。
-  缓解：样式监听只包裹导航栏与布局参数，并补状态保持测试。
-
-## 十三、实施结果（阶段 1 / 阶段 2）
-
-### 13.1 阶段 1：解耦 + 等价重构
-
-- `lib/app/root_navigation.dart` 只保留契约与布局侧：`VeriNavigationDestination`、
-  `veriRootNavigationDestinations`、`VeriRootNavigationLayout`、`VeriRootNavigationSpec`、
-  `VeriRootNavigationStyle`、`VeriRootNavigationHost`、`VeriRootNavigationBody`、
-  `veriRootPageListPadding`。
-- 停靠样式迁到 `lib/app/root_navigation_docked.dart`（`VeriDockedRootNavigationStyle` +
-  `VeriDockedRootNavigation`，条高 64、列表留白 12，与迁移前一致）；
-  注册表在 `lib/app/root_navigation_styles.dart`。
-- 壳层改为按样式取 `extendBody`、避让与切页弹簧时长；记账按钮与导航栏解耦，
-  只按 `extendBody ? occupiedHeight : 0` 抬升，停靠样式下仍是原来的 `bottom: 16`。
-- `VeriBottomBarItem` 新增 `itemKey`；条目 key 统一为 `main_nav_item_<下标>`，
-  测试脚手架 `rootTabCenter` 与相关断言改为按 key 定位，不再依赖等宽几何。
-- 用户可见行为零变化：`flutter analyze` 无问题，全量 `flutter test` 通过
-  （含 5 项按既有条件跳过）。
-
-### 13.2 阶段 2：持久化 + 设置页入口 + 样式选择页
-
-- `NavigationStylePreference`（KV `verifin.nav_style.v1`）+ `ValueNotifier` + 重置路径；
-  不进 JSON 备份，导入备份不改动本机样式。
-- `saveAppPreferencesDraft` 增加 `navigationStylePreference` 参数，与其它外观偏好同批写入。
-- 设置 → 外观新增「导航栏样式」行（`settings_navigation_style`），进入
-  `NavigationStyleSettingsPage`；选择结果回传设置页草稿，保存后才落盘。
-- 选择页对每个样式渲染同源预览（`IgnorePointer` + 独立 key 前缀 + `Material` 宿主），
-   非玻璃样式无模糊、无渐变；液态玻璃预览绘制真实模糊与折射。条目不可点击。
-- 新增 `test/navigation_style_settings_test.dart`（9 项）：注册表与偏好一一对应、
-  默认/非法值/重置、设置页入口与当前样式名、壳层样式与四目的地一致、重复设置同一值
-  不通知也不写 KV、未修改返回不写 KV、预览渲染真实标签且不绘制模糊、
-  点预览区域选中样式、选择后保存回传标识、修改后返回弹未保存询问。
-- 设置页新增一行后比一屏更长，而 widget 测试视口是 800×600、`ListView` 懒构建，
-  `test/navigation_settings_test.dart` 中三处断言补了 `scrollUntilVisible`
-  （应用代码没有为此改动；真机上只是页面变长可滚动）。
-- 全量测试通过（含 5 项按既有条件跳过）。
-
-### 13.3 实现期与本文草稿的差异
-
-1. 名称与说明文案从「偏好枚举提供」改为「样式实现提供」：页面只认样式标识，
-   选择页因此可以对任意实现（含测试假样式）做预览与选择，新样式也只需改自己的文件。
-2. 选择页新增 `styles` 构造参数（默认注册表），既避免为测试加特例，也为将来做样式画廊留出口。
-3. 选择页返回值从 `NavigationStylePreference` 改为样式标识字符串，由设置页
-   `fromStorage` 归一化，未知标识静默回退默认样式。
-4. `NavigationStylePreference` 不再承担展示文案，只做持久化标识。
-
-### 13.4 尚未覆盖
-
-- 「换样式后当前 Tab 与滚动位置不丢」目前只能靠契约与实现保证，注册表只有一个样式，
-  没有第二条路径可断言；阶段 3 接入第二种样式时补这条回归。
-- 记账按钮造型偏好未做（D5 已确认与导航栏无关）。
-
-## 十四、待确认
-
-1. 阶段 2 中样式选择页的名称与 l10n 中文/英文文案定稿。
-2. 是否允许本方案把「设置页草稿字段收敛」列为可选后续项（默认不做）。
-3. 第二种样式的视觉方向（阶段 3 的输入）。
+提交前执行 `dart format .`、`flutter analyze`、`flutter test`；真机确认底栏安全区与流畅度。

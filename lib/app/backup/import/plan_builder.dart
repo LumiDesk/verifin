@@ -160,7 +160,7 @@ ImportPlan buildImportPlanFromRecords({
 
   // 空分类名兜底：解析到固定 id 的「未分类」（与载入自愈同一约定，见
   // [uncategorizedCategoryId]）。绝不落空 categoryId——空 id 会被展示层回退成
-  // 「已删除分类」占位、且无法筛选与批量处理（issue #16，微信账单曾全量中招）。
+  // 「已删除分类」占位、且无法筛选与批量处理。
   // 「未分类」作为待新建候选进预览页映射区，用户可整体映射到具体分类或保留。
   String resolveUncategorized(EntryType type) {
     final id = uncategorizedCategoryId(type);
@@ -276,7 +276,7 @@ ImportPlan buildImportPlanFromRecords({
 
   // 转账落到一个「转账」分类（默认「转出」），与 App 内记账、信用卡还款口径一致
   // （见 credit_repayment_page）。空 categoryId 会被交易列表按 categoryById 回退成
-  // 「已删除分类」占位、且不计入分类管理的转账分类下（issue #14），故复用现有转账分类
+  // 「已删除分类」占位、且不计入分类管理的转账分类下，故复用现有转账分类
   // 而非留空。转账分类是系统种子（transfer_out/transfer_in/repayment），不在此新建；
   // 极端情况下（用户删光了转账分类）退回空串。
   final transferCategoryId = existingCategories

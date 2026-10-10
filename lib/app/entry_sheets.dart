@@ -283,7 +283,7 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
       buttonBackground = isDark
           ? veriExpense.withValues(alpha: 0.26)
           : const Color(0xFFF6D2D8);
-      // 浅色底用加深变体：原来的 veriExpense 在浅粉按键底上只有 2.65:1。
+      // 浅色底用加深变体，保证在浅粉按键底上的对比度。
       buttonForeground = isDark
           ? const Color(0xFFFFAAB6)
           : veriSemantic(context, veriExpense);
