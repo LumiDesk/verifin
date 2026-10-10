@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
@@ -662,14 +664,22 @@ class _TrendCard extends StatelessWidget {
   }
 
   /// 点位过多时抽样标签，避免坐标轴文字重叠。
+  /// 长序列的横轴标签：等距抽样并保留首尾两点。
+  /// 按固定步长抽样再补末尾会让最后两个标签只差 1–2 天，在 31 天窗口里直接
+  /// 叠在一起，所以这里改为把抽样点均匀铺满整个区间。
   List<String> _sampledLabels(List<ReportTrendPoint> points) {
-    if (points.length <= 12) {
+    final count = points.length;
+    if (count <= 12) {
       return points.map((point) => point.label).toList(growable: false);
     }
-    final step = (points.length / 8).ceil();
+    const maxLabels = 8;
+    final target = math.min(maxLabels, count);
+    final indices = <int>{
+      for (var i = 0; i < target; i++) (i * (count - 1) / (target - 1)).round(),
+    };
     return <String>[
-      for (var i = 0; i < points.length; i += 1)
-        (i % step == 0 || i == points.length - 1) ? points[i].label : '',
+      for (var i = 0; i < count; i++)
+        indices.contains(i) ? points[i].label : '',
     ];
   }
 }

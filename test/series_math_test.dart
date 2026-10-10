@@ -1,6 +1,9 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:verifin/app/amount_format.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/app/series_math.dart';
+import 'package:verifin/l10n/app_localizations.dart';
 
 Account _account(String id, {double initial = 0}) => Account(
   id: id,
@@ -93,5 +96,27 @@ void main() {
     );
 
     expect(balances['r'], 50);
+  });
+
+  group('余额纵轴刻度', () {
+    test('同一根轴的三个刻度同档：千位以上统一取整，0 只显示 0', () async {
+      // 保留固定小数位的金额偏好会暴露混排问题：旧实现把最小值按整数、0 按
+      // 两位小数输出，轴上同时出现「-1682」和「0.00」。
+      final previous = currencyFractionStyle;
+      currencyFractionStyle = CurrencyFractionStyle.standard;
+      addTearDown(() => currencyFractionStyle = previous);
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+      expect(balanceAxisLabels(const <double>[0, -3363], l10n), <String>[
+        '-3363',
+        '-1682',
+        '0',
+      ]);
+      expect(balanceAxisLabels(const <double>[0, 585], l10n), <String>[
+        '0',
+        '292.50',
+        '585.00',
+      ]);
+    });
   });
 }

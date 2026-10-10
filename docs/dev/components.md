@@ -49,7 +49,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `VeriBottomBar` / `VeriBottomBarItem` | Widget / 值类 | `veri_bottom_bar.dart` | 停靠样式的条目绘制：切换时两条圆弧扫过、两枚圆点飞过，图标由灰渐变为主题主色并轻微摆动。颜色缺省取 `Theme.of(context).colorScheme.primary`（`circle1Color` / `circle2Color` 缺省跟随主色），不写死品牌蓝；每个条目用 `MergeSemantics` + `Semantics(selected:)` 向读屏软件报告选中态，并按 `itemKey` 暴露稳定条目 key。**自持实现，不依赖上游包**：选中态完全由 `selectedIndex` 驱动并同步更新，`onSelect` 每次点击恰好一次；父级重建不重置图标状态，进度动画不断档，旋转方向随切换方向，`onSelect` 立即回调 |
 | `VeriFeedbackHost` / `VeriFeedbackController` / `VeriFeedbackRequest` / `VeriFeedbackResult` | 根级 Widget / Controller / 模型 | `feedback.dart` | 跨路由应用内轻提示：内容自适应宽高与三行正文（`error` 六行）、四条可见栈、优先级等待队列、2/4/8 秒与常驻、单操作 Future 结果、显式去重、前后台暂停；完整规范见 `feedback-system.md` |
 | `SectionTitle` | Widget | `common_widgets.dart` | 区块标题 + 可选 trailing |
-| `EmptyState` | Widget | `common_widgets.dart` | 空状态（图标+标题+描述+可选 `action` 操作入口） |
+| `EmptyState` | Widget | `common_widgets.dart` | 空状态（图标 + 标题 + 描述 + 可选 `action` 操作入口）；传 `animationAsset` 时用本地打包的 Lottie 动画替换图标（看板图表空态已接入 `assets/lottie/empty_state.json`），系统开启「减少动态效果」时自动回退图标 |
 | `HeaderAction` / `HeaderTextAction` / `HeaderInline` / `VeriSectionAction` | Widget | `common_widgets.dart` | 页眉动作族（图标钮/文字钮/宽度约束/填充色小图标钮）；需要弹出操作菜单时使用 `VeriAnchoredMenuButton` |
 | `VeriAnchoredMenuAnchor` / `VeriAnchoredMenuButton` / `VeriAnchoredChoice<T>` / `VeriMenuItem` / `VeriMenuDivider` | Widget / 菜单模型 | `common_widgets.dart` | Veri Fin 锚点菜单：图标、标题、副标题、分割线、选中/禁用态、根/默认子菜单/单项子菜单独立宽度、从点击行原位展开的容器变换，以及缩放/压暗但不丢失的完整祖先卡片栈；任意触发器用 `Anchor`，Header 图标入口用 `Button`，2–8 项静态受控单选优先用 `Choice`；完整用法见 [anchored-menu.md](anchored-menu.md) |
 | `SaveHeaderAction` | Widget | `common_widgets.dart` | 全屏编辑页统一保存动作；固定软碟语义的 `Icons.save_outlined` 和本地化 tooltip，支持禁用态 |
@@ -159,12 +159,14 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 
 | 名称 | 类型 | 位置 | 用途 |
 |---|---|---|---|
-| `InteractiveTrendChart` | Widget | `chart_painters.dart` | 可交互折线图；`values, xLabels, yLabels, glow, tooltipOf`。点击或**横向拖动**选中数据点，再点同一点或点图表外取消；自带 `Semantics` 摘要；位于可跳转卡片内时拦截点击 |
+| `InteractiveTrendChart` | Widget | `chart_painters.dart` | 可交互折线图；`values, xLabels, yLabels, glow, tooltipOf`。平滑曲线 + 渐隐填充，**不画节点圆点**；按住或横向拖动查看气泡，自带 `Semantics` 摘要；位于可跳转卡片内时拦截点击 |
 | `InteractiveBarChart` | Widget | `chart_painters.dart` | 可交互柱状图；`values, xLabels, yLabels, tooltipOf`。交互与无障碍同上 |
-| `TrendLinePainter` / `BarChartPainter` | CustomPainter | `chart_painters.dart` | 上面两个控件的绘制实现。**自绘保留**：曾评估改用 `fl_chart`，实测其坐标轴刻度与既有内边距约定对不齐（出现重复刻度与刻度/线错位），故维持自绘；不要为「换库」而替换，除非同时解决刻度对齐 |
-| `BudgetRingPainter` | CustomPainter | `chart_painters.dart` | 预算进度圆环，**保持自研**：`SweepGradient` + `GradientRotation(-π/2)` 的接缝处理是规范硬要求，有像素级回归测试（`budget_ring_test.dart`）。不要换成通用进度环组件 |
-| `trendChartRect` / `barChartRect` / `chartNearestIndex` / `chartSlotIndex` / `drawChartTooltip` | 纯函数 | `chart_painters.dart` | 预算趋势组合图（`budget_trend_chart.dart`，自绘画布）仍在用的几何与命中计算；有 `chart_hit_test.dart` 覆盖 |
-| `ChartTooltip` / `ChartTooltipLine` | 值类 | `chart_painters.dart` | 气泡数据模型 |
+| `InteractiveComboChart` | Widget | `chart_painters.dart` | 预算线 + 支出柱组合图；`barValues, lineValues, xLabels, yLabels, barColor, lineColor, tooltipOf`。两条序列共用同一 x 槽位（预算点落在柱心正上方）；点按选中并保持，气泡按内容自适应宽度 |
+| `VeriDonutChart` | Widget | `chart_painters.dart` | 环形分段图；`segments, center, ringWidth, selectedIndex, onSelected`。点击分段回传索引，中心空区回传 `null` |
+| `VeriBudgetRing` | Widget | `chart_painters.dart` | 预算/额度进度环；`value, trackColor, progressColor, center, strokeWidth`。中心内容忽略指针事件 |
+| `ChartTooltip` / `ChartTooltipLine` | 值类 | `chart_painters.dart` | 气泡数据模型；所有图表的气泡内容都由它生成 |
+
+适配层硬性规则：页面与卡片不得直接 `import 'package:fl_chart/...'`；不得再新增自绘数据图表；纵轴刻度（`_YAxisLabels`）与横向参考线（`_ChartGridLines`）由适配层共同绘制以保证对齐，`fl_chart` 自带网格恒为关闭（`_noGridData`）。历史自绘实现（`TrendLinePainter`、`BarChartPainter`、`BudgetRingPainter`、`trendChartRect`、`barChartRect`、`chartNearestIndex`、`chartSlotIndex`、`drawChartTooltip` 及 `chart_hit_test.dart`）已全部删除，不要再按旧接口新建调用。
 
 ## 族 10 — 纯计算（领域逻辑，无 Flutter 依赖或仅叶子级）
 

@@ -25,6 +25,23 @@ class ChartTooltipLine {
 const Color _chartTooltipBackground = Color(0xF21F2937);
 const Color _chartTooltipText = Colors.white;
 
+/// 组合图气泡的最大宽度；宽度本身按内容自适应，这里只作为上限与越界保护的基准。
+const double _comboTooltipMaxWidth = 190;
+const double _comboTooltipPadding = 10;
+
+/// 组合图气泡文案样式；宽度预测量与渲染必须共用同一份样式。
+const TextStyle _comboTooltipTitleStyle = TextStyle(
+  color: _chartTooltipText,
+  fontWeight: FontWeight.w800,
+  fontSize: 12,
+);
+const TextStyle _comboTooltipLineStyle = TextStyle(
+  // 与历史气泡一致的 86% 白；仅未指定系列色的行使用。
+  color: Color(0xDBFFFFFF),
+  fontWeight: FontWeight.w600,
+  fontSize: 11,
+);
+
 /// 按数据计算 y 轴范围；全部相等时给一个安全的上下浮动，避免除零。
 ({double min, double max}) _yRange(List<double> values) {
   if (values.isEmpty) {
@@ -46,23 +63,28 @@ const Color _chartTooltipText = Colors.white;
   return (min: minY, max: maxY);
 }
 
-FlGridData _gridData({
-  required double minY,
-  required double maxY,
-  required int yLabelCount,
-  required Color lineColor,
-}) {
-  if (yLabelCount < 2 || minY == maxY) {
-    return const FlGridData(show: false);
-  }
-  return FlGridData(
-    show: true,
-    drawVerticalLine: false,
-    drawHorizontalLine: true,
-    horizontalInterval: (maxY - minY) / (yLabelCount - 1),
-    getDrawingHorizontalLine: (value) =>
-        FlLine(color: lineColor, strokeWidth: 1),
+/// 网格线恒关闭：横向参考线由适配层自己绘制（见 [_ChartGridLines]）。
+/// fl_chart 的刻度迭代会排除最小/最大值并按 baseline 取整，画出的线与
+/// 纵轴标签并不在同一高度，所以由适配层统一控制两者。
+const FlGridData _noGridData = FlGridData(show: false);
+
+/// 纵轴标签行高与底部横轴标题占位；标签层、参考线层必须共用这两个常量。
+const double _axisLabelHeight = 14;
+const double _chartBottomTitlesSize = 22;
+
+/// 第 i 个纵轴刻度（i = 0 为最小值）在图表控件内的顶部偏移。
+/// 上下各留半个标签高度，避免文字被裁切。
+List<double> _axisLabelTops(double height, int count) {
+  final available = math.max(
+    0.0,
+    height - _axisLabelHeight - _chartBottomTitlesSize,
   );
+  if (count <= 1) {
+    return <double>[available / 2];
+  }
+  return <double>[
+    for (var i = 0; i < count; i++) available * (count - 1 - i) / (count - 1),
+  ];
 }
 
 /// 按实际纵轴文字宽度自适应预留：标签右对齐于预留区，预留宽度=文字宽度+间距，
@@ -94,9 +116,6 @@ double _axisReservedSize(BuildContext context, List<String> yLabels) {
 FlTitlesData _titlesData({
   required BuildContext context,
   required List<String> xLabels,
-  required List<String> yLabels,
-  required double minY,
-  required double maxY,
   int? xValueCount,
   Color? labelColor,
   bool renderTitles = true,
@@ -109,10 +128,6 @@ FlTitlesData _titlesData({
     fontWeight: FontWeight.w600,
     fontSize: 10,
   );
-  final yCount = yLabels.length;
-  final yInterval = yCount > 1 && minY != maxY
-      ? (maxY - minY) / (yCount - 1)
-      : null;
   final resolvedXValueCount = xValueCount ?? xLabels.length;
   final xLabelPositions = <int, int>{};
   if (xLabels.isNotEmpty && resolvedXValueCount > 0) {
@@ -123,8 +138,6 @@ FlTitlesData _titlesData({
       xLabelPositions[position] = i;
     }
   }
-  final reservedSize = _axisReservedSize(context, yLabels);
-  final renderedYLabels = <String>{};
 
   Widget title(String text) {
     if (!renderTitles || text.isEmpty) {
@@ -141,8 +154,9 @@ FlTitlesData _titlesData({
   return FlTitlesData(
     show: true,
     topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-    // 绘图区右缘直接贴卡片内容右缘；左侧预留宽度由纵轴文字实际宽度决定。
     rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+    // 纵轴文字由外层 _YAxisLabels 统一绘制，避免 fl_chart 自动刻度重复/闪烁。
+    leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
     bottomTitles: AxisTitles(
       sideTitles: SideTitles(
         showTitles: xLabels.isNotEmpty,
@@ -157,27 +171,6 @@ FlTitlesData _titlesData({
             return const SizedBox.shrink();
           }
           return SideTitleWidget(meta: meta, child: title(xLabels[labelIndex]));
-        },
-      ),
-    ),
-    leftTitles: AxisTitles(
-      sideTitles: SideTitles(
-        showTitles: yLabels.isNotEmpty,
-        reservedSize: reservedSize,
-        interval: yInterval,
-        minIncluded: true,
-        maxIncluded: true,
-        getTitlesWidget: (value, meta) {
-          if (yCount == 0 || minY == maxY) {
-            return const SizedBox.shrink();
-          }
-          final fraction = ((value - minY) / (maxY - minY)).clamp(0.0, 1.0);
-          final index = (fraction * (yCount - 1)).round().clamp(0, yCount - 1);
-          final label = yLabels[index];
-          if (label.isEmpty || !renderedYLabels.add(label)) {
-            return const SizedBox.shrink();
-          }
-          return SideTitleWidget(meta: meta, child: title(label));
         },
       ),
     ),
@@ -277,6 +270,114 @@ BarTouchTooltipData _barTooltipData(
   );
 }
 
+/// 触摸指示：虚线竖线 + 小圆点。默认实现是半径 5dp 的大圆点，
+/// 在只展示曲线的图表里过重，这里统一收敛成「高亮」而不是「节点」。
+List<TouchedSpotIndicatorData> _touchedIndicators(
+  BuildContext context,
+  Color color,
+  List<int> spotIndexes,
+) {
+  final surface = Theme.of(context).colorScheme.surface;
+  return <TouchedSpotIndicatorData>[
+    for (final _ in spotIndexes)
+      TouchedSpotIndicatorData(
+        FlLine(
+          color: color.withValues(alpha: 0.32),
+          strokeWidth: 1,
+          dashArray: const <int>[4, 4],
+        ),
+        FlDotData(
+          getDotPainter: (spot, percent, bar, index) => FlDotCirclePainter(
+            radius: 3.2,
+            color: surface,
+            strokeWidth: 2,
+            strokeColor: color,
+          ),
+        ),
+      ),
+  ];
+}
+
+/// 纵轴标签层：由适配层按数据区间精确绘制，避免 fl_chart 自动刻度重复/闪烁。
+class _YAxisLabels extends StatelessWidget {
+  const _YAxisLabels({required this.labels, required this.color});
+
+  final List<String> labels;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.labelSmall?.copyWith(
+      color: color,
+      fontWeight: FontWeight.w600,
+      fontSize: 10,
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final count = labels.length;
+        if (count == 0) {
+          return const SizedBox.shrink();
+        }
+        final tops = _axisLabelTops(constraints.maxHeight, count);
+        return Stack(
+          children: <Widget>[
+            for (var i = 0; i < count; i++)
+              Positioned(
+                left: 0,
+                right: 0,
+                top: tops[i],
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      labels[i],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: style,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// 横向参考线层：只画中间刻度，位置与 [_YAxisLabels] 完全同源，
+/// 因此标签与参考线严格对齐；最小/最大值刻度不重复画线。
+class _ChartGridLines extends StatelessWidget {
+  const _ChartGridLines({required this.labelCount, required this.color});
+
+  final int labelCount;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    if (labelCount < 3) {
+      return const SizedBox.shrink();
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tops = _axisLabelTops(constraints.maxHeight, labelCount);
+        return Stack(
+          children: <Widget>[
+            for (var i = 1; i < labelCount - 1; i++)
+              Positioned(
+                left: 0,
+                right: 0,
+                top: tops[i] + _axisLabelHeight / 2 - 0.5,
+                child: SizedBox(height: 1, child: ColoredBox(color: color)),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 /// 可交互折线图：内部由 `fl_chart` 渲染，点击/拖动查看数据气泡。
 class InteractiveTrendChart extends StatelessWidget {
   const InteractiveTrendChart({
@@ -328,15 +429,7 @@ class InteractiveTrendChart extends StatelessWidget {
             preventCurveOverShooting: true,
             isStrokeCapRound: true,
             isStrokeJoinRound: true,
-            dotData: FlDotData(
-              show: values.length <= 31,
-              getDotPainter: (spot, percent, bar, index) => FlDotCirclePainter(
-                radius: 2.6,
-                color: color,
-                strokeWidth: 1.4,
-                strokeColor: Theme.of(context).colorScheme.surface,
-              ),
-            ),
+            dotData: const FlDotData(show: false),
             belowBarData: BarAreaData(
               show: true,
               gradient: LinearGradient(
@@ -356,33 +449,57 @@ class InteractiveTrendChart extends StatelessWidget {
         titlesData: _titlesData(
           context: context,
           xLabels: xLabels,
-          yLabels: yLabels,
           xValueCount: values.length,
-          minY: range.min,
-          maxY: range.max,
           labelColor: muted,
         ),
-        gridData: _gridData(
-          minY: range.min,
-          maxY: range.max,
-          yLabelCount: yLabels.length,
-          lineColor: muted.withValues(alpha: 0.14),
-        ),
+        gridData: _noGridData,
         borderData: FlBorderData(show: false),
         lineTouchData: LineTouchData(
           handleBuiltInTouches: true,
           touchTooltipData: _lineTooltipData(tooltipOf),
+          getTouchedSpotIndicator: (barData, spotIndexes) =>
+              _touchedIndicators(context, color, spotIndexes),
         ),
       ),
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
     );
+    final reserved = _axisReservedSize(context, yLabels);
     return Semantics(
       container: true,
       label:
           semanticsLabel ??
           AppLocalizations.of(context).chartTrendSemantics(values.length),
-      child: chart,
+      child: LayoutBuilder(
+        builder: (context, constraints) => Stack(
+          children: <Widget>[
+            Positioned(
+              left: reserved,
+              top: 0,
+              right: 0,
+              bottom: 0,
+              child: _ChartGridLines(
+                // 有纵轴刻度时逐刻度画线；没有刻度（如净资产卡）时保留一条
+                // 中线，维持原有的阅读参考。
+                labelCount: yLabels.isEmpty ? 3 : yLabels.length,
+                color: muted.withValues(alpha: 0.16),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.only(left: reserved),
+              child: chart,
+            ),
+            if (reserved > 0)
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: reserved,
+                child: _YAxisLabels(labels: yLabels, color: muted),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -441,18 +558,10 @@ class InteractiveBarChart extends StatelessWidget {
         titlesData: _titlesData(
           context: context,
           xLabels: xLabels,
-          yLabels: yLabels,
           xValueCount: values.length,
-          minY: math.min(0.0, range.min),
-          maxY: range.max,
           labelColor: muted,
         ),
-        gridData: _gridData(
-          minY: math.min(0.0, range.min),
-          maxY: range.max,
-          yLabelCount: yLabels.length,
-          lineColor: muted.withValues(alpha: 0.14),
-        ),
+        gridData: _noGridData,
         borderData: FlBorderData(show: false),
         barTouchData: BarTouchData(
           handleBuiltInTouches: true,
@@ -462,12 +571,40 @@ class InteractiveBarChart extends StatelessWidget {
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
     );
+    final reserved = _axisReservedSize(context, yLabels);
     return Semantics(
       container: true,
       label:
           semanticsLabel ??
           AppLocalizations.of(context).chartBarSemantics(values.length),
-      child: chart,
+      child: LayoutBuilder(
+        builder: (context, constraints) => Stack(
+          children: <Widget>[
+            Positioned(
+              left: reserved,
+              top: 0,
+              right: 0,
+              bottom: 0,
+              child: _ChartGridLines(
+                labelCount: yLabels.isEmpty ? 3 : yLabels.length,
+                color: muted.withValues(alpha: 0.16),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.only(left: reserved),
+              child: chart,
+            ),
+            if (reserved > 0)
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: reserved,
+                child: _YAxisLabels(labels: yLabels, color: muted),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -502,6 +639,27 @@ class InteractiveComboChart extends StatefulWidget {
 class _InteractiveComboChartState extends State<InteractiveComboChart> {
   int? _selectedIndex;
 
+  /// 按气泡实际文案测量宽度：与 [_ComboTooltipCard] 的 padding、字号、字重一致，
+  /// 用于把气泡居中在选中槽位上，同时避免越出卡片右缘。
+  double _tooltipWidth(BuildContext context, ChartTooltip tooltip) {
+    final textScaler = MediaQuery.textScalerOf(context);
+    double measure(String text, TextStyle style) {
+      final painter = TextPainter(
+        text: TextSpan(text: text, style: style),
+        textDirection: TextDirection.ltr,
+        textScaler: textScaler,
+        maxLines: 1,
+      )..layout();
+      return painter.width;
+    }
+
+    var width = measure(tooltip.title, _comboTooltipTitleStyle);
+    for (final line in tooltip.lines) {
+      width = math.max(width, measure(line.text, _comboTooltipLineStyle));
+    }
+    return (width + _comboTooltipPadding * 2).clamp(0.0, _comboTooltipMaxWidth);
+  }
+
   @override
   void didUpdateWidget(covariant InteractiveComboChart oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -530,150 +688,171 @@ class _InteractiveComboChartState extends State<InteractiveComboChart> {
         .clamp(6.0, 20.0)
         .toDouble();
 
-    final barChart = BarChart(
-      BarChartData(
-        minY: minY,
-        maxY: maxY,
-        alignment: BarChartAlignment.spaceAround,
-        groupsSpace: 4,
-        barGroups: <BarChartGroupData>[
-          for (var i = 0; i < barValues.length; i++)
-            BarChartGroupData(
-              x: i,
-              barRods: <BarChartRodData>[
-                BarChartRodData(
-                  toY: barValues[i],
-                  color: widget.barColor,
-                  width: barWidth,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ],
-            ),
-        ],
-        titlesData: _titlesData(
-          context: context,
-          xLabels: widget.xLabels,
-          yLabels: widget.yLabels,
-          xValueCount: barValues.length,
-          minY: minY,
-          maxY: maxY,
-          labelColor: muted,
-        ),
-        gridData: _gridData(
-          minY: minY,
-          maxY: maxY,
-          yLabelCount: widget.yLabels.length,
-          lineColor: muted.withValues(alpha: 0.14),
-        ),
-        borderData: FlBorderData(show: false),
-        barTouchData: BarTouchData(
-          handleBuiltInTouches: false,
-          touchCallback: (event, response) {
-            if (event is! FlTapUpEvent &&
-                event is! FlPanUpdateEvent &&
-                event is! FlLongPressEnd &&
-                event is! FlLongPressMoveUpdate) {
-              return;
-            }
-            final index = response?.spot?.touchedBarGroupIndex;
-            if (index == null || index < 0 || index >= barValues.length) {
-              return;
-            }
-            setState(
-              () => _selectedIndex = index == _selectedIndex ? null : index,
-            );
-          },
-        ),
-      ),
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOutCubic,
-    );
-
-    final lineChart = LineChart(
-      LineChartData(
-        minX: 0,
-        maxX: math.max(1, lineValues.length - 1).toDouble(),
-        minY: minY,
-        maxY: maxY,
-        lineBarsData: <LineChartBarData>[
-          LineChartBarData(
-            spots: <FlSpot>[
-              for (var i = 0; i < lineValues.length; i++)
-                FlSpot(i.toDouble(), lineValues[i]),
-            ],
-            color: widget.lineColor,
-            barWidth: 2.2,
-            isCurved: true,
-            curveSmoothness: 0.35,
-            preventCurveOverShooting: true,
-            isStrokeCapRound: true,
-            isStrokeJoinRound: true,
-            dotData: FlDotData(
-              show: true,
-              getDotPainter: (spot, percent, bar, index) => FlDotCirclePainter(
-                radius: 2.8,
-                color: widget.lineColor,
-                strokeWidth: 1.4,
-                strokeColor: Theme.of(context).colorScheme.surface,
-              ),
-            ),
-            belowBarData: BarAreaData(
-              show: true,
-              gradient: LinearGradient(
-                colors: <Color>[
-                  widget.lineColor.withValues(alpha: 0.24),
-                  widget.lineColor.withValues(alpha: 0.0),
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
-          ),
-        ],
-        titlesData: _titlesData(
-          context: context,
-          xLabels: widget.xLabels,
-          yLabels: widget.yLabels,
-          xValueCount: barValues.length,
-          minY: minY,
-          maxY: maxY,
-          labelColor: muted,
-          renderTitles: false,
-        ),
-        gridData: const FlGridData(show: false),
-        borderData: FlBorderData(show: false),
-        lineTouchData: const LineTouchData(enabled: false),
-      ),
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOutCubic,
-    );
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
+        final plotWidth = math.max(0.0, width - reserved);
+        final count = math.max(barValues.length, 1);
+
+        final barChart = BarChart(
+          BarChartData(
+            minY: minY,
+            maxY: maxY,
+            alignment: BarChartAlignment.spaceAround,
+            groupsSpace: 4,
+            barGroups: <BarChartGroupData>[
+              for (var i = 0; i < barValues.length; i++)
+                BarChartGroupData(
+                  x: i,
+                  barRods: <BarChartRodData>[
+                    BarChartRodData(
+                      toY: barValues[i],
+                      color: widget.barColor,
+                      width: barWidth,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ],
+                ),
+            ],
+            titlesData: _titlesData(
+              context: context,
+              xLabels: widget.xLabels,
+              xValueCount: barValues.length,
+              labelColor: muted,
+            ),
+            gridData: _noGridData,
+            borderData: FlBorderData(show: false),
+            barTouchData: const BarTouchData(enabled: false),
+          ),
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+        );
+
+        // 折线坐标直接使用「第 i 个槽位中心 = i + 0.5」的数据坐标，
+        // 与 BarChartAlignment.spaceAround 的柱子中心像素位置一一对应，
+        // 这样预算折线点会落在柱子正上方。
+        final lineChart = LineChart(
+          LineChartData(
+            minX: 0,
+            maxX: count.toDouble(),
+            minY: minY,
+            maxY: maxY,
+            lineBarsData: <LineChartBarData>[
+              LineChartBarData(
+                spots: <FlSpot>[
+                  for (
+                    var i = 0;
+                    i < lineValues.length && i < barValues.length;
+                    i++
+                  )
+                    FlSpot(i + 0.5, lineValues[i]),
+                ],
+                color: widget.lineColor,
+                barWidth: 2.2,
+                isCurved: true,
+                curveSmoothness: 0.35,
+                preventCurveOverShooting: true,
+                isStrokeCapRound: true,
+                isStrokeJoinRound: true,
+                dotData: const FlDotData(show: false),
+                belowBarData: BarAreaData(
+                  show: true,
+                  gradient: LinearGradient(
+                    colors: <Color>[
+                      widget.lineColor.withValues(alpha: 0.24),
+                      widget.lineColor.withValues(alpha: 0.0),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+              ),
+            ],
+            titlesData: _titlesData(
+              context: context,
+              xLabels: widget.xLabels,
+              xValueCount: barValues.length,
+              labelColor: muted,
+              renderTitles: false,
+            ),
+            gridData: const FlGridData(show: false),
+            borderData: FlBorderData(show: false),
+            lineTouchData: const LineTouchData(enabled: false),
+          ),
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+        );
+
         final selected = _selectedIndex;
-        const tooltipWidth = 188.0;
-        final plotWidth = math.max(0.0, width - reserved * 2);
-        final slot = plotWidth / math.max(barValues.length, 1);
+        final slot = plotWidth / count;
+        final tooltipWidth = selected == null
+            ? 0.0
+            : _tooltipWidth(context, widget.tooltipOf(selected));
         final left = selected == null
             ? 0.0
             : (reserved + slot * (selected + 0.5) - tooltipWidth / 2)
                   .clamp(0.0, math.max(0.0, width - tooltipWidth))
                   .toDouble();
-        return Stack(
-          clipBehavior: Clip.none,
-          children: <Widget>[
-            Positioned.fill(child: barChart),
-            Positioned.fill(child: IgnorePointer(child: lineChart)),
-            if (selected != null)
-              Positioned(
-                left: left,
-                top: 0,
-                child: IgnorePointer(
-                  child: _ComboTooltipCard(tooltip: widget.tooltipOf(selected)),
+        void selectAt(double localX) {
+          if (localX < reserved || barValues.isEmpty) {
+            return;
+          }
+          final index = ((localX - reserved) / slot).floor().clamp(
+            0,
+            barValues.length - 1,
+          );
+          setState(
+            () => _selectedIndex = index == _selectedIndex ? null : index,
+          );
+        }
+
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: (details) => selectAt(details.localPosition.dx),
+          onHorizontalDragUpdate: (details) =>
+              selectAt(details.localPosition.dx),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: <Widget>[
+              Positioned.fill(
+                child: Padding(
+                  padding: EdgeInsets.only(left: reserved),
+                  child: Stack(
+                    children: <Widget>[
+                      Positioned.fill(
+                        child: _ChartGridLines(
+                          labelCount: widget.yLabels.isEmpty
+                              ? 3
+                              : widget.yLabels.length,
+                          color: muted.withValues(alpha: 0.16),
+                        ),
+                      ),
+                      Positioned.fill(child: barChart),
+                      Positioned.fill(child: IgnorePointer(child: lineChart)),
+                    ],
+                  ),
                 ),
               ),
-          ],
+              if (reserved > 0)
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: reserved,
+                  child: _YAxisLabels(labels: widget.yLabels, color: muted),
+                ),
+              if (selected != null)
+                Positioned(
+                  left: left,
+                  top: 0,
+                  child: IgnorePointer(
+                    child: _ComboTooltipCard(
+                      tooltip: widget.tooltipOf(selected),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         );
       },
     );
@@ -688,8 +867,11 @@ class _ComboTooltipCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 188,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      constraints: const BoxConstraints(maxWidth: _comboTooltipMaxWidth),
+      padding: const EdgeInsets.symmetric(
+        horizontal: _comboTooltipPadding,
+        vertical: 8,
+      ),
       decoration: BoxDecoration(
         color: _chartTooltipBackground,
         borderRadius: BorderRadius.circular(10),
@@ -698,25 +880,15 @@ class _ComboTooltipCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Text(
-            tooltip.title,
-            style: const TextStyle(
-              color: _chartTooltipText,
-              fontWeight: FontWeight.w800,
-              fontSize: 12,
-            ),
-          ),
+          Text(tooltip.title, style: _comboTooltipTitleStyle),
           for (final line in tooltip.lines)
             Padding(
               padding: const EdgeInsets.only(top: 3),
               child: Text(
                 line.text,
-                style: TextStyle(
-                  color:
-                      line.color ?? _chartTooltipText.withValues(alpha: 0.86),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 11,
-                ),
+                style: line.color == null
+                    ? _comboTooltipLineStyle
+                    : _comboTooltipLineStyle.copyWith(color: line.color),
               ),
             ),
         ],

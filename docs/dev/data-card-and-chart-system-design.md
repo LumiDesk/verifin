@@ -301,6 +301,12 @@
 
 项目内新增图表适配层，页面只依赖项目 API；适配层内部使用外部图表库，项目不再新增自绘数据图表：
 
+> 落地名称与本节草案不同，以实际实现为准：折线 `InteractiveTrendChart`、柱状
+> `InteractiveBarChart`、组合 `InteractiveComboChart`、环形 `VeriDonutChart`、
+> 进度环 `VeriBudgetRing`，气泡模型 `ChartTooltip` / `ChartTooltipLine`。
+> 草案里的 `VeriLineChart` / `VeriBarChart` / `VeriComboChart` / `VeriChartCard` /
+> `VeriChartLegend` / `VeriChartInteraction` 都没有落地，不要按草案名字找代码。
+
 - `VeriLineChart`：折线图；
 - `VeriBarChart`：柱状图；
 - `VeriDonutChart`：环形/饼图；
@@ -522,41 +528,50 @@
 
 剩余待确认：
 
-1. `fl_chart` 原型不通过时，优先改用 `syncfusion_flutter_charts` 还是 `graphic`。
-2. Lottie 动画资产由谁提供；是否接受使用许可证兼容的开源素材。
-3. 是否现在同步修订旧文档中的未经确认结论，还是等原型完成后一次性提交。
-4. 数据卡片范围是否只覆盖数据展示卡，设置、表单和确认类卡片保持现状。
+1. 数据卡片范围是否只覆盖数据展示卡；设置、表单和确认类卡片当前保持现状。
+2. 标题、指标块、排行行、进度条四个基础组件族尚未按第 6 节抽成统一组件，仍是页面内局部实现。
 
 ## 13. 下一步
 
-按以下顺序推进：
+当前优先级（用户 2026-10-10 复核后确认）：
 
-1. 修订选型与组件文档中的历史错误结论。
-2. 完成 `fl_chart` 和 Lottie 技术原型。
-3. 落地标题、进度条、空状态等低风险基础组件。
-4. 再进入指标、排行和图表适配层迁移。
+1. 先在模拟器逐张复核现有图表，按用户反馈继续修视觉与交互（已完成一轮：去掉节点圆点、参考线与刻度对齐、纵轴刻度同档格式化、横轴标签不重叠、组合图预算点对齐柱心、气泡宽度自适应）。
+2. 再按第 6 节把标题 / 指标块 / 排行行 / 进度条抽成组件族，并把结论写进规范文档。
+3. 规范稳定后再新增图表类型。
 
 ## 14. 当前实现进度
 
-截至 2026-10-10，已完成图表替换的大部分内容：
+截至 2026-10-10，图表替换已全部完成，规范文档已按实现修订：
 
-- `pubspec.yaml` 已加入 `fl_chart 1.2.0` 与 `lottie 3.6.1`。
+- `pubspec.yaml` 已加入 `fl_chart 1.2.0` 与 `lottie 3.6.1`（均 MIT）。
 - `lib/app/chart_painters.dart` 已从自绘实现重写为 `fl_chart` 适配层，保留
   `InteractiveTrendChart` / `InteractiveBarChart` 公共名称，新增
-  `InteractiveComboChart`、`VeriDonutChart`、`VeriBudgetRing`。
+  `InteractiveComboChart`、`VeriDonutChart`、`VeriBudgetRing`；自绘绘制器与
+  命中计算（`TrendLinePainter`、`BarChartPainter`、`BudgetRingPainter`、
+  `trendChartRect`、`barChartRect`、`chartNearestIndex`、`chartSlotIndex`、
+  `drawChartTooltip`）以及 `chart_hit_test.dart` 已删除。
 - 首页概览趋势、收支统计详情、资产净资产趋势、账户余额趋势、分析页趋势、
   AI 结果趋势/排行、看板日趋势/月度结构、预算近 6 期组合图全部走外部图表库。
 - 首页预算卡和预算总览页的进度圆环已改用 `VeriBudgetRing`。
 - 看板分类统计已改用 `fl_chart` 环形图；分段点击通过 `PieTouchData` 回传，
   中心空区返回 `null`，不再出现 `-1` 越界。
+- 空状态组件 `EmptyState` 支持 `animationAsset`，看板图表空态接入 MIT 许可的
+  `assets/lottie/empty_state.json`（来源登记见 `assets/lottie/README.md`），
+  系统开启减少动态效果时回退图标。
+- 视觉与交互收口：折线只保留平滑曲线 + 渐隐填充（不画节点圆点）；纵轴刻度由
+  适配层绘制并与横向参考线同源对齐；纵轴刻度同档格式化，不再混排「-1682」与
+  「0.00」；组合图预算点与柱心同列；组合气泡按内容自适应宽度并居中在选中槽位；
+  分析页长序列横轴改为等距抽样并保留首尾，末两个刻度不再重叠。
 - 示例数据已导入 diagnostic 应用：77 条交易、13 个账户、3 个标签、8 期月预算、
   9 条分类预算，覆盖 2026 年 1–7 月、收入、转账、退款、报销、预算外与多币种。
 - 模拟器时钟已临时设置为 2026-07-15 以匹配样例数据；恢复方法：
   `adb shell date <当前日期时间>`。
-- `flutter analyze` 通过；`flutter test` 全量 1093 项通过。
+- `dart format`、`flutter analyze` 与 `flutter test`（全量 1093 项）均通过，
+  并在模拟器逐卡复核。
 
 尚未完成：
 
-- Lottie 空状态组件与动画资产接入；
-- 旧文档（`ui-library-adoption-plan.md`、`components.md`、`ui-guidelines.md` 等）的正式修订；
-- 提交前的 `dart format .`、分支改名与提交。
+- 标题 / 指标块 / 排行行 / 进度条四个组件族仍散在页面内，未按第 6 节抽取；
+- `docs/ui-guidelines.md`、`docs/dev/components.md` 中图表相关章节已随本次修订，
+  其余旧文档（如 `docs/dev/ui-library-adoption-plan.md`）中关于「自绘保留」的历史
+  结论仍需在下次触碰时同步清理。

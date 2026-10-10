@@ -553,7 +553,14 @@ class HomeTrendPanel extends StatelessWidget {
             SizedBox(
               height: veriUnifiedDesignPreview ? 96 : 138,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(2, 6, 2, 0),
+                // 深色主题的曲线发光需要 2dp 余量；否则左右不留空隙，
+                // 保证纵轴标签左缘与卡片标题严格对齐。
+                padding: EdgeInsets.fromLTRB(
+                  isDark && !veriUnifiedDesignPreview ? 2 : 0,
+                  6,
+                  isDark && !veriUnifiedDesignPreview ? 2 : 0,
+                  0,
+                ),
                 // 图表区域自行响应点击展示数据,不触发卡片跳转。
                 child: InteractiveTrendChart(
                   color: seriesColor,
