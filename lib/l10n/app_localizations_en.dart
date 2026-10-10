@@ -975,9 +975,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountBalanceLabel => 'Account balance';
 
   @override
-  String get accountBalanceHint => 'Defaults to 0';
-
-  @override
   String get accountNoteLabel => 'Account note';
 
   @override

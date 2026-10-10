@@ -951,9 +951,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get accountBalanceLabel => '账户余额';
 
   @override
-  String get accountBalanceHint => '不填默认为 0';
-
-  @override
   String get accountNoteLabel => '账户备注';
 
   @override

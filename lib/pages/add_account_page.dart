@@ -10,7 +10,6 @@ class AddAccountPage extends StatefulWidget {
 class _AddAccountPageState extends State<AddAccountPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _balanceController = TextEditingController();
   final _cardLast4Controller = TextEditingController();
   final _cardNumberController = TextEditingController();
   final _noteController = TextEditingController();
@@ -22,6 +21,8 @@ class _AddAccountPageState extends State<AddAccountPage> {
   // 「后四位跟随完整卡号」开关，新账户默认打开。
   bool _cardLast4Follows = true;
   // 信用类账户的额度 / 账单日 / 还款日：新建时就能填，省去建完再去详情页补一次。
+  // 初始余额同样走统一数字键盘（可为负），不再用系统键盘输入。
+  double? _balance;
   double? _creditLimit;
   int? _statementDay;
   int? _dueDay;
@@ -32,7 +33,6 @@ class _AddAccountPageState extends State<AddAccountPage> {
   void initState() {
     super.initState();
     _nameController.addListener(_handleNameChanged);
-    _balanceController.addListener(_handleDraftChanged);
     _cardLast4Controller.addListener(_handleDraftChanged);
     _cardNumberController.addListener(_handleDraftChanged);
     _noteController.addListener(_handleDraftChanged);
@@ -47,12 +47,10 @@ class _AddAccountPageState extends State<AddAccountPage> {
   @override
   void dispose() {
     _nameController.removeListener(_handleNameChanged);
-    _balanceController.removeListener(_handleDraftChanged);
     _cardLast4Controller.removeListener(_handleDraftChanged);
     _cardNumberController.removeListener(_handleDraftChanged);
     _noteController.removeListener(_handleDraftChanged);
     _nameController.dispose();
-    _balanceController.dispose();
     _cardLast4Controller.dispose();
     _cardNumberController.dispose();
     _noteController.dispose();
@@ -181,18 +179,16 @@ class _AddAccountPageState extends State<AddAccountPage> {
                     onTap: _pickCurrency,
                   ),
                   const SizedBox(height: 10),
-                  TextFormField(
-                    controller: _balanceController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                      signed: true,
-                    ),
-                    decoration: InputDecoration(
-                      labelText: AppLocalizations.of(
-                        context,
-                      ).accountBalanceCurrencyLabel(currencyCode),
-                      hintText: AppLocalizations.of(context).accountBalanceHint,
-                    ),
+                  SelectField(
+                    key: const Key('add_account_balance'),
+                    label: AppLocalizations.of(
+                      context,
+                    ).accountBalanceCurrencyLabel(currencyCode),
+                    value: _balance == null
+                        ? AppLocalizations.of(context).notSet
+                        : formatUserMoney(_balance!, currencyCode),
+                    icon: Icons.account_balance_wallet_outlined,
+                    onTap: _pickBalance,
                   ),
                   const SizedBox(height: 10),
                   SelectField(
@@ -330,10 +326,7 @@ class _AddAccountPageState extends State<AddAccountPage> {
   }
 
   bool get _isDirty {
-    final balanceText = _balanceController.text.trim();
-    final parsedBalance = double.tryParse(balanceText);
-    final balanceChanged =
-        balanceText.isNotEmpty && (parsedBalance == null || parsedBalance != 0);
+    final balanceChanged = _balance != null && _balance != 0;
     return !_saved &&
         (_nameController.text.trim().isNotEmpty ||
             balanceChanged ||
@@ -367,6 +360,24 @@ class _AddAccountPageState extends State<AddAccountPage> {
       return;
     }
     setState(() => _creditLimit = value <= 0 ? null : value);
+  }
+
+  /// 初始余额：信用卡 / 贷款类账户本来就可能是负数，因此开放首位负号并允许 0。
+  Future<void> _pickBalance() async {
+    final code =
+        _currencyCode ?? VeriFinScope.of(context).activeBook.baseCurrencyCode;
+    final value = await showNumberPadSheet(
+      context,
+      title: AppLocalizations.of(context).accountBalanceCurrencyLabel(code),
+      initialAmount: _balance,
+      allowNegative: true,
+      allowZero: true,
+      currencyCode: code,
+    );
+    if (value == null || !mounted) {
+      return;
+    }
+    setState(() => _balance = value);
   }
 
   /// 选择账单日 / 还款日（1–28 或不设置）。
@@ -415,7 +426,7 @@ class _AddAccountPageState extends State<AddAccountPage> {
         name: _nameController.text.trim(),
         type: _type,
         groupId: _groupId,
-        initialBalance: double.tryParse(_balanceController.text.trim()) ?? 0,
+        initialBalance: _balance ?? 0,
         currencyCode: _currencyCode ?? controller.activeBook.baseCurrencyCode,
         iconCode: _iconCode,
         note: _noteController.text.trim(),

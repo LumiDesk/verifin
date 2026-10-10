@@ -179,6 +179,37 @@ void main() {
     );
   });
 
+  testWidgets('新建账户的初始余额走数字键盘且支持负数', (tester) async {
+    final controller = await pumpApp(tester);
+    await tapBottomTab(tester, 1);
+    await tester.tap(find.byTooltip('资产操作'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('添加账户'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).first, '招行信用卡');
+    await tester.pump();
+
+    // 初始余额不再是系统键盘输入框，点按后弹出统一数字键盘。
+    await tester.tap(find.byKey(const Key('add_account_balance')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('number_key_1')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('number_key_-')));
+    await tester.tap(find.byKey(const Key('number_key_5')));
+    await tester.tap(find.byKey(const Key('number_key_00')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('number_pad_ok')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('-500'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+
+    expect(controller.accounts.single.name, '招行信用卡');
+    expect(controller.accounts.single.initialBalance, -500);
+  });
+
   testWidgets('资产背景入口位于资产操作菜单的显示设置中', (WidgetTester tester) async {
     await pumpApp(tester);
 

@@ -587,7 +587,6 @@
   "accountSectionDisplay": "展示与记账",
   "accountSectionDanger": "危险操作",
   "accountBalanceLabel": "账户余额",
-  "accountBalanceHint": "不填默认为 0",
   "accountNoteLabel": "账户备注",
   "accountGroupLabel": "账户分组",
   "accountTypePickerTitle": "选择账户类型",

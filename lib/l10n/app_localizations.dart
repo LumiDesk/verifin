@@ -1874,12 +1874,6 @@ abstract class AppLocalizations {
   /// **'账户余额'**
   String get accountBalanceLabel;
 
-  /// No description provided for @accountBalanceHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'不填默认为 0'**
-  String get accountBalanceHint;
-
   /// No description provided for @accountNoteLabel.
   ///
   /// In zh, this message translates to:
