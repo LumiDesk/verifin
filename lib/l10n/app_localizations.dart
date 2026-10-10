@@ -3980,12 +3980,6 @@ abstract class AppLocalizations {
   /// **'本月预算（可选）'**
   String get onboardBudgetLabel;
 
-  /// No description provided for @onboardBudgetHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'如：3000'**
-  String get onboardBudgetHint;
-
   /// No description provided for @onboardDoneTitle.
   ///
   /// In zh, this message translates to:

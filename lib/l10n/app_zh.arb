@@ -1452,7 +1452,6 @@
   "onboardBalanceLabel": "当前余额（可选）",
   "onboardBudgetDesc": "设定每月预算后，首页与看板会展示预算执行进度，帮你控制支出。留空则暂不设预算，之后可在首页预算卡随时修改。",
   "onboardBudgetLabel": "本月预算（可选）",
-  "onboardBudgetHint": "如：3000",
   "onboardDoneTitle": "一切就绪",
   "onboardDoneDesc": "点击首页右下角的「+」即可快速记一笔。\n\n在「我的」页可以管理账本、分类、标签、周期记账，查看统计分析，设置记账提醒与数据备份。\n\n祝你记账愉快！",
   "legalUpdated": "更新日期：{date}",

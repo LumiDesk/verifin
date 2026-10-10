@@ -104,7 +104,7 @@ void main() {
     expect(find.text('默认账本不可删除'), findsOneWidget);
   });
 
-  testWidgets('新增账户可选择币种并按 minor unit 保存余额', (tester) async {
+  testWidgets('新增账户可选择币种，余额走数字键盘并遵循该币种 minor unit', (tester) async {
     final controller = await makeController();
     await pumpPage(tester, controller, const AddAccountPage());
 
@@ -113,7 +113,22 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('currency_option_JPY')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextFormField).last, '12.7');
+
+    // 初始余额不再是系统键盘输入框；JPY 没有小数位，数字键盘禁用小数点。
+    await tester.tap(find.byKey(const Key('add_account_balance')));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('number_key_.')))
+          .onPressed,
+      isNull,
+    );
+    await tester.tap(find.byKey(const Key('number_key_1')));
+    await tester.tap(find.byKey(const Key('number_key_3')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('number_pad_ok')));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.byTooltip('保存'));
     await tester.pumpAndSettle();
 

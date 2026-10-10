@@ -770,7 +770,6 @@
   "onboardBalanceLabel": "Current balance (optional)",
   "onboardBudgetDesc": "With a monthly budget set, Home and Reports show budget progress to help control spending. Leave blank to skip; you can change it anytime from the budget card on Home.",
   "onboardBudgetLabel": "This month's budget (optional)",
-  "onboardBudgetHint": "e.g. 3000",
   "onboardDoneTitle": "All set",
   "onboardDoneDesc": "Tap the + button at the bottom right of Home to record an entry.\n\nOn the Me page you can manage ledgers, categories, tags and recurring entries, view analytics, and set reminders and backups.\n\nHappy budgeting!",
   "legalUpdated": "Updated: {date}",

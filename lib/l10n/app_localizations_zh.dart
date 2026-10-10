@@ -2156,9 +2156,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get onboardBudgetLabel => '本月预算（可选）';
 
   @override
-  String get onboardBudgetHint => '如：3000';
-
-  @override
   String get onboardDoneTitle => '一切就绪';
 
   @override

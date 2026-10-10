@@ -2206,9 +2206,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardBudgetLabel => 'This month\'s budget (optional)';
 
   @override
-  String get onboardBudgetHint => 'e.g. 3000';
-
-  @override
   String get onboardDoneTitle => 'All set';
 
   @override
