@@ -99,6 +99,7 @@ class ReportsPage extends StatelessWidget {
                 // 否则只剩一个空轨道和「0」。
                 if (categoryStats.isEmpty || isZeroAmount(monthExpense))
                   EmptyState(
+                    animationAsset: 'assets/lottie/empty_state.json',
                     icon: Icons.donut_small_outlined,
                     title: AppLocalizations.of(context).noCategoryData,
                     description: AppLocalizations.of(context).noCategoryDesc,
@@ -129,6 +130,7 @@ class ReportsPage extends StatelessWidget {
                 const SizedBox(height: 8),
                 if (categoryStats.isEmpty)
                   EmptyState(
+                    animationAsset: 'assets/lottie/empty_state.json',
                     icon: Icons.donut_small_outlined,
                     title: AppLocalizations.of(context).noCategoryData,
                     description: AppLocalizations.of(context).noCategoryDesc,
@@ -149,9 +151,10 @@ class ReportsPage extends StatelessWidget {
                   title: AppLocalizations.of(context).panelDailyTrendLabel,
                   trailing: formatExpenseAmount(trendExpense),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 if (isZeroAmount(trendExpense))
                   EmptyState(
+                    animationAsset: 'assets/lottie/empty_state.json',
                     icon: Icons.show_chart,
                     title: l10n.noDimData(l10n.entryTypeExpense),
                     description: l10n.noDimDesc(l10n.entryTypeExpense),
@@ -197,9 +200,10 @@ class ReportsPage extends StatelessWidget {
                   title: AppLocalizations.of(context).monthlyTrendTitle,
                   trailing: AppLocalizations.of(context).thisYearLabel,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 if (monthlyMax <= 0)
                   EmptyState(
+                    animationAsset: 'assets/lottie/empty_state.json',
                     icon: Icons.bar_chart_outlined,
                     title: l10n.noDimData(l10n.entryTypeExpense),
                     description: l10n.noDimDesc(l10n.entryTypeExpense),
@@ -257,6 +261,7 @@ class ReportsPage extends StatelessWidget {
                 const SizedBox(height: 8),
                 if (tagStats.isEmpty)
                   EmptyState(
+                    animationAsset: 'assets/lottie/empty_state.json',
                     icon: Icons.label_outline,
                     title: AppLocalizations.of(context).noTagData,
                     description: AppLocalizations.of(context).noTagDesc,

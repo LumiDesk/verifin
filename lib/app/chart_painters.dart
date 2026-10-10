@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
@@ -64,12 +65,22 @@ FlGridData _gridData({
   );
 }
 
+/// 左侧/右侧统一预留相同的轴标签宽度，使绘图区在卡片内保持视觉居中。
+double _axisReservedSize(List<String> yLabels) {
+  if (yLabels.isEmpty) {
+    return 0;
+  }
+  final longest = yLabels.map((label) => label.length).reduce(math.max);
+  return (longest * 7.5).clamp(44.0, 88.0).toDouble();
+}
+
 FlTitlesData _titlesData({
   required BuildContext context,
   required List<String> xLabels,
   required List<String> yLabels,
   required double minY,
   required double maxY,
+  int? xValueCount,
   Color? labelColor,
   bool renderTitles = true,
 }) {
@@ -85,6 +96,17 @@ FlTitlesData _titlesData({
   final yInterval = yCount > 1 && minY != maxY
       ? (maxY - minY) / (yCount - 1)
       : null;
+  final resolvedXValueCount = xValueCount ?? xLabels.length;
+  final xLabelPositions = <int, int>{};
+  if (xLabels.isNotEmpty && resolvedXValueCount > 0) {
+    for (var i = 0; i < xLabels.length; i++) {
+      final position = xLabels.length == 1 || resolvedXValueCount == 1
+          ? 0
+          : ((i * (resolvedXValueCount - 1)) / (xLabels.length - 1)).round();
+      xLabelPositions[position] = i;
+    }
+  }
+  final reservedSize = _axisReservedSize(yLabels);
 
   Widget title(String text) {
     if (!renderTitles || text.isEmpty) {
@@ -101,7 +123,14 @@ FlTitlesData _titlesData({
   return FlTitlesData(
     show: true,
     topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+    // 右侧保留与左侧相同的空间，避免出现“左边留白大于右边”的视觉偏移。
+    rightTitles: AxisTitles(
+      sideTitles: SideTitles(
+        showTitles: reservedSize > 0,
+        reservedSize: reservedSize,
+        getTitlesWidget: (value, meta) => const SizedBox.shrink(),
+      ),
+    ),
     bottomTitles: AxisTitles(
       sideTitles: SideTitles(
         showTitles: xLabels.isNotEmpty,
@@ -111,17 +140,18 @@ FlTitlesData _titlesData({
         maxIncluded: true,
         getTitlesWidget: (value, meta) {
           final index = value.round();
-          if (index < 0 || index >= xLabels.length) {
+          final labelIndex = xLabelPositions[index];
+          if (index < 0 || labelIndex == null) {
             return const SizedBox.shrink();
           }
-          return SideTitleWidget(meta: meta, child: title(xLabels[index]));
+          return SideTitleWidget(meta: meta, child: title(xLabels[labelIndex]));
         },
       ),
     ),
     leftTitles: AxisTitles(
       sideTitles: SideTitles(
         showTitles: yLabels.isNotEmpty,
-        reservedSize: 42,
+        reservedSize: reservedSize,
         interval: yInterval,
         minIncluded: true,
         maxIncluded: true,
@@ -278,7 +308,8 @@ class InteractiveTrendChart extends StatelessWidget {
             color: color,
             barWidth: 2.2,
             isCurved: true,
-            curveSmoothness: 0.22,
+            curveSmoothness: 0.35,
+            preventCurveOverShooting: true,
             isStrokeCapRound: true,
             isStrokeJoinRound: true,
             dotData: FlDotData(
@@ -290,7 +321,17 @@ class InteractiveTrendChart extends StatelessWidget {
                 strokeColor: Theme.of(context).colorScheme.surface,
               ),
             ),
-            belowBarData: BarAreaData(show: false),
+            belowBarData: BarAreaData(
+              show: true,
+              gradient: LinearGradient(
+                colors: <Color>[
+                  color.withValues(alpha: 0.24),
+                  color.withValues(alpha: 0.0),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
             shadow: glow
                 ? Shadow(color: color.withValues(alpha: 0.35), blurRadius: 8)
                 : const Shadow(color: Colors.transparent),
@@ -300,6 +341,7 @@ class InteractiveTrendChart extends StatelessWidget {
           context: context,
           xLabels: xLabels,
           yLabels: yLabels,
+          xValueCount: values.length,
           minY: range.min,
           maxY: range.max,
           labelColor: muted,
@@ -384,6 +426,7 @@ class InteractiveBarChart extends StatelessWidget {
           context: context,
           xLabels: xLabels,
           yLabels: yLabels,
+          xValueCount: values.length,
           minY: math.min(0.0, range.min),
           maxY: range.max,
           labelColor: muted,
@@ -413,8 +456,8 @@ class InteractiveBarChart extends StatelessWidget {
   }
 }
 
-/// 柱线组合图：柱状图和折线图共用同一套坐标区与 y 轴范围。
-class InteractiveComboChart extends StatelessWidget {
+/// 柱线组合图：柱状图与折线图共用坐标区；气泡由适配层绘制在图表最上层，避免被曲线遮挡。
+class InteractiveComboChart extends StatefulWidget {
   const InteractiveComboChart({
     super.key,
     required this.barValues,
@@ -437,7 +480,25 @@ class InteractiveComboChart extends StatelessWidget {
   final ChartTooltip Function(int index) tooltipOf;
 
   @override
+  State<InteractiveComboChart> createState() => _InteractiveComboChartState();
+}
+
+class _InteractiveComboChartState extends State<InteractiveComboChart> {
+  int? _selectedIndex;
+
+  @override
+  void didUpdateWidget(covariant InteractiveComboChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!listEquals(oldWidget.barValues, widget.barValues) ||
+        !listEquals(oldWidget.lineValues, widget.lineValues)) {
+      _selectedIndex = null;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final barValues = widget.barValues;
+    final lineValues = widget.lineValues;
     if (barValues.isEmpty && lineValues.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -446,8 +507,9 @@ class InteractiveComboChart extends StatelessWidget {
     final minY = math.min(0.0, range.min);
     final maxY = math.max(0.0, range.max);
     final muted =
-        labelColor ??
+        widget.labelColor ??
         Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.50);
+    final reserved = _axisReservedSize(widget.yLabels);
     final barWidth = (240 / math.max(barValues.length, 1))
         .clamp(6.0, 20.0)
         .toDouble();
@@ -465,7 +527,7 @@ class InteractiveComboChart extends StatelessWidget {
               barRods: <BarChartRodData>[
                 BarChartRodData(
                   toY: barValues[i],
-                  color: barColor,
+                  color: widget.barColor,
                   width: barWidth,
                   borderRadius: BorderRadius.circular(4),
                 ),
@@ -474,8 +536,9 @@ class InteractiveComboChart extends StatelessWidget {
         ],
         titlesData: _titlesData(
           context: context,
-          xLabels: xLabels,
-          yLabels: yLabels,
+          xLabels: widget.xLabels,
+          yLabels: widget.yLabels,
+          xValueCount: barValues.length,
           minY: minY,
           maxY: maxY,
           labelColor: muted,
@@ -483,13 +546,27 @@ class InteractiveComboChart extends StatelessWidget {
         gridData: _gridData(
           minY: minY,
           maxY: maxY,
-          yLabelCount: yLabels.length,
+          yLabelCount: widget.yLabels.length,
           lineColor: muted.withValues(alpha: 0.14),
         ),
         borderData: FlBorderData(show: false),
         barTouchData: BarTouchData(
-          handleBuiltInTouches: true,
-          touchTooltipData: _barTooltipData(tooltipOf),
+          handleBuiltInTouches: false,
+          touchCallback: (event, response) {
+            if (event is! FlTapUpEvent &&
+                event is! FlPanUpdateEvent &&
+                event is! FlLongPressEnd &&
+                event is! FlLongPressMoveUpdate) {
+              return;
+            }
+            final index = response?.spot?.touchedBarGroupIndex;
+            if (index == null || index < 0 || index >= barValues.length) {
+              return;
+            }
+            setState(
+              () => _selectedIndex = index == _selectedIndex ? null : index,
+            );
+          },
         ),
       ),
       duration: const Duration(milliseconds: 220),
@@ -508,28 +585,40 @@ class InteractiveComboChart extends StatelessWidget {
               for (var i = 0; i < lineValues.length; i++)
                 FlSpot(i.toDouble(), lineValues[i]),
             ],
-            color: lineColor,
+            color: widget.lineColor,
             barWidth: 2.2,
             isCurved: true,
-            curveSmoothness: 0.2,
+            curveSmoothness: 0.35,
+            preventCurveOverShooting: true,
             isStrokeCapRound: true,
             isStrokeJoinRound: true,
             dotData: FlDotData(
               show: true,
               getDotPainter: (spot, percent, bar, index) => FlDotCirclePainter(
                 radius: 2.8,
-                color: lineColor,
+                color: widget.lineColor,
                 strokeWidth: 1.4,
                 strokeColor: Theme.of(context).colorScheme.surface,
               ),
             ),
-            belowBarData: BarAreaData(show: false),
+            belowBarData: BarAreaData(
+              show: true,
+              gradient: LinearGradient(
+                colors: <Color>[
+                  widget.lineColor.withValues(alpha: 0.24),
+                  widget.lineColor.withValues(alpha: 0.0),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
           ),
         ],
         titlesData: _titlesData(
           context: context,
-          xLabels: xLabels,
-          yLabels: yLabels,
+          xLabels: widget.xLabels,
+          yLabels: widget.yLabels,
+          xValueCount: barValues.length,
           minY: minY,
           maxY: maxY,
           labelColor: muted,
@@ -543,11 +632,79 @@ class InteractiveComboChart extends StatelessWidget {
       curve: Curves.easeOutCubic,
     );
 
-    return Stack(
-      children: <Widget>[
-        Positioned.fill(child: barChart),
-        Positioned.fill(child: IgnorePointer(child: lineChart)),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final selected = _selectedIndex;
+        const tooltipWidth = 188.0;
+        final plotWidth = math.max(0.0, width - reserved * 2);
+        final slot = plotWidth / math.max(barValues.length, 1);
+        final left = selected == null
+            ? 0.0
+            : (reserved + slot * (selected + 0.5) - tooltipWidth / 2)
+                  .clamp(0.0, math.max(0.0, width - tooltipWidth))
+                  .toDouble();
+        return Stack(
+          clipBehavior: Clip.none,
+          children: <Widget>[
+            Positioned.fill(child: barChart),
+            Positioned.fill(child: IgnorePointer(child: lineChart)),
+            if (selected != null)
+              Positioned(
+                left: left,
+                top: 0,
+                child: IgnorePointer(
+                  child: _ComboTooltipCard(tooltip: widget.tooltipOf(selected)),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ComboTooltipCard extends StatelessWidget {
+  const _ComboTooltipCard({required this.tooltip});
+
+  final ChartTooltip tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 188,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: _chartTooltipBackground,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(
+            tooltip.title,
+            style: const TextStyle(
+              color: _chartTooltipText,
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+            ),
+          ),
+          for (final line in tooltip.lines)
+            Padding(
+              padding: const EdgeInsets.only(top: 3),
+              child: Text(
+                line.text,
+                style: TextStyle(
+                  color:
+                      line.color ?? _chartTooltipText.withValues(alpha: 0.86),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

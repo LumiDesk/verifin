@@ -114,6 +114,7 @@ flutter:
   assets:
     - assets/account_icons/
     - assets/import_icons/
+    - assets/lottie/
 
   shaders:
     - shaders/liquid_glass_lens.frag

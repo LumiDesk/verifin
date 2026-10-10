@@ -190,7 +190,7 @@ List<double> monthlyNetAssetSeries(
 
 /// 余额类序列的纵轴刻度:范围取序列实际的 [min, max](含 0)。
 
-List<String> balanceAxisLabels(List<double> values, String currencyCode) {
+List<String> balanceAxisLabels(List<double> values, AppLocalizations l10n) {
   var maxValue = 0.0;
   var minValue = 0.0;
   for (final value in values) {
@@ -203,20 +203,29 @@ List<String> balanceAxisLabels(List<double> values, String currencyCode) {
   }
   if (maxValue - minValue <= 0) {
     return <String>[
-      formatCurrencyNumber(0, currencyCode),
-      formatCurrencyNumber(50, currencyCode),
-      formatCurrencyNumber(100, currencyCode),
+      formatCompactAmount(l10n, 0),
+      formatCompactAmount(l10n, 50),
+      formatCompactAmount(l10n, 100),
     ];
   }
-  return <String>[
-    _formatAxisAmount(minValue, currencyCode: currencyCode),
-    _formatAxisAmount((minValue + maxValue) / 2, currencyCode: currencyCode),
-    _formatAxisAmount(maxValue, currencyCode: currencyCode),
+  final labels = <String>[
+    formatCompactAmount(l10n, minValue),
+    formatCompactAmount(l10n, (minValue + maxValue) / 2),
+    formatCompactAmount(l10n, maxValue),
   ];
+  // 极端值经过紧凑格式化后可能碰撞；保证三个刻度严格递增且不重复。
+  for (var i = 1; i < labels.length; i++) {
+    if (labels[i] == labels[i - 1]) {
+      final value = minValue + (maxValue - minValue) * i / 2;
+      labels[i] = formatAmount(value);
+    }
+  }
+  return labels;
 }
 
-List<String> evenMonthAxisLabels() {
-  return const <String>['2', '4', '6', '8', '10', '12'];
+/// 年视图的 12 个月份标签；图表适配层按 x 值等距分布。
+List<String> yearMonthAxisLabels() {
+  return List<String>.generate(12, (index) => '${index + 1}');
 }
 
 int bookkeepingDays(List<LedgerEntry> entries) {

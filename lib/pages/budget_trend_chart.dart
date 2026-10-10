@@ -48,7 +48,7 @@ class _BudgetTrendCard extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 16),
           if (!hasData)
             EmptyState(
               icon: Icons.stacked_line_chart,

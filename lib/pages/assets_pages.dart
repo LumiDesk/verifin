@@ -328,7 +328,7 @@ class _AssetsPageState extends State<AssetsPage> {
                           child: InteractiveTrendChart(
                             color: assetCardTextColor,
                             values: assetTrendValues,
-                            xLabels: evenMonthAxisLabels(),
+                            xLabels: yearMonthAxisLabels(),
                             labelColor: assetCardMutedColor,
                             tooltipOf: (index) => ChartTooltip(
                               title: AppLocalizations.of(

@@ -198,18 +198,18 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 16),
                       SizedBox(
                         height: 148,
                         child: InteractiveTrendChart(
                           color: veriSemantic(context, veriBlue),
                           values: balanceTrendValues,
                           xLabels: _monthlyTrend
-                              ? evenMonthAxisLabels()
+                              ? yearMonthAxisLabels()
                               : monthAxisLabels(DateTime.now()),
                           yLabels: balanceAxisLabels(
                             balanceTrendValues,
-                            currentAccount.currencyCode,
+                            AppLocalizations.of(context),
                           ),
                           labelColor: Theme.of(
                             context,
@@ -1050,7 +1050,7 @@ class AccountReportPage extends StatelessWidget {
                       title: AppLocalizations.of(context).balanceTrend,
                       trailing: AppLocalizations.of(context).thisMonth,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
                     SizedBox(
                       height: 156,
                       child: InteractiveTrendChart(
@@ -1059,7 +1059,7 @@ class AccountReportPage extends StatelessWidget {
                         xLabels: monthAxisLabels(DateTime.now()),
                         yLabels: balanceAxisLabels(
                           reportBalanceValues,
-                          currentAccount.currencyCode,
+                          AppLocalizations.of(context),
                         ),
                         labelColor: Theme.of(
                           context,

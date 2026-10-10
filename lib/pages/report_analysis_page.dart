@@ -625,7 +625,7 @@ class _TrendCard extends StatelessWidget {
             trailing:
                 '$dimLabel ${dimension == EntryType.expense ? formatExpenseAmount(total) : formatIncomeAmount(total)}',
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           SizedBox(
             height: 150,
             child: InteractiveTrendChart(
