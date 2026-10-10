@@ -1,29 +1,13 @@
 part of 'budget_pages.dart';
 
-class _BudgetTrendCard extends StatefulWidget {
+class _BudgetTrendCard extends StatelessWidget {
   const _BudgetTrendCard({required this.months});
 
   final List<BudgetMonthSnapshot> months;
 
   @override
-  State<_BudgetTrendCard> createState() => _BudgetTrendCardState();
-}
-
-class _BudgetTrendCardState extends State<_BudgetTrendCard> {
-  int? _selectedIndex;
-
-  @override
-  void didUpdateWidget(covariant _BudgetTrendCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.months.length != widget.months.length) {
-      _selectedIndex = null;
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final months = widget.months;
     // 近 6 期都没有预算也没有支出时，画出来的是一条贴底的空网格。
     final hasData = months.any(
       (item) => item.budget > 0 || !isZeroAmount(item.expense),
@@ -74,87 +58,46 @@ class _BudgetTrendCardState extends State<_BudgetTrendCard> {
           else
             SizedBox(
               height: 132,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final size = Size(
-                    constraints.maxWidth,
-                    constraints.maxHeight,
-                  );
-                  Rect chartRect() => trendChartRect(
-                    size,
-                    hasXLabels: true,
-                    hasYLabels: true,
-                    yLabelWidth: chartYAxisLabelWidth(
-                      reportAxisLabels(maxValue),
-                      TextScaler.noScaling,
-                    ),
-                  );
-                  return GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTapDown: (details) {
-                      final index = chartSlotIndex(
-                        details.localPosition,
-                        chartRect(),
-                        months.length,
-                      );
-                      setState(() {
-                        _selectedIndex = index == _selectedIndex ? null : index;
-                      });
-                    },
-                    onHorizontalDragUpdate: (details) {
-                      final index = chartSlotIndex(
-                        details.localPosition,
-                        chartRect(),
-                        months.length,
-                      );
-                      if (index != null && index != _selectedIndex) {
-                        setState(() => _selectedIndex = index);
-                      }
-                    },
-                    child: CustomPaint(
-                      painter: _BudgetTrendPainter(
-                        months: months,
-                        monthLabelOf: (month) =>
-                            AppLocalizations.of(context).monthNumber(month),
-                        labelColor: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.50),
-                        yLabels: reportAxisLabels(maxValue),
-                        selectedIndex: _selectedIndex,
-                        tooltip: _selectedIndex == null
-                            ? null
-                            : _tooltipFor(months[_selectedIndex!]),
-                        brightness: Theme.of(context).brightness,
-                        primary: Theme.of(context).colorScheme.primary,
+              child: InteractiveComboChart(
+                barValues: months
+                    .map((item) => item.expense)
+                    .toList(growable: false),
+                lineValues: months
+                    .map((item) => item.budget)
+                    .toList(growable: false),
+                xLabels: months
+                    .map((item) => l10n.monthNumber(item.month.month))
+                    .toList(growable: false),
+                yLabels: reportAxisLabels(maxValue),
+                barColor: veriSemantic(context, veriExpense),
+                lineColor: Theme.of(context).colorScheme.primary,
+                labelColor: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.50),
+                tooltipOf: (index) {
+                  final snapshot = months[index];
+                  return ChartTooltip(
+                    title: l10n.yearMonth(snapshot.month),
+                    lines: <ChartTooltipLine>[
+                      ChartTooltipLine(
+                        text: l10n.budgetTotalLabel(
+                          formatAmount(snapshot.budget),
+                        ),
+                        color: Theme.of(context).colorScheme.primary,
                       ),
-                      child: const SizedBox.expand(),
-                    ),
+                      ChartTooltipLine(
+                        text: l10n.expenseAmountLabel(
+                          formatExpenseAmount(snapshot.expense),
+                        ),
+                        color: veriSemantic(context, veriExpense),
+                      ),
+                    ],
                   );
                 },
               ),
             ),
         ],
       ),
-    );
-  }
-
-  ChartTooltip _tooltipFor(BudgetMonthSnapshot snapshot) {
-    return ChartTooltip(
-      title: AppLocalizations.of(context).yearMonth(snapshot.month),
-      lines: <ChartTooltipLine>[
-        ChartTooltipLine(
-          text: AppLocalizations.of(
-            context,
-          ).budgetTotalLabel(formatAmount(snapshot.budget)),
-          color: Theme.of(context).colorScheme.primary,
-        ),
-        ChartTooltipLine(
-          text: AppLocalizations.of(
-            context,
-          ).expenseAmountLabel(formatExpenseAmount(snapshot.expense)),
-          color: veriSemantic(context, veriExpense),
-        ),
-      ],
     );
   }
 }
@@ -187,192 +130,5 @@ class _ChartLegendDot extends StatelessWidget {
         ),
       ],
     );
-  }
-}
-
-class _BudgetTrendPainter extends CustomPainter {
-  const _BudgetTrendPainter({
-    required this.months,
-    required this.monthLabelOf,
-    required this.labelColor,
-    required this.yLabels,
-    this.selectedIndex,
-    this.tooltip,
-    required this.brightness,
-    required this.primary,
-  });
-
-  final List<BudgetMonthSnapshot> months;
-
-  /// 月份坐标标签（由调用方按当前语言解析）。
-  final String Function(int month) monthLabelOf;
-  final Color labelColor;
-  final List<String> yLabels;
-  final int? selectedIndex;
-  final ChartTooltip? tooltip;
-
-  /// 画布不经过 Theme,语义色需按当前明暗取实际值,必须由调用方显式传入。
-  final Brightness brightness;
-  final Color primary;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final chartRect = trendChartRect(
-      size,
-      hasXLabels: true,
-      hasYLabels: true,
-      yLabelWidth: chartYAxisLabelWidth(yLabels, TextScaler.noScaling),
-    );
-    final axisPaint = Paint()
-      ..color = labelColor.withValues(alpha: 0.14)
-      ..strokeWidth = 1;
-    for (var i = 0; i < 4; i += 1) {
-      final y = chartRect.bottom - chartRect.height * chartValueScale * i / 3;
-      canvas.drawLine(
-        Offset(chartRect.left, y),
-        Offset(chartRect.right, y),
-        axisPaint,
-      );
-    }
-
-    final maxValue = math.max(
-      months.fold<double>(
-        0,
-        (max, item) => math.max(max, math.max(item.expense, item.budget)),
-      ),
-      1,
-    );
-    final gap = chartRect.width / math.max(months.length, 1);
-    final barPaint = Paint()
-      ..shader = LinearGradient(
-        colors: <Color>[
-          veriSemanticFor(brightness, veriExpense).withValues(alpha: 0.82),
-          veriSemanticFor(brightness, veriExpense).withValues(alpha: 0.30),
-        ],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ).createShader(chartRect);
-    final linePaint = Paint()
-      ..color = primary
-      ..strokeWidth = 2.2
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    final pointPaint = Paint()..color = primary;
-    final path = Path();
-
-    for (var i = 0; i < months.length; i += 1) {
-      final item = months[i];
-      final centerX = chartRect.left + gap * i + gap / 2;
-      final barHeight =
-          item.expense / maxValue * chartRect.height * chartValueScale;
-      final barRect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          centerX - gap * 0.16,
-          chartRect.bottom - barHeight,
-          gap * 0.32,
-          barHeight,
-        ),
-        const Radius.circular(6),
-      );
-      canvas.drawRRect(barRect, barPaint);
-
-      final budgetY =
-          chartRect.bottom -
-          item.budget / maxValue * chartRect.height * chartValueScale;
-      if (i == 0) {
-        path.moveTo(centerX, budgetY);
-      } else {
-        path.lineTo(centerX, budgetY);
-      }
-    }
-    canvas.drawPath(path, linePaint);
-    for (var i = 0; i < months.length; i += 1) {
-      final item = months[i];
-      final centerX = chartRect.left + gap * i + gap / 2;
-      final budgetY =
-          chartRect.bottom -
-          item.budget / maxValue * chartRect.height * chartValueScale;
-      canvas.drawCircle(Offset(centerX, budgetY), 2.4, pointPaint);
-    }
-
-    _drawBudgetTrendLabels(canvas, chartRect);
-
-    final selected = selectedIndex;
-    if (selected != null && selected >= 0 && selected < months.length) {
-      final item = months[selected];
-      final centerX = chartRect.left + gap * selected + gap / 2;
-      final budgetY =
-          chartRect.bottom -
-          item.budget / maxValue * chartRect.height * chartValueScale;
-      final barTop =
-          chartRect.bottom -
-          item.expense / maxValue * chartRect.height * chartValueScale;
-      canvas.drawLine(
-        Offset(centerX, chartRect.top),
-        Offset(centerX, chartRect.bottom),
-        Paint()
-          ..color = labelColor.withValues(alpha: 0.45)
-          ..strokeWidth = 1,
-      );
-      canvas.drawCircle(Offset(centerX, budgetY), 5, pointPaint);
-      canvas.drawCircle(
-        Offset(centerX, budgetY),
-        2.3,
-        Paint()..color = Colors.white,
-      );
-      if (tooltip != null) {
-        drawChartTooltip(
-          canvas,
-          size,
-          Offset(centerX, math.min(budgetY, barTop)),
-          tooltip!,
-        );
-      }
-    }
-  }
-
-  void _drawBudgetTrendLabels(Canvas canvas, Rect chartRect) {
-    final labelStyle = TextStyle(
-      color: labelColor,
-      fontSize: 10,
-      fontWeight: FontWeight.w600,
-    );
-    for (var i = 0; i < yLabels.length; i += 1) {
-      final painter = TextPainter(
-        text: TextSpan(text: yLabels[i], style: labelStyle),
-        textDirection: TextDirection.ltr,
-        maxLines: 1,
-      )..layout(maxWidth: chartRect.left - 4);
-      final y =
-          chartRect.bottom -
-          chartRect.height * chartValueScale * i / (yLabels.length - 1);
-      painter.paint(canvas, Offset(0, y - painter.height / 2));
-    }
-
-    if (months.isEmpty) {
-      return;
-    }
-    final gap = chartRect.width / months.length;
-    for (var i = 0; i < months.length; i += 1) {
-      final label = monthLabelOf(months[i].month.month);
-      final painter = TextPainter(
-        text: TextSpan(text: label, style: labelStyle),
-        textDirection: TextDirection.ltr,
-        maxLines: 1,
-      )..layout(maxWidth: gap);
-      final x = chartRect.left + gap * i + gap / 2 - painter.width / 2;
-      painter.paint(canvas, Offset(x, chartRect.bottom + 6));
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _BudgetTrendPainter oldDelegate) {
-    return !listEquals(oldDelegate.months, months) ||
-        oldDelegate.labelColor != labelColor ||
-        oldDelegate.yLabels != yLabels ||
-        oldDelegate.selectedIndex != selectedIndex ||
-        oldDelegate.tooltip != tooltip ||
-        oldDelegate.brightness != brightness ||
-        oldDelegate.primary != primary;
   }
 }

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
@@ -165,23 +164,19 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
                               SizedBox(
                                 width: 118,
                                 height: 118,
-                                child: CustomPaint(
-                                  painter: BudgetRingPainter(
-                                    value: ratio,
-                                    trackColor: Theme.of(context)
-                                        .colorScheme
-                                        .surfaceContainerHighest
-                                        .withValues(alpha: 0.48),
-                                    progressColor: budgetProgressColor(
-                                      budget,
-                                      remaining,
-                                      ratio,
-                                      Theme.of(context).brightness,
-                                      Theme.of(context).colorScheme.primary,
-                                    ),
-                                    primary: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
+                                child: VeriBudgetRing(
+                                  value: ratio,
+                                  strokeWidth: 12,
+                                  trackColor: Theme.of(context)
+                                      .colorScheme
+                                      .surfaceContainerHighest
+                                      .withValues(alpha: 0.48),
+                                  progressColor: budgetProgressColor(
+                                    budget,
+                                    remaining,
+                                    ratio,
+                                    Theme.of(context).brightness,
+                                    Theme.of(context).colorScheme.primary,
                                   ),
                                 ),
                               ),

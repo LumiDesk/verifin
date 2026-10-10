@@ -60,10 +60,7 @@ void main() {
     expect(
       find.descendant(
         of: budget,
-        matching: find.byWidgetPredicate(
-          (widget) =>
-              widget is CustomPaint && widget.painter is BudgetRingPainter,
-        ),
+        matching: find.byWidgetPredicate((widget) => widget is VeriBudgetRing),
       ),
       findsOneWidget,
     );

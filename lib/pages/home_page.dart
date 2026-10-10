@@ -760,21 +760,19 @@ class BudgetPanel extends StatelessWidget {
                     SizedBox(
                       width: 116,
                       height: 116,
-                      child: CustomPaint(
-                        painter: BudgetRingPainter(
-                          value: ratio,
-                          trackColor: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest
-                              .withValues(alpha: 0.48),
-                          progressColor: budgetProgressColor(
-                            budget,
-                            budget - expense,
-                            ratio,
-                            Theme.of(context).brightness,
-                            Theme.of(context).colorScheme.primary,
-                          ),
-                          primary: Theme.of(context).colorScheme.primary,
+                      child: VeriBudgetRing(
+                        value: ratio,
+                        strokeWidth: 11,
+                        trackColor: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest
+                            .withValues(alpha: 0.48),
+                        progressColor: budgetProgressColor(
+                          budget,
+                          budget - expense,
+                          ratio,
+                          Theme.of(context).brightness,
+                          Theme.of(context).colorScheme.primary,
                         ),
                       ),
                     ),
