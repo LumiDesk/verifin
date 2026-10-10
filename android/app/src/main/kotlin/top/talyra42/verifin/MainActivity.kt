@@ -1373,7 +1373,8 @@ class MainActivity : FlutterFragmentActivity() {
                     .filter {
                         it.isFile &&
                             (it.name?.endsWith(".json") == true ||
-                                it.name?.endsWith(".zip") == true)
+                                it.name?.endsWith(".zip") == true ||
+                                it.name?.endsWith(".verifin") == true)
                     }
                     .map { doc ->
                         mapOf(

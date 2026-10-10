@@ -679,9 +679,77 @@ class _DataManagementPageState extends State<DataManagementPage> {
             readStagedAttachment: staging.readBytes,
           );
           return true;
+        case EncryptedStreamBackup():
+          if (!context.mounted) {
+            return false;
+          }
+          return await _importEncryptedStream(context, controller, cachePath);
       }
     } finally {
       await controller.attachmentStore.discardStagingStore(staging);
+    }
+  }
+
+  /// 新版加密容器：先试设备保存的口令，失败或未设置则弹窗；口令错误可重试。
+  /// 解密、解包、导入全程流式，GB 级加密备份也不会整包进内存。
+  Future<bool> _importEncryptedStream(
+    BuildContext context,
+    VeriFinController controller,
+    String encryptedPath,
+  ) async {
+    final cacheDirectory = await controller.ensureBackupCacheDirectory();
+    var triedSavedPassphrase = false;
+    var errorText = '';
+    while (true) {
+      if (!context.mounted) {
+        return false;
+      }
+      String? passphrase;
+      if (!triedSavedPassphrase) {
+        triedSavedPassphrase = true;
+        final saved = controller.backupPassphrase;
+        if (saved.isNotEmpty) {
+          passphrase = saved;
+        }
+      }
+      passphrase ??= await _promptPassphrase(
+        context,
+        title: AppLocalizations.of(context).enterBackupKeyTitle,
+        message: AppLocalizations.of(context).enterBackupKeyMessage,
+        errorText: errorText,
+      );
+      if (passphrase == null) {
+        return false;
+      }
+      final String zipPath;
+      try {
+        zipPath = await BackupService.decryptStreamToZip(
+          encryptedPath: encryptedPath,
+          cacheDirectory: cacheDirectory,
+          passphrase: passphrase,
+        );
+      } on BackupCryptoException catch (error) {
+        errorText = error.message;
+        continue;
+      }
+      try {
+        final staging = await controller.attachmentStore.createStagingStore();
+        try {
+          final json = await BackupService.unpackCacheZip(
+            cachePath: zipPath,
+            sink: staging,
+          );
+          await controller.importDataJson(
+            json,
+            readStagedAttachment: staging.readBytes,
+          );
+          return true;
+        } finally {
+          await controller.attachmentStore.discardStagingStore(staging);
+        }
+      } finally {
+        await BackupService.deleteCachePath(zipPath);
+      }
     }
   }
 

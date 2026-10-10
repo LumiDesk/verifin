@@ -210,7 +210,10 @@ Future<List<WebdavRemoteFile>> webdavList(WebdavConfig config) async {
     }
     return parsePropfindResponse(body)
         .where(
-          (file) => file.name.endsWith('.json') || file.name.endsWith('.zip'),
+          (file) =>
+              file.name.endsWith('.json') ||
+              file.name.endsWith('.zip') ||
+              file.name.endsWith('.verifin'),
         )
         .toList();
   } catch (error) {

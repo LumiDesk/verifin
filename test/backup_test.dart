@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/backup/backup_service.dart';
@@ -98,6 +99,78 @@ void main() {
       source.dispose();
     },
   );
+
+  test('加密备份走流式容器：解密后可解包导入且附件字节完整', () async {
+    final source = await makeController();
+    const attachmentBytes = <int>[9, 8, 7, 6, 5];
+    source.addEntry(
+      LedgerEntry(
+        id: 'e-enc',
+        bookId: source.activeBook.id,
+        type: EntryType.expense,
+        amount: 12,
+        categoryId: 'dining',
+        accountId: '',
+        note: '加密备份',
+        occurredAt: DateTime(2026, 7, 5),
+      ),
+    );
+    await source.addAttachment('e-enc', Uint8List.fromList(attachmentBytes));
+
+    final cacheDir = await Directory.systemTemp.createTemp('verifin_enc_cache');
+    try {
+      final prepared = await BackupService.prepare(
+        json: source.exportDataJson(),
+        store: source.attachmentStore,
+        cacheDirectory: cacheDir,
+        passphrase: 'secret-key',
+        now: DateTime(2026, 7, 5, 8),
+        auto: false,
+      );
+      expect(prepared.filename.endsWith('.verifin'), isTrue);
+
+      final target = await makeController();
+      final staging = await target.attachmentStore.createStagingStore();
+      try {
+        final decoded = await BackupService.decodeBackupFile(
+          cachePath: prepared.cachePath,
+          sink: staging,
+        );
+        expect(decoded, isA<EncryptedStreamBackup>());
+
+        final zipPath = await BackupService.decryptStreamToZip(
+          encryptedPath: prepared.cachePath,
+          cacheDirectory: cacheDir,
+          passphrase: 'secret-key',
+        );
+        try {
+          final json = await BackupService.unpackCacheZip(
+            cachePath: zipPath,
+            sink: staging,
+          );
+          await target.importDataJson(
+            json,
+            readStagedAttachment: staging.readBytes,
+          );
+          expect(target.entries.single.id, 'e-enc');
+          final restored = target.attachmentsForEntry('e-enc').single;
+          expect(
+            await target.attachmentStore.readBytes(restored.id),
+            Uint8List.fromList(attachmentBytes),
+          );
+        } finally {
+          await BackupService.deleteCachePath(zipPath);
+        }
+      } finally {
+        await target.attachmentStore.discardStagingStore(staging);
+      }
+      await BackupService.deletePrepared(prepared);
+      target.dispose();
+    } finally {
+      await cacheDir.delete(recursive: true);
+    }
+    source.dispose();
+  });
 
   test('decodeBackupFile 也兼容旧版纯 JSON 备份字节', () async {
     final source = await makeController();

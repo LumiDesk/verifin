@@ -19,7 +19,7 @@ Future<String?> pickTextFile() async {
 Future<Uint8List?> pickBackupBytes({String label = '备份文件'}) async {
   final group = XTypeGroup(
     label: label,
-    extensions: <String>['json', 'zip'],
+    extensions: <String>['json', 'zip', 'verifin'],
     mimeTypes: <String>['application/json', 'application/zip'],
   );
   final file = await openFile(acceptedTypeGroups: <XTypeGroup>[group]);
@@ -36,7 +36,7 @@ Future<Uint8List?> pickBackupBytes({String label = '备份文件'}) async {
 Future<String?> pickBackupFileUri({String label = '备份文件'}) async {
   final group = XTypeGroup(
     label: label,
-    extensions: <String>['json', 'zip'],
+    extensions: <String>['json', 'zip', 'verifin'],
     mimeTypes: <String>['application/json', 'application/zip'],
   );
   final file = await openFile(acceptedTypeGroups: <XTypeGroup>[group]);

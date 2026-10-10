@@ -222,34 +222,6 @@ Future<String> extractLegacyAttachments(
   return jsonEncode(decoded);
 }
 
-/// 把附件字节重新内嵌成 base64 data URL，用于**既有加密信封**格式的写入路径。
-///
-/// 既有加密备份是「整份明文 JSON 的加密封装」，附件必须内嵌才不丢数据。为保持与旧
-/// 版本完全一致的加密格式（旧版本仍可解密导入），这条过渡实现暂时保留整份进内存，
-/// 待流式加密容器落地后由 `packBackupArchive` + 流式加密替换。
-Future<String> embedAttachmentsAsDataUrls(
-  String exportJson,
-  AttachmentStore store,
-) async {
-  final root = jsonDecode(exportJson);
-  for (final attachment in _attachmentsOf(root)) {
-    final id = attachment['id'];
-    if (id is! String || id.isEmpty) {
-      continue;
-    }
-    final mime = attachment['mimeType'] as String? ?? 'image/jpeg';
-    final Uint8List bytes;
-    try {
-      bytes = await store.readBytes(id);
-    } catch (_) {
-      throw BackupAttachmentUnavailableException(id);
-    }
-    attachment['dataUrl'] = 'data:$mime;base64,${base64Encode(bytes)}';
-    attachment['byteSize'] = bytes.length;
-  }
-  return jsonEncode(root);
-}
-
 /// 从导出 JSON 根（可能带 `data` 包裹）里取出附件列表（可原地改写元素）。
 Iterable<Map<Object?, Object?>> _attachmentsOf(Object? root) {
   if (root is! Map) {

@@ -104,7 +104,9 @@ Future<List<BackupFileInfo>> listBackupFiles(String directoryUri) async {
       continue;
     }
     final name = p.basename(entity.path);
-    if (!name.endsWith('.json') && !name.endsWith('.zip')) {
+    if (!name.endsWith('.json') &&
+        !name.endsWith('.zip') &&
+        !name.endsWith('.verifin')) {
       continue;
     }
     final stat = entity.statSync();

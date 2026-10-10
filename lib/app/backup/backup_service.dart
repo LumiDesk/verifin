@@ -35,10 +35,17 @@ class PlainBackupJson extends DecodedBackup {
 
 /// 加密文本信封：需向用户索要口令，经 [BackupService.decryptEnvelope] 解密
 /// 得到明文 JSON 后再导入。
+/// 旧版格式，仅保留读取兼容。
 class EncryptedBackupEnvelope extends DecodedBackup {
   const EncryptedBackupEnvelope(this.envelope);
 
   final String envelope;
+}
+
+/// 新版流式加密容器（加密的 zip）。需向用户索要口令，经
+/// [BackupService.decryptStreamToZip] 解出缓存 zip 后再走统一解包。
+class EncryptedStreamBackup extends DecodedBackup {
+  const EncryptedStreamBackup();
 }
 
 /// 一次备份写入的结果。
@@ -144,18 +151,16 @@ class BackupService {
     final header = await _readHeader(file);
     if (looksLikeZipBytes(header)) {
       onProgress?.call(const BackupProgress(phase: BackupPhase.unpacking));
-      final json = await unpackBackupArchiveFile(
-        archivePath: cachePath,
+      final json = await unpackCacheZip(
+        cachePath: cachePath,
         sink: sink,
-        onProgress: (done, total) => onProgress?.call(
-          BackupProgress(
-            phase: BackupPhase.unpacking,
-            fraction: total == 0 ? null : done / total,
-          ),
-        ),
+        onProgress: onProgress,
         isCancelled: isCancelled,
       );
       return PlainBackupJson(json);
+    }
+    if (looksLikeEncryptedStream(header)) {
+      return const EncryptedStreamBackup();
     }
     final String text;
     try {
@@ -172,6 +177,42 @@ class BackupService {
     }
     // 旧版明文 JSON：附件内嵌 base64，先抽取成附件文件，统一成新版形态。
     return PlainBackupJson(await extractLegacyAttachments(text, sink));
+  }
+
+  /// 把缓存里的 zip 解包到 [sink]，返回去掉内嵌 base64 的导出 JSON。
+  static Future<String> unpackCacheZip({
+    required String cachePath,
+    required AttachmentStore sink,
+    BackupProgressCallback? onProgress,
+    bool Function()? isCancelled,
+  }) {
+    onProgress?.call(const BackupProgress(phase: BackupPhase.unpacking));
+    return unpackBackupArchiveFile(
+      archivePath: cachePath,
+      sink: sink,
+      onProgress: (done, total) => onProgress?.call(
+        BackupProgress(
+          phase: BackupPhase.unpacking,
+          fraction: total == 0 ? null : done / total,
+        ),
+      ),
+      isCancelled: isCancelled,
+    );
+  }
+
+  /// 解密新版加密容器到缓存 zip，返回该 zip 的路径（调用方负责清理）。
+  static Future<String> decryptStreamToZip({
+    required String encryptedPath,
+    required Directory cacheDirectory,
+    required String passphrase,
+  }) async {
+    final outputPath = restoreCachePath(cacheDirectory);
+    await decryptFileToFile(
+      encryptedPath: encryptedPath,
+      outputPath: outputPath,
+      passphrase: passphrase,
+    );
+    return outputPath;
   }
 
   /// 解密加密信封，返回明文导出 JSON。口令错误/密文损坏抛 [BackupCryptoException]。
@@ -202,7 +243,7 @@ class BackupService {
     _throwIfCancelled(isCancelled);
     onProgress?.call(const BackupProgress(phase: BackupPhase.preparing));
     final encrypted = passphrase.isNotEmpty;
-    final ext = encrypted ? 'json' : 'zip';
+    final ext = encrypted ? 'verifin' : 'zip';
     final name = auto
         ? autoBackupFilename(now, ext)
         : manualBackupFilename(now, ext);
@@ -213,13 +254,37 @@ class BackupService {
       '_${DateTime.now().microsecondsSinceEpoch}_$name',
     );
     if (encrypted) {
-      // 既有加密信封是整份 JSON 的加密封装，附件必须内嵌才不丢；与其格式保持一致，
-      // 旧版本仍可解密导入。流式加密容器落地后这条过渡路径会被替换。
-      final envelope = await encryptBackup(
-        await embedAttachmentsAsDataUrls(json, store),
-        passphrase,
-      );
-      await File(path).writeAsString(envelope, flush: true);
+      // 先把 zip 打包到临时文件，再流式加密成新容器：附件与账目都不进内存。
+      // 旧版的 JSON 信封仍可读取导入（见 decodeBackupFile）。
+      final plainPath =
+          '${cacheDirectory.path}${Platform.pathSeparator}'
+          '_${DateTime.now().microsecondsSinceEpoch}_plain.zip';
+      try {
+        await packBackupArchiveToFile(
+          exportJson: json,
+          store: store,
+          outputPath: plainPath,
+          onProgress: (done, total) => onProgress?.call(
+            BackupProgress(
+              phase: BackupPhase.packing,
+              fraction: total == 0 ? 1 : done / total,
+            ),
+          ),
+          isCancelled: isCancelled,
+        );
+        onProgress?.call(const BackupProgress(phase: BackupPhase.encrypting));
+        await encryptFileToFile(
+          plainPath: plainPath,
+          outputPath: path,
+          passphrase: passphrase,
+        );
+      } finally {
+        try {
+          await File(plainPath).delete();
+        } catch (_) {
+          // 临时明文 zip 删除失败只留下缓存文件；不阻断备份。
+        }
+      }
     } else {
       onProgress?.call(const BackupProgress(phase: BackupPhase.packing));
       await packBackupArchiveToFile(
@@ -404,7 +469,8 @@ class BackupService {
   static Future<List<int>> _readHeader(File file) async {
     final handle = await file.open();
     try {
-      return await handle.read(4);
+      // 读够新版加密容器魔数所需的长度；zip 判定只看前 4 字节。
+      return await handle.read(32);
     } finally {
       await handle.close();
     }

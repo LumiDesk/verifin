@@ -18,6 +18,9 @@ enum BackupPhase {
   /// 解密。
   decrypting,
 
+  /// 加密。
+  encrypting,
+
   /// 解包并校验结构。
   unpacking,
 
