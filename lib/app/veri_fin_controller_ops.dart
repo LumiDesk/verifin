@@ -4119,8 +4119,8 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   }
 
   /// 从明文导出 JSON 导入。**字节层的格式判定（zip/加密信封/明文）不在 controller**
-  /// ——调用方先经 `BackupService.decodeBackupBytes`（必要时 `decryptEnvelope`）
-  /// 还原成明文 JSON 再传入，controller 只认 JSON。
+  /// ——调用方先经 `BackupService.decodeBackupFile` / `decryptStreamToZip`（必要时
+  /// `decryptEnvelope`）还原成明文 JSON 再传入，controller 只认 JSON。
   /// [readStagedAttachment] 提供备份里附件字节（zip 解包到暂存目录后按 id 读取）。
   /// 旧版内嵌 base64 的明文备份会在解包层先转成同样的暂存形态，因此这里只有一条路径。
   /// 附件字节先于任何 DB 写入落盘，读取/写入失败即中止导入、现有数据零改动。

@@ -21,7 +21,7 @@ target footprint 268435456, growth limit 268435456
 180 MiB 的整块分配，即某处正在把整份数据（或其翻倍副本）放进 `ByteArrayOutputStream`。
 这不是输入文件格式错误导致的，任何合法但足够大的备份都会触发。
 
-当前实现里所有涉及附件的环节都要求「整份进内存」，没有任何流式路径：
+改造前，所有涉及附件的环节都要求「整份进内存」，没有任何流式路径：
 
 | 环节 | 现状 | 后果 |
 | --- | --- | --- |
@@ -35,7 +35,7 @@ target footprint 268435456, growth limit 268435456
 | 加密备份 | `encryptBackup` 对整份 JSON 字符串做 AES-GCM | 整卷 + 密文 |
 | WebDAV | 上传 `request.add(整份 bytes)`，下载 `BytesBuilder` 累积 | 整卷 |
 
-现有的大小保护也拦不住：原生 `MAX_BACKUP_BYTES = 256 MiB`、Dart `maxBackupArchiveBytes =
+改造前的大小保护也拦不住：原生 `MAX_BACKUP_BYTES = 256 MiB`、Dart `maxBackupArchiveBytes =
 256 MiB` 都等于或高于设备堆上限，还没读到阈值就 OOM；`maxBackupAttachmentCount = 2000`、
 `maxBackupArchiveFileCount = 2048`、`_maxWebdavDownloadBytes = 256 MiB` 则会在数据正常增长后
 直接拒绝合法备份。

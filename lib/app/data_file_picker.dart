@@ -15,20 +15,6 @@ Future<String?> pickTextFile() async {
   return _readAsUtf8(file);
 }
 
-/// 选择备份文件（.json 旧版 / .zip 新版）并读原始字节，格式由调用方判别。
-Future<Uint8List?> pickBackupBytes({String label = '备份文件'}) async {
-  final group = XTypeGroup(
-    label: label,
-    extensions: <String>['json', 'zip', 'verifin'],
-    mimeTypes: <String>['application/json', 'application/zip'],
-  );
-  final file = await openFile(acceptedTypeGroups: <XTypeGroup>[group]);
-  if (file == null) {
-    return null;
-  }
-  return file.readAsBytes();
-}
-
 /// 选择备份文件并返回其 URI/路径，交给原生流式复制（不整份读入内存）。
 ///
 /// Android 上 file_selector 返回 `content://` URI，可直接交给 SAF 流式读取；
