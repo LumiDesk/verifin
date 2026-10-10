@@ -104,7 +104,7 @@ flutter:
     - assets/import_icons/
 
   shaders:
-    - shaders/liquid_glass_refraction.frag
+    - shaders/liquid_glass_lens.frag
 
   # To add assets to your application, add an assets section, like this:
   # assets:
