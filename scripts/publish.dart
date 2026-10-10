@@ -160,7 +160,7 @@ Future<int> _run(List<String> arguments) async {
 
   step('质量门禁');
   await run(<String>['dart', 'format', '.'], workingDirectory: root);
-  await run(<String>['flutter', 'pub get'], workingDirectory: root);
+  await run(<String>['flutter', 'pub', 'get'], workingDirectory: root);
   await run(<String>['flutter', 'analyze'], workingDirectory: root);
   await run(<String>['flutter', 'test'], workingDirectory: root);
 
