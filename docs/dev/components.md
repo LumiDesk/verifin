@@ -25,7 +25,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 `OnboardingGate`（`onboarding_page.dart`）位于 PrivacyConsentGate / AppLockGate 内部，完成引导前不构建首页。
 
 `VeriPage`、`VeriHeader` / `PageHeader` 与 `VeriCard` 支持显式 `compact` 参数。
-开启设计预览时所有公共骨架默认 compact=true：16dp 页边距、56dp Header、16dp 卡片圆角，默认内边距
+开启设计预览时所有公共骨架默认 compact=true：16dp **有效**页边距（页面容器写 14dp，`VeriPage` 再补 2dp）、56dp Header 最小高度、16dp 卡片圆角，默认内边距
 横向 14dp、纵向 12dp；`VeriCard.padding` 显式传入时仍优先。默认构建仍保持已发布几何参数；候选构建的管理页、设置页和根页面不再分两套密度。
 
 > **新建页面的标准骨架与头部对齐规则见 `docs/ui-guidelines.md`「顶部 Header 与页面骨架」**：`Scaffold > SafeArea > VeriPage > ListView(padding: fromLTRB(14,8,14,…))` + `VeriHeader`；`VeriHeader` 自身无横向内边距，头部缩进全靠外层 padding，带固定页脚的页面须单独给头部套 `Padding(fromLTRB(14,8,14,0))`。
