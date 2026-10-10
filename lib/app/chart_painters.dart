@@ -65,13 +65,30 @@ FlGridData _gridData({
   );
 }
 
-/// 左侧/右侧统一预留相同的轴标签宽度，使绘图区在卡片内保持视觉居中。
-double _axisReservedSize(List<String> yLabels) {
+/// 按实际纵轴文字宽度自适应预留：标签右对齐于预留区，预留宽度=文字宽度+间距，
+/// 因此最宽的标签左缘正好落在卡片内容左缘。
+double _axisReservedSize(BuildContext context, List<String> yLabels) {
   if (yLabels.isEmpty) {
     return 0;
   }
-  final longest = yLabels.map((label) => label.length).reduce(math.max);
-  return (longest * 7.5).clamp(44.0, 88.0).toDouble();
+  final style =
+      Theme.of(context).textTheme.labelSmall?.copyWith(
+        fontWeight: FontWeight.w600,
+        fontSize: 10,
+      ) ??
+      const TextStyle(fontWeight: FontWeight.w600, fontSize: 10);
+  final textScaler = MediaQuery.textScalerOf(context);
+  var maxWidth = 0.0;
+  for (final label in yLabels) {
+    final painter = TextPainter(
+      text: TextSpan(text: label, style: style),
+      textDirection: TextDirection.ltr,
+      textScaler: textScaler,
+      maxLines: 1,
+    )..layout();
+    maxWidth = math.max(maxWidth, painter.width);
+  }
+  return (maxWidth + 8).clamp(24.0, 120.0).toDouble();
 }
 
 FlTitlesData _titlesData({
@@ -106,7 +123,8 @@ FlTitlesData _titlesData({
       xLabelPositions[position] = i;
     }
   }
-  final reservedSize = _axisReservedSize(yLabels);
+  final reservedSize = _axisReservedSize(context, yLabels);
+  final renderedYLabels = <String>{};
 
   Widget title(String text) {
     if (!renderTitles || text.isEmpty) {
@@ -123,14 +141,8 @@ FlTitlesData _titlesData({
   return FlTitlesData(
     show: true,
     topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-    // 右侧保留与左侧相同的空间，避免出现“左边留白大于右边”的视觉偏移。
-    rightTitles: AxisTitles(
-      sideTitles: SideTitles(
-        showTitles: reservedSize > 0,
-        reservedSize: reservedSize,
-        getTitlesWidget: (value, meta) => const SizedBox.shrink(),
-      ),
-    ),
+    // 绘图区右缘直接贴卡片内容右缘；左侧预留宽度由纵轴文字实际宽度决定。
+    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
     bottomTitles: AxisTitles(
       sideTitles: SideTitles(
         showTitles: xLabels.isNotEmpty,
@@ -161,7 +173,11 @@ FlTitlesData _titlesData({
           }
           final fraction = ((value - minY) / (maxY - minY)).clamp(0.0, 1.0);
           final index = (fraction * (yCount - 1)).round().clamp(0, yCount - 1);
-          return SideTitleWidget(meta: meta, child: title(yLabels[index]));
+          final label = yLabels[index];
+          if (label.isEmpty || !renderedYLabels.add(label)) {
+            return const SizedBox.shrink();
+          }
+          return SideTitleWidget(meta: meta, child: title(label));
         },
       ),
     ),
@@ -509,7 +525,7 @@ class _InteractiveComboChartState extends State<InteractiveComboChart> {
     final muted =
         widget.labelColor ??
         Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.50);
-    final reserved = _axisReservedSize(widget.yLabels);
+    final reserved = _axisReservedSize(context, widget.yLabels);
     final barWidth = (240 / math.max(barValues.length, 1))
         .clamp(6.0, 20.0)
         .toDouble();
