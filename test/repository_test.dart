@@ -710,21 +710,19 @@ void main() {
   test('图片附件 attachments 表往返', () async {
     final repo = await openRepo();
     await repo.saveAttachments(<Attachment>[
-      const Attachment(
-        id: 'att1',
-        entryId: 'e1',
-        dataUrl: 'data:image/jpeg;base64,AAAA',
-      ),
+      const Attachment(id: 'att1', entryId: 'e1', byteSize: 4),
       const Attachment(
         id: 'att2',
         entryId: 'e1',
-        dataUrl: 'data:image/jpeg;base64,BBBB',
+        mimeType: 'image/png',
+        byteSize: 5,
       ),
     ]);
     final loaded = await repo.loadAttachments();
     expect(loaded.map((a) => a.id).toList(), <String>['att1', 'att2']);
     expect(loaded.first.entryId, 'e1');
-    expect(loaded.last.dataUrl, 'data:image/jpeg;base64,BBBB');
+    expect(loaded.last.mimeType, 'image/png');
+    expect(loaded.last.byteSize, 5);
   });
 
   test('v3 数据库升级到 v4 后有 attachments 表', () async {
@@ -757,11 +755,7 @@ void main() {
     final repo = SqliteLedgerRepository(db);
     expect(await repo.loadAttachments(), isEmpty);
     await repo.saveAttachments(<Attachment>[
-      const Attachment(
-        id: 'a',
-        entryId: 'e',
-        dataUrl: 'data:image/jpeg;base64,X',
-      ),
+      const Attachment(id: 'a', entryId: 'e', byteSize: 1),
     ]);
     expect((await repo.loadAttachments()).single.id, 'a');
 

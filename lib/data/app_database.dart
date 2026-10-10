@@ -14,7 +14,7 @@ class AppDatabase {
   final Database db;
 
   static const String defaultDatabaseName = 'verifin.db';
-  static const int schemaVersion = 17;
+  static const int schemaVersion = 18;
 
   /// 打开（或创建）数据库。测试通过 [factory]/[path] 注入 ffi 与内存路径；
   /// 真实平台留空则由 [resolveDatabaseFactory]/[resolveDatabasePath] 决定。
@@ -70,6 +70,7 @@ class AppDatabase {
         15: _migrateToV15,
         16: _migrateToV16,
         17: _migrateToV17,
+        18: _migrateToV18,
       };
 
   /// 只读暴露迁移注册表，供迁移矩阵测试把库推进到任意中间版本。生产代码勿用。
@@ -347,6 +348,47 @@ class AppDatabase {
     );
   }
 
+  /// v17 → v18：附件文件化。附件字节改为应用私有目录下的独立文件，SQLite 只保存
+  /// 元数据（`mime_type` / `byte_size`）。历史行的 `data_url` 保留为可空列，供启动后的
+  /// 后台转换任务逐条解成文件后清空；转换完成前读取路径是「文件优先、`data_url` 兜底」，
+  /// 因此迁移可中断、可重试，且不会丢数据。
+  ///
+  /// 表结构变更走「建新表 → 拷贝 → 改名」而非 `ALTER ... DROP COLUMN`：既要加列，
+  /// 又要把 `data_url` 从 NOT NULL 放宽为可空，重建是唯一对所有 SQLite 版本都安全的路径。
+  static Future<void> _migrateToV18(Database db) async {
+    if (!await _tableExists(db, 'attachments')) {
+      return;
+    }
+    if (await _columnsExist(db, 'attachments', const <String>[
+      'mime_type',
+      'byte_size',
+    ])) {
+      return;
+    }
+    await db.execute('''
+      CREATE TABLE attachments_v18 (
+        id TEXT PRIMARY KEY,
+        entry_id TEXT NOT NULL,
+        sort_order INTEGER NOT NULL,
+        mime_type TEXT NOT NULL DEFAULT 'image/jpeg',
+        byte_size INTEGER NOT NULL DEFAULT 0,
+        data_url TEXT
+      )
+    ''');
+    await db.execute('''
+      INSERT INTO attachments_v18
+        (id, entry_id, sort_order, mime_type, byte_size, data_url)
+      SELECT id, entry_id, sort_order, 'image/jpeg', 0, data_url
+      FROM attachments
+    ''');
+    await db.execute('DROP TABLE attachments');
+    await db.execute('ALTER TABLE attachments_v18 RENAME TO attachments');
+    // DROP TABLE 会一并删除旧索引，这里重建。
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_attachments_entry ON attachments (entry_id)',
+    );
+  }
+
   static Future<bool> _tableExists(Database db, String name) async {
     final rows = await db.rawQuery(
       "SELECT name FROM sqlite_master WHERE type='table' AND name = ?",
@@ -604,8 +646,10 @@ class AppDatabase {
     CREATE TABLE attachments (
       id TEXT PRIMARY KEY,
       entry_id TEXT NOT NULL,
-      data_url TEXT NOT NULL,
-      sort_order INTEGER NOT NULL
+      sort_order INTEGER NOT NULL,
+      mime_type TEXT NOT NULL DEFAULT 'image/jpeg',
+      byte_size INTEGER NOT NULL DEFAULT 0,
+      data_url TEXT
     )
     ''',
     'CREATE INDEX idx_attachments_entry ON attachments (entry_id)',

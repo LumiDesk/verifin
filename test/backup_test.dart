@@ -43,10 +43,14 @@ void main() {
         );
       final dataUrl =
           'data:image/jpeg;base64,${base64Encode(List<int>.generate(2048, (i) => i % 256))}';
-      source.addAttachment('entry-att', dataUrl);
+      await source.addAttachment(
+        'entry-att',
+        base64Decode(dataUrl.substring(dataUrl.indexOf(',') + 1)),
+      );
 
       final prepared = await BackupService.prepare(
         json: source.exportDataJson(),
+        store: source.attachmentStore,
         passphrase: '',
         now: DateTime(2026, 7, 4, 9),
         auto: false,
@@ -60,13 +64,22 @@ void main() {
       );
 
       final target = await makeController();
+      final staging = await target.attachmentStore.createStagingStore();
       final decoded =
-          BackupService.decodeBackupBytes(archiveBytes) as PlainBackupJson;
-      target.importDataJson(decoded.json);
+          await BackupService.decodeBackupBytes(archiveBytes, sink: staging)
+              as PlainBackupJson;
+      await target.importDataJson(
+        decoded.json,
+        readStagedAttachment: staging.readBytes,
+      );
 
       expect(target.entries.single.note, '带票据的午餐');
-      final restored = target.attachmentsForEntry('entry-att');
-      expect(restored.single.dataUrl, dataUrl);
+      final restored = target.attachmentsForEntry('entry-att').single;
+      expect(
+        await target.attachmentStore.readBytes(restored.id),
+        base64Decode(dataUrl.substring(dataUrl.indexOf(',') + 1)),
+      );
+      await target.attachmentStore.discardStagingStore(staging);
 
       source.dispose();
       target.dispose();
@@ -92,9 +105,15 @@ void main() {
     final jsonBytes = utf8.encode(source.exportDataJson());
 
     final target = await makeController();
+    final staging = await target.attachmentStore.createStagingStore();
     final decoded =
-        BackupService.decodeBackupBytes(jsonBytes) as PlainBackupJson;
-    target.importDataJson(decoded.json);
+        await BackupService.decodeBackupBytes(jsonBytes, sink: staging)
+            as PlainBackupJson;
+    await target.importDataJson(
+      decoded.json,
+      readStagedAttachment: staging.readBytes,
+    );
+    await target.attachmentStore.discardStagingStore(staging);
 
     expect(target.accounts.single.name, '旧备份账户');
     source.dispose();
@@ -161,7 +180,7 @@ void main() {
 
     final backup = source.exportDataJson();
     final target = await makeController();
-    target.importDataJson(backup);
+    await target.importDataJson(backup);
 
     expect(target.accounts.single.name, '现金账户');
     expect(target.entries.single.amount, 45);
@@ -185,8 +204,8 @@ void main() {
     expect(target.categories.any((category) => category.label == '咖啡'), isTrue);
     expect(target.categoriesForType(EntryType.expense).first.label, '咖啡');
 
-    expect(
-      () => target.importDataJson(
+    await expectLater(
+      target.importDataJson(
         '{"data":{"ledgerBooks":[],"entries":[],"accounts":"bad"}}',
       ),
       throwsFormatException,
@@ -258,7 +277,7 @@ void main() {
       expect(data['hideUnitInSingleCurrency'], isTrue);
 
       final target = await makeController();
-      target.importDataJson(backup);
+      await target.importDataJson(backup);
       final restoredAccount = target.accounts.single;
       final restoredEntry = target.entries.single;
       expect(target.activeBook.baseCurrencyCode, book.baseCurrencyCode);
@@ -284,7 +303,7 @@ void main() {
     'v1 backup reinterprets missing currency fields as legacy CNY',
     () async {
       final controller = await makeController();
-      controller.importDataJson(
+      await controller.importDataJson(
         jsonEncode(<String, Object?>{
           'app': 'verifin',
           'version': 1,
@@ -364,8 +383,8 @@ void main() {
       final accounts = data['accounts'] as List<dynamic>;
       (accounts.single as Map<String, dynamic>)['currencyCode'] = 'ZZZ';
 
-      expect(
-        () => controller.importDataJson(jsonEncode(root)),
+      await expectLater(
+        controller.importDataJson(jsonEncode(root)),
         throwsFormatException,
       );
       expect(controller.accounts.single.id, 'keep-account');
@@ -390,7 +409,7 @@ void main() {
     );
 
     final target = await makeController();
-    target.importDataJson(legacyJson);
+    await target.importDataJson(legacyJson);
 
     expect(
       target.enabledPanelIds(PanelPageKind.home).length,
@@ -410,7 +429,7 @@ void main() {
     ).readAsStringSync();
     final controller = await makeController();
 
-    controller.importDataJson(rawJson);
+    await controller.importDataJson(rawJson);
 
     expect(controller.accounts.length, greaterThanOrEqualTo(9));
     expect(controller.entries.length, greaterThanOrEqualTo(20));
@@ -558,15 +577,15 @@ void main() {
     );
 
     // 合法 JSON 但不是本应用备份：应报错，且现有数据原封不动。
-    expect(
-      () => controller.importDataJson('{"foo":1,"bar":[2,3]}'),
+    await expectLater(
+      controller.importDataJson('{"foo":1,"bar":[2,3]}'),
       throwsFormatException,
     );
     expect(controller.accounts.single.name, '要保住的账户');
 
     // 带 app 标记但 data 为空对象也应被拦截（无任何已知键）。
-    expect(
-      () => controller.importDataJson('{"app":"other","data":{"x":1}}'),
+    await expectLater(
+      controller.importDataJson('{"app":"other","data":{"x":1}}'),
       throwsFormatException,
     );
     expect(controller.accounts.single.name, '要保住的账户');
@@ -577,7 +596,7 @@ void main() {
   test('imports legacy backup budget keys into the default book', () async {
     // 旧备份里预算键没有 bookId 前缀，导入时应归入默认账本。
     final controller = await makeController();
-    controller.importDataJson(
+    await controller.importDataJson(
       jsonEncode(<String, Object?>{
         'data': <String, Object?>{
           'monthlyBudgets': <String, Object?>{'2026-07': 3000},

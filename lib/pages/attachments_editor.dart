@@ -1,37 +1,44 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
 import '../app/attachment_picker.dart';
+import '../app/attachments/attachment_store.dart';
 import '../app/common_widgets.dart';
-import '../app/image_sources.dart';
+import '../app/models.dart';
 import '../l10n/app_localizations.dart';
 
 /// 记账表单里的图片附件编辑区：横向缩略图 + 添加按钮（拍照 / 相册），
-/// 点击缩略图全屏查看，长按或查看页可删除。[dataUrls] 为当前附件（压缩 JPEG）。
+/// 点击缩略图全屏查看，长按或查看页可删除。
+///
+/// 附件字节存应用私有文件，缩略图经 [store] 按 id 取图并限制解码宽度，
+/// 不在内存里保留 base64；[onAddBytes] 由调用方把新图片落盘后再交给本组件。
 class AttachmentsEditor extends StatelessWidget {
   const AttachmentsEditor({
     super.key,
-    required this.dataUrls,
-    required this.onAddDataUrl,
+    required this.attachments,
+    required this.store,
+    required this.onAddBytes,
     required this.onRemoveIndex,
     this.showHeader = true,
     this.showAddButton = true,
   });
 
-  final List<String> dataUrls;
-  final ValueChanged<String> onAddDataUrl;
+  final List<Attachment> attachments;
+  final AttachmentStore store;
+  final Future<void> Function(Uint8List bytes) onAddBytes;
   final ValueChanged<int> onRemoveIndex;
   final bool showHeader;
   final bool showAddButton;
 
   Future<void> _add(BuildContext context, {required bool fromCamera}) async {
-    final dataUrl = await pickAttachmentDataUrl(fromCamera: fromCamera);
-    if (dataUrl == null || dataUrl.isEmpty) {
+    final bytes = await pickAttachmentBytes(fromCamera: fromCamera);
+    if (bytes == null || bytes.isEmpty) {
       return;
     }
-    onAddDataUrl(dataUrl);
+    await onAddBytes(bytes);
   }
 
   @override
@@ -58,7 +65,7 @@ class AttachmentsEditor extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                AppLocalizations.of(context).attachCount(dataUrls.length),
+                AppLocalizations.of(context).attachCount(attachments.length),
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: Theme.of(
                     context,
@@ -74,11 +81,11 @@ class AttachmentsEditor extends StatelessWidget {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount:
-                dataUrls.length +
+                attachments.length +
                 (showAddButton && attachmentPickingSupported ? 1 : 0),
             separatorBuilder: (_, _) => const SizedBox(width: 10),
             itemBuilder: (context, index) {
-              if (index == dataUrls.length) {
+              if (index == attachments.length) {
                 final l10n = AppLocalizations.of(context);
                 return VeriAnchoredMenuAnchor(
                   entries: <VeriMenuEntry>[
@@ -102,10 +109,10 @@ class AttachmentsEditor extends StatelessWidget {
                       _AddButton(onTap: openMenu),
                 );
               }
-              final dataUrl = dataUrls[index];
               return _Thumb(
                 index: index,
-                dataUrl: dataUrl,
+                store: store,
+                attachment: attachments[index],
                 onView: () => _viewFullScreen(context, index),
                 onRemove: () => onRemoveIndex(index),
               );
@@ -133,7 +140,8 @@ class AttachmentsEditor extends StatelessWidget {
       MaterialPageRoute<void>(
         fullscreenDialog: true,
         builder: (_) => _AttachmentViewerPage(
-          dataUrls: dataUrls,
+          attachments: attachments,
+          store: store,
           initialIndex: index,
           onRemoveIndex: onRemoveIndex,
         ),
@@ -175,13 +183,15 @@ class _AddButton extends StatelessWidget {
 class _Thumb extends StatelessWidget {
   const _Thumb({
     required this.index,
-    required this.dataUrl,
+    required this.store,
+    required this.attachment,
     required this.onView,
     required this.onRemove,
   });
 
   final int index;
-  final String dataUrl;
+  final AttachmentStore store;
+  final Attachment attachment;
   final VoidCallback onView;
   final VoidCallback onRemove;
 
@@ -198,7 +208,22 @@ class _Thumb extends StatelessWidget {
             child: SizedBox(
               width: 76,
               height: 76,
-              child: imageForSource(dataUrl),
+              child: Image(
+                image: store.imageProviderFor(attachment.id, cacheWidth: 160),
+                fit: BoxFit.cover,
+                gaplessPlayback: true,
+                errorBuilder: (context, error, stackTrace) => ColoredBox(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.08),
+                  child: Icon(
+                    Icons.broken_image_outlined,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.45),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -235,12 +260,14 @@ class _Thumb extends StatelessWidget {
 
 class _AttachmentViewerPage extends StatefulWidget {
   const _AttachmentViewerPage({
-    required this.dataUrls,
+    required this.attachments,
+    required this.store,
     required this.initialIndex,
     required this.onRemoveIndex,
   });
 
-  final List<String> dataUrls;
+  final List<Attachment> attachments;
+  final AttachmentStore store;
   final int initialIndex;
   final ValueChanged<int> onRemoveIndex;
 
@@ -268,7 +295,7 @@ class _AttachmentViewerPageState extends State<_AttachmentViewerPage> {
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
         title: Text(
-          '${_index + 1} / ${widget.dataUrls.length}',
+          '${_index + 1} / ${widget.attachments.length}',
           style: const TextStyle(color: Colors.white),
         ),
         actions: <Widget>[
@@ -284,12 +311,24 @@ class _AttachmentViewerPageState extends State<_AttachmentViewerPage> {
       ),
       body: PageView.builder(
         controller: _pageController,
-        itemCount: widget.dataUrls.length,
+        itemCount: widget.attachments.length,
         onPageChanged: (value) => setState(() => _index = value),
         itemBuilder: (context, index) => InteractiveViewer(
           minScale: 1,
           maxScale: 4,
-          child: Center(child: imageForSource(widget.dataUrls[index])),
+          child: Center(
+            child: Image(
+              image: widget.store.imageProviderFor(
+                widget.attachments[index].id,
+              ),
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const Icon(
+                Icons.broken_image_outlined,
+                color: Colors.white54,
+                size: 48,
+              ),
+            ),
+          ),
         ),
       ),
     );

@@ -46,6 +46,7 @@ class BackupCoordinator {
       // 避免重复导出/加密（加密时 PBKDF2 迭代很贵）。
       final prepared = await BackupService.prepare(
         json: controller.exportDataJson(),
+        store: controller.attachmentStore,
         passphrase: controller.backupPassphrase,
         now: now,
         auto: true,

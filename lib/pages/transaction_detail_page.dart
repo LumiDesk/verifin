@@ -448,19 +448,16 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                 const SizedBox(height: 12),
                 VeriCard(
                   child: AttachmentsEditor(
-                    dataUrls: _attachments
-                        .map((attachment) => attachment.dataUrl)
-                        .toList(growable: false),
-                    onAddDataUrl: (dataUrl) {
-                      setState(() {
-                        _attachments.add(
-                          Attachment(
-                            id: 'att_${widget.entryId}_${DateTime.now().microsecondsSinceEpoch}',
+                    attachments: _attachments,
+                    store: VeriFinScope.of(context).attachmentStore,
+                    onAddBytes: (bytes) async {
+                      final attachment = await VeriFinScope.of(context)
+                          .stageNewAttachment(
                             entryId: widget.entryId,
-                            dataUrl: dataUrl,
-                          ),
-                        );
-                      });
+                            bytes: bytes,
+                          );
+                      if (!mounted) return;
+                      setState(() => _attachments.add(attachment));
                     },
                     onRemoveIndex: (index) =>
                         setState(() => _attachments.removeAt(index)),

@@ -314,11 +314,15 @@ void main() {
           );
         final dataUrl =
             'data:image/jpeg;base64,${base64Encode(List<int>.generate(1024, (i) => i % 256))}';
-        source.addAttachment('e-e2e', dataUrl);
+        final attachmentBytes = base64Decode(
+          dataUrl.substring(dataUrl.indexOf(',') + 1),
+        );
+        await source.addAttachment('e-e2e', attachmentBytes);
 
         final result = await BackupService.writeManualBackup(
           settings: BackupSettings(directoryUri: dir.path),
           content: source.exportDataJson(),
+          store: source.attachmentStore,
           now: DateTime(2026, 7, 4, 9, 8, 7),
         );
         expect(result.filename.endsWith('.zip'), isTrue);
@@ -328,11 +332,21 @@ void main() {
         expect(looksLikeZipBytes(bytes!), isTrue);
 
         final target = await makeController();
+        final staging = await target.attachmentStore.createStagingStore();
         final decoded =
-            BackupService.decodeBackupBytes(bytes) as PlainBackupJson;
-        target.importDataJson(decoded.json);
+            await BackupService.decodeBackupBytes(bytes, sink: staging)
+                as PlainBackupJson;
+        await target.importDataJson(
+          decoded.json,
+          readStagedAttachment: staging.readBytes,
+        );
         expect(target.entries.single.note, '带票据');
-        expect(target.attachmentsForEntry('e-e2e').single.dataUrl, dataUrl);
+        final restored = target.attachmentsForEntry('e-e2e').single;
+        expect(
+          await target.attachmentStore.readBytes(restored.id),
+          attachmentBytes,
+        );
+        await target.attachmentStore.discardStagingStore(staging);
 
         source.dispose();
         target.dispose();

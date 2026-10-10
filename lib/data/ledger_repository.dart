@@ -65,6 +65,16 @@ abstract interface class LedgerRepository {
   Future<List<Attachment>> loadAttachments();
   Future<void> saveAttachments(List<Attachment> attachments);
 
+  /// 读取某附件的旧版 base64（`data_url`）。文件已生成或该行不存在时返回 null。
+  /// 仅迁移期使用：文件缺失时由附件存储层按需物化，成功后清空该列。
+  Future<String?> loadAttachmentDataUrl(String id);
+
+  /// 仍有旧版 base64 待转换的附件 id（按 sort_order 升序），供后台迁移任务消费。
+  Future<List<String>> attachmentIdsWithLegacyData();
+
+  /// 清空某附件的旧版 base64（幂等）。转换成功落盘后才允许调用。
+  Future<void> clearAttachmentDataUrl(String id);
+
   /// Replaces entries, attachments and optional exchange rates in one transaction.
   Future<void> saveEntryAggregate({
     required List<LedgerEntry> entries,
@@ -264,7 +274,48 @@ class SqliteLedgerRepository implements LedgerRepository {
   Future<void> saveAttachments(List<Attachment> attachments) {
     final snapshot = List<Attachment>.of(attachments);
     return _enqueueWrite(
-      () => _replaceAll('attachments', _indexed(snapshot, _attachmentToRow)),
+      () => _db.transaction(
+        (txn) =>
+            _replaceAttachmentsInTxn(txn, _indexed(snapshot, _attachmentToRow)),
+      ),
+    );
+  }
+
+  @override
+  Future<String?> loadAttachmentDataUrl(String id) async {
+    final rows = await _db.query(
+      'attachments',
+      columns: const <String>['data_url'],
+      where: 'id = ?',
+      whereArgs: <Object?>[id],
+      limit: 1,
+    );
+    if (rows.isEmpty) {
+      return null;
+    }
+    return rows.first['data_url'] as String?;
+  }
+
+  @override
+  Future<List<String>> attachmentIdsWithLegacyData() async {
+    final rows = await _db.query(
+      'attachments',
+      columns: const <String>['id'],
+      where: "data_url IS NOT NULL AND data_url != ''",
+      orderBy: 'sort_order ASC',
+    );
+    return rows.map((row) => row['id'] as String).toList(growable: false);
+  }
+
+  @override
+  Future<void> clearAttachmentDataUrl(String id) {
+    return _enqueueWrite(
+      () => _db.update(
+        'attachments',
+        <String, Object?>{'data_url': null},
+        where: 'id = ?',
+        whereArgs: <Object?>[id],
+      ),
     );
   }
 
@@ -291,9 +342,8 @@ class SqliteLedgerRepository implements LedgerRepository {
       final entryDiff = _diffRows(_rowSnapshots['entries'], _byId(entryRows));
       await _db.transaction((txn) async {
         await _applyRowDiffInTxn(txn, 'entries', entryDiff);
-        await _replaceInTxn(
+        await _replaceAttachmentsInTxn(
           txn,
-          'attachments',
           _indexed(attachmentSnapshot, _attachmentToRow),
         );
         if (rateRows != null) {
@@ -668,6 +718,51 @@ class SqliteLedgerRepository implements LedgerRepository {
     (entry) => <String, Object?>{'scope_key': entry.key, 'amount': entry.value},
   );
 
+  /// 附件表专用整替：对外语义不变（落库后表内容 == 传入列表），但对已存在的同一 id
+  /// 只更新元数据列，**不触碰 `data_url`**。原因：迁移期附件字节可能还只在 `data_url`
+  /// 里、文件尚未生成，若按普通整表覆盖重插会把未转换的 base64 丢掉。基线为「列缺席即
+  /// 写入 NULL」，因此导入/恢复走 [replaceAllLedgerData] 的整表重建时仍会清空该列。
+  static Future<void> _replaceAttachmentsInTxn(
+    Transaction txn,
+    Iterable<Map<String, Object?>> rows,
+  ) async {
+    final rowList = rows.toList(growable: false);
+    final keepIds = <Object?>{for (final row in rowList) row['id']};
+    final existing = await txn.query(
+      'attachments',
+      columns: const <String>['id'],
+    );
+    final batch = txn.batch();
+    for (final row in existing) {
+      if (!keepIds.contains(row['id'])) {
+        batch.delete(
+          'attachments',
+          where: 'id = ?',
+          whereArgs: <Object?>[row['id']],
+        );
+      }
+    }
+    for (final row in rowList) {
+      batch.rawInsert(
+        'INSERT INTO attachments (id, entry_id, sort_order, mime_type, byte_size) '
+        'VALUES (?, ?, ?, ?, ?) '
+        'ON CONFLICT(id) DO UPDATE SET '
+        'entry_id = excluded.entry_id, '
+        'sort_order = excluded.sort_order, '
+        'mime_type = excluded.mime_type, '
+        'byte_size = excluded.byte_size',
+        <Object?>[
+          row['id'],
+          row['entry_id'],
+          row['sort_order'],
+          row['mime_type'],
+          row['byte_size'],
+        ],
+      );
+    }
+    await batch.commit(noResult: true);
+  }
+
   Future<Map<String, double>> _loadBudgetMap(String table) async {
     final rows = await _db.query(table);
     return <String, double>{
@@ -766,14 +861,16 @@ class SqliteLedgerRepository implements LedgerRepository {
       <String, Object?>{
         'id': a.id,
         'entry_id': a.entryId,
-        'data_url': a.dataUrl,
         'sort_order': index,
+        'mime_type': a.mimeType,
+        'byte_size': a.byteSize,
       };
 
   static Attachment _attachmentFromRow(Map<String, Object?> row) => Attachment(
     id: row['id'] as String,
     entryId: row['entry_id'] as String,
-    dataUrl: row['data_url'] as String,
+    mimeType: row['mime_type'] as String? ?? 'image/jpeg',
+    byteSize: (row['byte_size'] as num?)?.toInt() ?? 0,
   );
 
   static Map<String, Object?> _recurringToRow(RecurringRule r, int index) =>

@@ -131,11 +131,7 @@ void _runContract(String name, Future<LedgerRepository> Function() openRepo) {
       ];
       const tags = <Tag>[Tag(id: 'tag-1', label: '出差')];
       const attachments = <Attachment>[
-        Attachment(
-          id: 'att-1',
-          entryId: 'e1',
-          dataUrl: 'data:image/jpeg;base64,QUJD',
-        ),
+        Attachment(id: 'att-1', entryId: 'e1', byteSize: 3),
       ];
       final rules = <RecurringRule>[
         RecurringRule(
@@ -222,22 +218,14 @@ void _runContract(String name, Future<LedgerRepository> Function() openRepo) {
         _entry('old', DateTime(2026, 1, 1)),
       ]);
       await repo.saveAttachments(const <Attachment>[
-        Attachment(
-          id: 'old-attachment',
-          entryId: 'old',
-          dataUrl: 'data:image/jpeg;base64,T0xE',
-        ),
+        Attachment(id: 'old-attachment', entryId: 'old', byteSize: 3),
       ]);
 
       final nextEntries = <LedgerEntry>[
         _entry('new', DateTime(2026, 2, 1), note: '聚合保存'),
       ];
       const nextAttachments = <Attachment>[
-        Attachment(
-          id: 'new-attachment',
-          entryId: 'new',
-          dataUrl: 'data:image/jpeg;base64,TkVX',
-        ),
+        Attachment(id: 'new-attachment', entryId: 'new', byteSize: 3),
       ];
       await repo.saveEntryAggregate(
         entries: nextEntries,

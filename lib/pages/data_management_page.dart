@@ -525,6 +525,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
       final result = await BackupService.writeManualBackup(
         settings: controller.backupSettings,
         content: controller.exportDataJson(),
+        store: controller.attachmentStore,
         now: now,
         passphrase: controller.backupPassphrase,
       );
@@ -578,6 +579,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
       // 未加密→zip（附件不膨胀）、加密→文本信封，统一按字节写入下载目录。
       final prepared = await BackupService.prepare(
         json: controller.exportDataJson(),
+        store: controller.attachmentStore,
         passphrase: controller.backupPassphrase,
         now: DateTime.now(),
         auto: false,
@@ -623,24 +625,45 @@ class _DataManagementPageState extends State<DataManagementPage> {
     VeriFinController controller,
     List<int> bytes,
   ) async {
-    switch (BackupService.decodeBackupBytes(bytes)) {
-      case PlainBackupJson(:final json):
-        controller.importDataJson(json);
-        return true;
-      case EncryptedBackupEnvelope(:final envelope):
-        if (!context.mounted) {
-          return false;
-        }
-        final decrypted = await _decryptForImport(
-          context,
-          controller,
-          envelope,
-        );
-        if (decrypted == null) {
-          return false;
-        }
-        controller.importDataJson(decrypted);
-        return true;
+    // 附件先解到独立暂存存储，全部解析成功后才并入主存储；任何失败直接丢弃暂存，
+    // 现有数据零改动。
+    final staging = await controller.attachmentStore.createStagingStore();
+    try {
+      final decoded = await BackupService.decodeBackupBytes(
+        bytes,
+        sink: staging,
+      );
+      switch (decoded) {
+        case PlainBackupJson(:final json):
+          await controller.importDataJson(
+            json,
+            readStagedAttachment: staging.readBytes,
+          );
+          return true;
+        case EncryptedBackupEnvelope(:final envelope):
+          if (!context.mounted) {
+            return false;
+          }
+          final decrypted = await _decryptForImport(
+            context,
+            controller,
+            envelope,
+          );
+          if (decrypted == null) {
+            return false;
+          }
+          final json = await BackupService.prepareDecryptedLegacyJson(
+            decrypted,
+            staging,
+          );
+          await controller.importDataJson(
+            json,
+            readStagedAttachment: staging.readBytes,
+          );
+          return true;
+      }
+    } finally {
+      await controller.attachmentStore.discardStagingStore(staging);
     }
   }
 
@@ -826,6 +849,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
       final now = DateTime.now();
       final prepared = await BackupService.prepare(
         json: controller.exportDataJson(),
+        store: controller.attachmentStore,
         passphrase: controller.backupPassphrase,
         now: now,
         auto: false,

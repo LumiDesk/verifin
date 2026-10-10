@@ -265,7 +265,7 @@ void main() {
     source.dispose();
 
     final target = await makeController();
-    target.importDataJson(exported);
+    await target.importDataJson(exported);
 
     expect(target.enabledPanelIds(PanelPageKind.home), <String>[
       'recent',

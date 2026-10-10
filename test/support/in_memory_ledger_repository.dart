@@ -80,6 +80,16 @@ class InMemoryLedgerRepository implements LedgerRepository {
     _attachments = List<Attachment>.of(attachments);
   }
 
+  /// 内存实现没有旧版 base64 列，迁移相关方法按「无遗留数据」退化。
+  @override
+  Future<String?> loadAttachmentDataUrl(String id) async => null;
+
+  @override
+  Future<List<String>> attachmentIdsWithLegacyData() async => const <String>[];
+
+  @override
+  Future<void> clearAttachmentDataUrl(String id) async {}
+
   @override
   Future<void> saveEntryAggregate({
     required List<LedgerEntry> entries,

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import '../attachments/attachment_store.dart';
 import 'backup_archive.dart';
 import 'backup_crypto.dart';
 import 'backup_settings.dart';
@@ -95,16 +96,22 @@ class BackupService {
     return encryptBackup(content, passphrase);
   }
 
-  /// 备份字节的**唯一解码入口**：zip（新版精简备份）→ 解包把附件字节拼回内嵌
-  /// JSON；加密文本信封 → 原样返回待解密；其余按旧版明文 JSON 文本处理。
-  /// 空文件抛 [FormatException]。手动导入文件与备份目录恢复都必须走这里，
-  /// 「zip 还是加密 JSON」的判定只此一份——与写出侧的 [prepare] 互为镜像。
-  static DecodedBackup decodeBackupBytes(List<int> bytes) {
+  /// 备份字节的**唯一解码入口**：zip（新版精简备份）→ 附件字节写入 [sink]，返回
+  /// 去掉内嵌 base64 的 JSON；加密文本信封 → 原样返回待解密；其余按旧版明文 JSON
+  /// 文本处理（附件内嵌 base64 会先抽取到 [sink]）。空文件抛 [FormatException]。
+  /// 手动导入文件与备份目录恢复都必须走这里，「zip 还是加密 JSON」的判定只此一份。
+  static Future<DecodedBackup> decodeBackupBytes(
+    List<int> bytes, {
+    required AttachmentStore sink,
+    void Function(int done, int total)? onProgress,
+  }) async {
     if (bytes.isEmpty) {
       throw const FormatException('空备份文件');
     }
     if (looksLikeZipBytes(bytes)) {
-      return PlainBackupJson(unpackBackupArchive(bytes));
+      return PlainBackupJson(
+        await unpackBackupArchive(bytes, sink, onProgress: onProgress),
+      );
     }
     final String text;
     try {
@@ -119,7 +126,8 @@ class BackupService {
     if (isEncryptedBackup(text)) {
       return EncryptedBackupEnvelope(text);
     }
-    return PlainBackupJson(text);
+    // 旧版明文 JSON：附件内嵌 base64，先抽取成附件文件，统一成新版形态。
+    return PlainBackupJson(await extractLegacyAttachments(text, sink));
   }
 
   /// 解密加密信封，返回明文导出 JSON。口令错误/密文损坏抛 [BackupCryptoException]。
@@ -127,21 +135,39 @@ class BackupService {
     return decryptBackup(envelope, passphrase);
   }
 
+  /// 旧版加密信封解密后的明文 JSON → 统一形态：内嵌的 base64 附件抽取到 [sink]。
+  static Future<String> prepareDecryptedLegacyJson(
+    String json,
+    AttachmentStore sink,
+  ) {
+    return extractLegacyAttachments(json, sink);
+  }
+
   /// 把导出 JSON 准备成待写入的备份：无口令→zip 字节（附件不膨胀）、`.zip`；
   /// 有口令→既有文本信封的 UTF-8 字节、`.json`。[auto] 决定文件名前缀。
   static Future<PreparedBackup> prepare({
     required String json,
+    required AttachmentStore store,
     required String passphrase,
     required DateTime now,
     required bool auto,
+    void Function(int done, int total)? onProgress,
   }) async {
     if (passphrase.isEmpty) {
       final name = auto
           ? autoBackupFilename(now, 'zip')
           : manualBackupFilename(now, 'zip');
-      return PreparedBackup(filename: name, bytes: packBackupArchive(json));
+      return PreparedBackup(
+        filename: name,
+        bytes: await packBackupArchive(json, store, onProgress: onProgress),
+      );
     }
-    final envelope = await encryptBackup(json, passphrase);
+    // 既有加密信封是整份 JSON 的加密封装，附件必须内嵌才不丢；与其格式保持一致，
+    // 旧版本仍可解密导入。流式加密容器落地后这条过渡路径会被替换。
+    final envelope = await encryptBackup(
+      await embedAttachmentsAsDataUrls(json, store),
+      passphrase,
+    );
     final name = auto
         ? autoBackupFilename(now, 'json')
         : manualBackupFilename(now, 'json');
@@ -155,11 +181,13 @@ class BackupService {
   static Future<BackupWriteResult> writeManualBackup({
     required BackupSettings settings,
     required String content,
+    required AttachmentStore store,
     required DateTime now,
     String passphrase = '',
   }) async {
     final prepared = await prepare(
       json: content,
+      store: store,
       passphrase: passphrase,
       now: now,
       auto: false,
@@ -175,11 +203,13 @@ class BackupService {
   static Future<BackupWriteResult> writeAutoBackup({
     required BackupSettings settings,
     required String content,
+    required AttachmentStore store,
     required DateTime now,
     String passphrase = '',
   }) async {
     final prepared = await prepare(
       json: content,
+      store: store,
       passphrase: passphrase,
       now: now,
       auto: true,

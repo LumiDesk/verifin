@@ -24,7 +24,10 @@ void main() {
       'mac': 'DDDD',
     });
 
-    expect(() => controller.importDataJson(envelope), throwsFormatException);
+    await expectLater(
+      controller.importDataJson(envelope),
+      throwsFormatException,
+    );
     // 数据原样保留，未被默认值覆盖。
     expect(controller.accountGroups.length, groupsBefore);
     expect(controller.accountGroups.any((g) => g.name == '我的分组'), isTrue);
@@ -34,7 +37,7 @@ void main() {
     final controller = await makeController();
     final before = controller.accountGroups.length;
     final json = jsonEncode(<String, Object?>{'app': 'verifin', 'version': 1});
-    expect(() => controller.importDataJson(json), throwsFormatException);
+    await expectLater(controller.importDataJson(json), throwsFormatException);
     expect(controller.accountGroups.length, before);
   });
 
@@ -44,7 +47,7 @@ void main() {
     final exported = source.exportDataJson();
 
     final target = await makeController();
-    target.importDataJson(exported);
+    await target.importDataJson(exported);
     expect(target.accountGroups.any((g) => g.name == '可导入分组'), isTrue);
   });
 }

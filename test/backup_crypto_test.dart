@@ -118,7 +118,7 @@ void main() {
       final decoded = jsonDecode(plain);
       expect(decoded, isA<Map<String, Object?>>());
       // 不应抛异常，且能被控制器导入。
-      controller.importDataJson(plain);
+      await controller.importDataJson(plain);
     });
   });
 }

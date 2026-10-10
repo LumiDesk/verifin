@@ -8,6 +8,7 @@ import '../local_storage/local_storage.dart';
 import 'ai/ai_capabilities.dart';
 import 'ai/ai_settings.dart';
 import 'app_lock.dart';
+import 'attachments/attachment_store.dart';
 import 'backup/backup_settings.dart';
 import 'backup/payment_import.dart';
 import 'backup/transaction_import.dart';
@@ -120,10 +121,13 @@ class VeriFinController extends ChangeNotifier
   VeriFinController._(
     this._store,
     this._repository, {
+    required AttachmentStore attachmentStore,
     AppLogger? logger,
     bool systemIsEnglish = false,
     // ignore: prefer_initializing_formals
-  }) : _systemIsEnglish = systemIsEnglish,
+  }) : _attachmentStore = attachmentStore,
+       // ignore: prefer_initializing_formals
+       _systemIsEnglish = systemIsEnglish,
        // ignore: prefer_initializing_formals
        _logger = logger {
     _loadPreferences();
@@ -145,27 +149,50 @@ class VeriFinController extends ChangeNotifier
 
   /// 唯一的构造入口：同步载入偏好类 KV 数据后，从 SQLite 载入账目类数据
   /// （全新数据库首启动写入默认数据）。账目类数据只以 SQLite 为准。
+  ///
+  /// [attachmentStore] 省略时取 [debugDefaultAttachmentStore]（仅测试脚手架会设置）；
+  /// 两者都没有时直接抛错，避免生产环境静默退化成内存存储、重启即丢附件。
   static Future<VeriFinController> create(
     LocalKeyValueStore store, {
     required LedgerRepository repository,
+    AttachmentStore? attachmentStore,
     AppLogger? logger,
     bool systemIsEnglish = false,
   }) async {
+    final resolvedAttachmentStore =
+        attachmentStore ?? debugDefaultAttachmentStore;
+    if (resolvedAttachmentStore == null) {
+      throw StateError(
+        'VeriFinController.create 缺少 attachmentStore：生产入口必须传入 FileAttachmentStore。',
+      );
+    }
     final controller = VeriFinController._(
       store,
       repository,
+      attachmentStore: resolvedAttachmentStore,
       logger: logger,
       systemIsEnglish: systemIsEnglish,
+    );
+    // 迁移期兜底：文件缺失时由控制器把旧库内 base64 物化成文件（幂等）。
+    resolvedAttachmentStore.setMaterializer(
+      controller._materializeLegacyAttachment,
     );
     await controller._loadFromRepository();
     controller._syncAmountFormatContext();
     return controller;
   }
 
+  /// 测试宿主默认附件存储。测试脚手架在 `useTestDatabases()` 里设置内存实现，
+  /// 生产代码必须显式注入 `FileAttachmentStore`。
+  @visibleForTesting
+  static AttachmentStore? debugDefaultAttachmentStore;
+
   @override
   final LocalKeyValueStore _store;
   @override
   final LedgerRepository _repository;
+  @override
+  final AttachmentStore _attachmentStore;
   @override
   final AppLogger? _logger;
   @override
@@ -173,6 +200,9 @@ class VeriFinController extends ChangeNotifier
 
   /// 软件日志入口，供「软件日志」页读取；未注入时为 null。
   AppLogger? get logger => _logger;
+
+  /// 附件字节入口，供绘制层取图片 provider。
+  AttachmentStore get attachmentStore => _attachmentStore;
 
   @override
   void dispose() {

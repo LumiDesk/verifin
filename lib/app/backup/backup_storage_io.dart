@@ -6,7 +6,6 @@ import 'package:file_selector/file_selector.dart';
 import 'package:path/path.dart' as p;
 
 import '../platform_bridge.dart';
-import 'backup_archive.dart';
 import 'backup_settings.dart';
 
 /// 用户选择的备份目录：Android 上 [uri] 为 SAF 树 URI，桌面上为文件系统路径。
@@ -83,10 +82,7 @@ Future<Uint8List?> readBackupBytesFile(String fileUri) async {
   if (!file.existsSync()) {
     return null;
   }
-  final length = file.lengthSync();
-  if (length > maxBackupArchiveBytes) {
-    throw const FormatException('备份文件过大');
-  }
+  // 不再做固定大小上限：内存有界由逐条流式处理保证，桌面端读取走 dart:io 分块。
   return file.readAsBytes();
 }
 
@@ -128,10 +124,6 @@ Future<String?> readBackupFile(String fileUri) async {
   final file = File.fromUri(Uri.parse(fileUri));
   if (!file.existsSync()) {
     return null;
-  }
-  final length = file.lengthSync();
-  if (length > maxBackupArchiveBytes) {
-    throw const FormatException('备份文件过大');
   }
   return utf8.decode(await file.readAsBytes());
 }

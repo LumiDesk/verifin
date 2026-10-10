@@ -208,7 +208,7 @@ void main() {
       controller.addEntry(_expense(id: 'e1', amount: 100, excluded: true));
 
       final restored = await makeController();
-      restored.importDataJson(controller.exportDataJson());
+      await restored.importDataJson(controller.exportDataJson());
       expect(restored.entries.single.excludedFromBudget, isTrue);
       restored.dispose();
 
@@ -221,7 +221,7 @@ void main() {
       expect(entryJson.remove('excludedFromBudget'), isTrue);
 
       final legacyController = await makeController();
-      legacyController.importDataJson(jsonEncode(legacy));
+      await legacyController.importDataJson(jsonEncode(legacy));
       expect(legacyController.entries.single.excludedFromBudget, isFalse);
       legacyController.dispose();
       controller.dispose();

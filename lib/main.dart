@@ -1,9 +1,13 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import 'app/app_theme.dart';
+import 'app/attachments/attachment_store.dart';
 import 'app/backup/backup_coordinator.dart';
 import 'app/feedback.dart';
 import 'app/home_widget_service.dart';
@@ -49,9 +53,14 @@ Future<void> main() async {
         final VeriFinController controller;
         try {
           final database = await AppDatabase.open();
+          final supportDirectory = await getApplicationSupportDirectory();
+          final attachmentStore = FileAttachmentStore(
+            root: Directory(p.join(supportDirectory.path, 'attachments')),
+          );
           controller = await VeriFinController.create(
             store,
             repository: SqliteLedgerRepository(database),
+            attachmentStore: attachmentStore,
             logger: logger,
             // 语言偏好为「跟随系统」时，首启动播种的默认数据（账本/分类/简介）按系统语言选文案。
             systemIsEnglish:
@@ -72,6 +81,13 @@ Future<void> main() async {
         }
         // 打开应用时补记到期的周期交易。
         await controller.applyDueRecurring(DateTime.now());
+        // 附件维护与存量迁移都放到启动后后台执行：迁移可中断、读取路径有 base64 兜底，
+        // 期间记账与查看不受影响。
+        unawaited(
+          controller.maintainAttachmentFiles().then(
+            (_) => controller.migrateLegacyAttachments(),
+          ),
+        );
         runApp(VeriFinApp(controller: controller));
       },
       (error, stack) {
