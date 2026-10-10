@@ -127,9 +127,16 @@ dart format .
 
 1. 确定版本号与日期，把 `CHANGELOG.md` 顶部 `## [Unreleased]` 提升为本次版本，并在其上新建空的 `## [Unreleased]`。`CHANGELOG.md` 只保留未发布改动与最近一个次版本线；更早版本归档在 git 标签与 GitHub Releases，不再回填。
 2. 先提交 CHANGELOG 变更，确认当前分支是 `main` 且工作树完全干净。
-3. 发布脚本参数可取 `patch`、`minor`、`major` 或显式版本号（如 `1.2.3`）。macOS/Linux 示例：`scripts/publish.sh patch`；Windows 示例：`./scripts/publish.ps1 patch`。两份脚本逻辑必须同步维护。
+3. 发布脚本参数可取 `patch`、`minor`、`major` 或显式版本号（如 `1.2.3`）：`dart run scripts/publish.dart patch`。脚本会先校验「本机 Flutter 版本 == CI 固定版本」，不一致直接失败（analyzer 的 lint 集合随版本变化，本地绿不代表 CI 绿）。`--dry-run` 只打印将要执行的步骤。
 4. 脚本会更新 `pubspec.yaml` 与 `lib/app/app_version.dart`，执行格式化、依赖安装、analyze、test，创建 `chore: release vX.Y.Z` 提交、标签并推送。
 5. 下载 CI 生成的预发布 APK 真机验收；通过后再手动设为正式版和 Latest。
+6. 没有被提升为正式版的预发布会一直堆在 Releases 页面；用 `dart run scripts/prune_prereleases.dart`（先 `--dry-run` 核对）清理。
+
+### 仓库脚本
+
+- `scripts/` 下的任务脚本一律用 **Dart** 实现（`dart run scripts/<name>.dart`），不再维护 `.sh` / `.ps1` 双份：Dart 是本项目必然存在的运行时，跨平台只有一份实现，且 `dart format` 与 `flutter analyze` 会把脚本一起纳入质量门禁。shell 版本会额外依赖 bash/python3/PowerShell，且同一份源码在不同 shell/编码下行为不一致。
+- 纯逻辑放 `scripts/src/`（可被 `test/` 直接单测，如 `test/scripts_version_test.dart`），入口脚本只做编排；脚本依赖只加 `dev_dependencies`，不得影响 APK。
+- 现有脚本：`doctor.dart`（环境自检：Flutter 版本对齐 CI、Android SDK/JDK/adb/gh、工作树）、`publish.dart`（发版）、`prune_prereleases.dart`（清理预发布）、`clean.dart`（清理构建产物）。
 
 ## 代码风格与工程约定
 

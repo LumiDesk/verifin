@@ -21,7 +21,7 @@ Controller 经 repository 写库。`VeriFinController.create()` 是生产初始�
 | AI | `lib/app/ai/`；[只读查询工具](ai-tools.md)、[截图识别与外部采集](auto-capture-plan.md) |
 | Android 系统能力 | `platform_bridge*.dart`、`android/`；单一 MethodChannel 分发，真实权限与冷启动验收；[桌面小组件](home-widgets.md) |
 | 国际化 | `lib/l10n/*.arb` 与 gen-l10n 输出；[国际化验收](i18n-verification.md) |
-| 本地调试、发布 | [Android 开发](android-development.md)、`scripts/publish.*` |
+| 本地调试、发布 | [Android 开发](android-development.md)、`scripts/*.dart`（`dart run scripts/doctor.dart` 环境自检、`publish.dart` 发版、`prune_prereleases.dart` 清理预发布、`clean.dart` 清构建产物） |
 
 内存仓储、插件 stub 和 ffi factory 用于测试，不能替代生产持久化。
 

@@ -10,6 +10,10 @@ Veri Fin 只维护 Android 应用；电脑上的单元/widget/ffi 测试保留�
 `adb devices -l`、Java 和 `android/local.properties`。Flutter 版本以两个 CI 工作流
 的 `flutter-version` 为准，当前 **3.47.2**。不要静默升级到其他 stable 版本。
 
+上述检查已收进 `dart run scripts/doctor.dart`（加 `--devices` 附带 adb 设备列表）：
+它会比对 PATH 上的 Flutter 版本与 CI 固定版本、核对 Android SDK 是否真的装了
+platforms/build-tools、检查 JDK/adb/gh，并在失败项上给出对应的修复入口。
+
 **工具缺失时 Agent 必须先自动尝试安装/补齐并重新检测，不能只以“没有 Android 环境”结束。**
 用户已授权正常开发所需工具的安装。优先复用现有安装，不覆盖其他项目的 SDK、不改签名，
 不把管理员机器的固定路径写进已提交配置。只在下载/权限/设备授权确实阻塞时说明具体原因。

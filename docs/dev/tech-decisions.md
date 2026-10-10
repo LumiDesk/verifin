@@ -62,6 +62,8 @@ Veri Fin 关键技术选型与理由。变更相关实现时同步更新本表�
 | Release 打包（体积） | CI 的 release **APK** 只构建 **arm64-v8a**（`flutter build apk --release --target-platform android-arm64`）而非 universal；play 渠道的 **AAB** 不限制 ABI（含全部架构，由 Play 按设备分发）。release 开启 R8 `isMinifyEnabled` + `isShrinkResources`，反射依赖点由 `proguard-rules.pro` keep 保护（ML Kit 识别器 + `flutter_local_notifications` 的 Gson 序列化 `com.dexterous.**`）。Release 说明注明机型限制与「更新前先备份」 | universal 把 armeabi-v7a/arm64/x86_64 三套原生库（含 ML Kit 十余 MB）全打进一个包，现代安卓机几乎全是 arm64，单 arm64 包体积约减半。代价是极老 32 位机型装不了（这类设备也跑不动带 OCR 的新版）。R8 裁掉未用插件 Java/Kotlin 代码与未引用资源；minify 开启后必须保住反射类，否则 release 崩溃/功能失效（只在 CI/真机暴露），故新增插件时同步补 keep 规则 |
 | GitHub APK 断点续传 | `github` flavor 的原生更新下载把当前版本半成品保存在 `cacheDir/updates/incoming`，HTTP 瞬时中断自动重试 3 次并按已写长度发送 `Range: bytes=N-`；服务器返回合法 206 时追加，忽略 Range 返回 200 时安全覆盖重下，多次失败回传 `paused + receivedBytes/totalBytes` 供 Flutter 展示“继续下载”。进程/Activity 重建后由 Release tag + asset size 重新识别断点；完整后依次校验长度、GitHub 可选 SHA-256 digest、包名和版本，再同文件系统原子 rename 到可安装目录。下载锁放 companion object，避免 Activity 重建产生并发任务 | 手机锁屏、Doze、网络切换可能让单次 60 秒读超时，但已下载几十 MB 不应被删除重来；Range 续传节省流量并允许用户稍后继续。半成品与可安装目录隔离、服务器不支持 Range 时覆盖重下、最终多重校验共同保证“可恢复”不会牺牲安装安全。Play flavor 仍隐藏自更新且移除安装权限 |
 
+| 仓库脚本语言 | `scripts/` 下的任务脚本一律用 Dart（`dart run scripts/*.dart`），不再维护 `.sh` / `.ps1` 双份；纯逻辑放 `scripts/src/` 并配单测；脚本依赖只进 `dev_dependencies` | 同一件事写两份必须靠人工同步（历史上发布逻辑散在 shell + python3 + PowerShell 三处）；shell 版本还依赖 bash/python3，且受「`.ps1` 是否需要 UTF-8 BOM」这类平台差异影响。Dart 是本项目必然存在的运行时，跨平台一份实现，并被 `dart format` / `flutter analyze` 自动纳入门禁；`publish.dart` 还能校验本机 Flutter 版本与 CI 一致——新版 analyzer 的 lint 差异曾导致「本地全绿、CI 失败」 |
+
 ## 备份数据范围（哪些进入备份 payload / 哪些仅设备本地）
 
 **导出/导入必须与此表保持一致**（`exportDataJson`/`importDataJson`）。改动任一偏好的归属时同步更新这里与 `README.md`。
