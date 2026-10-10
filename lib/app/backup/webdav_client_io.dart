@@ -267,3 +267,61 @@ Future<Uint8List> webdavDownload(WebdavConfig config, String href) async {
     client.close(force: true);
   }
 }
+
+/// 上传本地缓存文件（流式请求体）。备份可能上 GB，绝不能整份读进内存。
+Future<void> webdavUploadFile(
+  WebdavConfig config,
+  String filename,
+  String cachePath,
+) async {
+  final client = _newClient();
+  try {
+    await _ensureCollection(client, config);
+    final target = Uri.parse(joinWebdavUrl(config.url, filename));
+    final request = await _open(client, 'PUT', target, config);
+    request.headers.contentType = ContentType('application', 'octet-stream');
+    request.headers.contentLength = await File(cachePath).length();
+    await request.addStream(File(cachePath).openRead());
+    final response = await request.close();
+    await response.drain<void>();
+    if (response.statusCode >= 400) {
+      throw WebdavException(_statusMessage(response.statusCode));
+    }
+  } catch (error) {
+    _fail(error);
+  } finally {
+    client.close(force: true);
+  }
+}
+
+/// 把远端备份流式下载到 [cachePath]。不做固定大小上限：落盘由文件系统限制，
+/// 内存占用只与传输分块有关。
+Future<void> webdavDownloadToFile(
+  WebdavConfig config,
+  String href,
+  String cachePath,
+) async {
+  final client = _newClient();
+  try {
+    final request = await _open(
+      client,
+      'GET',
+      _resolveHref(config, href),
+      config,
+    );
+    final response = await request.close().timeout(_responseTimeout);
+    if (response.statusCode >= 400) {
+      throw WebdavException(_statusMessage(response.statusCode));
+    }
+    final sink = File(cachePath).openWrite();
+    try {
+      await response.pipe(sink);
+    } finally {
+      await sink.close();
+    }
+  } catch (error) {
+    _fail(error);
+  } finally {
+    client.close(force: true);
+  }
+}

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart' hide Category;
 
@@ -203,6 +204,10 @@ class VeriFinController extends ChangeNotifier
 
   /// 附件字节入口，供绘制层取图片 provider。
   AttachmentStore get attachmentStore => _attachmentStore;
+
+  /// 备份/恢复用的临时目录（缓存 zip、解密产物）；由附件存储定位应用私有目录。
+  Future<Directory> ensureBackupCacheDirectory() =>
+      _attachmentStore.ensureCacheDirectory();
 
   @override
   void dispose() {

@@ -1,6 +1,7 @@
 // 数据管理页：从 profile_pages 拆出。集中导出/导入/初始化与备份子系统
 // （本地目录 SAF、加密、WebDAV、账单导入）的入口与流程。
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 
@@ -526,6 +527,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
         settings: controller.backupSettings,
         content: controller.exportDataJson(),
         store: controller.attachmentStore,
+        cacheDirectory: await controller.ensureBackupCacheDirectory(),
         now: now,
         passphrase: controller.backupPassphrase,
       );
@@ -576,21 +578,37 @@ class _DataManagementPageState extends State<DataManagementPage> {
     VeriFinController controller,
   ) async {
     try {
-      // 未加密→zip（附件不膨胀）、加密→文本信封，统一按字节写入下载目录。
+      // 未加密→zip（附件不膨胀）、加密→文本信封，都先落到缓存文件再流式写出。
       final prepared = await BackupService.prepare(
         json: controller.exportDataJson(),
         store: controller.attachmentStore,
+        cacheDirectory: await controller.ensureBackupCacheDirectory(),
         passphrase: controller.backupPassphrase,
         now: DateTime.now(),
         auto: false,
       );
-      final saved = await downloadBytesFile(
-        filename: prepared.filename,
-        bytes: prepared.bytes,
-        mimeType: controller.backupEncryptionEnabled
+      final bool saved;
+      try {
+        final mimeType = controller.backupEncryptionEnabled
             ? 'application/json'
-            : 'application/zip',
-      );
+            : 'application/zip';
+        final receipt = await BackupService.exportToDownloads(
+          prepared,
+          mimeType: mimeType,
+        );
+        if (receipt == null) {
+          // Android 10 以下或桌面：回退到系统「保存到」选择器（该回退需要整份字节）。
+          saved = await downloadBytesFile(
+            filename: prepared.filename,
+            bytes: await File(prepared.cachePath).readAsBytes(),
+            mimeType: mimeType,
+          );
+        } else {
+          saved = true;
+        }
+      } finally {
+        await BackupService.deletePrepared(prepared);
+      }
       if (saved && context.mounted) {
         final hint = controller.backupEncryptionEnabled
             ? AppLocalizations.of(context).encryptedSuffix
@@ -616,21 +634,21 @@ class _DataManagementPageState extends State<DataManagementPage> {
     }
   }
 
-  /// 从备份字节导入：格式判定（zip/加密信封/明文）统一走
-  /// [BackupService.decodeBackupBytes]，加密信封在此弹窗索要口令解密后导入。
+  /// 从缓存里的备份文件导入：格式判定（zip/加密信封/明文）统一走
+  /// [BackupService.decodeBackupFile]，加密信封在此弹窗索要口令解密后导入。
   /// 返回是否成功导入；用户取消解密返回 false。空/坏文件抛 FormatException
   /// 由调用方提示。
-  Future<bool> _importBackupBytes(
+  Future<bool> _importBackupCacheFile(
     BuildContext context,
     VeriFinController controller,
-    List<int> bytes,
+    String cachePath,
   ) async {
     // 附件先解到独立暂存存储，全部解析成功后才并入主存储；任何失败直接丢弃暂存，
     // 现有数据零改动。
     final staging = await controller.attachmentStore.createStagingStore();
     try {
-      final decoded = await BackupService.decodeBackupBytes(
-        bytes,
+      final decoded = await BackupService.decodeBackupFile(
+        cachePath: cachePath,
         sink: staging,
       );
       switch (decoded) {
@@ -664,6 +682,26 @@ class _DataManagementPageState extends State<DataManagementPage> {
       }
     } finally {
       await controller.attachmentStore.discardStagingStore(staging);
+    }
+  }
+
+  /// 把外部备份文件流式落到缓存再导入；无论成败都清理缓存。
+  ///
+  /// 用流式复制而不是先读整份字节：用户可能选择 GB 级备份，整份读入会直接 OOM
+  /// （Issue 45）。返回是否成功导入；用户取消或文件不可读返回 false。
+  Future<bool> _importBackupFileUri(
+    BuildContext context,
+    VeriFinController controller,
+    String fileUri,
+  ) async {
+    final staged = await BackupService.stageBackupFile(fileUri);
+    if (staged == null || !context.mounted) {
+      return false;
+    }
+    try {
+      return await _importBackupCacheFile(context, controller, staged.path);
+    } finally {
+      await BackupService.deleteCachePath(staged.path);
     }
   }
 
@@ -850,23 +888,28 @@ class _DataManagementPageState extends State<DataManagementPage> {
       final prepared = await BackupService.prepare(
         json: controller.exportDataJson(),
         store: controller.attachmentStore,
+        cacheDirectory: await controller.ensureBackupCacheDirectory(),
         passphrase: controller.backupPassphrase,
         now: now,
         auto: false,
       );
-      await webdavUpload(
-        controller.webdavConfig,
-        prepared.filename,
-        prepared.bytes,
-      );
-      controller.recordBackupTime(now);
-      unawaited(
-        feedback.showMessage(
-          message: l10n.uploadedFile(prepared.filename),
-          tone: VeriFeedbackTone.success,
-          dedupeKey: 'webdav-upload',
-        ),
-      );
+      try {
+        await webdavUploadFile(
+          controller.webdavConfig,
+          prepared.filename,
+          prepared.cachePath,
+        );
+        controller.recordBackupTime(now);
+        unawaited(
+          feedback.showMessage(
+            message: l10n.uploadedFile(prepared.filename),
+            tone: VeriFeedbackTone.success,
+            dedupeKey: 'webdav-upload',
+          ),
+        );
+      } finally {
+        await BackupService.deletePrepared(prepared);
+      }
     } catch (error) {
       controller.logger?.error('WebDAV 上传失败', source: 'webdav', error: error);
       unawaited(
@@ -968,11 +1011,24 @@ class _DataManagementPageState extends State<DataManagementPage> {
       return;
     }
     try {
-      final bytes = await webdavDownload(controller.webdavConfig, chosen.href);
-      if (!context.mounted) {
-        return;
+      // 远端备份可能很大：先流式下载到缓存文件，再按统一路径导入。
+      final cachePath = BackupService.restoreCachePath(
+        await controller.ensureBackupCacheDirectory(),
+      );
+      final bool imported;
+      try {
+        await webdavDownloadToFile(
+          controller.webdavConfig,
+          chosen.href,
+          cachePath,
+        );
+        if (!context.mounted) {
+          return;
+        }
+        imported = await _importBackupCacheFile(context, controller, cachePath);
+      } finally {
+        await BackupService.deleteCachePath(cachePath);
       }
-      final imported = await _importBackupBytes(context, controller, bytes);
       if (imported && context.mounted) {
         unawaited(
           feedback.showMessage(
@@ -1598,14 +1654,14 @@ class _DataManagementPageState extends State<DataManagementPage> {
     final fileTypeLabel = AppLocalizations.of(context).backupFileTypeLabel;
 
     try {
-      final bytes = await pickBackupBytes(label: fileTypeLabel);
-      if (bytes == null) {
+      final fileUri = await pickBackupFileUri(label: fileTypeLabel);
+      if (fileUri == null) {
         return;
       }
       if (!context.mounted) {
         return;
       }
-      final imported = await _importBackupBytes(context, controller, bytes);
+      final imported = await _importBackupFileUri(context, controller, fileUri);
       if (imported && context.mounted) {
         _notify(
           context,

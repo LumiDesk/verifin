@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -70,29 +71,39 @@ void main() {
 
     // 元数据 JSON 不再内嵌 base64，附件字节只在 zip 条目里。
     expect(source.exportDataJson(), isNot(contains('data:image/jpeg;base64')));
-    final zip = await packBackupArchive(
-      source.exportDataJson(),
-      source.attachmentStore,
-    );
-
-    final target = await makeController();
-    final staging = await target.attachmentStore.createStagingStore();
+    final dir = await Directory.systemTemp.createTemp('verifin_att_archive');
+    final archivePath = '${dir.path}${Platform.pathSeparator}backup.zip';
     try {
-      final json = await unpackBackupArchive(zip, staging);
-      await target.importDataJson(
-        json,
-        readStagedAttachment: staging.readBytes,
+      await packBackupArchiveToFile(
+        exportJson: source.exportDataJson(),
+        store: source.attachmentStore,
+        outputPath: archivePath,
       );
-      final restored = target.attachmentsForEntry('e1').single;
-      expect(
-        await target.attachmentStore.readBytes(restored.id),
-        _bytesOf(_img),
-      );
+
+      final target = await makeController();
+      final staging = await target.attachmentStore.createStagingStore();
+      try {
+        final json = await unpackBackupArchiveFile(
+          archivePath: archivePath,
+          sink: staging,
+        );
+        await target.importDataJson(
+          json,
+          readStagedAttachment: staging.readBytes,
+        );
+        final restored = target.attachmentsForEntry('e1').single;
+        expect(
+          await target.attachmentStore.readBytes(restored.id),
+          _bytesOf(_img),
+        );
+      } finally {
+        await target.attachmentStore.discardStagingStore(staging);
+      }
+      target.dispose();
     } finally {
-      await target.attachmentStore.discardStagingStore(staging);
+      await dir.delete(recursive: true);
     }
     source.dispose();
-    target.dispose();
   });
 
   test('附件写入存储并被同 store 的新控制器读回', () async {

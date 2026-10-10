@@ -47,3 +47,48 @@ Future<Uint8List?> readBackupBytesFile(String fileUri) async {
 Future<bool> deleteBackupFile(String fileUri) async {
   return false;
 }
+
+// ---- 大文件流式路径（非 io 平台不支持）----
+
+/// 流式复制到缓存后的结果（stub 版本，与 io 实现同名同形）。
+class StagedCacheFile {
+  const StagedCacheFile({required this.path, required this.byteSize});
+
+  final String path;
+  final int byteSize;
+}
+
+/// 流式写出的回执（stub 版本，与 io 实现同名同形）。
+class StreamedWriteReceipt {
+  const StreamedWriteReceipt({required this.sha256, required this.byteSize});
+
+  final String sha256;
+  final int byteSize;
+}
+
+Future<StagedCacheFile?> stageBackupFileToCache(String fileUri) async {
+  throw UnsupportedError('当前平台暂不支持读取备份文件');
+}
+
+Future<({String uri, StreamedWriteReceipt receipt})?> writeBackupFromCacheFile({
+  required String directoryUri,
+  required String filename,
+  required String cachePath,
+  String mimeType = 'application/zip',
+}) async {
+  throw UnsupportedError('当前平台暂不支持写入备份目录');
+}
+
+Future<StreamedWriteReceipt?> saveCacheFileToDownloadsFromCache({
+  required String filename,
+  required String cachePath,
+  String mimeType = 'application/zip',
+}) async {
+  return null;
+}
+
+Future<void> deleteCacheFile(String path) async {}
+
+Future<String> hashFileSha256(String path) async {
+  throw UnsupportedError('当前平台暂不支持文件哈希');
+}

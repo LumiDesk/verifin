@@ -25,6 +25,11 @@ Future<Uint8List?> pickBackupBytes({String label = '备份文件'}) async {
   throw UnsupportedError('当前平台暂不支持文件选择');
 }
 
+/// 选择备份文件并返回其 URI/路径，交给原生流式复制。
+Future<String?> pickBackupFileUri({String label = '备份文件'}) async {
+  throw UnsupportedError('当前平台暂不支持文件选择');
+}
+
 Future<Uint8List?> pickImportBytes({
   required List<String> extensions,
   String label = '账单文件',

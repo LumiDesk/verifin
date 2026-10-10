@@ -1,23 +1,31 @@
-import 'dart:convert';
-import 'dart:typed_data';
+import 'dart:io';
+
+import 'package:path/path.dart' as p;
 
 import '../attachments/attachment_store.dart';
 import 'backup_archive.dart';
 import 'backup_crypto.dart';
+import 'backup_progress.dart';
 import 'backup_settings.dart';
 import 'backup_storage.dart';
 
 // 调用方（页面/controller）只 import 本文件即可完成备份的编解码全流程，
 // 不必触达 archive/crypto 实现细节；解密错误类型一并从这里透出。
 export 'backup_crypto.dart' show BackupCryptoException;
+export 'backup_progress.dart'
+    show
+        BackupPhase,
+        BackupProgress,
+        BackupProgressCallback,
+        BackupCancelledException;
 
 /// 备份字节的解码结果：明文导出 JSON，或需口令解密的加密信封。
-/// 由 [BackupService.decodeBackupBytes] 产出。
+/// 由 [BackupService.decodeBackupFile] 产出。
 sealed class DecodedBackup {
   const DecodedBackup();
 }
 
-/// 已还原成明文导出 JSON（zip 已解包拼回附件 / 本就是明文 JSON 文本），
+/// 已还原成明文导出 JSON（zip 已解包：附件字节已写入暂存存储、正文只留元数据）。
 /// 可直接交给 `VeriFinController.importDataJson`。
 class PlainBackupJson extends DecodedBackup {
   const PlainBackupJson(this.json);
@@ -41,7 +49,7 @@ class BackupWriteResult {
   final String? fileUri;
 }
 
-/// 备份写入后回读校验失败：文件写坏 / 被截断 / 读不回来。抛出它让调用方告警，
+/// 备份写入后校验失败：文件写坏 / 被截断 / 读不回来。抛出它让调用方告警，
 /// 而不是让用户以为备份成功、实际文件已损坏（本地优先 App 的数据安全网）。
 class BackupVerificationException implements Exception {
   const BackupVerificationException(this.filename);
@@ -52,17 +60,29 @@ class BackupVerificationException implements Exception {
   String toString() => 'Backup verification failed for "$filename"';
 }
 
-/// 一份准备好的备份内容：文件名 + 待写字节。未加密走 zip（.zip，附件不膨胀），
-/// 加密走既有文本信封（.json）。
+/// 一份准备好的备份：文件名 + 缓存文件路径 + 内容 SHA-256 与字节数。
+///
+/// 备份可能上 GB，内容只存在于缓存文件里（不进内存）；[cachePath] 由调用方在用完后
+/// 通过 [BackupService.deletePrepared] 清理。
 class PreparedBackup {
-  const PreparedBackup({required this.filename, required this.bytes});
+  const PreparedBackup({
+    required this.filename,
+    required this.cachePath,
+    required this.sha256,
+    required this.byteSize,
+  });
 
   final String filename;
-  final Uint8List bytes;
+  final String cachePath;
+  final String sha256;
+  final int byteSize;
 }
 
 /// 备份编排：写入备份文件、按保留份数清理旧的自动备份。真正的目录/文件 I/O
 /// 委托给条件导入的 [backup_storage]（Android 走 SAF，桌面走 dart:io）。
+///
+/// 内存约定：打包、写盘、校验、读回、解包全部走缓存文件与流式 API，
+/// 峰值与备份总体积无关。
 class BackupService {
   const BackupService._();
 
@@ -96,28 +116,52 @@ class BackupService {
     return encryptBackup(content, passphrase);
   }
 
-  /// 备份字节的**唯一解码入口**：zip（新版精简备份）→ 附件字节写入 [sink]，返回
-  /// 去掉内嵌 base64 的 JSON；加密文本信封 → 原样返回待解密；其余按旧版明文 JSON
-  /// 文本处理（附件内嵌 base64 会先抽取到 [sink]）。空文件抛 [FormatException]。
-  /// 手动导入文件与备份目录恢复都必须走这里，「zip 还是加密 JSON」的判定只此一份。
-  static Future<DecodedBackup> decodeBackupBytes(
-    List<int> bytes, {
+  /// 把 [fileUri]（用户选择的备份文件）流式落到缓存目录，返回本地路径。
+  ///
+  /// 流式复制意味着选择 1 GB 的备份也不会把整包读进内存——Issue 45 的崩溃点。
+  static Future<StagedCacheFile?> stageBackupFile(String fileUri) {
+    return stageBackupFileToCache(fileUri);
+  }
+
+  /// 备份文件的**唯一解码入口**：zip（新版精简备份）→ 附件字节写入 [sink]，
+  /// 返回去掉内嵌 base64 的 JSON；加密文本信封 → 原样返回待解密；其余按旧版明文
+  /// JSON 文本处理（内嵌 base64 先抽取到 [sink]）。空文件抛 [FormatException]。
+  static Future<DecodedBackup> decodeBackupFile({
+    required String cachePath,
     required AttachmentStore sink,
-    void Function(int done, int total)? onProgress,
+    BackupProgressCallback? onProgress,
+    bool Function()? isCancelled,
   }) async {
-    if (bytes.isEmpty) {
+    _throwIfCancelled(isCancelled);
+    final file = File(cachePath);
+    if (!await file.exists()) {
       throw const FormatException('空备份文件');
     }
-    if (looksLikeZipBytes(bytes)) {
-      return PlainBackupJson(
-        await unpackBackupArchive(bytes, sink, onProgress: onProgress),
+    if (await file.length() == 0) {
+      throw const FormatException('空备份文件');
+    }
+    onProgress?.call(const BackupProgress(phase: BackupPhase.reading));
+    final header = await _readHeader(file);
+    if (looksLikeZipBytes(header)) {
+      onProgress?.call(const BackupProgress(phase: BackupPhase.unpacking));
+      final json = await unpackBackupArchiveFile(
+        archivePath: cachePath,
+        sink: sink,
+        onProgress: (done, total) => onProgress?.call(
+          BackupProgress(
+            phase: BackupPhase.unpacking,
+            fraction: total == 0 ? null : done / total,
+          ),
+        ),
+        isCancelled: isCancelled,
       );
+      return PlainBackupJson(json);
     }
     final String text;
     try {
-      text = utf8.decode(bytes);
+      text = await file.readAsString();
     } on FormatException {
-      // utf8.decode 的原始报错是英文（Unexpected extension byte…），不能直接给用户看。
+      // readAsString 的原始报错是英文，不直接给用户看。
       throw const FormatException('备份文件格式不正确');
     }
     if (text.trim().isEmpty) {
@@ -143,37 +187,63 @@ class BackupService {
     return extractLegacyAttachments(json, sink);
   }
 
-  /// 把导出 JSON 准备成待写入的备份：无口令→zip 字节（附件不膨胀）、`.zip`；
-  /// 有口令→既有文本信封的 UTF-8 字节、`.json`。[auto] 决定文件名前缀。
+  /// 把导出 JSON 准备成缓存文件里的备份：无口令→zip（附件不膨胀）、`.zip`；
+  /// 有口令→既有文本信封、`.json`。[auto] 决定文件名前缀。
   static Future<PreparedBackup> prepare({
     required String json,
     required AttachmentStore store,
+    required Directory cacheDirectory,
     required String passphrase,
     required DateTime now,
     required bool auto,
-    void Function(int done, int total)? onProgress,
+    BackupProgressCallback? onProgress,
+    bool Function()? isCancelled,
   }) async {
-    if (passphrase.isEmpty) {
-      final name = auto
-          ? autoBackupFilename(now, 'zip')
-          : manualBackupFilename(now, 'zip');
-      return PreparedBackup(
-        filename: name,
-        bytes: await packBackupArchive(json, store, onProgress: onProgress),
+    _throwIfCancelled(isCancelled);
+    onProgress?.call(const BackupProgress(phase: BackupPhase.preparing));
+    final encrypted = passphrase.isNotEmpty;
+    final ext = encrypted ? 'json' : 'zip';
+    final name = auto
+        ? autoBackupFilename(now, ext)
+        : manualBackupFilename(now, ext);
+    // 缓存文件名带唯一前缀：即便用户把备份目录选成同一个目录（桌面端可能发生），
+    // 缓存文件也不会与最终写出的备份文件同名互相覆盖。
+    final path = p.join(
+      cacheDirectory.path,
+      '_${DateTime.now().microsecondsSinceEpoch}_$name',
+    );
+    if (encrypted) {
+      // 既有加密信封是整份 JSON 的加密封装，附件必须内嵌才不丢；与其格式保持一致，
+      // 旧版本仍可解密导入。流式加密容器落地后这条过渡路径会被替换。
+      final envelope = await encryptBackup(
+        await embedAttachmentsAsDataUrls(json, store),
+        passphrase,
+      );
+      await File(path).writeAsString(envelope, flush: true);
+    } else {
+      onProgress?.call(const BackupProgress(phase: BackupPhase.packing));
+      await packBackupArchiveToFile(
+        exportJson: json,
+        store: store,
+        outputPath: path,
+        onProgress: (done, total) => onProgress?.call(
+          BackupProgress(
+            phase: BackupPhase.packing,
+            fraction: total == 0 ? 1 : done / total,
+          ),
+        ),
+        isCancelled: isCancelled,
       );
     }
-    // 既有加密信封是整份 JSON 的加密封装，附件必须内嵌才不丢；与其格式保持一致，
-    // 旧版本仍可解密导入。流式加密容器落地后这条过渡路径会被替换。
-    final envelope = await encryptBackup(
-      await embedAttachmentsAsDataUrls(json, store),
-      passphrase,
-    );
-    final name = auto
-        ? autoBackupFilename(now, 'json')
-        : manualBackupFilename(now, 'json');
+    _throwIfCancelled(isCancelled);
+    onProgress?.call(const BackupProgress(phase: BackupPhase.verifying));
+    final size = await File(path).length();
+    final sha = await hashFileSha256(path);
     return PreparedBackup(
       filename: name,
-      bytes: Uint8List.fromList(utf8.encode(envelope)),
+      cachePath: path,
+      sha256: sha,
+      byteSize: size,
     );
   }
 
@@ -182,21 +252,33 @@ class BackupService {
     required BackupSettings settings,
     required String content,
     required AttachmentStore store,
+    required Directory cacheDirectory,
     required DateTime now,
     String passphrase = '',
+    BackupProgressCallback? onProgress,
+    bool Function()? isCancelled,
   }) async {
     final prepared = await prepare(
       json: content,
       store: store,
+      cacheDirectory: cacheDirectory,
       passphrase: passphrase,
       now: now,
       auto: false,
+      onProgress: onProgress,
+      isCancelled: isCancelled,
     );
-    final uri = await _writeVerified(
-      directoryUri: settings.directoryUri,
-      prepared: prepared,
-    );
-    return BackupWriteResult(filename: prepared.filename, fileUri: uri);
+    try {
+      final uri = await _writeVerified(
+        directoryUri: settings.directoryUri,
+        prepared: prepared,
+        onProgress: onProgress,
+        isCancelled: isCancelled,
+      );
+      return BackupWriteResult(filename: prepared.filename, fileUri: uri);
+    } finally {
+      await deletePrepared(prepared);
+    }
   }
 
   /// 写入自动备份并按保留份数清理旧文件。清理失败不影响本次备份成功。
@@ -204,17 +286,32 @@ class BackupService {
     required BackupSettings settings,
     required String content,
     required AttachmentStore store,
+    required Directory cacheDirectory,
     required DateTime now,
     String passphrase = '',
+    BackupProgressCallback? onProgress,
+    bool Function()? isCancelled,
   }) async {
     final prepared = await prepare(
       json: content,
       store: store,
+      cacheDirectory: cacheDirectory,
       passphrase: passphrase,
       now: now,
       auto: true,
+      onProgress: onProgress,
+      isCancelled: isCancelled,
     );
-    return writeAutoBackupPrepared(settings: settings, prepared: prepared);
+    try {
+      return await writeAutoBackupPrepared(
+        settings: settings,
+        prepared: prepared,
+        onProgress: onProgress,
+        isCancelled: isCancelled,
+      );
+    } finally {
+      await deletePrepared(prepared);
+    }
   }
 
   /// 用已准备好的备份内容写入自动备份并清理旧文件——供协调器把同一份 [PreparedBackup]
@@ -222,45 +319,95 @@ class BackupService {
   static Future<BackupWriteResult> writeAutoBackupPrepared({
     required BackupSettings settings,
     required PreparedBackup prepared,
+    BackupProgressCallback? onProgress,
+    bool Function()? isCancelled,
   }) async {
     final uri = await _writeVerified(
       directoryUri: settings.directoryUri,
       prepared: prepared,
+      onProgress: onProgress,
+      isCancelled: isCancelled,
     );
     await _pruneOldAutoBackups(settings);
     return BackupWriteResult(filename: prepared.filename, fileUri: uri);
   }
 
-  /// 写入备份并**立即回读逐字节比对**，防「写坏 / 截断却以为成功」。校验不通过抛
-  /// [BackupVerificationException]。无法回读（uri 为空的平台）时跳过校验、不阻断。
+  /// 把已准备的备份流式写入系统下载目录（zip 导出）。返回 null 表示当前平台
+  /// 需要调用方回退到系统「保存到」选择器。
+  static Future<StreamedWriteReceipt?> exportToDownloads(
+    PreparedBackup prepared, {
+    String mimeType = 'application/zip',
+  }) {
+    return saveCacheFileToDownloadsFromCache(
+      filename: prepared.filename,
+      cachePath: prepared.cachePath,
+      mimeType: mimeType,
+    );
+  }
+
+  /// 删除已准备备份的缓存文件（用完即删；失败不阻断主流程）。
+  static Future<void> deletePrepared(PreparedBackup prepared) async {
+    try {
+      await deleteCacheFile(prepared.cachePath);
+    } catch (_) {
+      // 缓存目录属应用私有空间，删除失败只留下临时文件，不影响用户数据。
+    }
+  }
+
+  /// 删除某个缓存文件（流式恢复路径收尾）。
+  static Future<void> deleteCachePath(String path) async {
+    try {
+      await deleteCacheFile(path);
+    } catch (_) {
+      // 同上：清理失败只留下临时文件。
+    }
+  }
+
+  /// 在缓存目录里生成一个恢复用的临时文件路径（WebDAV 下载等）。
+  static String restoreCachePath(Directory cacheDirectory) => p.join(
+    cacheDirectory.path,
+    'restore_${DateTime.now().microsecondsSinceEpoch}',
+  );
+
+  /// 写入备份并**流式校验**：原生写盘时同步算 SHA-256 与字节数，与打包侧比对，
+  /// 不一致即判定写坏。校验不通过抛 [BackupVerificationException]。
   static Future<String?> _writeVerified({
     required String directoryUri,
     required PreparedBackup prepared,
+    BackupProgressCallback? onProgress,
+    bool Function()? isCancelled,
   }) async {
-    final uri = await writeBackupBytesFile(
+    _throwIfCancelled(isCancelled);
+    onProgress?.call(const BackupProgress(phase: BackupPhase.writing));
+    final result = await writeBackupFromCacheFile(
       directoryUri: directoryUri,
       filename: prepared.filename,
-      bytes: prepared.bytes,
+      cachePath: prepared.cachePath,
     );
-    if (uri != null) {
-      final readBack = await readBackupBytesFile(uri);
-      if (readBack == null || !_bytesEqual(readBack, prepared.bytes)) {
-        throw BackupVerificationException(prepared.filename);
-      }
+    if (result == null) {
+      throw BackupVerificationException(prepared.filename);
     }
-    return uri;
+    onProgress?.call(const BackupProgress(phase: BackupPhase.verifying));
+    if (result.receipt.byteSize != prepared.byteSize ||
+        result.receipt.sha256 != prepared.sha256) {
+      throw BackupVerificationException(prepared.filename);
+    }
+    return result.uri;
   }
 
-  static bool _bytesEqual(Uint8List a, Uint8List b) {
-    if (a.length != b.length) {
-      return false;
+  static void _throwIfCancelled(bool Function()? isCancelled) {
+    if (isCancelled?.call() ?? false) {
+      throw const BackupCancelledException();
     }
-    for (var i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) {
-        return false;
-      }
+  }
+
+  static Future<List<int>> _readHeader(File file) async {
+    final handle = await file.open();
+    try {
+      return await handle.read(4);
+    } finally {
+      await handle.close();
     }
-    return true;
   }
 
   static Future<void> _pruneOldAutoBackups(BackupSettings settings) async {
@@ -277,10 +424,5 @@ class BackupService {
   /// 列出备份目录内的备份文件（供恢复选择）。
   static Future<List<BackupFileInfo>> listBackups(String directoryUri) {
     return listBackupFiles(directoryUri);
-  }
-
-  /// 读取备份文件原始字节（zip 与旧版 JSON 统一按字节读入，调用方判别格式）。
-  static Future<Uint8List?> readBackup(String fileUri) {
-    return readBackupBytesFile(fileUri);
   }
 }

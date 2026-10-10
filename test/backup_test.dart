@@ -48,45 +48,58 @@ void main() {
         base64Decode(dataUrl.substring(dataUrl.indexOf(',') + 1)),
       );
 
-      final prepared = await BackupService.prepare(
-        json: source.exportDataJson(),
-        store: source.attachmentStore,
-        passphrase: '',
-        now: DateTime(2026, 7, 4, 9),
-        auto: false,
-      );
-      final archiveBytes = prepared.bytes;
-      // 备份产物应为 zip（PK 头），且体积小于内嵌 base64 的 JSON。
-      expect(archiveBytes.sublist(0, 2), <int>[0x50, 0x4B]);
-      expect(
-        archiveBytes.length,
-        lessThan(utf8.encode(source.exportDataJson()).length),
-      );
+      final cacheDir = await Directory.systemTemp.createTemp('verifin_backup');
+      try {
+        final prepared = await BackupService.prepare(
+          json: source.exportDataJson(),
+          store: source.attachmentStore,
+          cacheDirectory: cacheDir,
+          passphrase: '',
+          now: DateTime(2026, 7, 4, 9),
+          auto: false,
+        );
+        final archiveBytes = await File(prepared.cachePath).readAsBytes();
+        // 备份产物应为 zip（PK 头），且体积小于内嵌 base64 的 JSON。
+        expect(archiveBytes.sublist(0, 2), <int>[0x50, 0x4B]);
+        expect(
+          archiveBytes.length,
+          lessThan(utf8.encode(source.exportDataJson()).length),
+        );
 
-      final target = await makeController();
-      final staging = await target.attachmentStore.createStagingStore();
-      final decoded =
-          await BackupService.decodeBackupBytes(archiveBytes, sink: staging)
-              as PlainBackupJson;
-      await target.importDataJson(
-        decoded.json,
-        readStagedAttachment: staging.readBytes,
-      );
+        final target = await makeController();
+        final staging = await target.attachmentStore.createStagingStore();
+        try {
+          final decoded =
+              await BackupService.decodeBackupFile(
+                    cachePath: prepared.cachePath,
+                    sink: staging,
+                  )
+                  as PlainBackupJson;
+          await target.importDataJson(
+            decoded.json,
+            readStagedAttachment: staging.readBytes,
+          );
 
-      expect(target.entries.single.note, '带票据的午餐');
-      final restored = target.attachmentsForEntry('entry-att').single;
-      expect(
-        await target.attachmentStore.readBytes(restored.id),
-        base64Decode(dataUrl.substring(dataUrl.indexOf(',') + 1)),
-      );
-      await target.attachmentStore.discardStagingStore(staging);
+          expect(target.entries.single.note, '带票据的午餐');
+          final restored = target.attachmentsForEntry('entry-att').single;
+          expect(
+            await target.attachmentStore.readBytes(restored.id),
+            base64Decode(dataUrl.substring(dataUrl.indexOf(',') + 1)),
+          );
+        } finally {
+          await target.attachmentStore.discardStagingStore(staging);
+        }
+        await BackupService.deletePrepared(prepared);
+        target.dispose();
+      } finally {
+        await cacheDir.delete(recursive: true);
+      }
 
       source.dispose();
-      target.dispose();
     },
   );
 
-  test('decodeBackupBytes 也兼容旧版纯 JSON 备份字节', () async {
+  test('decodeBackupFile 也兼容旧版纯 JSON 备份字节', () async {
     final source = await makeController();
     source.addAccount(
       Account(
@@ -102,18 +115,27 @@ void main() {
         hidden: false,
       ),
     );
-    final jsonBytes = utf8.encode(source.exportDataJson());
+    final cacheDir = await Directory.systemTemp.createTemp('verifin_legacy');
+    final legacyPath = '${cacheDir.path}${Platform.pathSeparator}legacy.json';
+    await File(legacyPath).writeAsString(source.exportDataJson());
 
     final target = await makeController();
     final staging = await target.attachmentStore.createStagingStore();
-    final decoded =
-        await BackupService.decodeBackupBytes(jsonBytes, sink: staging)
-            as PlainBackupJson;
-    await target.importDataJson(
-      decoded.json,
-      readStagedAttachment: staging.readBytes,
-    );
-    await target.attachmentStore.discardStagingStore(staging);
+    try {
+      final decoded =
+          await BackupService.decodeBackupFile(
+                cachePath: legacyPath,
+                sink: staging,
+              )
+              as PlainBackupJson;
+      await target.importDataJson(
+        decoded.json,
+        readStagedAttachment: staging.readBytes,
+      );
+    } finally {
+      await target.attachmentStore.discardStagingStore(staging);
+      await cacheDir.delete(recursive: true);
+    }
 
     expect(target.accounts.single.name, '旧备份账户');
     source.dispose();

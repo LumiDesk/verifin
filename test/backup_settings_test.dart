@@ -323,6 +323,7 @@ void main() {
           settings: BackupSettings(directoryUri: dir.path),
           content: source.exportDataJson(),
           store: source.attachmentStore,
+          cacheDirectory: dir,
           now: DateTime(2026, 7, 4, 9, 8, 7),
         );
         expect(result.filename.endsWith('.zip'), isTrue);
@@ -333,20 +334,29 @@ void main() {
 
         final target = await makeController();
         final staging = await target.attachmentStore.createStagingStore();
-        final decoded =
-            await BackupService.decodeBackupBytes(bytes, sink: staging)
-                as PlainBackupJson;
-        await target.importDataJson(
-          decoded.json,
-          readStagedAttachment: staging.readBytes,
-        );
-        expect(target.entries.single.note, '带票据');
-        final restored = target.attachmentsForEntry('e-e2e').single;
-        expect(
-          await target.attachmentStore.readBytes(restored.id),
-          attachmentBytes,
-        );
-        await target.attachmentStore.discardStagingStore(staging);
+        try {
+          // 模拟 Android 侧把外部备份文件流式落到缓存后再解析。
+          final restorePath = '${dir.path}${Platform.pathSeparator}restore.zip';
+          await File(restorePath).writeAsBytes(bytes);
+          final decoded =
+              await BackupService.decodeBackupFile(
+                    cachePath: restorePath,
+                    sink: staging,
+                  )
+                  as PlainBackupJson;
+          await target.importDataJson(
+            decoded.json,
+            readStagedAttachment: staging.readBytes,
+          );
+          expect(target.entries.single.note, '带票据');
+          final restored = target.attachmentsForEntry('e-e2e').single;
+          expect(
+            await target.attachmentStore.readBytes(restored.id),
+            attachmentBytes,
+          );
+        } finally {
+          await target.attachmentStore.discardStagingStore(staging);
+        }
 
         source.dispose();
         target.dispose();

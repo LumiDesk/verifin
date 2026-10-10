@@ -63,6 +63,9 @@ abstract interface class AttachmentStore {
 
   /// 注册迁移期物化回调（控制器在创建后注入；幂等，可覆盖）。
   void setMaterializer(AttachmentMaterializer? materializer);
+
+  /// 备份/恢复用的临时目录（缓存 zip、解密产物）。所有文件用完即删。
+  Future<Directory> ensureCacheDirectory();
 }
 
 /// 生产实现：附件字节落在应用私有支持目录下的普通文件。
@@ -233,6 +236,13 @@ class FileAttachmentStore implements AttachmentStore {
     return FileImage(File(_pathFor(id)));
   }
 
+  @override
+  Future<Directory> ensureCacheDirectory() async {
+    final dir = Directory(p.join(_root.parent.path, 'backup_cache'));
+    await dir.create(recursive: true);
+    return dir;
+  }
+
   String _pathFor(String id) => p.join(_root.path, id);
 
   Future<void> _ensureFile(String id) async {
@@ -373,5 +383,18 @@ class InMemoryAttachmentStore implements AttachmentStore {
   @override
   ImageProvider imageProviderFor(String id, {int? cacheWidth}) {
     return MemoryImage(_files[id] ?? Uint8List(0));
+  }
+
+  Directory? _cacheDirectory;
+
+  @override
+  Future<Directory> ensureCacheDirectory() async {
+    final cached = _cacheDirectory;
+    if (cached != null && await cached.exists()) {
+      return cached;
+    }
+    final dir = await Directory.systemTemp.createTemp('verifin_test_cache_');
+    _cacheDirectory = dir;
+    return dir;
   }
 }

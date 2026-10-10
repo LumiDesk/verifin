@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 
 import '../attachments/attachment_store.dart';
+import 'backup_progress.dart';
 
 /// 备份压缩包（zip）打包/解包。
 ///
@@ -47,95 +48,123 @@ bool looksLikeZipBytes(List<int> bytes) {
       bytes[3] == 0x04;
 }
 
-/// 把导出 JSON 打成 zip 字节，附件字节从 [store] 逐张读入。
-Future<Uint8List> packBackupArchive(
-  String exportJson,
-  AttachmentStore store, {
+/// 把导出 JSON 流式打包到 [outputPath] 指向的缓存文件。
+///
+/// 用增量编码器逐条写盘，而不是先攒一个 [Archive]：附件字节只在「正在写的那一张」
+/// 期间驻留内存，峰值与附件总量、备份总体积无关。附件用 store 模式（不重复压缩已
+/// 压缩的 JPEG），`backup.json` 很小、走 deflate。
+Future<void> packBackupArchiveToFile({
+  required String exportJson,
+  required AttachmentStore store,
+  required String outputPath,
   void Function(int done, int total)? onProgress,
+  bool Function()? isCancelled,
 }) async {
   final root = jsonDecode(exportJson);
-  final archive = Archive();
   final attachments = _attachmentsOf(root).toList(growable: false);
+  final output = OutputFileStream(outputPath);
+  final encoder = ZipEncoder();
   onProgress?.call(0, attachments.length);
-  var done = 0;
-  for (final attachment in attachments) {
-    final id = attachment['id'];
-    if (id is! String || id.isEmpty) {
-      continue;
+  try {
+    encoder.startEncode(output);
+    var done = 0;
+    for (final attachment in attachments) {
+      if (isCancelled?.call() ?? false) {
+        throw const BackupCancelledException();
+      }
+      final id = attachment['id'];
+      if (id is! String || id.isEmpty) {
+        continue;
+      }
+      final mime = attachment['mimeType'] as String? ?? 'image/jpeg';
+      final Uint8List bytes;
+      try {
+        bytes = await store.readBytes(id);
+      } catch (_) {
+        throw BackupAttachmentUnavailableException(id);
+      }
+      if (bytes.isEmpty) {
+        throw BackupAttachmentUnavailableException(id);
+      }
+      encoder.add(
+        ArchiveFile.stream('$_attachmentsDir/$id', InputMemoryStream(bytes))
+          ..compression = CompressionType.none,
+      );
+      // 保持 v3 形状，让旧版本仍能内嵌还原；正文里不再出现 base64。
+      attachment['dataUrl'] = '';
+      attachment[_archiveMimeKey] = mime;
+      attachment['byteSize'] = bytes.length;
+      done++;
+      onProgress?.call(done, attachments.length);
     }
-    final mime = attachment['mimeType'] as String? ?? 'image/jpeg';
-    final Uint8List bytes;
-    try {
-      bytes = await store.readBytes(id);
-    } catch (_) {
-      throw BackupAttachmentUnavailableException(id);
-    }
-    if (bytes.isEmpty) {
-      throw BackupAttachmentUnavailableException(id);
-    }
-    archive.addFile(
-      ArchiveFile('$_attachmentsDir/$id', bytes.length, bytes)
-        ..compression = CompressionType.none,
+    final jsonBytes = utf8.encode(
+      const JsonEncoder.withIndent('  ').convert(root),
     );
-    // 保持 v3 形状，让旧版本仍能内嵌还原；正文里不再出现 base64。
-    attachment['dataUrl'] = '';
-    attachment[_archiveMimeKey] = mime;
-    attachment['byteSize'] = bytes.length;
-    done++;
-    onProgress?.call(done, attachments.length);
+    encoder.add(ArchiveFile(backupJsonEntryName, jsonBytes.length, jsonBytes));
+    encoder.endEncode();
+  } finally {
+    output.closeSync();
   }
-  final jsonBytes = utf8.encode(
-    const JsonEncoder.withIndent('  ').convert(root),
-  );
-  archive.addFile(
-    ArchiveFile(backupJsonEntryName, jsonBytes.length, jsonBytes),
-  );
-  return Uint8List.fromList(ZipEncoder().encode(archive));
 }
 
-/// 解包 zip：附件字节逐条写入 [sink]（导入时传暂存存储），返回去掉内嵌 base64 的
-/// 导出 JSON。逐条处理，内存只与单张附件有关，与备份总体积无关。
-Future<String> unpackBackupArchive(
-  List<int> zipBytes,
-  AttachmentStore sink, {
+/// 从 [archivePath] 流式解包：附件字节逐条写入 [sink]（导入时传暂存存储），返回去掉
+/// 内嵌 base64 的导出 JSON。逐条处理，内存只与单张附件有关，与备份总体积无关。
+Future<String> unpackBackupArchiveFile({
+  required String archivePath,
+  required AttachmentStore sink,
   void Function(int done, int total)? onProgress,
+  bool Function()? isCancelled,
 }) async {
-  final archive = ZipDecoder().decodeBytes(zipBytes);
+  final input = InputFileStream(archivePath);
+  final Archive archive;
+  try {
+    archive = ZipDecoder().decodeStream(input);
+  } catch (error) {
+    input.closeSync();
+    throw const FormatException('备份压缩包已损坏');
+  }
   List<int>? jsonBytes;
   final sizes = <String, int>{};
   var fileCount = 0;
   var attachmentCount = 0;
   onProgress?.call(0, 0);
-  for (final file in archive) {
-    if (!file.isFile) {
-      continue;
+  try {
+    for (final file in archive) {
+      if (isCancelled?.call() ?? false) {
+        throw const BackupCancelledException();
+      }
+      if (!file.isFile) {
+        continue;
+      }
+      fileCount++;
+      if (fileCount > maxBackupArchiveFileCount) {
+        throw const FormatException('备份条目数量过多');
+      }
+      if (file.name == backupJsonEntryName) {
+        jsonBytes = file.content;
+        continue;
+      }
+      if (!file.name.startsWith('$_attachmentsDir/')) {
+        continue;
+      }
+      attachmentCount++;
+      if (attachmentCount > maxBackupAttachmentCount) {
+        throw const FormatException('备份附件数量过多');
+      }
+      final id = file.name.substring('$_attachmentsDir/'.length);
+      if (id.isEmpty) {
+        continue;
+      }
+      final content = file.content;
+      if (content.isEmpty) {
+        continue;
+      }
+      await sink.writeBytes(id, content);
+      sizes[id] = content.length;
+      onProgress?.call(attachmentCount, archive.length);
     }
-    fileCount++;
-    if (fileCount > maxBackupArchiveFileCount) {
-      throw const FormatException('备份条目数量过多');
-    }
-    if (file.name == backupJsonEntryName) {
-      jsonBytes = file.content;
-      continue;
-    }
-    if (!file.name.startsWith('$_attachmentsDir/')) {
-      continue;
-    }
-    attachmentCount++;
-    if (attachmentCount > maxBackupAttachmentCount) {
-      throw const FormatException('备份附件数量过多');
-    }
-    final id = file.name.substring('$_attachmentsDir/'.length);
-    if (id.isEmpty) {
-      continue;
-    }
-    final content = file.content;
-    if (content.isEmpty) {
-      continue;
-    }
-    await sink.writeBytes(id, content);
-    sizes[id] = content.length;
-    onProgress?.call(attachmentCount, archive.length);
+  } finally {
+    input.closeSync();
   }
   if (jsonBytes == null) {
     throw const FormatException('备份压缩包缺少 backup.json');
