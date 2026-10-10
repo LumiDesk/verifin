@@ -13,6 +13,20 @@ mixin _ControllerState on ChangeNotifier {
   /// SQLite 落库失败时回调（由 UI 层挂钩弹出「保存失败」提示）。
   void Function(Object error)? onPersistError;
 
+  /// 备份/恢复进度（null = 空闲）。阻塞进度对话框订阅它，不直接读服务层状态。
+  final ValueNotifier<BackupProgress?> backupProgressListenable =
+      ValueNotifier<BackupProgress?>(null);
+
+  /// 存量附件迁移进度（null = 未在迁移），供后台提示使用。
+  final ValueNotifier<({int done, int total})?>
+  attachmentMigrationProgressListenable =
+      ValueNotifier<({int done, int total})?>(null);
+
+  /// 上报/清空备份进度。
+  void reportBackupProgress(BackupProgress? progress) {
+    backupProgressListenable.value = progress;
+  }
+
   /// 任一 Controller 状态变化后通知根组件刷新桌面小组件投影。根组件负责去抖与
   /// 平台调用；Controller 不直接依赖 Android Bridge。
   VoidCallback? onWidgetProjectionInvalidated;
@@ -873,29 +887,31 @@ mixin _ControllerState on ChangeNotifier {
   ///
   /// 幂等且可中断：先写文件、写成功才清 `data_url`，因此任何时刻中断都不会丢数据；
   /// 清列失败也只是下次重复转换一次。
-  Future<void> _materializeLegacyAttachment(String id) async {
+  Future<bool> _materializeLegacyAttachment(String id) async {
     if (_attachmentStore.existsSync(id)) {
-      return;
+      return true;
     }
     final String? legacy;
     try {
       legacy = await _repository.loadAttachmentDataUrl(id);
     } catch (error, stackTrace) {
       _handlePersistError(error, stackTrace);
-      return;
+      return false;
     }
     if (legacy == null || legacy.isEmpty) {
-      return;
+      return true;
     }
     final bytes = _decodeAttachmentDataUrl(legacy);
     if (bytes == null || bytes.isEmpty) {
-      return;
+      return false;
     }
     try {
       await _attachmentStore.writeBytes(id, bytes);
       await _repository.clearAttachmentDataUrl(id);
+      return true;
     } catch (error, stackTrace) {
       _handlePersistError(error, stackTrace);
+      return false;
     }
   }
 
@@ -915,7 +931,7 @@ mixin _ControllerState on ChangeNotifier {
   }
 
   /// 把库里剩余的内嵌 base64 附件逐条转成文件；可中断，下次启动从剩余行继续。
-  Future<int> migrateLegacyAttachments({
+  Future<({int converted, int failed})> migrateLegacyAttachments({
     void Function(int done, int total)? onProgress,
   }) async {
     final List<String> pending;
@@ -923,19 +939,33 @@ mixin _ControllerState on ChangeNotifier {
       pending = await _repository.attachmentIdsWithLegacyData();
     } catch (error, stackTrace) {
       _handlePersistError(error, stackTrace);
-      return 0;
+      return (converted: 0, failed: 0);
     }
     if (pending.isEmpty) {
-      return 0;
+      attachmentMigrationProgressListenable.value = null;
+      return (converted: 0, failed: 0);
     }
-    var done = 0;
-    onProgress?.call(0, pending.length);
-    for (final id in pending) {
-      await _materializeLegacyAttachment(id);
-      done++;
+    var converted = 0;
+    var failed = 0;
+    void report(int done) {
+      attachmentMigrationProgressListenable.value = (
+        done: done,
+        total: pending.length,
+      );
       onProgress?.call(done, pending.length);
     }
-    return done;
+
+    report(0);
+    for (final id in pending) {
+      if (await _materializeLegacyAttachment(id)) {
+        converted++;
+      } else {
+        failed++;
+      }
+      report(converted + failed);
+    }
+    attachmentMigrationProgressListenable.value = null;
+    return (converted: converted, failed: failed);
   }
 
   void _persistRecurringRules() {

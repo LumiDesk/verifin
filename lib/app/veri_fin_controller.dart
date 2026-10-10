@@ -10,6 +10,7 @@ import 'ai/ai_capabilities.dart';
 import 'ai/ai_settings.dart';
 import 'app_lock.dart';
 import 'attachments/attachment_store.dart';
+import 'backup/backup_progress.dart';
 import 'backup/backup_settings.dart';
 import 'backup/payment_import.dart';
 import 'backup/transaction_import.dart';
@@ -216,6 +217,8 @@ class VeriFinController extends ChangeNotifier
     localePreferenceListenable.dispose();
     navigationStylePreferenceListenable.dispose();
     aiCapabilityListenable.dispose();
+    backupProgressListenable.dispose();
+    attachmentMigrationProgressListenable.dispose();
     super.dispose();
   }
 }

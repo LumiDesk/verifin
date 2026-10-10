@@ -81,13 +81,6 @@ Future<void> main() async {
         }
         // 打开应用时补记到期的周期交易。
         await controller.applyDueRecurring(DateTime.now());
-        // 附件维护与存量迁移都放到启动后后台执行：迁移可中断、读取路径有 base64 兜底，
-        // 期间记账与查看不受影响。
-        unawaited(
-          controller.maintainAttachmentFiles().then(
-            (_) => controller.migrateLegacyAttachments(),
-          ),
-        );
         runApp(VeriFinApp(controller: controller));
       },
       (error, stack) {
@@ -225,6 +218,32 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
     BackupCoordinator.maybeBackupOnOpen(_controller);
     // 打开应用时刷新桌面小组件「今日支出」。
     pushWidgetData(_controller);
+    // 附件维护（孤儿回收 / 清理中断的暂存）与存量 base64 迁移都在启动后后台执行：
+    // 迁移可中断、读取路径有 base64 兜底，期间记账与查看不受影响。
+    unawaited(_runAttachmentMaintenance());
+  }
+
+  Future<void> _runAttachmentMaintenance() async {
+    await _controller.maintainAttachmentFiles();
+    final result = await _controller.migrateLegacyAttachments();
+    if (!mounted || result.converted == 0) {
+      return;
+    }
+    final l10n = l10nForPreference(_controller.localePreference);
+    unawaited(
+      _feedbackController.showMessage(
+        message: result.failed == 0
+            ? l10n.attachmentMigrationDone
+            : l10n.attachmentMigrationFailed,
+        tone: result.failed == 0
+            ? VeriFeedbackTone.success
+            : VeriFeedbackTone.warning,
+        duration: result.failed == 0
+            ? VeriFeedbackDuration.standard
+            : VeriFeedbackDuration.long,
+        dedupeKey: 'attachment-migration',
+      ),
+    );
   }
 
   void _handleEntryAdded() {

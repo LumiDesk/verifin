@@ -15,10 +15,11 @@ import 'legacy_json_stream.dart';
 export 'backup_crypto.dart' show BackupCryptoException;
 export 'backup_progress.dart'
     show
+        BackupCancellation,
+        BackupCancelledException,
         BackupPhase,
         BackupProgress,
-        BackupProgressCallback,
-        BackupCancelledException;
+        BackupProgressCallback;
 
 /// 备份字节的解码结果：明文导出 JSON，或需口令解密的加密信封。
 /// 由 [BackupService.decodeBackupFile] 产出。
@@ -221,13 +222,18 @@ class BackupService {
     required String encryptedPath,
     required Directory cacheDirectory,
     required String passphrase,
+    BackupProgressCallback? onProgress,
+    bool Function()? isCancelled,
   }) async {
+    _throwIfCancelled(isCancelled);
+    onProgress?.call(const BackupProgress(phase: BackupPhase.decrypting));
     final outputPath = restoreCachePath(cacheDirectory);
     await decryptFileToFile(
       encryptedPath: encryptedPath,
       outputPath: outputPath,
       passphrase: passphrase,
     );
+    _throwIfCancelled(isCancelled);
     return outputPath;
   }
 
@@ -269,17 +275,45 @@ class BackupService {
       cacheDirectory.path,
       '_${DateTime.now().microsecondsSinceEpoch}_$name',
     );
-    if (encrypted) {
-      // 先把 zip 打包到临时文件，再流式加密成新容器：附件与账目都不进内存。
-      // 旧版的 JSON 信封仍可读取导入（见 decodeBackupFile）。
-      final plainPath =
-          '${cacheDirectory.path}${Platform.pathSeparator}'
-          '_${DateTime.now().microsecondsSinceEpoch}_plain.zip';
-      try {
+    try {
+      if (encrypted) {
+        // 先把 zip 打包到临时文件，再流式加密成新容器：附件与账目都不进内存。
+        // 旧版的 JSON 信封仍可读取导入（见 decodeBackupFile）。
+        final plainPath =
+            '${cacheDirectory.path}${Platform.pathSeparator}'
+            '_${DateTime.now().microsecondsSinceEpoch}_plain.zip';
+        try {
+          await packBackupArchiveToFile(
+            exportJson: json,
+            store: store,
+            outputPath: plainPath,
+            onProgress: (done, total) => onProgress?.call(
+              BackupProgress(
+                phase: BackupPhase.packing,
+                fraction: total == 0 ? 1 : done / total,
+              ),
+            ),
+            isCancelled: isCancelled,
+          );
+          onProgress?.call(const BackupProgress(phase: BackupPhase.encrypting));
+          await encryptFileToFile(
+            plainPath: plainPath,
+            outputPath: path,
+            passphrase: passphrase,
+          );
+        } finally {
+          try {
+            await File(plainPath).delete();
+          } catch (_) {
+            // 临时明文 zip 删除失败只留下缓存文件；不阻断备份。
+          }
+        }
+      } else {
+        onProgress?.call(const BackupProgress(phase: BackupPhase.packing));
         await packBackupArchiveToFile(
           exportJson: json,
           store: store,
-          outputPath: plainPath,
+          outputPath: path,
           onProgress: (done, total) => onProgress?.call(
             BackupProgress(
               phase: BackupPhase.packing,
@@ -288,44 +322,29 @@ class BackupService {
           ),
           isCancelled: isCancelled,
         );
-        onProgress?.call(const BackupProgress(phase: BackupPhase.encrypting));
-        await encryptFileToFile(
-          plainPath: plainPath,
-          outputPath: path,
-          passphrase: passphrase,
-        );
-      } finally {
-        try {
-          await File(plainPath).delete();
-        } catch (_) {
-          // 临时明文 zip 删除失败只留下缓存文件；不阻断备份。
-        }
       }
-    } else {
-      onProgress?.call(const BackupProgress(phase: BackupPhase.packing));
-      await packBackupArchiveToFile(
-        exportJson: json,
-        store: store,
-        outputPath: path,
-        onProgress: (done, total) => onProgress?.call(
-          BackupProgress(
-            phase: BackupPhase.packing,
-            fraction: total == 0 ? 1 : done / total,
-          ),
-        ),
-        isCancelled: isCancelled,
+      _throwIfCancelled(isCancelled);
+      onProgress?.call(const BackupProgress(phase: BackupPhase.verifying));
+      final size = await File(path).length();
+      final sha = await hashFileSha256(path);
+      return PreparedBackup(
+        filename: name,
+        cachePath: path,
+        sha256: sha,
+        byteSize: size,
       );
+    } catch (_) {
+      // 失败或取消时删掉写了一半的缓存文件，不留残片。
+      try {
+        final partial = File(path);
+        if (await partial.exists()) {
+          await partial.delete();
+        }
+      } catch (_) {
+        // 清理失败只留下缓存文件，不影响用户数据。
+      }
+      rethrow;
     }
-    _throwIfCancelled(isCancelled);
-    onProgress?.call(const BackupProgress(phase: BackupPhase.verifying));
-    final size = await File(path).length();
-    final sha = await hashFileSha256(path);
-    return PreparedBackup(
-      filename: name,
-      cachePath: path,
-      sha256: sha,
-      byteSize: size,
-    );
   }
 
   /// 写入手动备份到目录。[content] 为导出 JSON；[passphrase] 非空则加密。

@@ -4142,6 +4142,45 @@ class AppLocalizationsZh extends AppLocalizations {
   String get backingUp => '备份中…';
 
   @override
+  String get backupPhasePreparing => '准备数据';
+
+  @override
+  String get backupPhasePacking => '打包备份';
+
+  @override
+  String get backupPhaseEncrypting => '加密备份';
+
+  @override
+  String get backupPhaseWriting => '写入文件';
+
+  @override
+  String get backupPhaseVerifying => '校验备份';
+
+  @override
+  String get backupPhaseReading => '读取备份';
+
+  @override
+  String get backupPhaseDecrypting => '解密备份';
+
+  @override
+  String get backupPhaseUnpacking => '解包备份';
+
+  @override
+  String get backupPhaseImporting => '导入数据';
+
+  @override
+  String get backupPhaseCleaning => '清理临时文件';
+
+  @override
+  String get backupCancelled => '已取消';
+
+  @override
+  String get attachmentMigrationDone => '图片附件整理完成';
+
+  @override
+  String get attachmentMigrationFailed => '部分图片附件整理失败，将在下次启动时重试';
+
+  @override
   String get aiErrNotConfigured => 'AI 未配置：请先填写请求地址、API Key 与模型';
 
   @override

@@ -4255,6 +4255,46 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backingUp => 'Backing up…';
 
   @override
+  String get backupPhasePreparing => 'Preparing data';
+
+  @override
+  String get backupPhasePacking => 'Packing backup';
+
+  @override
+  String get backupPhaseEncrypting => 'Encrypting backup';
+
+  @override
+  String get backupPhaseWriting => 'Writing file';
+
+  @override
+  String get backupPhaseVerifying => 'Verifying backup';
+
+  @override
+  String get backupPhaseReading => 'Reading backup';
+
+  @override
+  String get backupPhaseDecrypting => 'Decrypting backup';
+
+  @override
+  String get backupPhaseUnpacking => 'Unpacking backup';
+
+  @override
+  String get backupPhaseImporting => 'Importing data';
+
+  @override
+  String get backupPhaseCleaning => 'Cleaning up';
+
+  @override
+  String get backupCancelled => 'Cancelled';
+
+  @override
+  String get attachmentMigrationDone => 'Image attachments organized';
+
+  @override
+  String get attachmentMigrationFailed =>
+      'Some attachments could not be organized; will retry on next launch';
+
+  @override
   String get aiErrNotConfigured =>
       'AI not configured: please fill in the base URL, API key and model first';
 

@@ -51,3 +51,12 @@ class BackupCancelledException implements Exception {
   @override
   String toString() => 'Backup cancelled';
 }
+
+/// 取消令牌：界面置位，服务层在条目/分块之间检查后抛 [BackupCancelledException]。
+class BackupCancellation {
+  bool _cancelled = false;
+
+  bool get cancelled => _cancelled;
+
+  void cancel() => _cancelled = true;
+}

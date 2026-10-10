@@ -172,6 +172,57 @@ void main() {
     source.dispose();
   });
 
+  test('备份上报阶段进度；取消时抛异常并清理写了一半的缓存文件', () async {
+    final controller = await makeController();
+    controller.addEntry(
+      LedgerEntry(
+        id: 'e-progress',
+        bookId: controller.activeBook.id,
+        type: EntryType.expense,
+        amount: 8,
+        categoryId: 'dining',
+        accountId: '',
+        note: '',
+        occurredAt: DateTime(2026, 7, 6),
+      ),
+    );
+    final cacheDir = await Directory.systemTemp.createTemp('verifin_progress');
+    try {
+      final phases = <BackupPhase>[];
+      final prepared = await BackupService.prepare(
+        json: controller.exportDataJson(),
+        store: controller.attachmentStore,
+        cacheDirectory: cacheDir,
+        passphrase: '',
+        now: DateTime(2026, 7, 6, 9),
+        auto: false,
+        onProgress: (progress) => phases.add(progress.phase),
+      );
+      expect(phases, contains(BackupPhase.preparing));
+      expect(phases, contains(BackupPhase.packing));
+      expect(phases, contains(BackupPhase.verifying));
+      await BackupService.deletePrepared(prepared);
+
+      // 取消：进入流程即中止，缓存目录不留残片。
+      await expectLater(
+        BackupService.prepare(
+          json: controller.exportDataJson(),
+          store: controller.attachmentStore,
+          cacheDirectory: cacheDir,
+          passphrase: '',
+          now: DateTime(2026, 7, 6, 9),
+          auto: false,
+          isCancelled: () => true,
+        ),
+        throwsA(isA<BackupCancelledException>()),
+      );
+      expect(await cacheDir.list().toList(), isEmpty);
+    } finally {
+      await cacheDir.delete(recursive: true);
+      controller.dispose();
+    }
+  });
+
   test('decodeBackupFile 也兼容旧版纯 JSON 备份字节', () async {
     final source = await makeController();
     source.addAccount(

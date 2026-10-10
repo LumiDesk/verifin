@@ -1,26 +1,84 @@
 part of 'data_management_page.dart';
 
+/// 备份/恢复的阻塞进度对话框：阶段文案 + 进度条 + 百分比 + 取消。
+///
+/// 进度来自 [VeriFinController.backupProgressListenable]；取消按钮置位
+/// [BackupCancellation]，服务层在条目/分块之间检查后中止并清理临时文件。
 class _BackupProgressDialog extends StatelessWidget {
-  const _BackupProgressDialog({required this.label});
+  const _BackupProgressDialog({
+    required this.title,
+    required this.controller,
+    required this.cancellation,
+  });
 
-  final String label;
+  final String title;
+  final VeriFinController controller;
+  final BackupCancellation cancellation;
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      content: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          const SizedBox(
-            width: 22,
-            height: 22,
-            child: CircularProgressIndicator(strokeWidth: 2.4),
+    final l10n = AppLocalizations.of(context);
+    return PopScope(
+      canPop: false,
+      child: AlertDialog(
+        content: ValueListenableBuilder<BackupProgress?>(
+          valueListenable: controller.backupProgressListenable,
+          builder: (context, progress, _) {
+            final fraction = progress?.fraction;
+            final label = progress == null
+                ? title
+                : _backupPhaseLabel(l10n, progress.phase);
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(label),
+                const SizedBox(height: 14),
+                LinearProgressIndicator(value: fraction),
+                if (fraction != null) ...<Widget>[
+                  const SizedBox(height: 8),
+                  Text(
+                    '${(fraction * 100).round()}%',
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                ],
+              ],
+            );
+          },
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: cancellation.cancel,
+            child: Text(l10n.commonCancel),
           ),
-          const SizedBox(width: 16),
-          Flexible(child: Text(label)),
         ],
       ),
     );
+  }
+}
+
+String _backupPhaseLabel(AppLocalizations l10n, BackupPhase phase) {
+  switch (phase) {
+    case BackupPhase.preparing:
+      return l10n.backupPhasePreparing;
+    case BackupPhase.packing:
+      return l10n.backupPhasePacking;
+    case BackupPhase.encrypting:
+      return l10n.backupPhaseEncrypting;
+    case BackupPhase.writing:
+      return l10n.backupPhaseWriting;
+    case BackupPhase.verifying:
+      return l10n.backupPhaseVerifying;
+    case BackupPhase.reading:
+      return l10n.backupPhaseReading;
+    case BackupPhase.decrypting:
+      return l10n.backupPhaseDecrypting;
+    case BackupPhase.unpacking:
+      return l10n.backupPhaseUnpacking;
+    case BackupPhase.importing:
+      return l10n.backupPhaseImporting;
+    case BackupPhase.cleaning:
+      return l10n.backupPhaseCleaning;
   }
 }
 
