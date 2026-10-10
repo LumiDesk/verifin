@@ -124,7 +124,7 @@ dart format .
 
 **发版必须得到用户明确授权。** 打标签会推送远端并触发 CI，不能自行执行。实际顺序如下：
 
-1. 确定版本号与日期，把 `CHANGELOG.md` 顶部 `## [Unreleased]` 提升为本次版本，并在其上新建空的 `## [Unreleased]`。
+1. 确定版本号与日期，把 `CHANGELOG.md` 顶部 `## [Unreleased]` 提升为本次版本，并在其上新建空的 `## [Unreleased]`。`CHANGELOG.md` 只保留未发布改动与最近一个次版本线；更早版本归档在 git 标签与 GitHub Releases，不再回填。
 2. 先提交 CHANGELOG 变更，确认当前分支是 `main` 且工作树完全干净。
 3. 发布脚本参数可取 `patch`、`minor`、`major` 或显式版本号（如 `1.2.3`）。macOS/Linux 示例：`scripts/publish.sh patch`；Windows 示例：`./scripts/publish.ps1 patch`。两份脚本逻辑必须同步维护。
 4. 脚本会更新 `pubspec.yaml` 与 `lib/app/app_version.dart`，执行格式化、依赖安装、analyze、test，创建 `chore: release vX.Y.Z` 提交、标签并推送。
