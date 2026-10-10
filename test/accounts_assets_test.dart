@@ -179,6 +179,83 @@ void main() {
     );
   });
 
+  testWidgets('新建账户的初始余额走数字键盘且支持负数', (tester) async {
+    final controller = await pumpApp(tester);
+    await tapBottomTab(tester, 1);
+    await tester.tap(find.byTooltip('资产操作'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('添加账户'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).first, '招行信用卡');
+    await tester.pump();
+
+    // 初始余额不再是系统键盘输入框，点按后弹出统一数字键盘。
+    await tester.tap(find.byKey(const Key('add_account_balance')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('number_key_1')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('number_key_-')));
+    await tester.tap(find.byKey(const Key('number_key_5')));
+    await tester.tap(find.byKey(const Key('number_key_00')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('number_pad_ok')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('-500'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+
+    expect(controller.accounts.single.name, '招行信用卡');
+    expect(controller.accounts.single.initialBalance, -500);
+  });
+
+  testWidgets('账户详情可把余额调整为负数并提示欠款', (tester) async {
+    final controller = await makeController();
+    final account = Account(
+      id: 'balance-edit-account',
+      bookId: controller.activeBook.id,
+      name: '招行信用卡',
+      type: AccountType.creditCard,
+      groupId: null,
+      initialBalance: 0,
+      iconCode: 'wallet',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+      currencyCode: controller.activeBook.baseCurrencyCode,
+    );
+    expect(await controller.addAccountDraft(account), isTrue);
+    await tester.binding.setSurfaceSize(const Size(460, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(home: AccountDetailPage(account: account)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 余额为 0 时面板也从空开始，可直接输入首位负号。
+    await tester.tap(find.byTooltip('调整余额'));
+    await tester.pumpAndSettle();
+    expect(find.text('请输入金额'), findsOneWidget);
+    for (final key in <String>['-', '5', '00']) {
+      await tester.tap(find.byKey(Key('number_key_$key')));
+      await tester.pump();
+    }
+    await tester.tap(find.byKey(const Key('number_pad_ok')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('-500'), findsWidgets);
+    expect(find.textContaining('负余额'), findsOneWidget);
+
+    await tester.tap(find.text('确认'));
+    await tester.pumpAndSettle();
+
+    expect(controller.accountBalance(account), -500);
+  });
+
   testWidgets('资产背景入口位于资产操作菜单的显示设置中', (WidgetTester tester) async {
     await pumpApp(tester);
 

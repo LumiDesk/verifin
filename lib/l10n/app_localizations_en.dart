@@ -975,9 +975,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountBalanceLabel => 'Account balance';
 
   @override
-  String get accountBalanceHint => 'Defaults to 0';
-
-  @override
   String get accountNoteLabel => 'Account note';
 
   @override
@@ -1121,6 +1118,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get balanceEditConfirmTitle => 'Confirm balance change?';
+
+  @override
+  String get balanceEditNegativeHint =>
+      'A negative balance means money owed — credit cards and loans usually sit below zero.';
 
   @override
   String balanceEditConfirmMessage(String name, String amount) {
@@ -2209,9 +2210,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardBudgetLabel => 'This month\'s budget (optional)';
 
   @override
-  String get onboardBudgetHint => 'e.g. 3000';
-
-  @override
   String get onboardDoneTitle => 'All set';
 
   @override
@@ -3036,6 +3034,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get calcIncomplete => 'Incomplete expression';
+
+  @override
+  String get numberPadAmountHint => 'Enter amount';
 
   @override
   String numberPadMax(String amount) {

@@ -55,15 +55,29 @@ void main() {
       find.byKey(const Key('onboarding_account_name')),
       '现金',
     );
-    await tester.enterText(
-      find.byKey(const Key('onboarding_account_balance')),
-      '500',
-    );
+
+    // 初始余额与预算都走统一数字键盘（引导页不再弹系统键盘）。
+    await tester.tap(find.byKey(const Key('onboarding_account_balance')));
+    await tester.pumpAndSettle();
+    for (final key in <String>['-', '5', '00']) {
+      await tester.tap(find.byKey(Key('number_key_$key')));
+      await tester.pump();
+    }
+    await tester.tap(find.byKey(const Key('number_pad_ok')));
+    await tester.pumpAndSettle();
+    expect(find.text('-500'), findsOneWidget);
 
     // → 预算步骤。
     await tester.tap(find.byKey(const Key('onboarding_next')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('onboarding_budget')), '3000');
+    await tester.tap(find.byKey(const Key('onboarding_budget')));
+    await tester.pumpAndSettle();
+    for (final key in <String>['3', '0', '0', '0']) {
+      await tester.tap(find.byKey(Key('number_key_$key')));
+      await tester.pump();
+    }
+    await tester.tap(find.byKey(const Key('number_pad_ok')));
+    await tester.pumpAndSettle();
 
     // → 完成步骤。
     await tester.tap(find.byKey(const Key('onboarding_next')));
@@ -76,6 +90,10 @@ void main() {
 
     expect(controller.onboardingCompleted, isTrue);
     expect(controller.accounts.any((a) => a.name == '现金'), isTrue);
+    expect(
+      controller.accounts.firstWhere((a) => a.name == '现金').initialBalance,
+      -500,
+    );
     expect(controller.activeBook.baseCurrencyCode, 'USD');
     expect(
       controller.accounts.firstWhere((a) => a.name == '现金').currencyCode,

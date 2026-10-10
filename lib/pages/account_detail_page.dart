@@ -601,6 +601,17 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                   formatUserMoney(amount, account.currencyCode),
                 ),
               ),
+              if (amount < 0) ...<Widget>[
+                const SizedBox(height: 6),
+                Text(
+                  AppLocalizations.of(context).balanceEditNegativeHint,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.62),
+                  ),
+                ),
+              ],
               const SizedBox(height: 8),
               CheckboxListTile(
                 value: recordEntry,

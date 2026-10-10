@@ -951,9 +951,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get accountBalanceLabel => '账户余额';
 
   @override
-  String get accountBalanceHint => '不填默认为 0';
-
-  @override
   String get accountNoteLabel => '账户备注';
 
   @override
@@ -1096,6 +1093,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get balanceEditConfirmTitle => '是否确认修改余额？';
+
+  @override
+  String get balanceEditNegativeHint => '负余额表示欠款，信用卡、贷款这类负债账户通常为负。';
 
   @override
   String balanceEditConfirmMessage(String name, String amount) {
@@ -2159,9 +2159,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get onboardBudgetLabel => '本月预算（可选）';
 
   @override
-  String get onboardBudgetHint => '如：3000';
-
-  @override
   String get onboardDoneTitle => '一切就绪';
 
   @override
@@ -2973,6 +2970,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get calcIncomplete => '算式不完整';
+
+  @override
+  String get numberPadAmountHint => '请输入金额';
 
   @override
   String numberPadMax(String amount) {

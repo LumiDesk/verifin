@@ -587,7 +587,6 @@
   "accountSectionDisplay": "展示与记账",
   "accountSectionDanger": "危险操作",
   "accountBalanceLabel": "账户余额",
-  "accountBalanceHint": "不填默认为 0",
   "accountNoteLabel": "账户备注",
   "accountGroupLabel": "账户分组",
   "accountTypePickerTitle": "选择账户类型",
@@ -655,6 +654,7 @@
   "deletableLabel": "可删除",
   "hasEntriesLabel": "已有交易",
   "balanceEditConfirmTitle": "是否确认修改余额？",
+  "balanceEditNegativeHint": "负余额表示欠款，信用卡、贷款这类负债账户通常为负。",
   "balanceEditConfirmMessage": "将把「{name}」的余额调整为 {amount}。",
   "@balanceEditConfirmMessage": {
     "placeholders": {
@@ -1453,7 +1453,6 @@
   "onboardBalanceLabel": "当前余额（可选）",
   "onboardBudgetDesc": "设定每月预算后，首页与看板会展示预算执行进度，帮你控制支出。留空则暂不设预算，之后可在首页预算卡随时修改。",
   "onboardBudgetLabel": "本月预算（可选）",
-  "onboardBudgetHint": "如：3000",
   "onboardDoneTitle": "一切就绪",
   "onboardDoneDesc": "点击首页右下角的「+」即可快速记一笔。\n\n在「我的」页可以管理账本、分类、标签、周期记账，查看统计分析，设置记账提醒与数据备份。\n\n祝你记账愉快！",
   "legalUpdated": "更新日期：{date}",
@@ -1914,6 +1913,7 @@
   "setAsDefaultAccount": "设为默认账户",
   "setAsDefaultAccountHint": "记账时默认用此账户付款",
   "calcIncomplete": "算式不完整",
+  "numberPadAmountHint": "请输入金额",
   "numberPadMax": "最多 {amount}",
   "@numberPadMax": {
     "placeholders": {

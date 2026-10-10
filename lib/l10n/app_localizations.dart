@@ -1874,12 +1874,6 @@ abstract class AppLocalizations {
   /// **'账户余额'**
   String get accountBalanceLabel;
 
-  /// No description provided for @accountBalanceHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'不填默认为 0'**
-  String get accountBalanceHint;
-
   /// No description provided for @accountNoteLabel.
   ///
   /// In zh, this message translates to:
@@ -2155,6 +2149,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'是否确认修改余额？'**
   String get balanceEditConfirmTitle;
+
+  /// No description provided for @balanceEditNegativeHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'负余额表示欠款，信用卡、贷款这类负债账户通常为负。'**
+  String get balanceEditNegativeHint;
 
   /// No description provided for @balanceEditConfirmMessage.
   ///
@@ -3986,12 +3986,6 @@ abstract class AppLocalizations {
   /// **'本月预算（可选）'**
   String get onboardBudgetLabel;
 
-  /// No description provided for @onboardBudgetHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'如：3000'**
-  String get onboardBudgetHint;
-
   /// No description provided for @onboardDoneTitle.
   ///
   /// In zh, this message translates to:
@@ -5485,6 +5479,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'算式不完整'**
   String get calcIncomplete;
+
+  /// No description provided for @numberPadAmountHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入金额'**
+  String get numberPadAmountHint;
 
   /// No description provided for @numberPadMax.
   ///

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
+import '../app/common_widgets.dart';
 import '../app/currency_catalog.dart';
+import '../app/currency_math.dart';
 import '../app/models.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
@@ -35,11 +37,12 @@ class OnboardingPage extends StatefulWidget {
 class _OnboardingPageState extends State<OnboardingPage> {
   final PageController _pageController = PageController();
   final TextEditingController _accountName = TextEditingController();
-  final TextEditingController _accountBalance = TextEditingController();
-  final TextEditingController _budget = TextEditingController();
 
   int _page = 0;
   String? _baseCurrencyCode;
+  // 金额一律走统一数字键盘，因此只保留数值草稿，不再持有文本控制器。
+  double? _accountBalance;
+  double? _budget;
   // 「完成/跳过」会先 await 一次落库再建账户，期间按钮仍可点；没有这个标志，
   // 快速双击会建出两个默认账户。
   bool _finishing = false;
@@ -58,8 +61,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
   void dispose() {
     _pageController.dispose();
     _accountName.dispose();
-    _accountBalance.dispose();
-    _budget.dispose();
     super.dispose();
   }
 
@@ -103,7 +104,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
           name: name.isEmpty ? AccountType.cash.label(l10n) : name,
           type: AccountType.cash,
           groupId: null,
-          initialBalance: double.tryParse(_accountBalance.text.trim()) ?? 0,
+          initialBalance: _accountBalance ?? 0,
           iconCode: 'wallet',
           note: '',
           includeInAssets: true,
@@ -112,7 +113,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         ),
       );
       // 设默认月预算（填了正数才设）：作为每月自动沿用的默认值，而非只设当月。
-      final budget = double.tryParse(_budget.text.trim());
+      final budget = _budget;
       if (budget != null && budget > 0) {
         controller.setDefaultMonthlyBudget(budget);
       }
@@ -137,6 +138,38 @@ class _OnboardingPageState extends State<OnboardingPage> {
     );
     if (selected == null || !mounted) return;
     setState(() => _baseCurrencyCode = selected.code);
+  }
+
+  /// 首个账户的初始余额：可与正式的新建账户页一致地输入负数。
+  Future<void> _pickAccountBalance() async {
+    final code = _baseCurrencyCode ?? 'CNY';
+    final value = await showNumberPadSheet(
+      context,
+      title: AppLocalizations.of(context).accountBalanceCurrencyLabel(code),
+      initialAmount: _accountBalance,
+      allowNegative: true,
+      allowZero: true,
+      currencyCode: code,
+    );
+    if (value == null || !mounted) {
+      return;
+    }
+    setState(() => _accountBalance = value);
+  }
+
+  Future<void> _pickBudget() async {
+    final code = _baseCurrencyCode ?? 'CNY';
+    final value = await showNumberPadSheet(
+      context,
+      title: AppLocalizations.of(context).onboardBudgetLabel,
+      initialAmount: _budget,
+      allowZero: true,
+      currencyCode: code,
+    );
+    if (value == null || !mounted) {
+      return;
+    }
+    setState(() => _budget = value);
   }
 
   @override
@@ -165,11 +198,16 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   const _WelcomeStep(),
                   _AccountStep(
                     nameController: _accountName,
-                    balanceController: _accountBalance,
+                    balance: _accountBalance,
                     baseCurrencyCode: _baseCurrencyCode ?? 'CNY',
                     onPickBaseCurrency: _pickBaseCurrency,
+                    onPickBalance: _pickAccountBalance,
                   ),
-                  _BudgetStep(budgetController: _budget),
+                  _BudgetStep(
+                    budget: _budget,
+                    baseCurrencyCode: _baseCurrencyCode ?? 'CNY',
+                    onPickBudget: _pickBudget,
+                  ),
                   const _DoneStep(),
                 ],
               ),
@@ -278,15 +316,17 @@ class _WelcomeStep extends StatelessWidget {
 class _AccountStep extends StatelessWidget {
   const _AccountStep({
     required this.nameController,
-    required this.balanceController,
+    required this.balance,
     required this.baseCurrencyCode,
     required this.onPickBaseCurrency,
+    required this.onPickBalance,
   });
 
   final TextEditingController nameController;
-  final TextEditingController balanceController;
+  final double? balance;
   final String baseCurrencyCode;
   final VoidCallback onPickBaseCurrency;
+  final VoidCallback onPickBalance;
 
   @override
   Widget build(BuildContext context) {
@@ -318,16 +358,16 @@ class _AccountStep extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          TextField(
+          SelectField(
             key: const Key('onboarding_account_balance'),
-            controller: balanceController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(
-              labelText: AppLocalizations.of(
-                context,
-              ).accountBalanceCurrencyLabel(baseCurrencyCode),
-              hintText: '0',
-            ),
+            label: AppLocalizations.of(
+              context,
+            ).accountBalanceCurrencyLabel(baseCurrencyCode),
+            value: balance == null
+                ? AppLocalizations.of(context).notSet
+                : formatUserMoney(balance!, baseCurrencyCode),
+            icon: Icons.account_balance_wallet_outlined,
+            onTap: onPickBalance,
           ),
         ],
       ),
@@ -336,9 +376,15 @@ class _AccountStep extends StatelessWidget {
 }
 
 class _BudgetStep extends StatelessWidget {
-  const _BudgetStep({required this.budgetController});
+  const _BudgetStep({
+    required this.budget,
+    required this.baseCurrencyCode,
+    required this.onPickBudget,
+  });
 
-  final TextEditingController budgetController;
+  final double? budget;
+  final String baseCurrencyCode;
+  final VoidCallback onPickBudget;
 
   @override
   Widget build(BuildContext context) {
@@ -346,14 +392,14 @@ class _BudgetStep extends StatelessWidget {
       icon: Icons.pie_chart_outline,
       title: AppLocalizations.of(context).setMonthBudgetTitle,
       description: AppLocalizations.of(context).onboardBudgetDesc,
-      child: TextField(
+      child: SelectField(
         key: const Key('onboarding_budget'),
-        controller: budgetController,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        decoration: InputDecoration(
-          labelText: AppLocalizations.of(context).onboardBudgetLabel,
-          hintText: AppLocalizations.of(context).onboardBudgetHint,
-        ),
+        label: AppLocalizations.of(context).onboardBudgetLabel,
+        value: budget == null
+            ? AppLocalizations.of(context).notSet
+            : formatUserMoney(budget!, baseCurrencyCode),
+        icon: Icons.pie_chart_outline,
+        onTap: onPickBudget,
       ),
     );
   }
