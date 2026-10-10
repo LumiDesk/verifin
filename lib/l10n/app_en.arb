@@ -1073,6 +1073,7 @@
   "setAsDefaultAccount": "Set as default account",
   "setAsDefaultAccountHint": "Used as the default payment account for entries",
   "calcIncomplete": "Incomplete expression",
+  "numberPadAmountHint": "Enter amount",
   "numberPadMax": "Max {amount}",
   "aiSettingsTitle": "AI settings",
   "aiConfigured": "Configured",

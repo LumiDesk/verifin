@@ -3038,6 +3038,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calcIncomplete => 'Incomplete expression';
 
   @override
+  String get numberPadAmountHint => 'Enter amount';
+
+  @override
   String numberPadMax(String amount) {
     return 'Max $amount';
   }

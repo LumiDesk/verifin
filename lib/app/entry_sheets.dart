@@ -52,9 +52,22 @@ class NumberPadSheet extends StatefulWidget {
 }
 
 class _NumberPadSheetState extends State<NumberPadSheet> {
-  late String _input = widget.initialAmount == null
-      ? ''
-      : _formatInitialValue(widget.initialAmount!, widget.maxFractionDigits);
+  late String _input = _initialInput(
+    widget.initialAmount,
+    widget.maxFractionDigits,
+  );
+
+  /// 初始输入串：空值与 0 都从空输入开始，不再把 `0` 预填成值。
+  ///
+  /// 预填的 `0` 会被当成已输入内容——按数字要顶掉它、按运算符要接在它后面，
+  /// 用户看不到「还没输入」的状态。0 由占位提示表达；需要确认 0 的场景走
+  /// `allowZero`，清空后按 OK 仍会提交 0。
+  static String _initialInput(double? amount, int fractionDigits) {
+    if (amount == null || amount == 0) {
+      return '';
+    }
+    return _formatInitialValue(amount, fractionDigits);
+  }
 
   /// 求值当前输入（可能是 `500+800` 这类算式）；不完整/无效时为 null。
   double? get _result =>
@@ -111,10 +124,20 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
                     children: <Widget>[
                       Text(
                         key: const Key('number_pad_display'),
-                        _input.isEmpty ? '0' : _input,
+                        _input.isEmpty
+                            ? AppLocalizations.of(context).numberPadAmountHint
+                            : _input,
                         textAlign: TextAlign.end,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.displaySmall
-                            ?.copyWith(fontWeight: FontWeight.w800),
+                            ?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: _input.isEmpty
+                                  ? Theme.of(context).colorScheme.onSurface
+                                        .withValues(alpha: 0.32)
+                                  : null,
+                            ),
                       ),
                       // 算式模式在右下角展示浅色结果预览；不完整则提示。
                       if (_hasOperator) ...<Widget>[
@@ -407,7 +430,8 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
         if (operand.contains('.')) {
           return;
         }
-        _input += operand.isEmpty ? '0.' : '.';
+        // 空操作数与「只有负号」都补前导 0，避免出现 `-.` 这种无效串。
+        _input += operand.isEmpty || operand == '-' ? '0.' : '.';
         return;
       }
       // 数字键：小数位与前导零规则只针对当前操作数。
@@ -423,7 +447,8 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
         _input = _input.substring(0, _input.length - 1) + value;
       } else if (operand == '-0' && value != '00') {
         _input = '${_input.substring(0, _input.length - 1)}$value';
-      } else if (operand.isEmpty && value == '00') {
+      } else if ((operand.isEmpty || operand == '-') && value == '00') {
+        // `00` 在负号后只落一个 0，保持 `-0` 可被后续数字替换。
         _input += '0';
       } else {
         _input += value;
@@ -440,9 +465,16 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
     return fixed.replaceFirst(RegExp(r'\.?0+$'), '');
   }
 
-  /// 追加一个运算符：不能以运算符开头；末尾已是运算符则替换；末尾的 `.` 先去掉。
+  /// 追加一个运算符。
+  ///
+  /// 空输入时只有「允许负数」下的 `-` 有意义——作为首位负号写入，其余运算符仍
+  /// 需要左操作数而保持不响应。单独一个 `-` 之后不能再接运算符，否则算式必然
+  /// 不完整。末尾已是运算符则替换，末尾的 `.` 先去掉。
   void _appendOperator(String op) {
     if (_input.isEmpty) {
+      if (op == '-' && widget.allowNegative) {
+        _input = '-';
+      }
       return;
     }
     var next = _input;

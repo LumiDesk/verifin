@@ -1914,6 +1914,7 @@
   "setAsDefaultAccount": "设为默认账户",
   "setAsDefaultAccountHint": "记账时默认用此账户付款",
   "calcIncomplete": "算式不完整",
+  "numberPadAmountHint": "请输入金额",
   "numberPadMax": "最多 {amount}",
   "@numberPadMax": {
     "placeholders": {

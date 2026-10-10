@@ -5486,6 +5486,12 @@ abstract class AppLocalizations {
   /// **'算式不完整'**
   String get calcIncomplete;
 
+  /// No description provided for @numberPadAmountHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入金额'**
+  String get numberPadAmountHint;
+
   /// No description provided for @numberPadMax.
   ///
   /// In zh, this message translates to:
