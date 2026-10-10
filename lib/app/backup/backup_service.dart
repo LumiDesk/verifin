@@ -8,6 +8,7 @@ import 'backup_crypto.dart';
 import 'backup_progress.dart';
 import 'backup_settings.dart';
 import 'backup_storage.dart';
+import 'legacy_json_stream.dart';
 
 // 调用方（页面/controller）只 import 本文件即可完成备份的编解码全流程，
 // 不必触达 archive/crypto 实现细节；解密错误类型一并从这里透出。
@@ -162,6 +163,22 @@ class BackupService {
     if (looksLikeEncryptedStream(header)) {
       return const EncryptedStreamBackup();
     }
+    // 旧版明文 JSON：流式重写，边解析边把内嵌 base64 附件外置，整份文档不进内存。
+    try {
+      final rewritten = await rewriteLegacyBackupJson(
+        sourcePath: cachePath,
+        sink: sink,
+        onProgress: onProgress,
+        isCancelled: isCancelled,
+      );
+      return PlainBackupJson(rewritten);
+    } on BackupCancelledException {
+      rethrow;
+    } on LegacyEncryptedEnvelopeDetected {
+      // 旧版加密信封：密文内嵌在 JSON 文本里，按文本读取后交由调用方索要口令。
+    } catch (_) {
+      throw const FormatException('备份文件格式不正确');
+    }
     final String text;
     try {
       text = await file.readAsString();
@@ -175,7 +192,6 @@ class BackupService {
     if (isEncryptedBackup(text)) {
       return EncryptedBackupEnvelope(text);
     }
-    // 旧版明文 JSON：附件内嵌 base64，先抽取成附件文件，统一成新版形态。
     return PlainBackupJson(await extractLegacyAttachments(text, sink));
   }
 
