@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'ledger_math.dart';
@@ -190,7 +192,7 @@ List<double> monthlyNetAssetSeries(
 
 /// 余额类序列的纵轴刻度:范围取序列实际的 [min, max](含 0)。
 
-List<String> balanceAxisLabels(List<double> values, String currencyCode) {
+List<String> balanceAxisLabels(List<double> values, AppLocalizations l10n) {
   var maxValue = 0.0;
   var minValue = 0.0;
   for (final value in values) {
@@ -201,22 +203,43 @@ List<String> balanceAxisLabels(List<double> values, String currencyCode) {
       minValue = value;
     }
   }
-  if (maxValue - minValue <= 0) {
-    return <String>[
-      formatCurrencyNumber(0, currencyCode),
-      formatCurrencyNumber(50, currencyCode),
-      formatCurrencyNumber(100, currencyCode),
-    ];
+  // 同一根轴的三个刻度必须同档：跨度上到千位时统一取整（如 3363 / 1682 / 0），
+  // 否则统一保留金额小数（如 585.00 / 292.50 / 0），不能混排。
+  final integerScale = math.max(maxValue.abs(), minValue.abs()) >= 1000;
+  String labelOf(double value) {
+    if (isZeroAmount(value)) {
+      return '0';
+    }
+    if (!integerScale) {
+      return formatAmount(value);
+    }
+    // 千位以上统一取整；万以上沿用带本地化单位的紧凑写法。
+    return value.abs() >= 10000
+        ? formatCompactAmount(l10n, value)
+        : value.toStringAsFixed(0);
   }
-  return <String>[
-    _formatAxisAmount(minValue, currencyCode: currencyCode),
-    _formatAxisAmount((minValue + maxValue) / 2, currencyCode: currencyCode),
-    _formatAxisAmount(maxValue, currencyCode: currencyCode),
+
+  if (maxValue - minValue <= 0) {
+    return <String>[labelOf(0), labelOf(50), labelOf(100)];
+  }
+  final labels = <String>[
+    labelOf(minValue),
+    labelOf((minValue + maxValue) / 2),
+    labelOf(maxValue),
   ];
+  // 极端值经过紧凑格式化后可能碰撞；保证三个刻度严格递增且不重复。
+  for (var i = 1; i < labels.length; i++) {
+    if (labels[i] == labels[i - 1]) {
+      final value = minValue + (maxValue - minValue) * i / 2;
+      labels[i] = formatAmount(value);
+    }
+  }
+  return labels;
 }
 
-List<String> evenMonthAxisLabels() {
-  return const <String>['2', '4', '6', '8', '10', '12'];
+/// 年视图的 12 个月份标签；图表适配层按 x 值等距分布。
+List<String> yearMonthAxisLabels() {
+  return List<String>.generate(12, (index) => '${index + 1}');
 }
 
 int bookkeepingDays(List<LedgerEntry> entries) {

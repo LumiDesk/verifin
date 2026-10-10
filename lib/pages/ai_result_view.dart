@@ -33,7 +33,7 @@ class AiResultView extends StatelessWidget {
 
 Widget _cardTitle(BuildContext context, String title, {String? currencyCode}) {
   return Padding(
-    padding: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.only(bottom: 12),
     child: Row(
       children: <Widget>[
         Expanded(
@@ -234,7 +234,7 @@ class _TrendCard extends StatelessWidget {
             child: InteractiveTrendChart(
               color: display.isExpense
                   ? Theme.of(context).colorScheme.primary
-                  : veriMint,
+                  : veriSemantic(context, veriIncome),
               values: display.values,
               xLabels: display.labels,
               yLabels: _yLabels(context, display.values),

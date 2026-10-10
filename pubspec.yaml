@@ -41,6 +41,10 @@ dependencies:
   image_picker: ^1.2.3
   image: ^4.9.1
   file_selector: ^1.1.0
+  # 数据图表统一走外部组件库，项目不再维护自绘图表。
+  fl_chart: ^1.2.0
+  # 通用空状态动画；资产本地打包，不联网加载。
+  lottie: ^3.6.1
   # 备份目录文件名/路径拼接（已作为 flutter 传递依赖存在，此处显式声明）。
   path: ^1.9.0
   # 附件文件化存储需要应用私有支持目录；官方插件，避免自行拼数据库目录。
@@ -110,6 +114,7 @@ flutter:
   assets:
     - assets/account_icons/
     - assets/import_icons/
+    - assets/lottie/
 
   shaders:
     - shaders/liquid_glass_lens.frag

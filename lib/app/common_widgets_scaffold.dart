@@ -396,6 +396,7 @@ class EmptyState extends StatelessWidget {
     required this.title,
     required this.description,
     this.action,
+    this.animationAsset,
   });
 
   final IconData icon;
@@ -405,8 +406,14 @@ class EmptyState extends StatelessWidget {
   /// 可选的操作入口（如「添加账户」）。空状态只说原因不给出口时，用户会卡在死路上。
   final Widget? action;
 
+  /// 通用空状态动画；传 null 可回退到图标方案（也用于系统减少动态效果）。
+  final String? animationAsset;
+
   @override
   Widget build(BuildContext context) {
+    final animationAsset = this.animationAsset;
+    final showAnimation =
+        animationAsset != null && !MediaQuery.of(context).disableAnimations;
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 260),
@@ -415,26 +422,37 @@ class EmptyState extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(veriRadiusMd),
-                  border: Border.all(
+              if (showAnimation)
+                SizedBox(
+                  width: 96,
+                  height: 96,
+                  child: Lottie.asset(
+                    animationAsset,
+                    fit: BoxFit.contain,
+                    repeat: false,
+                  ),
+                )
+              else
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
                     color: Theme.of(
                       context,
-                    ).colorScheme.primary.withValues(alpha: 0.10),
+                    ).colorScheme.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(veriRadiusMd),
+                    border: Border.all(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.10),
+                    ),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 24,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
-                child: Icon(
-                  icon,
-                  size: 24,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
               const SizedBox(height: 10),
               Text(
                 title,

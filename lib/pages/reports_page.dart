@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
@@ -100,6 +99,7 @@ class ReportsPage extends StatelessWidget {
                 // 否则只剩一个空轨道和「0」。
                 if (categoryStats.isEmpty || isZeroAmount(monthExpense))
                   EmptyState(
+                    animationAsset: 'assets/lottie/empty_state.json',
                     icon: Icons.donut_small_outlined,
                     title: AppLocalizations.of(context).noCategoryData,
                     description: AppLocalizations.of(context).noCategoryDesc,
@@ -130,6 +130,7 @@ class ReportsPage extends StatelessWidget {
                 const SizedBox(height: 8),
                 if (categoryStats.isEmpty)
                   EmptyState(
+                    animationAsset: 'assets/lottie/empty_state.json',
                     icon: Icons.donut_small_outlined,
                     title: AppLocalizations.of(context).noCategoryData,
                     description: AppLocalizations.of(context).noCategoryDesc,
@@ -150,9 +151,10 @@ class ReportsPage extends StatelessWidget {
                   title: AppLocalizations.of(context).panelDailyTrendLabel,
                   trailing: formatExpenseAmount(trendExpense),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 if (isZeroAmount(trendExpense))
                   EmptyState(
+                    animationAsset: 'assets/lottie/empty_state.json',
                     icon: Icons.show_chart,
                     title: l10n.noDimData(l10n.entryTypeExpense),
                     description: l10n.noDimDesc(l10n.entryTypeExpense),
@@ -198,9 +200,10 @@ class ReportsPage extends StatelessWidget {
                   title: AppLocalizations.of(context).monthlyTrendTitle,
                   trailing: AppLocalizations.of(context).thisYearLabel,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 if (monthlyMax <= 0)
                   EmptyState(
+                    animationAsset: 'assets/lottie/empty_state.json',
                     icon: Icons.bar_chart_outlined,
                     title: l10n.noDimData(l10n.entryTypeExpense),
                     description: l10n.noDimDesc(l10n.entryTypeExpense),
@@ -258,6 +261,7 @@ class ReportsPage extends StatelessWidget {
                 const SizedBox(height: 8),
                 if (tagStats.isEmpty)
                   EmptyState(
+                    animationAsset: 'assets/lottie/empty_state.json',
                     icon: Icons.label_outline,
                     title: AppLocalizations.of(context).noTagData,
                     description: AppLocalizations.of(context).noTagDesc,
@@ -568,167 +572,106 @@ class _CategoryRingChartState extends State<_CategoryRingChart> {
     }
   }
 
-  /// 点击环形图:命中环上的分段则选中/取消,命中中心或环外则清除选中。
-  void _handleTap(Offset localPosition, List<_CategoryRingSegment> segments) {
-    final ringSize = widget.ringSize;
-    final center = Offset(ringSize / 2, ringSize / 2);
-    final offset = localPosition - center;
-    final radius = offset.distance;
-    final strokeWidth = math.max(12.0, ringSize * 0.14);
-    final outer = ringSize / 2 + 5;
-    final inner = ringSize / 2 - strokeWidth - 5;
-    int? hit;
-    if (radius <= outer && radius >= inner) {
-      var angle = math.atan2(offset.dy, offset.dx) + math.pi / 2;
-      if (angle < 0) {
-        angle += math.pi * 2;
-      }
-      var start = 0.0;
-      for (final item in segments.indexed) {
-        final sweep = math.pi * 2 * item.$2.percent;
-        if (angle >= start && angle < start + sweep) {
-          hit = item.$1;
-          break;
-        }
-        start += sweep;
-      }
-    }
-    setState(() {
-      _selectedIndex = hit == _selectedIndex ? null : hit;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    final segments = _categoryRingSegments(
-      AppLocalizations.of(context),
-      widget.stats,
-      Theme.of(context).brightness,
-      Theme.of(context).colorScheme.primary,
-    );
-    final ringSize = widget.ringSize;
+    final l10n = AppLocalizations.of(context);
+    final brightness = Theme.of(context).brightness;
+    final primary = Theme.of(context).colorScheme.primary;
     final mutedColor = Theme.of(
       context,
     ).colorScheme.onSurface.withValues(alpha: 0.56);
-    final selected = _selectedIndex != null && _selectedIndex! < segments.length
+    final neutral = Theme.of(
+      context,
+    ).colorScheme.onSurface.withValues(alpha: 0.45);
+    final segments = _categoryRingSegments(
+      l10n,
+      widget.stats,
+      brightness,
+      primary,
+      neutral,
+    );
+    final selected =
+        _selectedIndex != null &&
+            _selectedIndex! >= 0 &&
+            _selectedIndex! < segments.length
         ? segments[_selectedIndex!]
         : null;
+    final selectedPercent = selected == null || widget.total <= 0
+        ? 0.0
+        : selected.value / widget.total;
 
     return SizedBox(
       width: double.infinity,
-      height: ringSize + 26,
-      child: Stack(
-        alignment: Alignment.center,
-        children: <Widget>[
-          Positioned.fill(
-            child: CustomPaint(
-              painter: _CategoryCalloutPainter(
-                segments: segments,
-                ringSize: ringSize,
-                textColor: mutedColor,
-              ),
-            ),
-          ),
-          SizedBox(
-            width: ringSize,
-            height: ringSize,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTapDown: segments.isEmpty
-                  ? null
-                  : (details) => _handleTap(details.localPosition, segments),
-              child: Stack(
-                alignment: Alignment.center,
-                children: <Widget>[
-                  CustomPaint(
-                    painter: _CategoryDonutPainter(
-                      segments: segments,
-                      trackColor: Theme.of(context)
-                          .colorScheme
-                          .surfaceContainerHighest
-                          .withValues(alpha: 0.64),
-                      selectedIndex: _selectedIndex,
+      height: widget.ringSize + 26,
+      child: Center(
+        child: SizedBox(
+          width: widget.ringSize,
+          height: widget.ringSize,
+          child: VeriDonutChart(
+            segments: segments,
+            selectedIndex: _selectedIndex,
+            onSelected: (index) => setState(() => _selectedIndex = index),
+            ringWidth: math.max(14.0, widget.ringSize * 0.14),
+            semanticsLabel: l10n.panelCategoryRingLabel,
+            center: selected == null
+                ? Text(
+                    formatExpenseAmount(widget.total),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
                     ),
-                    child: const SizedBox.expand(),
+                  )
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        selected.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: mutedColor,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        formatExpenseAmount(selected.value),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      Text(
+                        '${(selectedPercent * 100).toStringAsFixed(1)}%',
+                        maxLines: 1,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: selected.color,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
                   ),
-                  SizedBox(
-                    width: ringSize * 0.56,
-                    child: selected == null
-                        ? Text(
-                            formatExpenseAmount(widget.total),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(fontWeight: FontWeight.w800),
-                          )
-                        : Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              Text(
-                                selected.label,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(
-                                      color: mutedColor,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                              ),
-                              Text(
-                                formatExpenseAmount(selected.amount),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                style: Theme.of(context).textTheme.labelLarge
-                                    ?.copyWith(fontWeight: FontWeight.w800),
-                              ),
-                              Text(
-                                '${(selected.percent * 100).toStringAsFixed(1)}%',
-                                maxLines: 1,
-                                textAlign: TextAlign.center,
-                                style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(
-                                      color: selected.color,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                              ),
-                            ],
-                          ),
-                  ),
-                ],
-              ),
-            ),
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _CategoryRingSegment {
-  const _CategoryRingSegment({
-    required this.label,
-    required this.amount,
-    required this.percent,
-    required this.color,
-  });
-
-  final String label;
-  final double amount;
-  final double percent;
-  final Color color;
-}
-
-List<_CategoryRingSegment> _categoryRingSegments(
+List<VeriDonutSegment> _categoryRingSegments(
   AppLocalizations l10n,
   List<_CategoryStat> stats,
   Brightness brightness,
   Color primary,
+  Color neutral,
 ) {
   if (stats.isEmpty) {
-    return const <_CategoryRingSegment>[];
+    return const <VeriDonutSegment>[];
   }
   final colors = <Color>[
     primary,
@@ -736,168 +679,33 @@ List<_CategoryRingSegment> _categoryRingSegments(
     veriCyan,
     veriMint,
     veriSemanticFor(brightness, veriWarning),
-    Color(0xFF8B95A7),
+    neutral,
   ];
   final total = stats.fold<double>(0, (sum, stat) => sum + stat.amount);
   if (total <= 0) {
-    return const <_CategoryRingSegment>[];
+    return const <VeriDonutSegment>[];
   }
   final visible = stats.take(5).toList();
   final hidden = stats.skip(5).toList();
-  final segments = <_CategoryRingSegment>[
+  final segments = <VeriDonutSegment>[
     for (final item in visible.indexed)
-      _CategoryRingSegment(
+      VeriDonutSegment(
         label: item.$2.category.label,
-        amount: item.$2.amount,
-        percent: item.$2.amount / total,
+        value: item.$2.amount,
         color: colors[item.$1 % colors.length],
       ),
   ];
   final otherAmount = hidden.fold<double>(0, (sum, stat) => sum + stat.amount);
   if (otherAmount > 0) {
     segments.add(
-      _CategoryRingSegment(
+      VeriDonutSegment(
         label: l10n.othersLabel,
-        amount: otherAmount,
-        percent: otherAmount / total,
-        color: colors.last,
+        value: otherAmount,
+        color: neutral,
       ),
     );
   }
   return segments;
-}
-
-class _CategoryDonutPainter extends CustomPainter {
-  const _CategoryDonutPainter({
-    required this.segments,
-    required this.trackColor,
-    this.selectedIndex,
-  });
-
-  final List<_CategoryRingSegment> segments;
-  final Color trackColor;
-  final int? selectedIndex;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final strokeWidth = math.max(12.0, size.shortestSide * 0.14);
-    final rect = Offset.zero & size;
-    final arcRect = rect.deflate(strokeWidth / 2);
-    final trackPaint = Paint()
-      ..color = trackColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
-    canvas.drawArc(arcRect, -math.pi / 2, math.pi * 2, false, trackPaint);
-    if (segments.isEmpty) {
-      return;
-    }
-
-    var start = -math.pi / 2;
-    for (final item in segments.indexed) {
-      final segment = item.$2;
-      final sweep = math.pi * 2 * segment.percent;
-      // 有选中分段时,其余分段弱化并略微收窄,突出当前分类。
-      final isSelected = selectedIndex == null || selectedIndex == item.$1;
-      final paint = Paint()
-        ..color = isSelected
-            ? segment.color
-            : segment.color.withValues(alpha: 0.30)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = selectedIndex == item.$1
-            ? strokeWidth * 1.14
-            : strokeWidth
-        ..strokeCap = StrokeCap.round;
-      canvas.drawArc(
-        arcRect,
-        start,
-        math.max(0.02, sweep - 0.018),
-        false,
-        paint,
-      );
-      start += sweep;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _CategoryDonutPainter oldDelegate) {
-    // segments 由调用方每帧新建，按元素比较才能避免内容不变时的无谓重绘。
-    return !listEquals(oldDelegate.segments, segments) ||
-        oldDelegate.trackColor != trackColor ||
-        oldDelegate.selectedIndex != selectedIndex;
-  }
-}
-
-class _CategoryCalloutPainter extends CustomPainter {
-  const _CategoryCalloutPainter({
-    required this.segments,
-    required this.ringSize,
-    required this.textColor,
-  });
-
-  final List<_CategoryRingSegment> segments;
-  final double ringSize;
-  final Color textColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (segments.isEmpty) {
-      return;
-    }
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = ringSize / 2;
-    var startAngle = -math.pi / 2;
-    for (final item in segments.indexed) {
-      final segment = item.$2;
-      final sweep = math.pi * 2 * segment.percent;
-      final angle = startAngle + sweep / 2;
-      startAngle += sweep;
-      if (item.$1 >= 6 || segment.percent < 0.035) {
-        continue;
-      }
-      final direction = Offset(math.cos(angle), math.sin(angle));
-      final start = center + direction * radius;
-      final elbow = center + direction * (radius + 12);
-      final rightSide = direction.dx >= 0;
-      final end = Offset(elbow.dx + (rightSide ? 32 : -32), elbow.dy);
-      final paint = Paint()
-        ..color = segment.color.withValues(alpha: 0.82)
-        ..strokeWidth = 1.3
-        ..strokeCap = StrokeCap.round;
-
-      canvas.drawLine(start, elbow, paint);
-      canvas.drawLine(elbow, end, paint);
-      canvas.drawCircle(start, 2.2, Paint()..color = segment.color);
-
-      final label = '${segment.label} ${(segment.percent * 100).round()}%';
-      final textPainter = TextPainter(
-        text: TextSpan(
-          text: label,
-          style: TextStyle(
-            color: textColor,
-            fontSize: 10.5,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        maxLines: 1,
-        ellipsis: '...',
-        textDirection: TextDirection.ltr,
-        textAlign: rightSide ? TextAlign.left : TextAlign.right,
-      )..layout(maxWidth: 74);
-      final textOffset = Offset(
-        rightSide ? end.dx + 5 : end.dx - textPainter.width - 5,
-        end.dy - textPainter.height / 2,
-      );
-      textPainter.paint(canvas, textOffset);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _CategoryCalloutPainter oldDelegate) {
-    return !listEquals(oldDelegate.segments, segments) ||
-        oldDelegate.ringSize != ringSize ||
-        oldDelegate.textColor != textColor;
-  }
 }
 
 class _CategoryStat {
