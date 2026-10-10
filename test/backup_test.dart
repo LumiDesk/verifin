@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/backup/backup_service.dart';
@@ -43,37 +44,186 @@ void main() {
         );
       final dataUrl =
           'data:image/jpeg;base64,${base64Encode(List<int>.generate(2048, (i) => i % 256))}';
-      source.addAttachment('entry-att', dataUrl);
-
-      final prepared = await BackupService.prepare(
-        json: source.exportDataJson(),
-        passphrase: '',
-        now: DateTime(2026, 7, 4, 9),
-        auto: false,
-      );
-      final archiveBytes = prepared.bytes;
-      // 备份产物应为 zip（PK 头），且体积小于内嵌 base64 的 JSON。
-      expect(archiveBytes.sublist(0, 2), <int>[0x50, 0x4B]);
-      expect(
-        archiveBytes.length,
-        lessThan(utf8.encode(source.exportDataJson()).length),
+      await source.addAttachment(
+        'entry-att',
+        base64Decode(dataUrl.substring(dataUrl.indexOf(',') + 1)),
       );
 
-      final target = await makeController();
-      final decoded =
-          BackupService.decodeBackupBytes(archiveBytes) as PlainBackupJson;
-      target.importDataJson(decoded.json);
+      final cacheDir = await Directory.systemTemp.createTemp('verifin_backup');
+      try {
+        final prepared = await BackupService.prepare(
+          json: source.exportDataJson(),
+          store: source.attachmentStore,
+          cacheDirectory: cacheDir,
+          passphrase: '',
+          now: DateTime(2026, 7, 4, 9),
+          auto: false,
+        );
+        final archiveBytes = await File(prepared.cachePath).readAsBytes();
+        // 备份产物应为 zip（PK 头），且体积小于内嵌 base64 的 JSON。
+        expect(archiveBytes.sublist(0, 2), <int>[0x50, 0x4B]);
+        expect(
+          archiveBytes.length,
+          lessThan(utf8.encode(source.exportDataJson()).length),
+        );
 
-      expect(target.entries.single.note, '带票据的午餐');
-      final restored = target.attachmentsForEntry('entry-att');
-      expect(restored.single.dataUrl, dataUrl);
+        final target = await makeController();
+        final staging = await target.attachmentStore.createStagingStore();
+        try {
+          final decoded =
+              await BackupService.decodeBackupFile(
+                    cachePath: prepared.cachePath,
+                    sink: staging,
+                  )
+                  as PlainBackupJson;
+          await target.importDataJson(
+            decoded.json,
+            readStagedAttachment: staging.readBytes,
+          );
+
+          expect(target.entries.single.note, '带票据的午餐');
+          final restored = target.attachmentsForEntry('entry-att').single;
+          expect(
+            await target.attachmentStore.readBytes(restored.id),
+            base64Decode(dataUrl.substring(dataUrl.indexOf(',') + 1)),
+          );
+        } finally {
+          await target.attachmentStore.discardStagingStore(staging);
+        }
+        await BackupService.deletePrepared(prepared);
+        target.dispose();
+      } finally {
+        await cacheDir.delete(recursive: true);
+      }
 
       source.dispose();
-      target.dispose();
     },
   );
 
-  test('decodeBackupBytes 也兼容旧版纯 JSON 备份字节', () async {
+  test('加密备份走流式容器：解密后可解包导入且附件字节完整', () async {
+    final source = await makeController();
+    const attachmentBytes = <int>[9, 8, 7, 6, 5];
+    source.addEntry(
+      LedgerEntry(
+        id: 'e-enc',
+        bookId: source.activeBook.id,
+        type: EntryType.expense,
+        amount: 12,
+        categoryId: 'dining',
+        accountId: '',
+        note: '加密备份',
+        occurredAt: DateTime(2026, 7, 5),
+      ),
+    );
+    await source.addAttachment('e-enc', Uint8List.fromList(attachmentBytes));
+
+    final cacheDir = await Directory.systemTemp.createTemp('verifin_enc_cache');
+    try {
+      final prepared = await BackupService.prepare(
+        json: source.exportDataJson(),
+        store: source.attachmentStore,
+        cacheDirectory: cacheDir,
+        passphrase: 'secret-key',
+        now: DateTime(2026, 7, 5, 8),
+        auto: false,
+      );
+      expect(prepared.filename.endsWith('.verifin'), isTrue);
+
+      final target = await makeController();
+      final staging = await target.attachmentStore.createStagingStore();
+      try {
+        final decoded = await BackupService.decodeBackupFile(
+          cachePath: prepared.cachePath,
+          sink: staging,
+        );
+        expect(decoded, isA<EncryptedStreamBackup>());
+
+        final zipPath = await BackupService.decryptStreamToZip(
+          encryptedPath: prepared.cachePath,
+          cacheDirectory: cacheDir,
+          passphrase: 'secret-key',
+        );
+        try {
+          final json = await BackupService.unpackCacheZip(
+            cachePath: zipPath,
+            sink: staging,
+          );
+          await target.importDataJson(
+            json,
+            readStagedAttachment: staging.readBytes,
+          );
+          expect(target.entries.single.id, 'e-enc');
+          final restored = target.attachmentsForEntry('e-enc').single;
+          expect(
+            await target.attachmentStore.readBytes(restored.id),
+            Uint8List.fromList(attachmentBytes),
+          );
+        } finally {
+          await BackupService.deleteCachePath(zipPath);
+        }
+      } finally {
+        await target.attachmentStore.discardStagingStore(staging);
+      }
+      await BackupService.deletePrepared(prepared);
+      target.dispose();
+    } finally {
+      await cacheDir.delete(recursive: true);
+    }
+    source.dispose();
+  });
+
+  test('备份上报阶段进度；取消时抛异常并清理写了一半的缓存文件', () async {
+    final controller = await makeController();
+    controller.addEntry(
+      LedgerEntry(
+        id: 'e-progress',
+        bookId: controller.activeBook.id,
+        type: EntryType.expense,
+        amount: 8,
+        categoryId: 'dining',
+        accountId: '',
+        note: '',
+        occurredAt: DateTime(2026, 7, 6),
+      ),
+    );
+    final cacheDir = await Directory.systemTemp.createTemp('verifin_progress');
+    try {
+      final phases = <BackupPhase>[];
+      final prepared = await BackupService.prepare(
+        json: controller.exportDataJson(),
+        store: controller.attachmentStore,
+        cacheDirectory: cacheDir,
+        passphrase: '',
+        now: DateTime(2026, 7, 6, 9),
+        auto: false,
+        onProgress: (progress) => phases.add(progress.phase),
+      );
+      expect(phases, contains(BackupPhase.preparing));
+      expect(phases, contains(BackupPhase.packing));
+      expect(phases, contains(BackupPhase.verifying));
+      await BackupService.deletePrepared(prepared);
+
+      // 取消：进入流程即中止，缓存目录不留残片。
+      await expectLater(
+        BackupService.prepare(
+          json: controller.exportDataJson(),
+          store: controller.attachmentStore,
+          cacheDirectory: cacheDir,
+          passphrase: '',
+          now: DateTime(2026, 7, 6, 9),
+          auto: false,
+          isCancelled: () => true,
+        ),
+        throwsA(isA<BackupCancelledException>()),
+      );
+      expect(await cacheDir.list().toList(), isEmpty);
+    } finally {
+      await cacheDir.delete(recursive: true);
+      controller.dispose();
+    }
+  });
+
+  test('decodeBackupFile 也兼容旧版纯 JSON 备份字节', () async {
     final source = await makeController();
     source.addAccount(
       Account(
@@ -89,12 +239,27 @@ void main() {
         hidden: false,
       ),
     );
-    final jsonBytes = utf8.encode(source.exportDataJson());
+    final cacheDir = await Directory.systemTemp.createTemp('verifin_legacy');
+    final legacyPath = '${cacheDir.path}${Platform.pathSeparator}legacy.json';
+    await File(legacyPath).writeAsString(source.exportDataJson());
 
     final target = await makeController();
-    final decoded =
-        BackupService.decodeBackupBytes(jsonBytes) as PlainBackupJson;
-    target.importDataJson(decoded.json);
+    final staging = await target.attachmentStore.createStagingStore();
+    try {
+      final decoded =
+          await BackupService.decodeBackupFile(
+                cachePath: legacyPath,
+                sink: staging,
+              )
+              as PlainBackupJson;
+      await target.importDataJson(
+        decoded.json,
+        readStagedAttachment: staging.readBytes,
+      );
+    } finally {
+      await target.attachmentStore.discardStagingStore(staging);
+      await cacheDir.delete(recursive: true);
+    }
 
     expect(target.accounts.single.name, '旧备份账户');
     source.dispose();
@@ -161,7 +326,7 @@ void main() {
 
     final backup = source.exportDataJson();
     final target = await makeController();
-    target.importDataJson(backup);
+    await target.importDataJson(backup);
 
     expect(target.accounts.single.name, '现金账户');
     expect(target.entries.single.amount, 45);
@@ -185,8 +350,8 @@ void main() {
     expect(target.categories.any((category) => category.label == '咖啡'), isTrue);
     expect(target.categoriesForType(EntryType.expense).first.label, '咖啡');
 
-    expect(
-      () => target.importDataJson(
+    await expectLater(
+      target.importDataJson(
         '{"data":{"ledgerBooks":[],"entries":[],"accounts":"bad"}}',
       ),
       throwsFormatException,
@@ -258,7 +423,7 @@ void main() {
       expect(data['hideUnitInSingleCurrency'], isTrue);
 
       final target = await makeController();
-      target.importDataJson(backup);
+      await target.importDataJson(backup);
       final restoredAccount = target.accounts.single;
       final restoredEntry = target.entries.single;
       expect(target.activeBook.baseCurrencyCode, book.baseCurrencyCode);
@@ -284,7 +449,7 @@ void main() {
     'v1 backup reinterprets missing currency fields as legacy CNY',
     () async {
       final controller = await makeController();
-      controller.importDataJson(
+      await controller.importDataJson(
         jsonEncode(<String, Object?>{
           'app': 'verifin',
           'version': 1,
@@ -364,8 +529,8 @@ void main() {
       final accounts = data['accounts'] as List<dynamic>;
       (accounts.single as Map<String, dynamic>)['currencyCode'] = 'ZZZ';
 
-      expect(
-        () => controller.importDataJson(jsonEncode(root)),
+      await expectLater(
+        controller.importDataJson(jsonEncode(root)),
         throwsFormatException,
       );
       expect(controller.accounts.single.id, 'keep-account');
@@ -390,7 +555,7 @@ void main() {
     );
 
     final target = await makeController();
-    target.importDataJson(legacyJson);
+    await target.importDataJson(legacyJson);
 
     expect(
       target.enabledPanelIds(PanelPageKind.home).length,
@@ -410,7 +575,7 @@ void main() {
     ).readAsStringSync();
     final controller = await makeController();
 
-    controller.importDataJson(rawJson);
+    await controller.importDataJson(rawJson);
 
     expect(controller.accounts.length, greaterThanOrEqualTo(9));
     expect(controller.entries.length, greaterThanOrEqualTo(20));
@@ -558,15 +723,15 @@ void main() {
     );
 
     // 合法 JSON 但不是本应用备份：应报错，且现有数据原封不动。
-    expect(
-      () => controller.importDataJson('{"foo":1,"bar":[2,3]}'),
+    await expectLater(
+      controller.importDataJson('{"foo":1,"bar":[2,3]}'),
       throwsFormatException,
     );
     expect(controller.accounts.single.name, '要保住的账户');
 
     // 带 app 标记但 data 为空对象也应被拦截（无任何已知键）。
-    expect(
-      () => controller.importDataJson('{"app":"other","data":{"x":1}}'),
+    await expectLater(
+      controller.importDataJson('{"app":"other","data":{"x":1}}'),
       throwsFormatException,
     );
     expect(controller.accounts.single.name, '要保住的账户');
@@ -577,7 +742,7 @@ void main() {
   test('imports legacy backup budget keys into the default book', () async {
     // 旧备份里预算键没有 bookId 前缀，导入时应归入默认账本。
     final controller = await makeController();
-    controller.importDataJson(
+    await controller.importDataJson(
       jsonEncode(<String, Object?>{
         'data': <String, Object?>{
           'monthlyBudgets': <String, Object?>{'2026-07': 3000},

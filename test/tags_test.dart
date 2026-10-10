@@ -69,7 +69,7 @@ void main() {
     source.dispose();
 
     final target = await makeController();
-    target.importDataJson(backup);
+    await target.importDataJson(backup);
     expect(target.tags.map((t) => t.label), contains('必要开销'));
     expect(target.entries.single.tagIds, <String>[tagId]);
     target.dispose();

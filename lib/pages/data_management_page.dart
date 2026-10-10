@@ -1,6 +1,7 @@
 // 数据管理页：从 profile_pages 拆出。集中导出/导入/初始化与备份子系统
 // （本地目录 SAF、加密、WebDAV、账单导入）的入口与流程。
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 
@@ -497,6 +498,53 @@ class _DataManagementPageState extends State<DataManagementPage> {
     }
   }
 
+  /// 以阻塞进度对话框执行 [task]：显示阶段进度、百分比与取消按钮。
+  ///
+  /// 返回任务结果；用户取消或任务抛出 [BackupCancelledException] 时返回 null
+  /// （调用方据此提示「已取消」）。对话框与进度状态在 finally 中统一收尾。
+  Future<T?> _runWithProgress<T>(
+    BuildContext context,
+    VeriFinController controller,
+    String title,
+    Future<T> Function(bool Function() isCancelled) task,
+  ) async {
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final cancellation = BackupCancellation();
+    controller.reportBackupProgress(null);
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => _BackupProgressDialog(
+          title: title,
+          controller: controller,
+          cancellation: cancellation,
+        ),
+      ),
+    );
+    try {
+      return await task(() => cancellation.cancelled);
+    } on BackupCancelledException {
+      return null;
+    } finally {
+      controller.reportBackupProgress(null);
+      if (navigator.canPop()) {
+        navigator.pop();
+      }
+    }
+  }
+
+  /// 提示用户操作已取消（调用点需先确认 `context.mounted`）。
+  void _notifyCancelled(BuildContext context) {
+    unawaited(
+      VeriFeedbackHost.of(context).showMessage(
+        message: AppLocalizations.of(context).backupCancelled,
+        tone: VeriFeedbackTone.info,
+        dedupeKey: 'backup-cancelled',
+      ),
+    );
+  }
+
   Future<void> _backupNow(
     BuildContext context,
     VeriFinController controller,
@@ -509,27 +557,34 @@ class _DataManagementPageState extends State<DataManagementPage> {
     }
     final l10n = AppLocalizations.of(context);
     final feedback = VeriFeedbackHost.of(context);
-    // 备份含加密（PBKDF2）与文件写入，耗时可感知：期间弹不可关闭的「备份中」转圈，
-    // 避免点了没反应的错觉。
-    final navigator = Navigator.of(context, rootNavigator: true);
-    // 进度弹窗随后由 navigator.pop 关闭，故不 await（fire-and-forget）。
-    unawaited(
-      showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => _BackupProgressDialog(label: l10n.backingUp),
-      ),
-    );
     try {
       final now = DateTime.now();
-      final result = await BackupService.writeManualBackup(
-        settings: controller.backupSettings,
-        content: controller.exportDataJson(),
-        now: now,
-        passphrase: controller.backupPassphrase,
+      // 备份可能上 GB（打包 / 加密 / 写盘 / 校验），全程显示阶段进度并可取消。
+      final result = await _runWithProgress(
+        context,
+        controller,
+        l10n.backingUp,
+        (isCancelled) async {
+          final cacheDirectory = await controller.ensureBackupCacheDirectory();
+          return BackupService.writeManualBackup(
+            settings: controller.backupSettings,
+            content: controller.exportDataJson(),
+            store: controller.attachmentStore,
+            cacheDirectory: cacheDirectory,
+            now: now,
+            passphrase: controller.backupPassphrase,
+            onProgress: controller.reportBackupProgress,
+            isCancelled: isCancelled,
+          );
+        },
       );
+      if (result == null) {
+        if (context.mounted) {
+          _notifyCancelled(context);
+        }
+        return;
+      }
       controller.recordBackupTime(now);
-      navigator.pop(); // 关闭「备份中」
       unawaited(
         feedback.showMessage(
           message: l10n.backedUpFile(result.filename),
@@ -538,7 +593,6 @@ class _DataManagementPageState extends State<DataManagementPage> {
       );
     } catch (error) {
       controller.logger?.error('手动备份失败', source: 'backup', error: error);
-      navigator.pop(); // 关闭「备份中」
       unawaited(
         feedback.showMessage(
           message: _backupErrorText(l10n, error),
@@ -575,20 +629,50 @@ class _DataManagementPageState extends State<DataManagementPage> {
     VeriFinController controller,
   ) async {
     try {
-      // 未加密→zip（附件不膨胀）、加密→文本信封，统一按字节写入下载目录。
-      final prepared = await BackupService.prepare(
-        json: controller.exportDataJson(),
-        passphrase: controller.backupPassphrase,
-        now: DateTime.now(),
-        auto: false,
+      // 未加密→zip（附件不膨胀）、加密→文本信封，都先落到缓存文件再流式写出。
+      final saved = await _runWithProgress<bool>(
+        context,
+        controller,
+        AppLocalizations.of(context).backingUp,
+        (isCancelled) async {
+          final prepared = await BackupService.prepare(
+            json: controller.exportDataJson(),
+            store: controller.attachmentStore,
+            cacheDirectory: await controller.ensureBackupCacheDirectory(),
+            passphrase: controller.backupPassphrase,
+            now: DateTime.now(),
+            auto: false,
+            onProgress: controller.reportBackupProgress,
+            isCancelled: isCancelled,
+          );
+          try {
+            final mimeType = controller.backupEncryptionEnabled
+                ? 'application/json'
+                : 'application/zip';
+            final receipt = await BackupService.exportToDownloads(
+              prepared,
+              mimeType: mimeType,
+            );
+            if (receipt != null) {
+              return true;
+            }
+            // Android 10 以下或桌面：回退到系统「保存到」选择器（需要整份字节）。
+            return downloadBytesFile(
+              filename: prepared.filename,
+              bytes: await File(prepared.cachePath).readAsBytes(),
+              mimeType: mimeType,
+            );
+          } finally {
+            await BackupService.deletePrepared(prepared);
+          }
+        },
       );
-      final saved = await downloadBytesFile(
-        filename: prepared.filename,
-        bytes: prepared.bytes,
-        mimeType: controller.backupEncryptionEnabled
-            ? 'application/json'
-            : 'application/zip',
-      );
+      if (saved == null) {
+        if (context.mounted) {
+          _notifyCancelled(context);
+        }
+        return;
+      }
       if (saved && context.mounted) {
         final hint = controller.backupEncryptionEnabled
             ? AppLocalizations.of(context).encryptedSuffix
@@ -614,33 +698,161 @@ class _DataManagementPageState extends State<DataManagementPage> {
     }
   }
 
-  /// 从备份字节导入：格式判定（zip/加密信封/明文）统一走
-  /// [BackupService.decodeBackupBytes]，加密信封在此弹窗索要口令解密后导入。
+  /// 从缓存里的备份文件导入：格式判定（zip/加密信封/明文）统一走
+  /// [BackupService.decodeBackupFile]，加密信封在此弹窗索要口令解密后导入。
   /// 返回是否成功导入；用户取消解密返回 false。空/坏文件抛 FormatException
   /// 由调用方提示。
-  Future<bool> _importBackupBytes(
+  Future<bool> _importBackupCacheFile(
     BuildContext context,
     VeriFinController controller,
-    List<int> bytes,
-  ) async {
-    switch (BackupService.decodeBackupBytes(bytes)) {
-      case PlainBackupJson(:final json):
-        controller.importDataJson(json);
-        return true;
-      case EncryptedBackupEnvelope(:final envelope):
-        if (!context.mounted) {
-          return false;
+    String cachePath, {
+    bool Function()? isCancelled,
+  }) async {
+    // 附件先解到独立暂存存储，全部解析成功后才并入主存储；任何失败直接丢弃暂存，
+    // 现有数据零改动。
+    final staging = await controller.attachmentStore.createStagingStore();
+    try {
+      final decoded = await BackupService.decodeBackupFile(
+        cachePath: cachePath,
+        sink: staging,
+        onProgress: controller.reportBackupProgress,
+        isCancelled: isCancelled,
+      );
+      switch (decoded) {
+        case PlainBackupJson(:final json):
+          await controller.importDataJson(
+            json,
+            readStagedAttachment: staging.readBytes,
+          );
+          return true;
+        case EncryptedBackupEnvelope(:final envelope):
+          if (!context.mounted) {
+            return false;
+          }
+          final decrypted = await _decryptForImport(
+            context,
+            controller,
+            envelope,
+          );
+          if (decrypted == null) {
+            return false;
+          }
+          final json = await BackupService.prepareDecryptedLegacyJson(
+            decrypted,
+            staging,
+          );
+          await controller.importDataJson(
+            json,
+            readStagedAttachment: staging.readBytes,
+          );
+          return true;
+        case EncryptedStreamBackup():
+          if (!context.mounted) {
+            return false;
+          }
+          return await _importEncryptedStream(
+            context,
+            controller,
+            cachePath,
+            isCancelled: isCancelled,
+          );
+      }
+    } finally {
+      await controller.attachmentStore.discardStagingStore(staging);
+    }
+  }
+
+  /// 新版加密容器：先试设备保存的口令，失败或未设置则弹窗；口令错误可重试。
+  /// 解密、解包、导入全程流式，GB 级加密备份也不会整包进内存。
+  Future<bool> _importEncryptedStream(
+    BuildContext context,
+    VeriFinController controller,
+    String encryptedPath, {
+    bool Function()? isCancelled,
+  }) async {
+    final cacheDirectory = await controller.ensureBackupCacheDirectory();
+    var triedSavedPassphrase = false;
+    var errorText = '';
+    while (true) {
+      if (!context.mounted) {
+        return false;
+      }
+      String? passphrase;
+      if (!triedSavedPassphrase) {
+        triedSavedPassphrase = true;
+        final saved = controller.backupPassphrase;
+        if (saved.isNotEmpty) {
+          passphrase = saved;
         }
-        final decrypted = await _decryptForImport(
-          context,
-          controller,
-          envelope,
+      }
+      passphrase ??= await _promptPassphrase(
+        context,
+        title: AppLocalizations.of(context).enterBackupKeyTitle,
+        message: AppLocalizations.of(context).enterBackupKeyMessage,
+        errorText: errorText,
+      );
+      if (passphrase == null) {
+        return false;
+      }
+      final String zipPath;
+      try {
+        zipPath = await BackupService.decryptStreamToZip(
+          encryptedPath: encryptedPath,
+          cacheDirectory: cacheDirectory,
+          passphrase: passphrase,
+          onProgress: controller.reportBackupProgress,
+          isCancelled: isCancelled,
         );
-        if (decrypted == null) {
-          return false;
+      } on BackupCryptoException catch (error) {
+        errorText = error.message;
+        continue;
+      }
+      try {
+        final staging = await controller.attachmentStore.createStagingStore();
+        try {
+          final json = await BackupService.unpackCacheZip(
+            cachePath: zipPath,
+            sink: staging,
+            onProgress: controller.reportBackupProgress,
+            isCancelled: isCancelled,
+          );
+          await controller.importDataJson(
+            json,
+            readStagedAttachment: staging.readBytes,
+          );
+          return true;
+        } finally {
+          await controller.attachmentStore.discardStagingStore(staging);
         }
-        controller.importDataJson(decrypted);
-        return true;
+      } finally {
+        await BackupService.deleteCachePath(zipPath);
+      }
+    }
+  }
+
+  /// 把外部备份文件流式落到缓存再导入；无论成败都清理缓存。
+  ///
+  /// 用流式复制而不是先读整份字节：用户可能选择 GB 级备份，整份读入会直接 OOM
+  /// （Issue 45）。返回是否成功导入；用户取消或文件不可读返回 false。
+  Future<bool> _importBackupFileUri(
+    BuildContext context,
+    VeriFinController controller,
+    String fileUri, {
+    bool Function()? isCancelled,
+  }) async {
+    final staged = await BackupService.stageBackupFile(fileUri);
+    if (staged == null || !context.mounted) {
+      return false;
+    }
+    try {
+      return await _importBackupCacheFile(
+        context,
+        controller,
+        staged.path,
+        isCancelled: isCancelled,
+      );
+    } finally {
+      await BackupService.deleteCachePath(staged.path);
     }
   }
 
@@ -815,30 +1027,48 @@ class _DataManagementPageState extends State<DataManagementPage> {
   ) async {
     final feedback = VeriFeedbackHost.of(context);
     final l10n = AppLocalizations.of(context);
-    unawaited(
-      feedback.showMessage(
-        message: l10n.uploadingWebdav,
-        duration: VeriFeedbackDuration.persistent,
-        dedupeKey: 'webdav-upload',
-      ),
-    );
+    String? uploadedName;
     try {
-      final now = DateTime.now();
-      final prepared = await BackupService.prepare(
-        json: controller.exportDataJson(),
-        passphrase: controller.backupPassphrase,
-        now: now,
-        auto: false,
+      // 上传可能上 GB：打包 + 上传全程显示进度并可取消。
+      final uploaded = await _runWithProgress<bool>(
+        context,
+        controller,
+        l10n.uploadingWebdav,
+        (isCancelled) async {
+          final now = DateTime.now();
+          final prepared = await BackupService.prepare(
+            json: controller.exportDataJson(),
+            store: controller.attachmentStore,
+            cacheDirectory: await controller.ensureBackupCacheDirectory(),
+            passphrase: controller.backupPassphrase,
+            now: now,
+            auto: false,
+            onProgress: controller.reportBackupProgress,
+            isCancelled: isCancelled,
+          );
+          try {
+            await webdavUploadFile(
+              controller.webdavConfig,
+              prepared.filename,
+              prepared.cachePath,
+            );
+            controller.recordBackupTime(now);
+            uploadedName = prepared.filename;
+            return true;
+          } finally {
+            await BackupService.deletePrepared(prepared);
+          }
+        },
       );
-      await webdavUpload(
-        controller.webdavConfig,
-        prepared.filename,
-        prepared.bytes,
-      );
-      controller.recordBackupTime(now);
+      if (uploaded == null) {
+        if (context.mounted) {
+          _notifyCancelled(context);
+        }
+        return;
+      }
       unawaited(
         feedback.showMessage(
-          message: l10n.uploadedFile(prepared.filename),
+          message: l10n.uploadedFile(uploadedName ?? ''),
           tone: VeriFeedbackTone.success,
           dedupeKey: 'webdav-upload',
         ),
@@ -943,12 +1173,45 @@ class _DataManagementPageState extends State<DataManagementPage> {
     if (!confirmed) {
       return;
     }
+    if (!context.mounted) {
+      return;
+    }
     try {
-      final bytes = await webdavDownload(controller.webdavConfig, chosen.href);
-      if (!context.mounted) {
+      // 远端备份可能很大：先流式下载到缓存文件，再按统一路径导入；全程可取消。
+      final imported = await _runWithProgress<bool>(
+        context,
+        controller,
+        l10n.restoreLabel,
+        (isCancelled) async {
+          final cachePath = BackupService.restoreCachePath(
+            await controller.ensureBackupCacheDirectory(),
+          );
+          try {
+            await webdavDownloadToFile(
+              controller.webdavConfig,
+              chosen.href,
+              cachePath,
+            );
+            if (!context.mounted) {
+              return false;
+            }
+            return await _importBackupCacheFile(
+              context,
+              controller,
+              cachePath,
+              isCancelled: isCancelled,
+            );
+          } finally {
+            await BackupService.deleteCachePath(cachePath);
+          }
+        },
+      );
+      if (imported == null) {
+        if (context.mounted) {
+          _notifyCancelled(context);
+        }
         return;
       }
-      final imported = await _importBackupBytes(context, controller, bytes);
       if (imported && context.mounted) {
         unawaited(
           feedback.showMessage(
@@ -1574,14 +1837,30 @@ class _DataManagementPageState extends State<DataManagementPage> {
     final fileTypeLabel = AppLocalizations.of(context).backupFileTypeLabel;
 
     try {
-      final bytes = await pickBackupBytes(label: fileTypeLabel);
-      if (bytes == null) {
+      final fileUri = await pickBackupFileUri(label: fileTypeLabel);
+      if (fileUri == null) {
         return;
       }
       if (!context.mounted) {
         return;
       }
-      final imported = await _importBackupBytes(context, controller, bytes);
+      final imported = await _runWithProgress<bool>(
+        context,
+        controller,
+        AppLocalizations.of(context).restoreLabel,
+        (isCancelled) => _importBackupFileUri(
+          context,
+          controller,
+          fileUri,
+          isCancelled: isCancelled,
+        ),
+      );
+      if (imported == null) {
+        if (context.mounted) {
+          _notifyCancelled(context);
+        }
+        return;
+      }
       if (imported && context.mounted) {
         _notify(
           context,

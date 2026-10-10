@@ -4,6 +4,7 @@ import 'package:verifin/app/veri_fin_controller.dart';
 import 'package:verifin/local_storage/local_storage.dart';
 
 import 'support/in_memory_ledger_repository.dart';
+import 'support/test_harness.dart';
 
 /// 载入与首启动播种正常、但保存月度预算时抛错的仓储（预算保存不在播种路径上），
 /// 用于验证落库失败的错误处理。
@@ -15,6 +16,8 @@ class _ThrowingOnBudgetSaveRepository extends InMemoryLedgerRepository {
 }
 
 void main() {
+  useTestDatabases();
+
   test('记录后最新在前，并持久化到 KV、跨实例可恢复', () {
     final store = LocalKeyValueStore();
     final logger = AppLogger(store);

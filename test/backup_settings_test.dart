@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/backup/backup_archive.dart';
 import 'package:verifin/app/backup/backup_service.dart';
 import 'package:verifin/app/backup/backup_settings.dart';
-import 'package:verifin/app/backup/backup_storage.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/app/veri_fin_scope.dart';
 import 'package:verifin/local_storage/local_storage.dart';
@@ -314,25 +313,50 @@ void main() {
           );
         final dataUrl =
             'data:image/jpeg;base64,${base64Encode(List<int>.generate(1024, (i) => i % 256))}';
-        source.addAttachment('e-e2e', dataUrl);
+        final attachmentBytes = base64Decode(
+          dataUrl.substring(dataUrl.indexOf(',') + 1),
+        );
+        await source.addAttachment('e-e2e', attachmentBytes);
 
         final result = await BackupService.writeManualBackup(
           settings: BackupSettings(directoryUri: dir.path),
           content: source.exportDataJson(),
+          store: source.attachmentStore,
+          cacheDirectory: dir,
           now: DateTime(2026, 7, 4, 9, 8, 7),
         );
         expect(result.filename.endsWith('.zip'), isTrue);
 
-        final bytes = await readBackupBytesFile(result.fileUri!);
-        expect(bytes, isNotNull);
-        expect(looksLikeZipBytes(bytes!), isTrue);
+        final written = await File.fromUri(
+          Uri.parse(result.fileUri!),
+        ).readAsBytes();
+        expect(looksLikeZipBytes(written), isTrue);
 
         final target = await makeController();
-        final decoded =
-            BackupService.decodeBackupBytes(bytes) as PlainBackupJson;
-        target.importDataJson(decoded.json);
-        expect(target.entries.single.note, '带票据');
-        expect(target.attachmentsForEntry('e-e2e').single.dataUrl, dataUrl);
+        final staging = await target.attachmentStore.createStagingStore();
+        try {
+          // 模拟 Android 侧把外部备份文件流式落到缓存后再解析。
+          final restorePath = '${dir.path}${Platform.pathSeparator}restore.zip';
+          await File(restorePath).writeAsBytes(written);
+          final decoded =
+              await BackupService.decodeBackupFile(
+                    cachePath: restorePath,
+                    sink: staging,
+                  )
+                  as PlainBackupJson;
+          await target.importDataJson(
+            decoded.json,
+            readStagedAttachment: staging.readBytes,
+          );
+          expect(target.entries.single.note, '带票据');
+          final restored = target.attachmentsForEntry('e-e2e').single;
+          expect(
+            await target.attachmentStore.readBytes(restored.id),
+            attachmentBytes,
+          );
+        } finally {
+          await target.attachmentStore.discardStagingStore(staging);
+        }
 
         source.dispose();
         target.dispose();

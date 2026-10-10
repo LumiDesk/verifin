@@ -278,7 +278,7 @@ void main() {
     source.dispose();
 
     final target = await makeController();
-    target.importDataJson(backup);
+    await target.importDataJson(backup);
     final entry = target.entries.firstWhere((e) => e.id == 'e1');
     expect(entry.reimbursable, isTrue);
     expect(entry.refundedAmount, 20); // 缓存重算保留
@@ -305,7 +305,7 @@ void main() {
     legacy.dispose();
 
     final target = await makeController();
-    target.importDataJson(backup);
+    await target.importDataJson(backup);
     final entry = target.entries.firstWhere((e) => e.id == 'e1');
     expect(entry.netAmount, 60); // 迁移后净额不变
     final refunds = target.refundsForEntry('e1');

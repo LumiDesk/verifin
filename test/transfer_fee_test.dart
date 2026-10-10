@@ -80,7 +80,7 @@ void main() {
     source.dispose();
 
     final target = await makeController();
-    target.importDataJson(backup);
+    await target.importDataJson(backup);
     expect(target.entries.single.fee, 2.5);
     target.dispose();
   });

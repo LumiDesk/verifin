@@ -318,7 +318,7 @@ void main() {
     source.dispose();
 
     final target = await makeController();
-    target.importDataJson(backup);
+    await target.importDataJson(backup);
     expect(target.recurringRules.single.note, '房租');
     expect(target.recurringRules.single.frequency, RecurringFrequency.monthly);
     target.dispose();

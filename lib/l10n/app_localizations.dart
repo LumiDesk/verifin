@@ -7658,6 +7658,84 @@ abstract class AppLocalizations {
   /// **'备份中…'**
   String get backingUp;
 
+  /// No description provided for @backupPhasePreparing.
+  ///
+  /// In zh, this message translates to:
+  /// **'准备数据'**
+  String get backupPhasePreparing;
+
+  /// No description provided for @backupPhasePacking.
+  ///
+  /// In zh, this message translates to:
+  /// **'打包备份'**
+  String get backupPhasePacking;
+
+  /// No description provided for @backupPhaseEncrypting.
+  ///
+  /// In zh, this message translates to:
+  /// **'加密备份'**
+  String get backupPhaseEncrypting;
+
+  /// No description provided for @backupPhaseWriting.
+  ///
+  /// In zh, this message translates to:
+  /// **'写入文件'**
+  String get backupPhaseWriting;
+
+  /// No description provided for @backupPhaseVerifying.
+  ///
+  /// In zh, this message translates to:
+  /// **'校验备份'**
+  String get backupPhaseVerifying;
+
+  /// No description provided for @backupPhaseReading.
+  ///
+  /// In zh, this message translates to:
+  /// **'读取备份'**
+  String get backupPhaseReading;
+
+  /// No description provided for @backupPhaseDecrypting.
+  ///
+  /// In zh, this message translates to:
+  /// **'解密备份'**
+  String get backupPhaseDecrypting;
+
+  /// No description provided for @backupPhaseUnpacking.
+  ///
+  /// In zh, this message translates to:
+  /// **'解包备份'**
+  String get backupPhaseUnpacking;
+
+  /// No description provided for @backupPhaseImporting.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入数据'**
+  String get backupPhaseImporting;
+
+  /// No description provided for @backupPhaseCleaning.
+  ///
+  /// In zh, this message translates to:
+  /// **'清理临时文件'**
+  String get backupPhaseCleaning;
+
+  /// No description provided for @backupCancelled.
+  ///
+  /// In zh, this message translates to:
+  /// **'已取消'**
+  String get backupCancelled;
+
+  /// No description provided for @attachmentMigrationDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'图片附件整理完成'**
+  String get attachmentMigrationDone;
+
+  /// No description provided for @attachmentMigrationFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'部分图片附件整理失败，将在下次启动时重试'**
+  String get attachmentMigrationFailed;
+
   /// No description provided for @aiErrNotConfigured.
   ///
   /// In zh, this message translates to:

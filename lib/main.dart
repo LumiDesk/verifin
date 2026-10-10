@@ -1,9 +1,13 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import 'app/app_theme.dart';
+import 'app/attachments/attachment_store.dart';
 import 'app/backup/backup_coordinator.dart';
 import 'app/feedback.dart';
 import 'app/home_widget_service.dart';
@@ -49,9 +53,14 @@ Future<void> main() async {
         final VeriFinController controller;
         try {
           final database = await AppDatabase.open();
+          final supportDirectory = await getApplicationSupportDirectory();
+          final attachmentStore = FileAttachmentStore(
+            root: Directory(p.join(supportDirectory.path, 'attachments')),
+          );
           controller = await VeriFinController.create(
             store,
             repository: SqliteLedgerRepository(database),
+            attachmentStore: attachmentStore,
             logger: logger,
             // 语言偏好为「跟随系统」时，首启动播种的默认数据（账本/分类/简介）按系统语言选文案。
             systemIsEnglish:
@@ -209,6 +218,32 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
     BackupCoordinator.maybeBackupOnOpen(_controller);
     // 打开应用时刷新桌面小组件「今日支出」。
     pushWidgetData(_controller);
+    // 附件维护（孤儿回收 / 清理中断的暂存）与存量 base64 迁移都在启动后后台执行：
+    // 迁移可中断、读取路径有 base64 兜底，期间记账与查看不受影响。
+    unawaited(_runAttachmentMaintenance());
+  }
+
+  Future<void> _runAttachmentMaintenance() async {
+    await _controller.maintainAttachmentFiles();
+    final result = await _controller.migrateLegacyAttachments();
+    if (!mounted || result.converted == 0) {
+      return;
+    }
+    final l10n = l10nForPreference(_controller.localePreference);
+    unawaited(
+      _feedbackController.showMessage(
+        message: result.failed == 0
+            ? l10n.attachmentMigrationDone
+            : l10n.attachmentMigrationFailed,
+        tone: result.failed == 0
+            ? VeriFeedbackTone.success
+            : VeriFeedbackTone.warning,
+        duration: result.failed == 0
+            ? VeriFeedbackDuration.standard
+            : VeriFeedbackDuration.long,
+        dedupeKey: 'attachment-migration',
+      ),
+    );
   }
 
   void _handleEntryAdded() {

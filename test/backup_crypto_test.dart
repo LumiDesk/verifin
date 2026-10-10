@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/backup/backup_crypto.dart';
@@ -118,7 +120,70 @@ void main() {
       final decoded = jsonDecode(plain);
       expect(decoded, isA<Map<String, Object?>>());
       // 不应抛异常，且能被控制器导入。
-      controller.importDataJson(plain);
+      await controller.importDataJson(plain);
+    });
+  });
+
+  group('流式加密容器', () {
+    test('文件流式加密/解密往返还原字节，且可识别容器头', () async {
+      final dir = await Directory.systemTemp.createTemp('verifin_enc');
+      try {
+        final sep = Platform.pathSeparator;
+        final plainPath = '${dir.path}${sep}plain.bin';
+        final encPath = '${dir.path}${sep}enc.verifin';
+        final outPath = '${dir.path}${sep}out.bin';
+        final bytes = Uint8List.fromList(
+          List<int>.generate(200000, (i) => (i * 31) % 256),
+        );
+        await File(plainPath).writeAsBytes(bytes);
+
+        await encryptFileToFile(
+          plainPath: plainPath,
+          outputPath: encPath,
+          passphrase: 'k1',
+        );
+        final header = await File(encPath).openRead(0, 32).first;
+        expect(looksLikeEncryptedStream(header), isTrue);
+        expect(
+          looksLikeEncryptedStream(utf8.encode('{"app":"verifin"}')),
+          isFalse,
+        );
+
+        await decryptFileToFile(
+          encryptedPath: encPath,
+          outputPath: outPath,
+          passphrase: 'k1',
+        );
+        expect(await File(outPath).readAsBytes(), bytes);
+      } finally {
+        await dir.delete(recursive: true);
+      }
+    });
+
+    test('流式容器错误口令抛可读异常', () async {
+      final dir = await Directory.systemTemp.createTemp('verifin_enc_bad');
+      try {
+        final sep = Platform.pathSeparator;
+        final plainPath = '${dir.path}${sep}plain.bin';
+        final encPath = '${dir.path}${sep}enc.verifin';
+        final outPath = '${dir.path}${sep}out.bin';
+        await File(plainPath).writeAsBytes(List<int>.filled(4096, 7));
+        await encryptFileToFile(
+          plainPath: plainPath,
+          outputPath: encPath,
+          passphrase: 'right',
+        );
+        await expectLater(
+          decryptFileToFile(
+            encryptedPath: encPath,
+            outputPath: outPath,
+            passphrase: 'wrong',
+          ),
+          throwsA(isA<BackupCryptoException>()),
+        );
+      } finally {
+        await dir.delete(recursive: true);
+      }
     });
   });
 }

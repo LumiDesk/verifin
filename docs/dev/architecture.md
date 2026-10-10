@@ -17,6 +17,7 @@ Controller 经 repository 写库。`VeriFinController.create()` 是生产初始�
 | 共享绘制、菜单、图表 | `common_widgets.dart`、`chart_painters.dart`、`root_navigation.dart`、`veri_bottom_bar.dart`；[统一设计](../design-system.md) |
 | 多币种、预算、退款 | [多币种](multi-currency-design.md)、[单期预算](category-budget-override-design.md)、[退款](refund-design.md) |
 | 导入、备份 | `lib/app/backup/import/`、`lib/app/backup/`；只在预览确认后落库，字节格式仅由 BackupService 编解码 |
+| 图片附件 | `lib/app/attachments/attachment_store.dart` 是字节唯一入口（文件存储、暂存、孤儿回收、迁移期物化）；SQLite 只存元数据；[设计](attachment-storage-and-streaming-backup-design.md) |
 | AI | `lib/app/ai/`；[只读查询工具](ai-tools.md)、[截图识别与外部采集](auto-capture-plan.md) |
 | Android 系统能力 | `platform_bridge*.dart`、`android/`；单一 MethodChannel 分发，真实权限与冷启动验收；[桌面小组件](home-widgets.md) |
 | 国际化 | `lib/l10n/*.arb` 与 gen-l10n 输出；[国际化验收](i18n-verification.md) |

@@ -23,6 +23,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -97,30 +98,29 @@ class MainActivity : FlutterFragmentActivity() {
                     result,
                 )
                 "pickBackupDirectory" -> pickBackupDirectory(result)
-                "writeBackupFile" -> writeBackupFile(
-                    call.argument<String>("directoryUri") ?: "",
-                    call.argument<String>("filename") ?: "verifin-backup.json",
-                    call.argument<String>("content") ?: "",
-                    call.argument<String>("mimeType") ?: "application/json",
+                "stageBackupFile" -> stageBackupFile(
+                    call.argument<String>("fileUri") ?: "",
                     result,
                 )
-                "writeBackupBytes" -> writeBackupBytes(
+                "writeBackupFromCache" -> writeBackupFromCache(
                     call.argument<String>("directoryUri") ?: "",
                     call.argument<String>("filename") ?: "verifin-backup.zip",
-                    call.argument<ByteArray>("bytes") ?: ByteArray(0),
+                    call.argument<String>("cachePath") ?: "",
                     call.argument<String>("mimeType") ?: "application/zip",
                     result,
                 )
-                "readBackupBytes" -> readBackupBytes(
-                    call.argument<String>("fileUri") ?: "",
+                "saveCacheFileToDownloads" -> saveCacheFileToDownloads(
+                    call.argument<String>("filename") ?: "verifin-backup.zip",
+                    call.argument<String>("cachePath") ?: "",
+                    call.argument<String>("mimeType") ?: "application/zip",
+                    result,
+                )
+                "deleteCacheFile" -> deleteCacheFile(
+                    call.argument<String>("path") ?: "",
                     result,
                 )
                 "listBackupFiles" -> listBackupFiles(
                     call.argument<String>("directoryUri") ?: "",
-                    result,
-                )
-                "readBackupFile" -> readBackupFile(
-                    call.argument<String>("fileUri") ?: "",
                     result,
                 )
                 "deleteBackupFile" -> deleteBackupFile(
@@ -1069,72 +1069,169 @@ class MainActivity : FlutterFragmentActivity() {
         return DocumentFile.fromTreeUri(this, Uri.parse(directoryUri))
     }
 
-    private fun writeBackupFile(
-        directoryUri: String,
-        filename: String,
-        content: String,
-        mimeType: String,
-        result: MethodChannel.Result,
-    ) {
-        Thread {
-            try {
-                val tree = backupTree(directoryUri)
-                    ?: throw IllegalStateException("备份目录不可用，请重新选择。")
-                tree.findFile(filename)?.delete()
-                val file = tree.createFile(mimeType, filename)
-                    ?: throw IllegalStateException("无法在备份目录创建文件。")
-                contentResolver.openOutputStream(file.uri)?.use { output ->
-                    output.write(content.toByteArray(Charsets.UTF_8))
-                } ?: throw IllegalStateException("无法写入备份文件。")
-                runOnUiThread { result.success(file.uri.toString()) }
-            } catch (error: Exception) {
-                runOnUiThread {
-                    result.error("BACKUP_FAILED", error.message ?: "写入备份失败。", null)
-                }
-            }
-        }.start()
-    }
+    // ---- 大文件流式复制 ----
+    //
+    // 备份/恢复/导出可能是 GB 级。MethodChannel 传 ByteArray 会把整包放进 Java 堆，
+    // 超过设备堆上限直接 OutOfMemoryError（Issue 45）。以下方法一律只传路径，在原生
+    // 侧边读边写固定缓冲区，并在复制过程中同步算出 SHA-256 供 Dart 侧比对。
 
-    private fun writeBackupBytes(
-        directoryUri: String,
-        filename: String,
-        bytes: ByteArray,
-        mimeType: String,
-        result: MethodChannel.Result,
-    ) {
+    /// 把用户选择的 SAF 文件流式复制到应用缓存目录，返回本地路径与字节数。
+    private fun stageBackupFile(fileUri: String, result: MethodChannel.Result) {
         Thread {
             try {
-                val tree = backupTree(directoryUri)
-                    ?: throw IllegalStateException("备份目录不可用，请重新选择。")
-                tree.findFile(filename)?.delete()
-                val file = tree.createFile(mimeType, filename)
-                    ?: throw IllegalStateException("无法在备份目录创建文件。")
-                contentResolver.openOutputStream(file.uri)?.use { output ->
-                    output.write(bytes)
-                } ?: throw IllegalStateException("无法写入备份文件。")
-                runOnUiThread { result.success(file.uri.toString()) }
-            } catch (error: Exception) {
-                runOnUiThread {
-                    result.error("BACKUP_FAILED", error.message ?: "写入备份失败。", null)
-                }
-            }
-        }.start()
-    }
-
-    private fun readBackupBytes(fileUri: String, result: MethodChannel.Result) {
-        Thread {
-            try {
-                val bytes = contentResolver.openInputStream(Uri.parse(fileUri))?.use { input ->
-                    readLimitedBytes(input)
+                val target = File(cacheDir, "backup_stage_${System.currentTimeMillis()}")
+                var bytes = 0L
+                contentResolver.openInputStream(Uri.parse(fileUri))?.use { input ->
+                    FileOutputStream(target).use { output ->
+                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                        while (true) {
+                            val read = input.read(buffer)
+                            if (read == -1) break
+                            output.write(buffer, 0, read)
+                            bytes += read
+                        }
+                        output.flush()
+                    }
                 } ?: throw IllegalStateException("无法读取备份文件。")
-                runOnUiThread { result.success(bytes) }
+                runOnUiThread {
+                    result.success(
+                        mapOf("path" to target.absolutePath, "bytes" to bytes),
+                    )
+                }
             } catch (error: Exception) {
                 runOnUiThread {
-                    result.error("BACKUP_READ_FAILED", error.message ?: "读取备份文件失败。", null)
+                    result.error(
+                        "BACKUP_READ_FAILED",
+                        error.message ?: "读取备份文件失败。",
+                        null,
+                    )
                 }
             }
         }.start()
     }
+
+    /// 把缓存文件流式复制到备份目录（同名覆盖），返回目标 URI、SHA-256 与字节数。
+    private fun writeBackupFromCache(
+        directoryUri: String,
+        filename: String,
+        cachePath: String,
+        mimeType: String,
+        result: MethodChannel.Result,
+    ) {
+        Thread {
+            try {
+                val tree = backupTree(directoryUri)
+                    ?: throw IllegalStateException("备份目录不可用，请重新选择。")
+                tree.findFile(filename)?.delete()
+                val file = tree.createFile(mimeType, filename)
+                    ?: throw IllegalStateException("无法在备份目录创建文件。")
+                val digest = MessageDigest.getInstance("SHA-256")
+                var bytes = 0L
+                contentResolver.openOutputStream(file.uri)?.use { output ->
+                    FileInputStream(cachePath).use { input ->
+                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                        while (true) {
+                            val read = input.read(buffer)
+                            if (read == -1) break
+                            output.write(buffer, 0, read)
+                            digest.update(buffer, 0, read)
+                            bytes += read
+                        }
+                        output.flush()
+                    }
+                } ?: throw IllegalStateException("无法写入备份文件。")
+                runOnUiThread {
+                    result.success(
+                        mapOf(
+                            "uri" to file.uri.toString(),
+                            "sha256" to digest.digest().toHex(),
+                            "bytes" to bytes,
+                        ),
+                    )
+                }
+            } catch (error: Exception) {
+                runOnUiThread {
+                    result.error("BACKUP_FAILED", error.message ?: "写入备份失败。", null)
+                }
+            }
+        }.start()
+    }
+
+    /// 把缓存文件流式写入系统下载目录（zip 导出）。Android 10+ 用 MediaStore；
+    /// 更低版本返回 null，由 Flutter 侧回退到系统「保存到」选择器。
+    private fun saveCacheFileToDownloads(
+        filename: String,
+        cachePath: String,
+        mimeType: String,
+        result: MethodChannel.Result,
+    ) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            result.success(null)
+            return
+        }
+        Thread {
+            try {
+                val values = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                    put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                    put(MediaStore.MediaColumns.IS_PENDING, 1)
+                }
+                val uri = contentResolver.insert(
+                    MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                    values,
+                ) ?: throw IllegalStateException("无法创建下载文件")
+                val digest = MessageDigest.getInstance("SHA-256")
+                var bytes = 0L
+                contentResolver.openOutputStream(uri)?.use { output ->
+                    FileInputStream(cachePath).use { input ->
+                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                        while (true) {
+                            val read = input.read(buffer)
+                            if (read == -1) break
+                            output.write(buffer, 0, read)
+                            digest.update(buffer, 0, read)
+                            bytes += read
+                        }
+                        output.flush()
+                    }
+                } ?: throw IllegalStateException("无法写入下载文件")
+                values.clear()
+                values.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                contentResolver.update(uri, values, null, null)
+                runOnUiThread {
+                    result.success(
+                        mapOf(
+                            "sha256" to digest.digest().toHex(),
+                            "bytes" to bytes,
+                        ),
+                    )
+                }
+            } catch (error: Exception) {
+                runOnUiThread {
+                    result.error(
+                        "EXPORT_FAILED",
+                        error.message ?: "导出失败，请稍后再试。",
+                        null,
+                    )
+                }
+            }
+        }.start()
+    }
+
+    /// 删除应用缓存目录里的临时文件（备份/恢复收尾）。只允许删 cacheDir 下的文件。
+    private fun deleteCacheFile(path: String, result: MethodChannel.Result) {
+        try {
+            val file = File(path)
+            val deleted = file.parentFile == cacheDir && (!file.exists() || file.delete())
+            result.success(deleted)
+        } catch (error: Exception) {
+            result.success(false)
+        }
+    }
+
+    private fun ByteArray.toHex(): String =
+        joinToString("") { "%02x".format(it) }
 
     // 写公共下载目录的字节版（zip 导出）。Android 10+ 用 MediaStore、无需权限；
     // 更低版本返回 false，由 Flutter 侧回退到系统「保存到」选择器。
@@ -1187,7 +1284,8 @@ class MainActivity : FlutterFragmentActivity() {
                     .filter {
                         it.isFile &&
                             (it.name?.endsWith(".json") == true ||
-                                it.name?.endsWith(".zip") == true)
+                                it.name?.endsWith(".zip") == true ||
+                                it.name?.endsWith(".verifin") == true)
                     }
                     .map { doc ->
                         mapOf(
@@ -1206,21 +1304,6 @@ class MainActivity : FlutterFragmentActivity() {
         }.start()
     }
 
-    private fun readBackupFile(fileUri: String, result: MethodChannel.Result) {
-        Thread {
-            try {
-                val text = contentResolver.openInputStream(Uri.parse(fileUri))?.use { input ->
-                    readLimitedBytes(input).toString(Charsets.UTF_8)
-                } ?: throw IllegalStateException("无法读取备份文件。")
-                runOnUiThread { result.success(text) }
-            } catch (error: Exception) {
-                runOnUiThread {
-                    result.error("BACKUP_READ_FAILED", error.message ?: "读取备份文件失败。", null)
-                }
-            }
-        }.start()
-    }
-
     private fun deleteBackupFile(fileUri: String, result: MethodChannel.Result) {
         Thread {
             try {
@@ -1233,24 +1316,6 @@ class MainActivity : FlutterFragmentActivity() {
                 }
             }
         }.start()
-    }
-
-    /// 备份可能来自用户选择的任意 SAF 文件，读取前后都限制大小，避免把异常大文件
-    /// 一次性装入 Dart/Android 内存。zip 解包层还会检查解压后的累计大小。
-    private fun readLimitedBytes(input: java.io.InputStream): ByteArray {
-        val output = ByteArrayOutputStream(DEFAULT_BUFFER_SIZE)
-        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-        var total = 0
-        while (true) {
-            val read = input.read(buffer)
-            if (read == -1) break
-            total += read
-            if (total > MAX_BACKUP_BYTES) {
-                throw IllegalStateException("备份文件过大")
-            }
-            output.write(buffer, 0, read)
-        }
-        return output.toByteArray()
     }
 
     private fun isNewerVersion(latest: String, current: String): Boolean {
@@ -1312,7 +1377,6 @@ class MainActivity : FlutterFragmentActivity() {
         const val EXTRA_CAPTURE_IMAGE_URI = "imageUri"
         private const val MAX_CAPTURE_TEXT_LENGTH = 8_000
         private const val MAX_CAPTURE_IMAGE_BYTES = 25 * 1024 * 1024
-        private const val MAX_BACKUP_BYTES = 256 * 1024 * 1024
         private const val CHANNEL_NAME = "verifin/app"
         private const val REQUEST_WRITE_DOWNLOADS = 4301
         private const val REQUEST_PICK_BACKUP_DIR = 4302

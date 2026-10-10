@@ -9,6 +9,7 @@ import 'package:verifin/app/veri_fin_controller.dart';
 import 'package:verifin/local_storage/local_storage.dart';
 
 import 'support/in_memory_ledger_repository.dart';
+import 'support/test_harness.dart';
 
 LedgerEntry _expense(String id, String categoryId, double amount) =>
     LedgerEntry(
@@ -61,6 +62,8 @@ Future<VeriFinController> _controllerWith({
 }
 
 void main() {
+  useTestDatabases();
+
   group('category_tree 对孤儿 / 悬空分类的收口', () {
     test('parentId 指向不存在的父分类（孤儿）→ 视为自身顶级，不返回幽灵祖先', () {
       final categories = <Category>[

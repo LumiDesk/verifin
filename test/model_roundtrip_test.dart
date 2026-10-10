@@ -115,7 +115,8 @@ void main() {
   const attachment = Attachment(
     id: 'att-1',
     entryId: 'entry-full',
-    dataUrl: 'data:image/jpeg;base64,QUJD',
+    mimeType: 'image/png',
+    byteSize: 3,
   );
 
   final rule = RecurringRule(

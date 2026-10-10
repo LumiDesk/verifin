@@ -293,7 +293,7 @@ void main() {
 
       final backup = source.exportDataJson();
       final target = await makeController();
-      target.importDataJson(backup);
+      await target.importDataJson(backup);
 
       expect(target.entries.single.toAccountId, card.id);
       expect(target.accountBalance(target.accounts.first), 420);

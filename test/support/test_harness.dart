@@ -9,6 +9,7 @@
 // [useTestDatabases] 注册清理。
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:verifin/app/attachments/attachment_store.dart';
 import 'package:verifin/app/feedback.dart';
 import 'package:verifin/app/veri_fin_controller.dart';
 import 'package:verifin/data/ledger_repository.dart';
@@ -21,9 +22,22 @@ import 'in_memory_ledger_repository.dart';
 final Map<LocalKeyValueStore, LedgerRepository> _repoForStore =
     <LocalKeyValueStore, LedgerRepository>{};
 
+/// 附件存储同样按 store 复用：附件字节是「设备上的数据」，与仓储一样跨控制器重建保留。
+final Map<LocalKeyValueStore, AttachmentStore> _attachmentsForStore =
+    <LocalKeyValueStore, AttachmentStore>{};
+
 /// 在测试 main() 顶部调用：每个用例后重置 store→仓储映射，保证用例间隔离。
 void useTestDatabases() {
-  tearDown(_repoForStore.clear);
+  // 直接用 VeriFinController.create 的用例也走内存附件存储，避免测试宿主缺少
+  // path_provider 插件；生产入口必须显式注入 FileAttachmentStore。
+  setUp(() {
+    VeriFinController.debugDefaultAttachmentStore = InMemoryAttachmentStore();
+  });
+  tearDown(() {
+    _repoForStore.clear();
+    _attachmentsForStore.clear();
+    VeriFinController.debugDefaultAttachmentStore = null;
+  });
 }
 
 /// 构造控制器：相同 [store] 复用同一内存仓储；省略/新 store 则得到独立仓储。
@@ -49,7 +63,15 @@ Future<VeriFinController> makeController([
     resolvedStore,
     InMemoryLedgerRepository.new,
   );
-  return VeriFinController.create(resolvedStore, repository: repository);
+  final attachmentStore = _attachmentsForStore.putIfAbsent(
+    resolvedStore,
+    InMemoryAttachmentStore.new,
+  );
+  return VeriFinController.create(
+    resolvedStore,
+    repository: repository,
+    attachmentStore: attachmentStore,
+  );
 }
 
 /// 构造控制器并 pump 进 [VeriFinApp]，返回控制器（可用于断言）。

@@ -6,11 +6,26 @@ mixin _ControllerState on ChangeNotifier {
   // 依赖由具体类 VeriFinController 注入（构造参数）。
   LocalKeyValueStore get _store;
   LedgerRepository get _repository;
+  AttachmentStore get _attachmentStore;
   AppLogger? get _logger;
   bool get _systemIsEnglish;
 
   /// SQLite 落库失败时回调（由 UI 层挂钩弹出「保存失败」提示）。
   void Function(Object error)? onPersistError;
+
+  /// 备份/恢复进度（null = 空闲）。阻塞进度对话框订阅它，不直接读服务层状态。
+  final ValueNotifier<BackupProgress?> backupProgressListenable =
+      ValueNotifier<BackupProgress?>(null);
+
+  /// 存量附件迁移进度（null = 未在迁移），供后台提示使用。
+  final ValueNotifier<({int done, int total})?>
+  attachmentMigrationProgressListenable =
+      ValueNotifier<({int done, int total})?>(null);
+
+  /// 上报/清空备份进度。
+  void reportBackupProgress(BackupProgress? progress) {
+    backupProgressListenable.value = progress;
+  }
 
   /// 任一 Controller 状态变化后通知根组件刷新桌面小组件投影。根组件负责去抖与
   /// 平台调用；Controller 不直接依赖 Android Bridge。
@@ -850,8 +865,107 @@ mixin _ControllerState on ChangeNotifier {
     _trackWrite(_repository.saveTags(List<Tag>.of(_tags)));
   }
 
-  void _persistAttachments() {
-    _trackWrite(_repository.saveAttachments(List<Attachment>.of(_attachments)));
+  /// 落库附件元数据；[deleteFilesAfter] 里的附件文件只在落库成功后删除，避免
+  /// 落库失败却先删了文件、留下「有行无文件」的不可读附件。失败时文件保留，
+  /// 由孤儿回收兜底。
+  void _persistAttachments({
+    Iterable<String> deleteFilesAfter = const <String>[],
+  }) {
+    final doomed = deleteFilesAfter.toList(growable: false);
+    _trackWrite(
+      _repository.saveAttachments(List<Attachment>.of(_attachments)).then((
+        _,
+      ) async {
+        if (doomed.isNotEmpty) {
+          await _attachmentStore.deleteMany(doomed);
+        }
+      }),
+    );
+  }
+
+  /// 迁移期兜底：某附件文件缺失但库里仍有旧版 base64 时，解成文件并清空该列。
+  ///
+  /// 幂等且可中断：先写文件、写成功才清 `data_url`，因此任何时刻中断都不会丢数据；
+  /// 清列失败也只是下次重复转换一次。
+  Future<bool> _materializeLegacyAttachment(String id) async {
+    if (_attachmentStore.existsSync(id)) {
+      return true;
+    }
+    final String? legacy;
+    try {
+      legacy = await _repository.loadAttachmentDataUrl(id);
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    if (legacy == null || legacy.isEmpty) {
+      return true;
+    }
+    final bytes = _decodeAttachmentDataUrl(legacy);
+    if (bytes == null || bytes.isEmpty) {
+      return false;
+    }
+    try {
+      await _attachmentStore.writeBytes(id, bytes);
+      await _repository.clearAttachmentDataUrl(id);
+      return true;
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+  }
+
+  static Uint8List? _decodeAttachmentDataUrl(String dataUrl) {
+    if (!dataUrl.startsWith('data:')) {
+      return null;
+    }
+    final comma = dataUrl.indexOf(',');
+    if (comma < 0) {
+      return null;
+    }
+    try {
+      return base64Decode(dataUrl.substring(comma + 1));
+    } on FormatException {
+      return null;
+    }
+  }
+
+  /// 把库里剩余的内嵌 base64 附件逐条转成文件；可中断，下次启动从剩余行继续。
+  Future<({int converted, int failed})> migrateLegacyAttachments({
+    void Function(int done, int total)? onProgress,
+  }) async {
+    final List<String> pending;
+    try {
+      pending = await _repository.attachmentIdsWithLegacyData();
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return (converted: 0, failed: 0);
+    }
+    if (pending.isEmpty) {
+      attachmentMigrationProgressListenable.value = null;
+      return (converted: 0, failed: 0);
+    }
+    var converted = 0;
+    var failed = 0;
+    void report(int done) {
+      attachmentMigrationProgressListenable.value = (
+        done: done,
+        total: pending.length,
+      );
+      onProgress?.call(done, pending.length);
+    }
+
+    report(0);
+    for (final id in pending) {
+      if (await _materializeLegacyAttachment(id)) {
+        converted++;
+      } else {
+        failed++;
+      }
+      report(converted + failed);
+    }
+    attachmentMigrationProgressListenable.value = null;
+    return (converted: converted, failed: failed);
   }
 
   void _persistRecurringRules() {
@@ -919,7 +1033,36 @@ mixin _ControllerState on ChangeNotifier {
   /// 这些跨多表的整体操作若中途失败会整体回滚，不留孤儿引用（如 entries 已换但
   /// accounts 还是旧的）。KV 偏好类写入不在事务内，另行处理。
   void _persistAllLedgerData() {
-    _trackWrite(_repository.replaceAllLedgerData(_ledgerDataSnapshot()));
+    _trackWrite(
+      _repository.replaceAllLedgerData(_ledgerDataSnapshot()).then((_) async {
+        await _collectAttachmentOrphans();
+      }),
+    );
+  }
+
+  /// 删除不再被任何附件元数据引用的文件。
+  ///
+  /// 覆盖导入/恢复/重置/删除条目等「整替」路径，以及编辑期取消留下的未落库文件。
+  /// 只在确认无引用时删除，回收失败只记日志、不影响主流程。
+  Future<int> _collectAttachmentOrphans() async {
+    try {
+      return await _attachmentStore.collectOrphans(<String>{
+        for (final attachment in _attachments) attachment.id,
+      });
+    } catch (error) {
+      _logger?.error('附件孤儿回收失败', source: 'attachments', error: error);
+      return 0;
+    }
+  }
+
+  /// 冷启动时回收孤儿附件文件，并清掉中断的导入暂存。
+  Future<void> maintainAttachmentFiles() async {
+    await _collectAttachmentOrphans();
+    try {
+      await _attachmentStore.purgeStaging();
+    } catch (error) {
+      _logger?.error('清理附件暂存失败', source: 'attachments', error: error);
+    }
   }
 
   void _persistAssetSectionCollapsed() {

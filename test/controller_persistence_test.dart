@@ -9,8 +9,11 @@ import 'package:verifin/data/app_database.dart';
 import 'package:verifin/data/ledger_repository.dart';
 import 'package:verifin/local_storage/local_storage.dart';
 
+import 'support/test_harness.dart';
+
 void main() {
   setUpAll(sqfliteFfiInit);
+  useTestDatabases();
 
   final opened = <AppDatabase>[];
   tearDown(() async {
@@ -173,9 +176,11 @@ void main() {
       initiatedAt: DateTime(2026, 8, 21),
       settledAt: DateTime(2026, 8, 22),
     );
-    controller
-      ..addAttachment('delete-expense', 'data:image/jpeg;base64,RVhQRU5TRQ==')
-      ..addAttachment(refund!.id, 'data:image/jpeg;base64,UkVGVU5E');
+    await controller.addAttachment(
+      'delete-expense',
+      base64Decode('RVhQRU5TRQ=='),
+    );
+    await controller.addAttachment(refund!.id, base64Decode('UkVGVU5E'));
     await controller.waitForPendingWrites();
 
     expect(await controller.deleteAccountAndRelatedEntries(cash.id), 1);
@@ -217,7 +222,7 @@ void main() {
     const attachment = Attachment(
       id: 'attachment-5',
       entryId: '5',
-      dataUrl: 'data:image/jpeg;base64,QUJD',
+      byteSize: 3,
     );
 
     final saved = await controller.saveEntryAggregateDraft(
@@ -362,7 +367,7 @@ void main() {
       LocalKeyValueStore(),
       repository: repo,
     );
-    controller.importDataJson(rawJson);
+    await controller.importDataJson(rawJson);
     await controller.waitForPendingWrites();
 
     final reloaded = await VeriFinController.create(

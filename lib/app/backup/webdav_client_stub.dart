@@ -35,3 +35,19 @@ Future<void> webdavDelete(WebdavConfig config, String href) async {
 Future<Uint8List> webdavDownload(WebdavConfig config, String href) async {
   throw const WebdavException('当前平台不支持 WebDAV');
 }
+
+Future<void> webdavUploadFile(
+  WebdavConfig config,
+  String filename,
+  String cachePath,
+) async {
+  throw const WebdavException('当前平台不支持 WebDAV');
+}
+
+Future<void> webdavDownloadToFile(
+  WebdavConfig config,
+  String href,
+  String cachePath,
+) async {
+  throw const WebdavException('当前平台不支持 WebDAV');
+}

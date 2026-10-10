@@ -1,5 +1,21 @@
 part of 'platform_bridge.dart';
 
+/// 原生流式复制到缓存后的结果：本地路径 + 字节数。
+class StagedCacheFile {
+  const StagedCacheFile({required this.path, required this.byteSize});
+
+  final String path;
+  final int byteSize;
+}
+
+/// 原生流式写出后的回执：写入字节数与内容 SHA-256（写盘时同步算出）。
+class StreamedWriteReceipt {
+  const StreamedWriteReceipt({required this.sha256, required this.byteSize});
+
+  final String sha256;
+  final int byteSize;
+}
+
 /// 文件存储：系统下载目录写出（CSV 模板 / zip 导出）与备份目录 SAF 读写。
 class AppStorageBridge {
   AppStorageBridge._();
@@ -65,48 +81,6 @@ class AppStorageBridge {
     }
   }
 
-  /// 向已授权的备份目录写入一个文本文件（同名覆盖），返回新文件 URI。
-  static Future<String?> writeBackupFile({
-    required String directoryUri,
-    required String filename,
-    required String content,
-    String mimeType = 'application/json',
-  }) async {
-    try {
-      return await _channel.invokeMethod<String>('writeBackupFile', {
-        'directoryUri': directoryUri,
-        'filename': filename,
-        'content': content,
-        'mimeType': mimeType,
-      });
-    } on MissingPluginException {
-      throw Exception('当前平台不支持写入备份目录。');
-    } on PlatformException catch (error) {
-      throw Exception(error.message ?? '写入备份失败，请稍后再试。');
-    }
-  }
-
-  /// 向已授权的备份目录写入一个字节文件（同名覆盖，zip 备份），返回新文件 URI。
-  static Future<String?> writeBackupBytes({
-    required String directoryUri,
-    required String filename,
-    required Uint8List bytes,
-    String mimeType = 'application/zip',
-  }) async {
-    try {
-      return await _channel.invokeMethod<String>('writeBackupBytes', {
-        'directoryUri': directoryUri,
-        'filename': filename,
-        'bytes': bytes,
-        'mimeType': mimeType,
-      });
-    } on MissingPluginException {
-      throw Exception('当前平台不支持写入备份目录。');
-    } on PlatformException catch (error) {
-      throw Exception(error.message ?? '写入备份失败，请稍后再试。');
-    }
-  }
-
   /// 列出备份目录内的文件元数据。
   static Future<List<Map<Object?, Object?>>> listBackupFiles(
     String directoryUri,
@@ -126,32 +100,6 @@ class AppStorageBridge {
     }
   }
 
-  /// 读取备份目录内某个文件的文本内容。
-  static Future<String?> readBackupFile(String fileUri) async {
-    try {
-      return await _channel.invokeMethod<String>('readBackupFile', {
-        'fileUri': fileUri,
-      });
-    } on MissingPluginException {
-      throw Exception('当前平台不支持读取备份文件。');
-    } on PlatformException catch (error) {
-      throw Exception(error.message ?? '读取备份文件失败，请稍后再试。');
-    }
-  }
-
-  /// 读取备份目录内某个文件的原始字节（用于 zip / 旧版 JSON 统一按字节读入）。
-  static Future<Uint8List?> readBackupBytes(String fileUri) async {
-    try {
-      return await _channel.invokeMethod<Uint8List>('readBackupBytes', {
-        'fileUri': fileUri,
-      });
-    } on MissingPluginException {
-      throw Exception('当前平台不支持读取备份文件。');
-    } on PlatformException catch (error) {
-      throw Exception(error.message ?? '读取备份文件失败，请稍后再试。');
-    }
-  }
-
   /// 删除备份目录内某个文件。
   static Future<bool> deleteBackupFile(String fileUri) async {
     try {
@@ -163,6 +111,113 @@ class AppStorageBridge {
       return false;
     } on PlatformException catch (error) {
       throw Exception(error.message ?? '删除备份文件失败，请稍后再试。');
+    }
+  }
+
+  // ---- 大文件流式复制（不把整包放进内存）----
+
+  /// 把用户选择的 SAF 文件流式复制到应用缓存目录，返回本地路径与字节数。
+  static Future<StagedCacheFile?> stageBackupFile(String fileUri) async {
+    try {
+      final result = await _channel.invokeMapMethod<String, Object?>(
+        'stageBackupFile',
+        <String, Object?>{'fileUri': fileUri},
+      );
+      if (result == null) {
+        return null;
+      }
+      final path = result['path'] as String?;
+      if (path == null || path.isEmpty) {
+        return null;
+      }
+      return StagedCacheFile(
+        path: path,
+        byteSize: (result['bytes'] as num?)?.toInt() ?? 0,
+      );
+    } on MissingPluginException {
+      throw Exception('当前平台不支持读取备份文件。');
+    } on PlatformException catch (error) {
+      throw Exception(error.message ?? '读取备份文件失败，请稍后再试。');
+    }
+  }
+
+  /// 把缓存文件流式写入备份目录（同名覆盖），返回目标 URI 与写盘校验信息。
+  static Future<({String uri, StreamedWriteReceipt receipt})?>
+  writeBackupFromCache({
+    required String directoryUri,
+    required String filename,
+    required String cachePath,
+    String mimeType = 'application/zip',
+  }) async {
+    try {
+      final result = await _channel.invokeMapMethod<String, Object?>(
+        'writeBackupFromCache',
+        <String, Object?>{
+          'directoryUri': directoryUri,
+          'filename': filename,
+          'cachePath': cachePath,
+          'mimeType': mimeType,
+        },
+      );
+      if (result == null) {
+        return null;
+      }
+      final uri = result['uri'] as String? ?? '';
+      return (
+        uri: uri,
+        receipt: StreamedWriteReceipt(
+          sha256: result['sha256'] as String? ?? '',
+          byteSize: (result['bytes'] as num?)?.toInt() ?? 0,
+        ),
+      );
+    } on MissingPluginException {
+      return null;
+    } on PlatformException catch (error) {
+      throw Exception(error.message ?? '写入备份失败，请稍后再试。');
+    }
+  }
+
+  /// 把缓存文件流式写入系统下载目录；Android 10 以下返回 null（调用方回退到选择器）。
+  static Future<StreamedWriteReceipt?> saveCacheFileToDownloads({
+    required String filename,
+    required String cachePath,
+    String mimeType = 'application/zip',
+  }) async {
+    try {
+      final result = await _channel.invokeMapMethod<String, Object?>(
+        'saveCacheFileToDownloads',
+        <String, Object?>{
+          'filename': filename,
+          'cachePath': cachePath,
+          'mimeType': mimeType,
+        },
+      );
+      if (result == null) {
+        return null;
+      }
+      return StreamedWriteReceipt(
+        sha256: result['sha256'] as String? ?? '',
+        byteSize: (result['bytes'] as num?)?.toInt() ?? 0,
+      );
+    } on MissingPluginException {
+      return null;
+    } on PlatformException catch (error) {
+      throw Exception(error.message ?? '导出失败，请稍后再试。');
+    }
+  }
+
+  /// 删除应用缓存目录里的临时文件（备份/恢复收尾，尽力而为）。
+  static Future<bool> deleteCacheFile(String path) async {
+    try {
+      return await _channel.invokeMethod<bool>(
+            'deleteCacheFile',
+            <String, Object?>{'path': path},
+          ) ??
+          false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
     }
   }
 }

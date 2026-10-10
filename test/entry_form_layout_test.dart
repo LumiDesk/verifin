@@ -1,8 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/app_theme.dart';
+import 'package:verifin/app/attachments/attachment_store.dart';
 import 'package:verifin/app/common_widgets.dart';
 import 'package:verifin/app/entry_sheets.dart';
+import 'package:verifin/app/models.dart';
 import 'package:verifin/app/veri_fin_scope.dart';
 import 'package:verifin/pages/attachments_editor.dart';
 import 'package:verifin/pages/entry_detail_page.dart';
@@ -158,13 +162,24 @@ void main() {
         'data:image/png;base64,'
         'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
     final removed = <int>[];
+    final bytes = base64Decode(image.substring(image.indexOf(',') + 1));
+    final store = InMemoryAttachmentStore();
+    final attachments = <Attachment>[];
+    for (var index = 0; index < 3; index++) {
+      final id = 'att-$index';
+      await store.writeBytes(id, bytes);
+      attachments.add(
+        Attachment(id: id, entryId: 'e1', byteSize: bytes.length),
+      );
+    }
 
     await tester.pumpWidget(
       zhMaterialApp(
         home: Scaffold(
           body: AttachmentsEditor(
-            dataUrls: const <String>[image, image, image],
-            onAddDataUrl: (_) {},
+            attachments: attachments,
+            store: store,
+            onAddBytes: (_) async {},
             onRemoveIndex: removed.add,
             showHeader: false,
             showAddButton: false,

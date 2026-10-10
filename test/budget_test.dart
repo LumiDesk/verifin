@@ -523,7 +523,7 @@ void main() {
       // 备份导入：默认预算与单期覆盖都进 JSON 备份。
       final target = await makeController();
       expect(target.defaultMonthlyBudget, 0);
-      target.importDataJson(json);
+      await target.importDataJson(json);
       expect(target.defaultMonthlyBudget, 3000);
       expect(target.defaultCategoryBudget('dining'), 800);
       expect(target.categoryBudgetIsOverride(july, 'dining'), isTrue);
@@ -629,7 +629,7 @@ void main() {
 
     final target = await makeController();
     expect(target.dailyBudget(), 0);
-    target.importDataJson(json);
+    await target.importDataJson(json);
     expect(target.dailyBudget(), 123);
     controller.dispose();
     target.dispose();
@@ -691,7 +691,7 @@ void main() {
 
       final target = await makeController();
       expect(target.budgetCycleStartDay, 1);
-      target.importDataJson(json);
+      await target.importDataJson(json);
       expect(target.budgetCycleStartDay, 22);
       target.dispose();
     });

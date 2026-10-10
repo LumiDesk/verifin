@@ -475,38 +475,61 @@ class RecurringRule {
   }
 }
 
-/// 交易的图片附件（如票据）。以压缩后的 JPEG data URL 存储在独立表中，
-/// 不放进 entries 表，避免整表覆盖式写入放大；数据落在应用私有的 SQLite 内。
+/// 交易的图片附件（如票据）元数据。
+///
+/// 图片字节存应用私有目录下的独立文件（见 `AttachmentStore`），SQLite 只保存元数据，
+/// 不放进 entries 表。这样启动只读元数据、备份与恢复可逐张流式处理，内存不再随附件
+/// 总量增长。渲染一律经 `AttachmentStore.imageProviderFor` 取文件，不再内联 base64。
 class Attachment {
   const Attachment({
     required this.id,
     required this.entryId,
-    required this.dataUrl,
+    this.mimeType = 'image/jpeg',
+    this.byteSize = 0,
   });
 
   final String id;
   final String entryId;
 
-  /// `data:image/jpeg;base64,...` 形式的图片，移动端用内存图片渲染。
-  final String dataUrl;
+  /// 图片 MIME 类型；旧备份缺字段时按 `image/jpeg` 读入。
+  final String mimeType;
 
-  Attachment copyWith({String? id, String? entryId, String? dataUrl}) {
+  /// 图片字节数；未知/旧数据为 0。
+  final int byteSize;
+
+  Attachment copyWith({
+    String? id,
+    String? entryId,
+    String? mimeType,
+    int? byteSize,
+  }) {
     return Attachment(
       id: id ?? this.id,
       entryId: entryId ?? this.entryId,
-      dataUrl: dataUrl ?? this.dataUrl,
+      mimeType: mimeType ?? this.mimeType,
+      byteSize: byteSize ?? this.byteSize,
     );
   }
 
   Map<String, Object?> toJson() {
-    return <String, Object?>{'id': id, 'entryId': entryId, 'dataUrl': dataUrl};
+    return <String, Object?>{
+      'id': id,
+      'entryId': entryId,
+      'mimeType': mimeType,
+      'byteSize': byteSize,
+    };
   }
 
   static Attachment fromJson(Map<String, Object?> json) {
+    // `_archiveMime` 是备份压缩包里剥离 base64 后记录的 MIME（见 backup_archive），
+    // 直接读 v3 的 backup.json 时兜底取用，保证旧包也能解析出正确类型。
+    final mime =
+        json['mimeType'] as String? ?? json['_archiveMime'] as String? ?? '';
     return Attachment(
       id: json['id'] as String,
       entryId: json['entryId'] as String? ?? '',
-      dataUrl: json['dataUrl'] as String? ?? '',
+      mimeType: mime.isEmpty ? 'image/jpeg' : mime,
+      byteSize: (json['byteSize'] as num?)?.toInt() ?? 0,
     );
   }
 }

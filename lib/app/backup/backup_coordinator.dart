@@ -41,11 +41,14 @@ class BackupCoordinator {
     }
     _running = true;
     var allTargetsSucceeded = true;
+    PreparedBackup? prepared;
     try {
       // 只准备一次备份内容（未加密→zip、加密→文本信封），本地与 WebDAV 共用同一份，
       // 避免重复导出/加密（加密时 PBKDF2 迭代很贵）。
-      final prepared = await BackupService.prepare(
+      prepared = await BackupService.prepare(
         json: controller.exportDataJson(),
+        store: controller.attachmentStore,
+        cacheDirectory: await controller.ensureBackupCacheDirectory(),
         passphrase: controller.backupPassphrase,
         now: now,
         auto: true,
@@ -68,10 +71,10 @@ class BackupCoordinator {
           // 兜底总超时：即便上传响应被服务器黑洞挂住，也保证 finally 能释放 _running，
           // 不会让此后所有自动备份（含本地目录）被静默跳过。自动备份取较宽的 5 分钟，
           // 手动备份路径不经此处、不受此限。
-          await webdavUpload(
+          await webdavUploadFile(
             webdav,
             prepared.filename,
-            prepared.bytes,
+            prepared.cachePath,
           ).timeout(const Duration(minutes: 5));
           // 与本地一致：按保留份数清理远端旧的自动备份，避免无限累积。
           await _pruneWebdav(webdav, settings.retention);
@@ -95,6 +98,10 @@ class BackupCoordinator {
       // 兜底：任何未预期错误都不打断用户操作，但必须留下隐私友好的诊断线索。
       controller.logger?.error('自动备份未预期失败', source: 'backup', error: error);
     } finally {
+      final pending = prepared;
+      if (pending != null) {
+        await BackupService.deletePrepared(pending);
+      }
       _running = false;
     }
   }

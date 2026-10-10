@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/app/veri_fin_controller.dart';
@@ -50,8 +52,8 @@ void main() {
     controller
       ..addEntry(_entry('a', bookId))
       ..addEntry(_entry('b', bookId))
-      ..addEntry(_entry('c', bookId))
-      ..addAttachment('a', 'data:image/jpeg;base64,AAAA');
+      ..addEntry(_entry('c', bookId));
+    await controller.addAttachment('a', Uint8List(4));
 
     await controller.deleteEntries(<String>{'a', 'b'});
     expect(controller.entries.map((e) => e.id), <String>['c']);

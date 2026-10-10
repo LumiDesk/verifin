@@ -196,14 +196,32 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   // id 生成（_generateId / _idSeq）已下沉到 _ControllerState，便于载入期的
   // _syncRefundData() 等基础流程合成条目时复用。
 
-  /// 为交易新增一张图片附件（[dataUrl] 为压缩后的 JPEG data URL）。
-  void addAttachment(String entryId, String dataUrl) {
-    if (dataUrl.isEmpty) {
+  /// 写入一张新附件并返回其元数据（此时尚未落库）。
+  ///
+  /// 编辑期先把字节落盘，保存时只提交元数据；用户取消编辑留下的文件由孤儿回收清理，
+  /// 不会污染账目。附件 id 全局唯一，未落库文件不会被误当成已引用数据。
+  Future<Attachment> stageNewAttachment({
+    required String entryId,
+    required Uint8List bytes,
+    String mimeType = 'image/jpeg',
+  }) async {
+    final id = _generateId('att');
+    await _attachmentStore.writeBytes(id, bytes);
+    return Attachment(
+      id: id,
+      entryId: entryId,
+      mimeType: mimeType,
+      byteSize: bytes.length,
+    );
+  }
+
+  /// 为交易新增一张图片附件（[bytes] 为压缩后的 JPEG 字节）。
+  Future<void> addAttachment(String entryId, Uint8List bytes) async {
+    if (bytes.isEmpty) {
       return;
     }
-    _attachments.add(
-      Attachment(id: _generateId('att'), entryId: entryId, dataUrl: dataUrl),
-    );
+    final attachment = await stageNewAttachment(entryId: entryId, bytes: bytes);
+    _attachments.add(attachment);
     _persistAttachments();
     notifyListeners();
   }
@@ -214,7 +232,8 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     if (_attachments.length == before) {
       return;
     }
-    _persistAttachments();
+    // 落库成功后再删文件，避免落库失败留下「有行无文件」的不可读附件。
+    _persistAttachments(deleteFilesAfter: <String>[attachmentId]);
     notifyListeners();
   }
 
@@ -1979,6 +1998,15 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     }
     nextEntries.sort(_compareEntriesLatestFirst);
 
+    final nextAttachmentIds = <String>{
+      for (final attachment in attachments) attachment.id,
+    };
+    final removedAttachmentIds = <String>[
+      for (final attachment in _attachments)
+        if (attachment.entryId == entry.id &&
+            !nextAttachmentIds.contains(attachment.id))
+          attachment.id,
+    ];
     final nextAttachments = <Attachment>[
       for (final attachment in _attachments)
         if (attachment.entryId != entry.id) attachment,
@@ -2057,6 +2085,10 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       _exchangeRates
         ..clear()
         ..addAll(nextRates);
+    }
+    // 行列已提交成功，这时才删除被移除附件的文件；失败时文件保留、由孤儿回收兜底。
+    if (removedAttachmentIds.isNotEmpty) {
+      await _attachmentStore.deleteMany(removedAttachmentIds);
     }
     notifyListeners();
     if (hasNewEntry) {
@@ -4060,10 +4092,42 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     return const JsonEncoder.withIndent('  ').convert(payload);
   }
 
+  /// 把导入数据里的附件字节从暂存来源并入附件目录，返回按实际字节数校正的元数据。
+  ///
+  /// 必须在任何 DB 写入之前完成：读取或写入失败即抛 [FormatException]，整次导入中止，
+  /// 现有数据保持不变。没有暂存来源（如仅测 JSON 结构）时原样返回元数据。
+  Future<List<Attachment>> _materializeImportedAttachments(
+    List<Attachment> attachments,
+    Future<Uint8List> Function(String id)? readStagedAttachment,
+  ) async {
+    if (attachments.isEmpty || readStagedAttachment == null) {
+      return attachments;
+    }
+    final result = <Attachment>[];
+    for (final attachment in attachments) {
+      final Uint8List bytes;
+      try {
+        bytes = await readStagedAttachment(attachment.id);
+      } catch (error) {
+        _logger?.error('备份附件读取失败', source: 'import', error: error);
+        throw const FormatException('备份附件缺失或损坏');
+      }
+      await _attachmentStore.writeBytes(attachment.id, bytes);
+      result.add(attachment.copyWith(byteSize: bytes.length));
+    }
+    return result;
+  }
+
   /// 从明文导出 JSON 导入。**字节层的格式判定（zip/加密信封/明文）不在 controller**
-  /// ——调用方先经 `BackupService.decodeBackupBytes`（必要时 `decryptEnvelope`）
-  /// 还原成明文 JSON 再传入，controller 只认 JSON。
-  void importDataJson(String rawJson) {
+  /// ——调用方先经 `BackupService.decodeBackupFile` / `decryptStreamToZip`（必要时
+  /// `decryptEnvelope`）还原成明文 JSON 再传入，controller 只认 JSON。
+  /// [readStagedAttachment] 提供备份里附件字节（zip 解包到暂存目录后按 id 读取）。
+  /// 旧版内嵌 base64 的明文备份会在解包层先转成同样的暂存形态，因此这里只有一条路径。
+  /// 附件字节先于任何 DB 写入落盘，读取/写入失败即中止导入、现有数据零改动。
+  Future<void> importDataJson(
+    String rawJson, {
+    Future<Uint8List> Function(String id)? readStagedAttachment,
+  }) async {
     final Object? decoded;
     try {
       decoded = jsonDecode(rawJson);
@@ -4142,9 +4206,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       ...(importedCategories.isEmpty ? _seedCategories : importedCategories),
     ];
     final nextTags = _decodeModelList<Tag>(data['tags'], Tag.fromJson);
-    final nextAttachments = _decodeModelList<Attachment>(
-      data['attachments'],
-      Attachment.fromJson,
+    final nextAttachments = await _materializeImportedAttachments(
+      _decodeModelList<Attachment>(data['attachments'], Attachment.fromJson),
+      readStagedAttachment,
     );
     final nextRecurringRules = _decodeModelList<RecurringRule>(
       data['recurringRules'],

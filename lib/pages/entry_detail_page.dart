@@ -103,8 +103,8 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   // 支出可标记「不计入预算」（借款、垫付等）：只脱离预算口径，收支统计照旧。
   bool _excludedFromBudget = false;
   List<String> _tagIds = <String>[];
-  // 新增交易时先缓存附件 data URL，保存后再按新交易 id 落库。
-  final List<String> _pendingAttachments = <String>[];
+  // 新增交易时先把附件字节落盘（stageNewAttachment），保存时只提交元数据。
+  final List<Attachment> _pendingAttachments = <Attachment>[];
   final TextEditingController _noteController = TextEditingController();
 
   // 自动识别：用户未手动改动某字段前，按历史（金额/备注/时段）自动填充类型、分类、
@@ -122,7 +122,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   late final String _entryId =
       widget.draftEntry?.id ?? DateTime.now().microsecondsSinceEpoch.toString();
   LedgerEntry? _initialEntryDraft;
-  List<String>? _initialAttachmentDataUrls;
+  List<String>? _initialAttachmentIds;
   LedgerEntry? _savedResult;
   final EditorExitController _exitController = EditorExitController();
   // 程序化写入备注时置真，令备注监听忽略这次（不误判为用户输入）。
@@ -1095,9 +1095,15 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         _pendingAttachments.isNotEmpty) ...<Widget>[
                       const SizedBox(height: 10),
                       AttachmentsEditor(
-                        dataUrls: _pendingAttachments,
-                        onAddDataUrl: (dataUrl) =>
-                            setState(() => _pendingAttachments.add(dataUrl)),
+                        attachments: _pendingAttachments,
+                        store: VeriFinScope.of(context).attachmentStore,
+                        onAddBytes: (bytes) async {
+                          final attachment = await VeriFinScope.of(
+                            context,
+                          ).stageNewAttachment(entryId: _entryId, bytes: bytes);
+                          if (!mounted) return;
+                          setState(() => _pendingAttachments.add(attachment));
+                        },
                         onRemoveIndex: (index) =>
                             setState(() => _pendingAttachments.removeAt(index)),
                         showHeader: false,
@@ -1728,9 +1734,13 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   }
 
   Future<void> _addAttachment({required bool fromCamera}) async {
-    final dataUrl = await pickAttachmentDataUrl(fromCamera: fromCamera);
-    if (!mounted || dataUrl == null || dataUrl.isEmpty) return;
-    setState(() => _pendingAttachments.add(dataUrl));
+    final bytes = await pickAttachmentBytes(fromCamera: fromCamera);
+    if (!mounted || bytes == null || bytes.isEmpty) return;
+    final attachment = await VeriFinScope.of(
+      context,
+    ).stageNewAttachment(entryId: _entryId, bytes: bytes);
+    if (!mounted) return;
+    setState(() => _pendingAttachments.add(attachment));
   }
 
   Future<void> _pickTags() async {
@@ -1795,7 +1805,9 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
 
   void _captureInitialSnapshot() {
     _initialEntryDraft ??= _buildDraftEntry();
-    _initialAttachmentDataUrls ??= List<String>.of(_pendingAttachments);
+    _initialAttachmentIds ??= _pendingAttachments
+        .map((attachment) => attachment.id)
+        .toList(growable: false);
   }
 
   bool _sameDraft(LedgerEntry left, LedgerEntry right) =>
@@ -1826,12 +1838,17 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       return true;
     }
     final initial = _initialEntryDraft;
-    final initialAttachments = _initialAttachmentDataUrls;
+    final initialAttachments = _initialAttachmentIds;
     if (initial == null || initialAttachments == null) {
       return false;
     }
     return !_sameDraft(initial, _buildDraftEntry()) ||
-        !listEquals(initialAttachments, _pendingAttachments);
+        !listEquals(
+          initialAttachments,
+          _pendingAttachments
+              .map((attachment) => attachment.id)
+              .toList(growable: false),
+        );
   }
 
   Future<void> _saveAndExit() async {
@@ -1878,14 +1895,9 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       return false;
     }
     _saving = true;
-    final attachments = <Attachment>[
-      for (var index = 0; index < _pendingAttachments.length; index++)
-        Attachment(
-          id: 'att_${_entryId}_$index',
-          entryId: _entryId,
-          dataUrl: _pendingAttachments[index],
-        ),
-    ];
+    // 附件字节已在选择时落盘，这里只提交元数据；entryId 由 stageNewAttachment
+    // 与 _buildDraftEntry 共用同一个 _entryId，保证引用一致。
+    final attachments = List<Attachment>.of(_pendingAttachments);
     final result = await controller.saveEntryAggregateDraftResult(
       entry: draft,
       isNew: true,
