@@ -125,12 +125,20 @@ dart format .
 
 **发版必须得到用户明确授权。** 打标签会推送远端并触发 CI，不能自行执行。实际顺序如下：
 
-1. 确定版本号与日期，把 `CHANGELOG.md` 顶部 `## [Unreleased]` 提升为本次版本，并在其上新建空的 `## [Unreleased]`。`CHANGELOG.md` 只保留未发布改动与最近一个次版本线；更早版本归档在 git 标签与 GitHub Releases，不再回填。
-2. 先提交 CHANGELOG 变更，确认当前分支是 `main` 且工作树完全干净。
-3. 发布脚本参数可取 `patch`、`minor`、`major` 或显式版本号（如 `1.2.3`）：`dart run scripts/publish.dart patch`。脚本会先校验「本机 Flutter 版本 == CI 固定版本」，不一致直接失败（analyzer 的 lint 集合随版本变化，本地绿不代表 CI 绿）。`--dry-run` 只打印将要执行的步骤。
-4. 脚本会更新 `pubspec.yaml` 与 `lib/app/app_version.dart`，执行格式化、依赖安装、analyze、test，创建 `chore: release vX.Y.Z` 提交、标签并推送。
-5. 下载 CI 生成的预发布 APK 真机验收；通过后再手动设为正式版和 Latest。
-6. 没有被提升为正式版的预发布会一直堆在 Releases 页面；用 `dart run scripts/prune_prereleases.dart`（先 `--dry-run` 核对）清理。
+1. 先跑 `dart run scripts/doctor.dart` 确认环境（Flutter 版本必须等于 CI 固定版本、Android SDK/JDK 可用、工作树干净）。
+2. 确定版本号与日期，把 `CHANGELOG.md` 顶部 `## [Unreleased]` 提升为本次版本，并在其上新建空的 `## [Unreleased]`。`CHANGELOG.md` 只保留未发布改动与最近一个次版本线；更早版本的**源码归档以 git 标签为准**，不再回填，详见下方「版本归档与预发布清理」。
+3. 提交 CHANGELOG 变更，确认当前分支是 `main` 且工作树完全干净。
+4. 运行发布脚本，参数可取 `patch`、`minor`、`major` 或显式版本号（如 `1.2.3`）：`dart run scripts/publish.dart patch`。脚本会再次校验「本机 Flutter 版本 == CI 固定版本」，不一致直接失败（analyzer 的 lint 集合随版本变化，本地绿不代表 CI 绿）；`--dry-run` 只打印将要执行的步骤。
+5. 脚本更新 `pubspec.yaml` 与 `lib/app/app_version.dart`，执行格式化、依赖安装、analyze、test，创建 `chore: release vX.Y.Z` 提交、标签并推送；推送标签触发 CI 构建 APK/AAB 并创建 GitHub **预发布**（不标记 Latest）。
+6. 下载 CI 生成的预发布 APK 真机验收；通过后在 GitHub 上把该 Release **提升为正式版并标记 Latest**（`prerelease` 去掉）。
+7. 清理没被提升的预发布（见下）。
+
+### 版本归档与预发布清理
+
+- GitHub Releases 只保留**正式版**（推荐 Latest 指向最新正式版）；预发布只是「待真机验收」的临时状态，验收通过就应该提升为正式版，而不是长期留存。
+- **git 标签是版本源码的唯一归档**：即使清掉了某个预发布的 Release 页面，也不要删除它的标签——发布脚本会拒绝复用已存在的标签，标签也是旧版本唯一的源码定位方式。Release 页面可以删，标签不要删。
+- 清理命令：`dart run scripts/prune_prereleases.dart --dry-run` 先核对列表，再去掉 `--dry-run` 执行（默认保留 git 标签）。只有在确认某个标签确实不再需要时才加 `--cleanup-tag`。
+- 当前仓库历史上堆积过 80+ 个未被提升的预发布，已按上述规则清理过一次。
 
 ### 仓库脚本
 

@@ -41,16 +41,26 @@ Windows 安装顺序：
    `flutter doctor -v` 和 `adb devices -l` 复核。macOS/Linux 同样使用官方 Flutter
    归档、JDK 与对应平台 Command-line Tools，不执行 Windows 安装命令。
 
-本机已验证的工具（供发现已有安装，不能作为其他环境的硬依赖）：
+本机已持久化配置（写进环境变量，新终端直接生效；供发现已有安装，不能作为其他环境的硬依赖）：
+
+- Flutter：`C:\Dev\flutter-3.47.2`，本地 `stable` 分支固定在该 tag，`flutter --version` 为 3.47.2（与 CI 一致）；机器 PATH 中排在通用安装 `C:\Dev\flutter` 之前。
+- Android SDK：`C:\Dev\android-sdk`；`ANDROID_HOME` / `ANDROID_SDK_ROOT` 指向它，`platform-tools` 已在 PATH 上，SDK 许可已全部接受（`flutter doctor` 的 Android toolchain 为 ✓）。
+- JDK：`JAVA_HOME` 指向 `jdk-17.0.20.101-hotspot`，与 CI 同为 Java 17。
+- 早先 `C:\Android\Sdk` 是个没有 `platforms/`、`build-tools/` 的空壳目录，已删除，避免工具把它当成可用的 SDK。
+
+复核（新终端）：
 
 ```powershell
-$env:PATH='C:\Dev\flutter-3.47.2\bin;C:\Dev\android-sdk\platform-tools;'+$env:PATH
-$env:ANDROID_HOME='C:\Dev\android-sdk'
-# 本机 Java AF_UNIX 临时目录和跨盘 Kotlin 缓存问题的局部绕过：
-New-Item -ItemType Directory -Force C:/Dev/java-tmp | Out-Null
-$env:JAVA_TOOL_OPTIONS='-Djava.io.tmpdir=C:/Dev/java-tmp -Djdk.net.unixdomain.tmpdir=C:/Dev/java-tmp -Dorg.gradle.project.kotlin.incremental=false'
+dart run scripts/doctor.dart --devices
 flutter doctor -v
 adb devices -l
+```
+
+遇到 Java AF_UNIX 临时目录或跨盘 Kotlin 缓存报错时，按需临时叠加（不要写进 CI 或提交的配置）：
+
+```powershell
+New-Item -ItemType Directory -Force C:/Dev/java-tmp | Out-Null
+$env:JAVA_TOOL_OPTIONS='-Djava.io.tmpdir=C:/Dev/java-tmp -Djdk.net.unixdomain.tmpdir=C:/Dev/java-tmp -Dorg.gradle.project.kotlin.incremental=false'
 ```
 
 仅在复现同类错误时使用上述 Java/Kotlin 绕过，不复制到 CI 全局配置。`local.properties`

@@ -128,7 +128,8 @@ Android 包名 `top.talyra42.verifin`。本地不构建交付 APK——正式安
   dart run scripts/publish.dart patch   # Windows / macOS / Linux 通用；也支持 minor / major / 显式版本号
   ```
 
-  脚本会更新版本号、提交、打标签并推送。
+  脚本会更新版本号、提交、打标签并推送；推送标签触发 CI 构建 APK/AAB 并创建 GitHub **预发布**。
+- 真机验收通过后，在 GitHub 上把该 Release 提升为正式版并标记 Latest；**没被提升的预发布用 `dart run scripts/prune_prereleases.dart` 清理**（先 `--dry-run` 核对，默认保留 git 标签——标签是旧版本源码的唯一归档）。GitHub Releases 只保留正式版。
 - 仓库脚本都在 `scripts/` 下、用 Dart 编写（无需 bash/PowerShell）：`doctor.dart` 自检本机环境（Flutter 版本、Android SDK、JDK、adb、gh、工作树），`prune_prereleases.dart` 清理未提升的 GitHub 预发布，`clean.dart` 清理本地构建产物。
 - Release APK 使用项目内稳定 keystore（`android/app/verifin-release.jks`）签名，版本间可覆盖安装。
 
