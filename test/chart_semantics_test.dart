@@ -87,7 +87,7 @@ void main() {
     expect(chart.data.lineBarsData.single.isCurved, isTrue);
   });
 
-  testWidgets('双柱图每个插槽两根柱子，按住空白处也能选中最近插槽', (tester) async {
+  testWidgets('双柱图每个插槽两根柱子，横向拖过空白处也能选中最近插槽并保持', (tester) async {
     await tester.pumpWidget(
       zhMaterialApp(
         home: Scaffold(
@@ -132,12 +132,16 @@ void main() {
     expect(chart().data.barGroups.first.barRods.length, 2);
     expect(pressedGroup(), isNull);
 
-    // 按住最右侧（第 3 个月那一列的空白处）：仍要选中第 3 个插槽。
+    // 从最右侧（第 3 个月那一列的空白处）开始横向拖动：仍要选中第 3 个插槽。
     final gesture = await tester.startGesture(
       tester.getTopRight(find.byType(InteractiveBarChart)) -
           const Offset(4, 0) +
           const Offset(0, 80),
     );
+    await tester.pump();
+    // 只按下不动不会选中任何插槽（竖向拖动要留给页面滚动）。
+    expect(pressedGroup(), isNull);
+    await gesture.moveBy(const Offset(-24, 0));
     await tester.pump();
     expect(pressedGroup(), 2);
 
@@ -146,9 +150,39 @@ void main() {
     await tester.pump();
     expect(pressedGroup(), 0);
 
-    // 松手收起，保持「按住查看」的手感。
+    // 松手保留最后一次选中，抬手后仍能读数。
     await gesture.up();
     await tester.pumpAndSettle();
-    expect(pressedGroup(), isNull);
+    expect(pressedGroup(), 0);
+  });
+
+  testWidgets('柱状图放在可跳转卡片里时，点图表不触发卡片跳转', (tester) async {
+    var cardTaps = 0;
+    await tester.pumpWidget(
+      zhMaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 300,
+              height: 160,
+              child: GestureDetector(
+                onTap: () => cardTaps++,
+                child: InteractiveBarChart(
+                  values: const <double>[1, 2, 3],
+                  xLabels: const <String>['1', '2', '3'],
+                  yLabels: const <String>['0', '2', '4'],
+                  tooltipOf: tooltipOf,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tapAt(tester.getCenter(find.byType(InteractiveBarChart)));
+    await tester.pumpAndSettle();
+    expect(cardTaps, 0);
   });
 }

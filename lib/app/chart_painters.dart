@@ -361,8 +361,58 @@ class _ChartGridLines extends StatelessWidget {
   }
 }
 
-/// 可交互折线图：内部由 `fl_chart` 渲染，点击/拖动查看数据气泡。
-class InteractiveTrendChart extends StatelessWidget {
+/// 图表手势层：统一折线与柱状图的「点一下看数据、左右滑动看数据」。
+///
+/// 用横向拖动识别器接管横向手势：根导航的 `PageView`（左右切页）和页面的竖向
+/// 列表都是外层手势消费者，图表是更深层的手势消费者，会在竞技场里本地胜出，
+/// 因此横向滑动始终归图表、不会切页。竖向滑动仍交给页面滚动——图表只在明显
+/// 横向时才接管，否则整块图表都会把页面滚动锁死。
+///
+/// [onTap] 收到的是原地抬手时的横坐标，用于「点一下固定显示气泡、再点同一个点
+/// 收起」；[onScrub] 在横向拖动开始时与每次移动时回调。
+class _ChartGestureLayer extends StatelessWidget {
+  const _ChartGestureLayer({
+    required this.onScrub,
+    required this.onTap,
+    required this.child,
+  });
+
+  final ValueChanged<double> onScrub;
+  final ValueChanged<double> onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapUp: (details) => onTap(details.localPosition.dx),
+      onHorizontalDragStart: (details) => onScrub(details.localPosition.dx),
+      onHorizontalDragUpdate: (details) => onScrub(details.localPosition.dx),
+      // 拖动结束保留最后一次选中，抬手后仍能读数。
+      onHorizontalDragEnd: (_) {},
+      child: child,
+    );
+  }
+}
+
+/// 图表选中状态在「点图表以外的地方」时收起。
+///
+/// 气泡由适配层自己驱动，只有它知道当前是否选中；[TapRegion] 让图表在页面任何
+/// 其它位置被按下时清空选中，符合「点别的就关掉气泡」的直觉。图表在没有
+/// `TapRegionSurface` 的环境（例如未包在 App 里的 widget 测试）中跳过这一层。
+Widget _chartTapRegion({
+  required BuildContext context,
+  required VoidCallback onTapOutside,
+  required Widget child,
+}) {
+  if (TapRegionRegistry.maybeOf(context) == null) {
+    return child;
+  }
+  return TapRegion(onTapOutside: (_) => onTapOutside(), child: child);
+}
+
+/// 可交互折线图：内部由 `fl_chart` 渲染，点击或左右滑动查看数据气泡。
+class InteractiveTrendChart extends StatefulWidget {
   const InteractiveTrendChart({
     super.key,
     required this.color,
@@ -385,107 +435,171 @@ class InteractiveTrendChart extends StatelessWidget {
   final String? semanticsLabel;
 
   @override
+  State<InteractiveTrendChart> createState() => _InteractiveTrendChartState();
+}
+
+class _InteractiveTrendChartState extends State<InteractiveTrendChart> {
+  /// 当前展示气泡的数据点下标；null 表示没有选中。
+  int? _selectedIndex;
+
+  @override
+  void didUpdateWidget(covariant InteractiveTrendChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!listEquals(oldWidget.values, widget.values)) {
+      _selectedIndex = null;
+    }
+  }
+
+  void _select(int? index) {
+    if (index == _selectedIndex) {
+      return;
+    }
+    setState(() => _selectedIndex = index);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final values = widget.values;
     if (values.isEmpty) {
       return const SizedBox.shrink();
     }
     final range = _yRange(values);
     final muted =
-        labelColor ??
+        widget.labelColor ??
         Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.50);
+    final lastIndex = values.length - 1;
+    final selected = _selectedIndex != null && _selectedIndex! <= lastIndex
+        ? _selectedIndex
+        : null;
+    final barData = LineChartBarData(
+      spots: <FlSpot>[
+        for (var i = 0; i < values.length; i++) FlSpot(i.toDouble(), values[i]),
+      ],
+      color: widget.color,
+      barWidth: 2.2,
+      isCurved: true,
+      curveSmoothness: 0.35,
+      preventCurveOverShooting: true,
+      isStrokeCapRound: true,
+      isStrokeJoinRound: true,
+      dotData: const FlDotData(show: false),
+      // 气泡与指示线由适配层按当前选中项驱动：[LineTouchData.handleBuiltInTouches]
+      // 自带的触摸只在长按时出现、抬手即消失，满足不了「点一下固定显示」。
+      showingIndicators: selected == null ? const <int>[] : <int>[selected],
+      belowBarData: BarAreaData(
+        show: true,
+        gradient: LinearGradient(
+          colors: <Color>[
+            widget.color.withValues(alpha: 0.24),
+            widget.color.withValues(alpha: 0.0),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
+      shadow: widget.glow
+          ? Shadow(color: widget.color.withValues(alpha: 0.35), blurRadius: 8)
+          : const Shadow(color: Colors.transparent),
+    );
     final chart = LineChart(
       LineChartData(
         minX: 0,
-        maxX: math.max(1, values.length - 1).toDouble(),
+        maxX: math.max(1, lastIndex).toDouble(),
         minY: range.min,
         maxY: range.max,
-        lineBarsData: <LineChartBarData>[
-          LineChartBarData(
-            spots: <FlSpot>[
-              for (var i = 0; i < values.length; i++)
-                FlSpot(i.toDouble(), values[i]),
-            ],
-            color: color,
-            barWidth: 2.2,
-            isCurved: true,
-            curveSmoothness: 0.35,
-            preventCurveOverShooting: true,
-            isStrokeCapRound: true,
-            isStrokeJoinRound: true,
-            dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(
-              show: true,
-              gradient: LinearGradient(
-                colors: <Color>[
-                  color.withValues(alpha: 0.24),
-                  color.withValues(alpha: 0.0),
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
-            shadow: glow
-                ? Shadow(color: color.withValues(alpha: 0.35), blurRadius: 8)
-                : const Shadow(color: Colors.transparent),
-          ),
-        ],
+        lineBarsData: <LineChartBarData>[barData],
+        showingTooltipIndicators: selected == null
+            ? const <ShowingTooltipIndicators>[]
+            : <ShowingTooltipIndicators>[
+                ShowingTooltipIndicators(<LineBarSpot>[
+                  LineBarSpot(barData, 0, barData.spots[selected]),
+                ]),
+              ],
         titlesData: _titlesData(
           context: context,
-          xLabels: xLabels,
+          xLabels: widget.xLabels,
           xValueCount: values.length,
           labelColor: muted,
         ),
         gridData: _noGridData,
         borderData: FlBorderData(show: false),
+        // 手势统一由 [_ChartGestureLayer] 接管，库自带触摸全部关闭：两套识别器
+        // 抢同一个指针只会互相打架。
         lineTouchData: LineTouchData(
-          handleBuiltInTouches: true,
-          // 默认阈值是 10dp 且只比较横轴距离：点数少的图（7 天、12 个月）大部分
-          // 区域都点不中，横向按住拖动也就时灵时不灵。这里让整片绘图区都命中
-          // 最近的横轴位置，仍保留库默认的「按住查看、松手收起」。
-          touchSpotThreshold: double.infinity,
-          touchTooltipData: _lineTooltipData(tooltipOf),
+          handleBuiltInTouches: false,
+          touchTooltipData: _lineTooltipData(widget.tooltipOf),
           getTouchedSpotIndicator: (barData, spotIndexes) =>
-              _touchedIndicators(context, color, spotIndexes),
+              _touchedIndicators(context, widget.color, spotIndexes),
         ),
       ),
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
     );
-    final reserved = _axisReservedSize(context, yLabels);
+    final reserved = _axisReservedSize(context, widget.yLabels);
     return Semantics(
       container: true,
       label:
-          semanticsLabel ??
+          widget.semanticsLabel ??
           AppLocalizations.of(context).chartTrendSemantics(values.length),
       child: LayoutBuilder(
-        builder: (context, constraints) => Stack(
-          children: <Widget>[
-            Positioned(
-              left: reserved,
-              top: 0,
-              right: 0,
-              bottom: 0,
-              child: _ChartGridLines(
-                // 有纵轴刻度时逐刻度画线；没有刻度（如净资产卡）时保留一条
-                // 中线，维持原有的阅读参考。
-                labelCount: yLabels.isEmpty ? 3 : yLabels.length,
-                color: muted.withValues(alpha: 0.16),
+        builder: (context, constraints) {
+          final plotWidth = math.max(1.0, constraints.maxWidth - reserved);
+
+          /// 数据点 i 落在绘图区 i/(n-1) 处，取横向最近的即可。
+          int indexAt(double localX) {
+            if (lastIndex <= 0) {
+              return 0;
+            }
+            final ratio = (localX - reserved) / plotWidth;
+            return (ratio * lastIndex).round().clamp(0, lastIndex);
+          }
+
+          return _chartTapRegion(
+            context: context,
+            onTapOutside: () => _select(null),
+            child: _ChartGestureLayer(
+              onScrub: (localX) => _select(indexAt(localX)),
+              onTap: (localX) {
+                // 按在纵轴刻度区不算选中。
+                if (localX < reserved) {
+                  return;
+                }
+                final index = indexAt(localX);
+                _select(index == _selectedIndex ? null : index);
+              },
+              child: Stack(
+                children: <Widget>[
+                  Positioned(
+                    left: reserved,
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: _ChartGridLines(
+                      // 有纵轴刻度时逐刻度画线；没有刻度（如净资产卡）时保留一条
+                      // 中线，维持原有的阅读参考。
+                      labelCount: widget.yLabels.isEmpty
+                          ? 3
+                          : widget.yLabels.length,
+                      color: muted.withValues(alpha: 0.16),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(left: reserved),
+                    child: chart,
+                  ),
+                  if (reserved > 0)
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: reserved,
+                      child: _YAxisLabels(labels: widget.yLabels, color: muted),
+                    ),
+                ],
               ),
             ),
-            Padding(
-              padding: EdgeInsets.only(left: reserved),
-              child: chart,
-            ),
-            if (reserved > 0)
-              Positioned(
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: reserved,
-                child: _YAxisLabels(labels: yLabels, color: muted),
-              ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -500,11 +614,11 @@ class VeriBarSeries {
   final Color color;
 }
 
-/// 可交互柱状图：内部由 `fl_chart` 渲染，按住或横向滑动查看数据气泡。
+/// 可交互柱状图：内部由 `fl_chart` 渲染，点击或左右滑动查看数据气泡。
 ///
 /// 命中由适配层按插槽自己算，而不是用库自带的矩形命中：零值月份和柱子上方的
-/// 空白在矩形命中里都点不中，横向按住拖动会时灵时不灵。按插槽取最近一根柱子后
-/// 整片绘图区都能响应，横向拖动可连续查看，仍保留「按住查看、松手收起」。
+/// 空白在矩形命中里都点不中，横向拖动会时灵时不灵。按插槽取最近一根柱子后
+/// 整片绘图区都能响应，气泡在点击或拖动后保持显示。
 class InteractiveBarChart extends StatefulWidget {
   const InteractiveBarChart({
     super.key,
@@ -539,8 +653,8 @@ class InteractiveBarChart extends StatefulWidget {
 }
 
 class _InteractiveBarChartState extends State<InteractiveBarChart> {
-  /// 当前按住查看的插槽；松手即收起，保持库默认的「按住看数据」手感。
-  int? _pressedIndex;
+  /// 当前展示气泡的插槽；点击或左右滑动后保持，方便抬手继续读数。
+  int? _selectedIndex;
 
   List<VeriBarSeries> _resolvedSeries(BuildContext context) {
     final series = widget.series;
@@ -560,7 +674,7 @@ class _InteractiveBarChartState extends State<InteractiveBarChart> {
     super.didUpdateWidget(oldWidget);
     if (!listEquals(oldWidget.values, widget.values) ||
         !_sameSeries(oldWidget.series, widget.series)) {
-      _pressedIndex = null;
+      _selectedIndex = null;
     }
   }
 
@@ -579,6 +693,13 @@ class _InteractiveBarChartState extends State<InteractiveBarChart> {
     return true;
   }
 
+  void _select(int? index) {
+    if (index == _selectedIndex) {
+      return;
+    }
+    setState(() => _selectedIndex = index);
+  }
+
   @override
   Widget build(BuildContext context) {
     final series = _resolvedSeries(context);
@@ -588,6 +709,9 @@ class _InteractiveBarChartState extends State<InteractiveBarChart> {
     if (groupCount == 0) {
       return const SizedBox.shrink();
     }
+    final selected = _selectedIndex != null && _selectedIndex! < groupCount
+        ? _selectedIndex
+        : null;
     final allValues = <double>[
       for (final item in series) ...item.values.take(groupCount),
     ];
@@ -617,7 +741,6 @@ class _InteractiveBarChartState extends State<InteractiveBarChart> {
               ((groupWidth - rodsSpace * (series.length - 1)) / series.length)
                   .clamp(2.5, 24.0)
                   .toDouble();
-          final pressed = _pressedIndex;
 
           final chart = BarChart(
             BarChartData(
@@ -632,7 +755,7 @@ class _InteractiveBarChartState extends State<InteractiveBarChart> {
                     barsSpace: rodsSpace,
                     // 气泡挂在同组最高的一根柱子上，避免压在数据上；
                     // 内容由调用方一次给出整组的全部序列。
-                    showingTooltipIndicators: pressed == i
+                    showingTooltipIndicators: selected == i
                         ? <int>[_highestRodIndex(series, i)]
                         : const <int>[],
                     barRods: <BarChartRodData>[
@@ -664,56 +787,58 @@ class _InteractiveBarChartState extends State<InteractiveBarChart> {
             curve: Curves.easeOutCubic,
           );
 
-          void selectAt(double localX) {
-            final index = ((localX - reserved) / slot).floor().clamp(
+          // 插槽等宽排列（`spaceAround`），按横坐标整除即可定位最近的一组柱。
+          int indexAt(double localX) {
+            if (slot <= 0) {
+              return 0;
+            }
+            return ((localX - reserved) / slot).floor().clamp(
               0,
               groupCount - 1,
             );
-            if (index != _pressedIndex) {
-              setState(() => _pressedIndex = index);
-            }
           }
 
-          return Listener(
-            behavior: HitTestBehavior.opaque,
-            onPointerDown: (event) {
-              // 按在纵轴刻度区不算选中；横向拖出绘图区则贴住首尾插槽。
-              if (event.localPosition.dx < reserved) {
-                _clearSelection();
-                return;
-              }
-              selectAt(event.localPosition.dx);
-            },
-            onPointerMove: (event) => selectAt(event.localPosition.dx),
-            onPointerUp: (_) => _clearSelection(),
-            onPointerCancel: (_) => _clearSelection(),
-            child: Stack(
-              children: <Widget>[
-                Positioned(
-                  left: reserved,
-                  top: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: _ChartGridLines(
-                    labelCount: widget.yLabels.isEmpty
-                        ? 3
-                        : widget.yLabels.length,
-                    color: muted.withValues(alpha: 0.16),
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.only(left: reserved),
-                  child: chart,
-                ),
-                if (reserved > 0)
+          return _chartTapRegion(
+            context: context,
+            onTapOutside: () => _select(null),
+            child: _ChartGestureLayer(
+              onScrub: (localX) => _select(indexAt(localX)),
+              onTap: (localX) {
+                // 按在纵轴刻度区不算选中。
+                if (localX < reserved) {
+                  return;
+                }
+                final index = indexAt(localX);
+                _select(index == _selectedIndex ? null : index);
+              },
+              child: Stack(
+                children: <Widget>[
                   Positioned(
-                    left: 0,
+                    left: reserved,
                     top: 0,
+                    right: 0,
                     bottom: 0,
-                    width: reserved,
-                    child: _YAxisLabels(labels: widget.yLabels, color: muted),
+                    child: _ChartGridLines(
+                      labelCount: widget.yLabels.isEmpty
+                          ? 3
+                          : widget.yLabels.length,
+                      color: muted.withValues(alpha: 0.16),
+                    ),
                   ),
-              ],
+                  Padding(
+                    padding: EdgeInsets.only(left: reserved),
+                    child: chart,
+                  ),
+                  if (reserved > 0)
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: reserved,
+                      child: _YAxisLabels(labels: widget.yLabels, color: muted),
+                    ),
+                ],
+              ),
             ),
           );
         },
@@ -729,12 +854,6 @@ class _InteractiveBarChartState extends State<InteractiveBarChart> {
       }
     }
     return best;
-  }
-
-  void _clearSelection() {
-    if (_pressedIndex != null) {
-      setState(() => _pressedIndex = null);
-    }
   }
 }
 

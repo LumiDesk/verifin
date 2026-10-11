@@ -14,7 +14,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 
 ## 族 1 — 布局脚手架 / 页面容器
 
-`BudgetRingPainter` 使用常规 SweepGradient 进度环，参数为 value/trackColor/progressColor。
+预算圆环用 `VeriBudgetRing`（`chart_painters.dart`，内部是 `fl_chart` 环形图），参数为 value/trackColor/progressColor/center/strokeWidth；轨底 + 进度弧两段，中心内容由调用方给，禁止内外白线。旧的 `BudgetRingPainter` 已删除。
 
 **表面材质**：除可选的液态玻璃底栏样式外，卡片、导航、快捷按钮、菜单与弹层一律用不透明实色。
 `VeriCard`（`common_widgets_scaffold.dart`）走 `veriContentSurfaceColor(brightness)` + 圆角 + 细描边；
@@ -159,8 +159,8 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 
 | 名称 | 类型 | 位置 | 用途 |
 |---|---|---|---|
-| `InteractiveTrendChart` | Widget | `chart_painters.dart` | 可交互折线图；`values, xLabels, yLabels, glow, tooltipOf`。平滑曲线 + 渐隐填充，**不画节点圆点**；按住或横向拖动查看气泡，自带 `Semantics` 摘要；位于可跳转卡片内时拦截点击 |
-| `InteractiveBarChart` | Widget | `chart_painters.dart` | 可交互柱状图；单序列传 `values`，多序列传 `series`（`List<VeriBarSeries>`，同插槽并排成组，如预算/支出双柱）。命中按插槽取最近一根柱子，整片绘图区可按住拖动，零值柱也能查看；松手收起 |
+| `InteractiveTrendChart` | Widget | `chart_painters.dart` | 可交互折线图；`values, xLabels, yLabels, glow, tooltipOf`。平滑曲线 + 渐隐填充，**不画节点圆点**；点击固定显示气泡、再点同一点收起、点左右滑动连续查看，手势自带，不切根页面也不锁页面滚动；自带 `Semantics` 摘要；位于可跳转卡片内时拦截点击 |
+| `InteractiveBarChart` | Widget | `chart_painters.dart` | 可交互柱状图；单序列传 `values`，多序列传 `series`（`List<VeriBarSeries>`，同插槽并排成组，如预算/支出双柱）。命中按插槽取最近一根柱子，整片绘图区可点击或拖动，零值柱也能查看；选中在抬手后保持 |
 | `VeriBarSeries` | 值类 | `chart_painters.dart` | 柱状图的一条序列（`values, color`）；配合 `InteractiveBarChart.series` 使用 |
 | `VeriDonutChart` | Widget | `chart_painters.dart` | 环形分段图；`segments, center, ringWidth, selectedIndex, onSelected`。点击分段回传索引，中心空区回传 `null` |
 | `VeriBudgetRing` | Widget | `chart_painters.dart` | 预算/额度进度环；`value, trackColor, progressColor, center, strokeWidth`。中心内容忽略指针事件 |

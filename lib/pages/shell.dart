@@ -311,9 +311,9 @@ class _VeriFinShellState extends State<VeriFinShell> {
         // 停靠底栏不透明且已由 Scaffold 让位，内容不延伸到它背后（否则会被盖住半截）；
         // 悬浮样式由样式自己在 layout 里声明 extendBody。
         extendBody: navigationStyle.layout.extendBody,
-        // 四个主页面横向 PageView：左右滑动切换。图表（onHorizontalDrag）与
-        // 交易行 Dismissible 都是更深层的手势消费者，会在竞技场里本地胜出，
-        // 故在图表/可滑删行上拖动仍走各自交互，仅空白区滑动才切页。
+        // 四个主页面横向 PageView：左右滑动切换。图表（chart_painters.dart 的
+        // 横向拖动识别器）与交易行 Dismissible 都是更深层的手势消费者，会在竞技场里
+        // 本地胜出，故在图表/可滑删行上拖动仍走各自交互，仅空白区滑动才切页。
         body: SafeArea(
           key: const Key('main_shell_body_safe_area'),
           bottom: false,

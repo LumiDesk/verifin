@@ -7,7 +7,7 @@
 | 领域 | 当前实现 | 结论 |
 | --- | --- | --- |
 | 统一分段控件 | `animated_toggle_switch` + `VeriSegmentedControl` | 已采用，同类切换条复用包装组件 |
-| 图表 | `fl_chart 1.2.0`（适配层 `chart_painters.dart`） | **已采用**（MIT）。数据图表一律用外部图表库，项目不再自绘；所有页面只依赖适配层 `InteractiveTrendChart` / `InteractiveBarChart` / `InteractiveComboChart` / `VeriDonutChart` / `VeriBudgetRing`，纵轴刻度与参考线由适配层自绘以保证对齐 |
+| 图表 | `fl_chart 1.2.0`（适配层 `chart_painters.dart`） | **已采用**（MIT）。数据图表一律用外部图表库，项目不再自绘；所有页面只依赖适配层 `InteractiveTrendChart` / `InteractiveBarChart`（含 `VeriBarSeries` 分组双柱）/ `VeriDonutChart` / `VeriBudgetRing`，纵轴刻度与参考线由适配层自绘以保证对齐 |
 | 空状态动画 | `lottie 3.6.1` | **已采用**（MIT）；资产本地打包、不联网加载，缺少资产或系统开启减少动态效果时回退图标 |
 | 根导航 | `VeriBottomBar` | 停靠底栏自持实现；不依赖 `bottom_bar_matu` |
 | 短反馈 | `VeriFeedbackHost` | 自研队列、去重、优先级与前后台暂停；不用 `toastification` |
