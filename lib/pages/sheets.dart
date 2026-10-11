@@ -963,9 +963,10 @@ Future<String?> showCategoryPickerSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(veriRadiusLg)),
     ),
-    builder: (_) => CategoryPickerSheet(
+    builder: (context) => CategoryPickerSheet(
       categories: categories,
       selectedId: selectedId,
+      expandedByDefault: VeriFinScope.of(context).categoryTreeExpandedByDefault,
       title: title,
       topLevelLabel: topLevelLabel,
       allLabel: allLabel,

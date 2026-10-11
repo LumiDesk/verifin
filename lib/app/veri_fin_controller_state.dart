@@ -154,6 +154,8 @@ mixin _ControllerState on ChangeNotifier {
   bool _autoSuggestEnabled = true;
   // 交易列表是否在每行显示该账户当时的结余；默认关闭，避免信息过载。
   bool _showRunningBalance = false;
+  // 分类选择弹窗是否默认展开所有父分类；默认关闭，只展开已选项路径。
+  bool _categoryTreeExpanded = false;
   NumberPadLayout _numberPadLayout = NumberPadLayout.standard;
   AiSettings _aiSettings = const AiSettings();
   AiCapabilityProfile? _aiCapabilityProfile;
@@ -263,6 +265,7 @@ mixin _ControllerState on ChangeNotifier {
     _autoSuggestEnabled = _store.read(_autoSuggestKey) != 'false';
     // 默认关闭：只有显式开过才为 true。
     _showRunningBalance = _store.read(_runningBalanceKey) == 'true';
+    _categoryTreeExpanded = _store.read(_categoryTreeExpandedKey) == 'true';
     _aiSettings = AiSettings.decode(_store.read(_aiSettingsKey));
     _aiCapabilityProfile = AiCapabilityProfile.decode(
       _store.read(_aiCapabilitiesKey),
@@ -1101,6 +1104,10 @@ mixin _ControllerState on ChangeNotifier {
         _pagePanels[page] = _defaultPanelSettings(page.specs);
       }
     }
+  }
+
+  void _persistCategoryTreeExpanded() {
+    _store.write(_categoryTreeExpandedKey, _categoryTreeExpanded.toString());
   }
 
   void _persistPagePanels(PanelPageKind page) {

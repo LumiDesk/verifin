@@ -385,6 +385,7 @@ void main() {
       defaultAccountId: controller2.defaultAccountId,
       autoSuggestEnabled: controller2.autoSuggestEnabled,
       showRunningBalance: true,
+      categoryTreeExpandedByDefault: controller2.categoryTreeExpandedByDefault,
       numberPadLayout: controller2.numberPadLayout,
     );
     await tester.pumpAndSettle();

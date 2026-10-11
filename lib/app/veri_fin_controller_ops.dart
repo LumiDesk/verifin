@@ -1254,6 +1254,10 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   /// 进 JSON 备份、初始化保留。
   bool get showRunningBalance => _showRunningBalance;
 
+  /// 分类选择弹窗是否默认展开所有父分类。全局偏好（不分账本），**默认关**，
+  /// 进 JSON 备份、初始化保留。
+  bool get categoryTreeExpandedByDefault => _categoryTreeExpanded;
+
   /// 交易 id → 该账户在这笔交易之后的余额（当前账本口径）。
   /// 惰性计算并随派生视图一起失效；只有开启「显示逐笔结余」时才会被读取。
   Map<String, double> get balanceAfterEntry => _balanceAfterEntryCache ??=
@@ -1265,6 +1269,15 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     }
     _autoSuggestEnabled = value;
     _store.write(_autoSuggestKey, value.toString());
+    notifyListeners();
+  }
+
+  void setCategoryTreeExpandedByDefault(bool value) {
+    if (_categoryTreeExpanded == value) {
+      return;
+    }
+    _categoryTreeExpanded = value;
+    _persistCategoryTreeExpanded();
     notifyListeners();
   }
 
@@ -1282,6 +1295,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     required String? defaultAccountId,
     required bool autoSuggestEnabled,
     required bool showRunningBalance,
+    required bool categoryTreeExpandedByDefault,
     required NumberPadLayout numberPadLayout,
   }) async {
     final nextDefaultAccounts = Map<String, String>.of(_defaultAccountIds);
@@ -1321,6 +1335,10 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         _runningBalanceKey,
         showRunningBalance.toString(),
       );
+      await _store.writeAndFlush(
+        _categoryTreeExpandedKey,
+        categoryTreeExpandedByDefault.toString(),
+      );
       await _store.writeAndFlush(_numberPadLayoutKey, numberPadLayout.name);
     } catch (error, stackTrace) {
       _handlePersistError(error, stackTrace);
@@ -1342,6 +1360,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       ..addAll(nextDefaultAccounts);
     _autoSuggestEnabled = autoSuggestEnabled;
     _showRunningBalance = showRunningBalance;
+    _categoryTreeExpanded = categoryTreeExpandedByDefault;
     _numberPadLayout = numberPadLayout;
     themePreferenceListenable.value = themePreference;
     themeColorPreferenceListenable.value = themeColorPreference;
@@ -3992,6 +4011,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       _assetSectionOrderKey,
       _homePanelsKey,
       _reportPanelsKey,
+      _categoryTreeExpandedKey,
     ]) {
       _store.delete(key);
     }
@@ -4086,6 +4106,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         'hideUnitInSingleCurrency': _hideUnitInSingleCurrency,
         'autoSuggestEnabled': _autoSuggestEnabled,
         'showRunningBalance': _showRunningBalance,
+        'categoryTreeExpanded': _categoryTreeExpanded,
         'homeTrendConfig': _homeTrendConfig.toJson(),
       },
     };
@@ -4306,6 +4327,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     final nextAutoSuggestEnabled = data['autoSuggestEnabled'] as bool? ?? true;
     // 旧备份没有这个键：默认关闭，保持旧行为。
     final nextShowRunningBalance = data['showRunningBalance'] as bool? ?? false;
+    // 旧备份没有这个键：默认关闭，保持旧行为。
+    final nextCategoryTreeExpanded =
+        data['categoryTreeExpanded'] as bool? ?? false;
     final homeTrendValue = data['homeTrendConfig'];
     final nextHomeTrendConfig = homeTrendValue is Map
         ? HomeTrendConfig.fromJson(Map<String, dynamic>.from(homeTrendValue))
@@ -4400,6 +4424,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _hideUnitInSingleCurrency = nextHideUnitInSingleCurrency;
     _autoSuggestEnabled = nextAutoSuggestEnabled;
     _showRunningBalance = nextShowRunningBalance;
+    _categoryTreeExpanded = nextCategoryTreeExpanded;
     _homeTrendConfig = nextHomeTrendConfig;
     // 备份恢复零参照完整性校验，是「幽灵同名分类」的唯一现实入口（内部不一致的外部/
     // 异构/手改备份）；覆盖后跑一遍自愈，堵住这个入口。落库统一由下方 _persistAllLedgerData。
@@ -4430,6 +4455,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     );
     _store.write(_autoSuggestKey, _autoSuggestEnabled.toString());
     _store.write(_runningBalanceKey, _showRunningBalance.toString());
+    _store.write(_categoryTreeExpandedKey, _categoryTreeExpanded.toString());
     _store.write(_homeTrendKey, _homeTrendConfig.encode());
     if (_assetCoverUrl.isEmpty) {
       _store.delete(_assetCoverKey);

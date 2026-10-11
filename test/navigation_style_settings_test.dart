@@ -62,6 +62,7 @@ void main() {
       defaultAccountId: controller.defaultAccountId,
       autoSuggestEnabled: controller.autoSuggestEnabled,
       showRunningBalance: controller.showRunningBalance,
+      categoryTreeExpandedByDefault: controller.categoryTreeExpandedByDefault,
       numberPadLayout: controller.numberPadLayout,
     );
     expect(store.read('verifin.nav_style.v1'), 'docked');
