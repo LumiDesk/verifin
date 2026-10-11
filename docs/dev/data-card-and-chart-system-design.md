@@ -1,12 +1,12 @@
 # 数据卡片与图表体系统一开发文档
 
-> 状态：草案 v0.2，核心方向已确认，细节待原型验证
+> 状态：图表部分**已全部落地**（结果见第 14 节）；标题 / 指标块 / 排行行 / 进度条四个组件族仍是待办。
 >
-> 分支：`docs/data-card-and-chart-system`
+> 阅读提示：第 5–13 节（选型、组件体系、视觉规范草案、迁移计划、测试验收、文档同步、风险与下一步）都是当时的方案草案，含「迁移完成后删除自绘图表」这类当时的待办；实现结果、已删除的旧组件名与本次收口项一律以**第 14 节「当前实现进度」**为准。
 >
-> 日期：2026-10-10
+> 分支：图表工作已在 `talyra42/data-card-and-chart-system` 完成并合并回 `main`（v1.19.0 发布）。
 >
-> 范围：仅文档与选型，不包含 Dart 代码改动。
+> 日期：2026-10-10（图表落地与 v1.19.0 同日）
 
 ## 1. 背景与纠偏
 
@@ -568,16 +568,22 @@
   （7 天、12 个月）和零值月份也能按住拖动连续查看，不再时灵时不灵。
 - 预算近 6 期趋势从「预算线 + 支出柱」改成预算 / 支出**双柱**（`VeriBarSeries`），
   曲线压在柱子上不好读数的问题一并消失；`InteractiveComboChart` 因此删除。
-- 示例数据已导入 diagnostic 应用：77 条交易、13 个账户、3 个标签、8 期月预算、
-  9 条分类预算，覆盖 2026 年 1–7 月、收入、转账、退款、报销、预算外与多币种。
-- 模拟器时钟已临时设置为 2026-07-15 以匹配样例数据；恢复方法：
-  `adb shell date <当前日期时间>`。
-- `dart format`、`flutter analyze` 与 `flutter test`（全量 1096 项）均通过，
+- 示例数据已导入 diagnostic 应用（覆盖 2026 年 1–7 月、收入、转账、退款、报销、
+  预算外与多币种；仅虚拟账目）。模拟器时钟已临时设置为 2026-07-15 以匹配样例
+  数据；恢复方法：`adb shell date <当前日期时间>`。
+- 图表落地后已同步文档：`README.md`（功能与技术栈表）、`docs/ui-guidelines.md`
+  （图表交互 / 预算卡 / 环图中心内容）、`docs/dev/components.md`（图表族与预算环）、
+  `docs/design-system.md`（预算环材质行）、`docs/dev/ui-library-adoption-plan.md`
+  （fl_chart / Lottie 选型）与 `docs/acceptance-checklist.md`（环图验收项）；
+  `docs/screenshots/` 三张预览图已按新图表重拍。
+- `dart format`、`flutter analyze` 与 `flutter test`（全量 1097 项）均通过，
   并在模拟器逐卡复核。
+- v1.19.0 已按发布流程发出（GitHub 预发布，含 arm64 APK 与 AAB），待真机验收后
+  在 GitHub 提升为正式版。
 
 尚未完成：
 
 - 标题 / 指标块 / 排行行 / 进度条四个组件族仍散在页面内，未按第 6 节抽取；
-- `docs/ui-guidelines.md`、`docs/dev/components.md` 中图表相关章节已随本次修订，
-  其余旧文档（如 `docs/dev/ui-library-adoption-plan.md`）中关于「自绘保留」的历史
-  结论仍需在下次触碰时同步清理。
+- AI 结果页的两个图表走同一适配层，但只做过代码层核对，未在真机逐项验收；
+- 图表自动化覆盖只有 `chart_semantics_test.dart`、`donut_chart_test.dart` 与
+  `budget_ring_test.dart`，命中、留白与刻度对齐仍靠模拟器人工复核。

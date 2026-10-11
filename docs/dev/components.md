@@ -14,7 +14,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 
 ## 族 1 — 布局脚手架 / 页面容器
 
-`BudgetRingPainter` 使用常规 SweepGradient 进度环，参数为 value/trackColor/progressColor。
+预算圆环用 `VeriBudgetRing`（`chart_painters.dart`，内部是 `fl_chart` 环形图），参数为 value/trackColor/progressColor/center/strokeWidth；轨底 + 进度弧两段，中心内容由调用方给，禁止内外白线。旧的 `BudgetRingPainter` 已删除。
 
 **表面材质**：除可选的液态玻璃底栏样式外，卡片、导航、快捷按钮、菜单与弹层一律用不透明实色。
 `VeriCard`（`common_widgets_scaffold.dart`）走 `veriContentSurfaceColor(brightness)` + 圆角 + 细描边；

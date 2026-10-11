@@ -61,7 +61,7 @@
 - 看板：本月收支摘要、预算执行、分类环形图、分类明细、标签统计、日趋势、月度趋势，面板可开关排序；
 - **统计分析**：本月 / 本年 / 自定义范围 × 支出 / 收入维度，趋势曲线 + 分类排行 + **同比 · 环比**；
 - **AI 财务 Agent**（可选，需先配置 AI）：看板页「问 AI」进入聊天页，用自然语言问账目（「这个月花最多的是哪些分类」「最近三个月的大额支出」等）；Agent 自主调用只读工具查询你**当前账本**的真实数据，以柱状图 / 折线 / 可点击交易列表 + Markdown（含表格）流式作答，调用步骤可展开查看；支持原生 Tool Calls 并可自动降级到兼容模式。聊天记录只存本机、可清空，Agent 全程**只读**不改数据；
-- 全部图表**自绘且可交互**：点击 / 滑动查看数据气泡，环形图点选分段。
+- 全部图表走外部图表库（`fl_chart` 适配层，项目内不再自绘数据图表）且**可交互**：按住 / 横向滑动查看数据气泡（整片绘图区都能命中最近的横轴位置），预算趋势用预算 / 支出双柱对比，环形图点选分段。
 
 ### 🔐 数据与安全
 
@@ -93,7 +93,7 @@
 | 国际化 | Flutter 官方 gen-l10n（ARB，中文模板 + 英文） |
 | 备份加密 | `cryptography`（纯 Dart AES-GCM + PBKDF2-SHA256） |
 | 云备份 | `dart:io HttpClient` 手写 WebDAV 客户端（PUT / GET / PROPFIND / MKCOL） |
-| 图表 | 全部 `CustomPainter` 自绘（趋势 / 柱状 / 环形，带命中测试与数据气泡） |
+| 图表 | `fl_chart`（MIT），统一走 `lib/app/chart_painters.dart` 适配层：趋势 / 柱状（含分组双柱）/ 环形 / 预算进度环；纵轴刻度与参考线由适配层绘制以保证对齐，页面不直接依赖图表库 |
 | 平台能力 | `local_auth`（指纹解锁）、`flutter_local_notifications`（提醒）、`image_picker`（附件）、原生 `AppWidgetProvider`（桌面小组件）、MethodChannel 桥（SAF / 磁贴 / 更新检查） |
 | 测试 | 按领域拆分的 widget / 单元测试（内存仓储）+ ffi 真实 SQLite、迁移矩阵、模型往返与仓储契约测试 |
 | CI / 发布 | GitHub Actions：PR / `main` 执行 format + analyze + test 并构建不交付的 debug APK 门禁；推 `vX.Y.Z` 标签构建 release APK/AAB 并创建 GitHub 预发布（真机验收后手动提升为正式版） |
