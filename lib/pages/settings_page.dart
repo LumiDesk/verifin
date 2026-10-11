@@ -350,9 +350,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           ).categoryTreeExpandedTitle,
                         ),
                         subtitle: Text(
-                          AppLocalizations.of(
-                            context,
-                          ).categoryTreeExpandedDesc,
+                          AppLocalizations.of(context).categoryTreeExpandedDesc,
                         ),
                         value: _categoryTreeExpanded,
                         onChanged: (value) =>

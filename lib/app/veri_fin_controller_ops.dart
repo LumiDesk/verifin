@@ -4328,7 +4328,8 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     // 旧备份没有这个键：默认关闭，保持旧行为。
     final nextShowRunningBalance = data['showRunningBalance'] as bool? ?? false;
     // 旧备份没有这个键：默认关闭，保持旧行为。
-    final nextCategoryTreeExpanded = data['categoryTreeExpanded'] as bool? ?? false;
+    final nextCategoryTreeExpanded =
+        data['categoryTreeExpanded'] as bool? ?? false;
     final homeTrendValue = data['homeTrendConfig'];
     final nextHomeTrendConfig = homeTrendValue is Map
         ? HomeTrendConfig.fromJson(Map<String, dynamic>.from(homeTrendValue))
