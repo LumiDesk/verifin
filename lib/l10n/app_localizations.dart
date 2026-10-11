@@ -4712,6 +4712,18 @@ abstract class AppLocalizations {
   /// **'余额 {amount}'**
   String runningBalancePrefix(Object amount);
 
+  /// No description provided for @categoryTreeExpandedTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'分类选择默认展开'**
+  String get categoryTreeExpandedTitle;
+
+  /// No description provided for @categoryTreeExpandedDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'分类选择弹窗默认展开所有父分类'**
+  String get categoryTreeExpandedDesc;
+
   /// No description provided for @moneyUnitLabel.
   ///
   /// In zh, this message translates to:

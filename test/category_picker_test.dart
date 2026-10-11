@@ -28,7 +28,11 @@ void main() {
     ),
   ];
 
-  Future<String?> openPicker(WidgetTester tester) async {
+  Future<String?> openPicker(
+    WidgetTester tester, {
+    String selectedId = 'dining',
+    bool expandedByDefault = false,
+  }) async {
     String? result;
     await tester.pumpWidget(
       zhMaterialApp(
@@ -41,7 +45,8 @@ void main() {
                     context: context,
                     builder: (_) => CategoryPickerSheet(
                       categories: categories,
-                      selectedId: 'dining',
+                      selectedId: selectedId,
+                      expandedByDefault: expandedByDefault,
                     ),
                   );
                 },
@@ -54,23 +59,39 @@ void main() {
     );
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
-    return Future<String?>.value(result);
+    return result;
   }
 
-  testWidgets('子分类默认展开显示', (tester) async {
+  testWidgets('默认收起父分类，未选中路径的子分类不显示', (tester) async {
     await openPicker(tester);
+    expect(find.text('餐饮'), findsOneWidget);
+    expect(find.text('购物'), findsOneWidget);
+    expect(find.text('咖啡'), findsNothing);
+    // 「餐饮」尾部是折叠箭头。
+    expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+  });
+
+  testWidgets('点击展开箭头显示子分类', (tester) async {
+    await openPicker(tester);
+    await tester.tap(find.byIcon(Icons.chevron_right));
+    await tester.pumpAndSettle();
+    expect(find.text('咖啡'), findsOneWidget);
+    expect(find.byIcon(Icons.expand_more), findsOneWidget);
+  });
+
+  testWidgets('偏好开启时默认展开所有父分类', (tester) async {
+    await openPicker(tester, expandedByDefault: true);
     expect(find.text('餐饮'), findsOneWidget);
     expect(find.text('咖啡'), findsOneWidget);
     expect(find.text('购物'), findsOneWidget);
+    expect(find.byIcon(Icons.expand_more), findsOneWidget);
   });
 
-  testWidgets('折叠父分类隐藏其子分类', (tester) async {
-    await openPicker(tester);
-    // 「餐饮」有子分类，尾部是展开箭头，点击后收起「咖啡」。
-    await tester.tap(find.byIcon(Icons.expand_more));
-    await tester.pumpAndSettle();
-    expect(find.text('咖啡'), findsNothing);
-    expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+  testWidgets('已选项的祖先路径自动展开', (tester) async {
+    await openPicker(tester, selectedId: 'coffee');
+    expect(find.text('餐饮'), findsOneWidget);
+    expect(find.text('咖啡'), findsOneWidget);
+    expect(find.text('购物'), findsOneWidget);
   });
 
   testWidgets('点选子分类返回其 id', (tester) async {
@@ -86,7 +107,8 @@ void main() {
                     context: context,
                     builder: (_) => CategoryPickerSheet(
                       categories: categories,
-                      selectedId: 'dining',
+                      selectedId: 'coffee',
+                      expandedByDefault: false,
                     ),
                   );
                 },

@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -2558,6 +2559,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String runningBalancePrefix(Object amount) {
     return '余额 $amount';
   }
+
+  @override
+  String get categoryTreeExpandedTitle => '分类选择默认展开';
+
+  @override
+  String get categoryTreeExpandedDesc => '分类选择弹窗默认展开所有父分类';
 
   @override
   String moneyUnitLabel(String unit) {

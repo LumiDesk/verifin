@@ -91,6 +91,7 @@ const String _hideSingleCurrencyUnitKey =
     'verifin.hide_single_currency_unit.v1';
 const String _autoSuggestKey = 'verifin.auto_suggest.v1';
 const String _runningBalanceKey = 'verifin.entry_running_balance.v1';
+const String _categoryTreeExpandedKey = 'verifin.category_tree_expanded.v1';
 const String _aiSettingsKey = 'verifin.ai.v1';
 const String _aiCapabilitiesKey = 'verifin.ai_capabilities.v1';
 const String _aiChatHistoryKey = 'verifin.ai_chat.v1';

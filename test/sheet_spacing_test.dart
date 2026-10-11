@@ -49,21 +49,37 @@ void main() {
   });
 
   testWidgets('分类选择弹窗标题与弹窗边缘保持顶部间距', (tester) async {
-    await openWithButton(tester, (context) async {
-      await showCategoryPickerSheet(
-        context,
-        categories: const <Category>[
-          Category(
-            id: 'dining',
-            label: '餐饮',
-            type: EntryType.expense,
-            iconCode: 'dining',
+    final controller = await makeController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () => showCategoryPickerSheet(
+                  context,
+                  categories: const <Category>[
+                    Category(
+                      id: 'dining',
+                      label: '餐饮',
+                      type: EntryType.expense,
+                      iconCode: 'dining',
+                    ),
+                  ],
+                  selectedId: 'dining',
+                  title: '筛选分类',
+                ),
+                child: const Text('open'),
+              ),
+            ),
           ),
-        ],
-        selectedId: 'dining',
-        title: '筛选分类',
-      );
-    });
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
     expectTitleGap(tester, '筛选分类');
   });
 

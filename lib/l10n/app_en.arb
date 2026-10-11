@@ -928,6 +928,8 @@
   "runningBalanceLabel": "Show running balance",
   "runningBalanceDesc": "Show the account balance after each entry in the transaction list",
   "runningBalancePrefix": "Balance {amount}",
+  "categoryTreeExpandedTitle": "Category Tree Expanded by Default",
+  "categoryTreeExpandedDesc": "Expand all parent categories in category picker by default",
   "moneyUnitLabel": "Unit: {unit}",
   "@moneyUnitLabel": {
     "placeholders": {"unit": {"type": "String"}}

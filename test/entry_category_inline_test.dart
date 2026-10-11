@@ -86,7 +86,14 @@ void main() {
     await tester.tap(find.byKey(const Key('entry_category_more_dining')));
     await tester.pumpAndSettle();
     expect(find.byType(CategoryPickerSheet), findsOneWidget);
+
+    // 默认折叠，需依次展开「餐饮 → 午餐」才能看到三级分类。
+    await tester.tap(find.byIcon(Icons.chevron_right).first);
+    await tester.pumpAndSettle();
     expect(find.text('早餐'), findsOneWidget);
+    expect(find.text('午餐'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.chevron_right).first);
+    await tester.pumpAndSettle();
     expect(find.text('工作午餐'), findsOneWidget);
 
     final workLunch = find.text('工作午餐');

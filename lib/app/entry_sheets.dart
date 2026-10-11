@@ -514,6 +514,7 @@ class CategoryPickerSheet extends StatefulWidget {
     super.key,
     required this.categories,
     required this.selectedId,
+    required this.expandedByDefault,
     this.title,
     this.topLevelLabel,
     this.allLabel,
@@ -522,6 +523,10 @@ class CategoryPickerSheet extends StatefulWidget {
   /// 当前类型下的全部分类（含各级子分类），由调用方按类型过滤后传入。
   final List<Category> categories;
   final String selectedId;
+
+  /// 是否默认展开所有父分类。该值由调用方在 builder 上下文中读取偏好后传入，
+  /// 禁止在 [initState] 中通过 [VeriFinScope.of(context)] 读取。
+  final bool expandedByDefault;
 
   /// 弹窗标题；为空时用「全部分类」。
   final String? title;
@@ -543,8 +548,18 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
   @override
   void initState() {
     super.initState();
-    // 默认展开全部；但收起与当前选中项无关的分支，保持已选项可见。
-    _collapsed = <String>{};
+    if (widget.expandedByDefault) {
+      _collapsed = <String>{};
+    } else {
+      final ancestorPath = ancestorIds(widget.categories, widget.selectedId);
+      final ancestorSet = <String>{...ancestorPath};
+      _collapsed = <String>{
+        for (final category in widget.categories)
+          if (hasChildren(widget.categories, category.id) &&
+              !ancestorSet.contains(category.id))
+            category.id,
+      };
+    }
   }
 
   /// 按类型分区（支出→收入→转账）并按折叠状态前序展开：每个非空类型前插入一行

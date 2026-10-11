@@ -56,6 +56,8 @@ class _SettingsPageState extends State<SettingsPage> {
   late bool _autoSuggest;
   late bool _initialShowRunningBalance;
   late bool _showRunningBalance;
+  late bool _initialCategoryTreeExpanded;
+  late bool _categoryTreeExpanded;
   bool _initialized = false;
 
   @override
@@ -81,6 +83,8 @@ class _SettingsPageState extends State<SettingsPage> {
     _initialAutoSuggest = _autoSuggest = controller.autoSuggestEnabled;
     _initialShowRunningBalance = _showRunningBalance =
         controller.showRunningBalance;
+    _initialCategoryTreeExpanded = _categoryTreeExpanded =
+        controller.categoryTreeExpandedByDefault;
     _initialized = true;
   }
 
@@ -336,6 +340,23 @@ class _SettingsPageState extends State<SettingsPage> {
                         title: Text(AppLocalizations.of(context).hapticsLabel),
                         value: _haptics,
                         onChanged: (value) => setState(() => _haptics = value),
+                      ),
+                      const Divider(height: 1),
+                      CompactSwitchRow(
+                        icon: Icons.account_tree_outlined,
+                        title: Text(
+                          AppLocalizations.of(
+                            context,
+                          ).categoryTreeExpandedTitle,
+                        ),
+                        subtitle: Text(
+                          AppLocalizations.of(
+                            context,
+                          ).categoryTreeExpandedDesc,
+                        ),
+                        value: _categoryTreeExpanded,
+                        onChanged: (value) =>
+                            setState(() => _categoryTreeExpanded = value),
                       ),
                       const Divider(height: 1),
                       SettingsRow(
@@ -667,7 +688,8 @@ class _SettingsPageState extends State<SettingsPage> {
       _numberPadLayout != _initialNumberPadLayout ||
       _defaultAccountId != _initialDefaultAccountId ||
       _autoSuggest != _initialAutoSuggest ||
-      _showRunningBalance != _initialShowRunningBalance;
+      _showRunningBalance != _initialShowRunningBalance ||
+      _categoryTreeExpanded != _initialCategoryTreeExpanded;
 
   Future<void> _saveAndExit() async {
     if (await _save() && mounted) {
@@ -685,6 +707,7 @@ class _SettingsPageState extends State<SettingsPage> {
         _initialDefaultAccountId = _defaultAccountId;
         _initialAutoSuggest = _autoSuggest;
         _initialShowRunningBalance = _showRunningBalance;
+        _initialCategoryTreeExpanded = _categoryTreeExpanded;
       });
       _exitController.exit();
     }
@@ -705,6 +728,7 @@ class _SettingsPageState extends State<SettingsPage> {
       defaultAccountId: _defaultAccountId,
       autoSuggestEnabled: _autoSuggest,
       showRunningBalance: _showRunningBalance,
+      categoryTreeExpandedByDefault: _categoryTreeExpanded,
     );
   }
 }

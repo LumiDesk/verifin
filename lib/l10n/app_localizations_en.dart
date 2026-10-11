@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -2613,6 +2614,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String runningBalancePrefix(Object amount) {
     return 'Balance $amount';
   }
+
+  @override
+  String get categoryTreeExpandedTitle => 'Category Tree Expanded by Default';
+
+  @override
+  String get categoryTreeExpandedDesc =>
+      'Expand all parent categories in category picker by default';
 
   @override
   String moneyUnitLabel(String unit) {
