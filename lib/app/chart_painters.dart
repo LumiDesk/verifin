@@ -674,46 +674,52 @@ class _InteractiveBarChartState extends State<InteractiveBarChart> {
             }
           }
 
-          return Listener(
+          // 外层 GestureDetector 只用来拦截点击：图表放在可跳转卡片里时，
+          // 点图表只应展示数据，不能触发卡片跳转（与折线图一致）。
+          return GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onPointerDown: (event) {
-              // 按在纵轴刻度区不算选中；横向拖出绘图区则贴住首尾插槽。
-              if (event.localPosition.dx < reserved) {
-                _clearSelection();
-                return;
-              }
-              selectAt(event.localPosition.dx);
-            },
-            onPointerMove: (event) => selectAt(event.localPosition.dx),
-            onPointerUp: (_) => _clearSelection(),
-            onPointerCancel: (_) => _clearSelection(),
-            child: Stack(
-              children: <Widget>[
-                Positioned(
-                  left: reserved,
-                  top: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: _ChartGridLines(
-                    labelCount: widget.yLabels.isEmpty
-                        ? 3
-                        : widget.yLabels.length,
-                    color: muted.withValues(alpha: 0.16),
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.only(left: reserved),
-                  child: chart,
-                ),
-                if (reserved > 0)
+            onTap: () {},
+            child: Listener(
+              behavior: HitTestBehavior.opaque,
+              onPointerDown: (event) {
+                // 按在纵轴刻度区不算选中；横向拖出绘图区则贴住首尾插槽。
+                if (event.localPosition.dx < reserved) {
+                  _clearSelection();
+                  return;
+                }
+                selectAt(event.localPosition.dx);
+              },
+              onPointerMove: (event) => selectAt(event.localPosition.dx),
+              onPointerUp: (_) => _clearSelection(),
+              onPointerCancel: (_) => _clearSelection(),
+              child: Stack(
+                children: <Widget>[
                   Positioned(
-                    left: 0,
+                    left: reserved,
                     top: 0,
+                    right: 0,
                     bottom: 0,
-                    width: reserved,
-                    child: _YAxisLabels(labels: widget.yLabels, color: muted),
+                    child: _ChartGridLines(
+                      labelCount: widget.yLabels.isEmpty
+                          ? 3
+                          : widget.yLabels.length,
+                      color: muted.withValues(alpha: 0.16),
+                    ),
                   ),
-              ],
+                  Padding(
+                    padding: EdgeInsets.only(left: reserved),
+                    child: chart,
+                  ),
+                  if (reserved > 0)
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: reserved,
+                      child: _YAxisLabels(labels: widget.yLabels, color: muted),
+                    ),
+                ],
+              ),
             ),
           );
         },

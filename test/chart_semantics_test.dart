@@ -151,4 +151,34 @@ void main() {
     await tester.pumpAndSettle();
     expect(pressedGroup(), isNull);
   });
+
+  testWidgets('柱状图放在可跳转卡片里时，点图表不触发卡片跳转', (tester) async {
+    var cardTaps = 0;
+    await tester.pumpWidget(
+      zhMaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 300,
+              height: 160,
+              child: GestureDetector(
+                onTap: () => cardTaps++,
+                child: InteractiveBarChart(
+                  values: const <double>[1, 2, 3],
+                  xLabels: const <String>['1', '2', '3'],
+                  yLabels: const <String>['0', '2', '4'],
+                  tooltipOf: tooltipOf,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tapAt(tester.getCenter(find.byType(InteractiveBarChart)));
+    await tester.pumpAndSettle();
+    expect(cardTaps, 0);
+  });
 }
