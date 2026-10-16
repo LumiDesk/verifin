@@ -122,6 +122,7 @@ flutter:
 
   shaders:
     - shaders/liquid_glass_lens.frag
+    - shaders/liquid_glass_bar.frag
 
   # To add assets to your application, add an assets section, like this:
   # assets:

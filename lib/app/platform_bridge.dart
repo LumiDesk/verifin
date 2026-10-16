@@ -20,6 +20,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 part 'platform_bridge_capture.dart';
+part 'platform_bridge_glass.dart';
 part 'platform_bridge_storage.dart';
 part 'platform_bridge_update.dart';
 part 'platform_bridge_widget.dart';
@@ -52,6 +53,12 @@ void _ensureInboundDispatcher() {
         call.arguments as Map<dynamic, dynamic>? ?? <dynamic, dynamic>{},
       );
       await AppWidgetBridge.handleRoute(args);
+    }
+    if (call.method == 'onLiquidGlassTabSelected') {
+      final args = Map<String, Object?>.from(
+        call.arguments as Map<dynamic, dynamic>? ?? <dynamic, dynamic>{},
+      );
+      AppGlassBridge._handleInbound(call.method, args);
     }
   });
 }

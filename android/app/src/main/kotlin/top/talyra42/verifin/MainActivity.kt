@@ -12,12 +12,15 @@ import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.provider.Settings
 import android.util.Base64
+import android.view.View
 import android.view.WindowManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
 import io.flutter.embedding.android.FlutterFragmentActivity
+import io.flutter.embedding.android.FlutterFragment
+import io.flutter.embedding.android.RenderMode
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import org.json.JSONArray
@@ -43,12 +46,27 @@ class MainActivity : FlutterFragmentActivity() {
     private var pendingDownloadsWrite: PendingDownloadsWrite? = null
     private var pendingDirectoryPick: MethodChannel.Result? = null
     private var pendingBackupFilePick: MethodChannel.Result? = null
+    private var glassBar: LiquidGlassBarController? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         rememberQuickEntryIntent(intent)
         rememberWidgetRouteIntent(intent)
         rememberCaptureIntent(intent)
         super.onCreate(savedInstanceState)
+    }
+
+    /// 液态玻璃底栏要求 Flutter 像素进入 HWUI 硬件画布，
+    /// 供 QWEA0 玻璃的 RenderNode 重录采样：必须用 texture 渲染模式（SurfaceView 的
+    /// 内容在独立 Surface，View.draw 采不到）。渲染模式是全局的，无法按样式热切换。
+    override fun getRenderMode(): RenderMode = RenderMode.texture
+
+    /// 当前 FlutterView（texture 模式下即 FlutterTextureView）。embedding 未公开
+    /// fragment tag 常量，FlutterFragmentActivity 固定用 "flutter_fragment" 挂 fragment。
+    private fun currentFlutterView(): View? = try {
+        val fragment = supportFragmentManager.findFragmentByTag("flutter_fragment")
+        fragment?.view
+    } catch (t: Throwable) {
+        null
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -132,12 +150,88 @@ class MainActivity : FlutterFragmentActivity() {
                     call.argument<String>("fileUri") ?: "",
                     result,
                 )
+                "installLiquidGlassBar" -> installLiquidGlassBar(call, result)
+                "uninstallLiquidGlassBar" -> {
+                    glassBar?.uninstall()
+                    result.success(true)
+                }
+                "updateLiquidGlassSelection" -> {
+                    glassBar?.updateSelection(
+                        call.argument<Int>("index") ?: 0)
+                    result.success(true)
+                }
+                "updateLiquidGlassGeometry" -> {
+                    glassBar?.updateGeometry(
+                        call.argument<Boolean>("dark") ?: false,
+                        (call.argument<Double>("bottomInset") ?: 0.0).toInt())
+                    result.success(true)
+                }
+                "updateLiquidGlassAppearance" -> {
+                    glassBar?.updateAppearance(
+                        call.argument<Boolean>("dark") ?: false,
+                        argbArgument(call, "accentOverLight"),
+                        argbArgument(call, "accentOverDark"))
+                    result.success(true)
+                }
+                "setLiquidGlassBarHidden" -> {
+                    glassBar?.setHidden(call.argument<Boolean>("hidden") ?: false)
+                    result.success(true)
+                }
                 else -> result.notImplemented()
             }
         }
     }
 
+    /// 挂载原生液态玻璃底栏：白色剪影图标 + 标签 + 选中态 + 底部 inset。
+    private fun installLiquidGlassBar(
+        call: io.flutter.plugin.common.MethodCall,
+        result: MethodChannel.Result,
+    ) {
+        try {
+            val flutterView = currentFlutterView() ?: run {
+                result.error("NO_FLUTTER_VIEW", "FlutterView 未就绪", null)
+                return
+            }
+            if (glassBar == null) {
+                glassBar = LiquidGlassBarController(this)
+            }
+            val controller = glassBar!!
+            controller.onTabSelected = { index ->
+                channel?.invokeMethod("onLiquidGlassTabSelected", mapOf("index" to index))
+            }
+            val tabs = (call.argument<List<Map<String, Any?>>>("tabs") ?: emptyList())
+                .map { tab ->
+                    val iconBytes = (tab["icon"] as? ByteArray)
+                    LiquidGlassBarController.Tab(
+                        label = tab["label"] as? String ?: "",
+                        iconBytes = iconBytes,
+                    )
+                }
+            controller.install(
+                flutterView = flutterView,
+                tabs = tabs,
+                initialIndex = call.argument<Int>("selectedIndex") ?: 0,
+                dark = call.argument<Boolean>("dark") ?: false,
+                bottomInsetPx = (call.argument<Double>("bottomInset") ?: 0.0).toInt(),
+                accentOverLight = argbArgument(call, "accentOverLight"),
+                accentOverDark = argbArgument(call, "accentOverDark"),
+            )
+            result.success(controller.isActive)
+        } catch (t: Throwable) {
+            result.error("GLASS_INSTALL_FAILED", t.message, null)
+        }
+    }
+
+    /**
+     * ARGB 颜色参数：Dart 侧 ≥0x80000000 的值以 Int64 传输，`argument<Int>` 会得到 null，
+     * 这里统一经 Number 转换。
+     */
+    private fun argbArgument(call: io.flutter.plugin.common.MethodCall, key: String): Int? =
+        call.argument<Number>(key)?.toInt()
+
     override fun onDestroy() {
+        glassBar?.uninstall()
+        glassBar = null
         widgetPreview?.close()
         super.onDestroy()
     }

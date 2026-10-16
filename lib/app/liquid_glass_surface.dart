@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
 import 'app_theme.dart';
+import 'liquid_glass_material.dart';
 
 /// 液态玻璃面板的填色：浅色偏白、深色偏黑，保持内容可见。
 Color veriLiquidGlassTint(Brightness brightness) =>
@@ -181,6 +183,100 @@ _GlassOutline _outlineFor({
   );
   _glassOutlineCache[key] = outline;
   return outline;
+}
+
+/// 液态玻璃底栏的背景折射面板。
+///
+/// 与 [VeriLiquidGlassSurface] 的「模糊 + 中性填色」不同，这里用
+/// `BackdropFilter + ImageFilter.shader` 把胶囊底下的页面内容喂给
+/// `liquid_glass_bar.frag`，在着色器内完成模糊、折射、色散、染色与边缘光，
+/// 基于 QWEA0 的液态玻璃底栏。着色器不可用或高对比度时退回
+/// 纯模糊玻璃面板，交互不受影响。
+class VeriLiquidGlassBar extends StatefulWidget {
+  const VeriLiquidGlassBar({
+    super.key,
+    required this.child,
+    this.radius = 999,
+    this.motion = 0,
+  });
+
+  final Widget child;
+  final double radius;
+  final double motion;
+
+  @override
+  State<VeriLiquidGlassBar> createState() => _VeriLiquidGlassBarState();
+}
+
+class _VeriLiquidGlassBarState extends State<VeriLiquidGlassBar> {
+  ui.FragmentShader? _shader;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadShader());
+  }
+
+  Future<void> _loadShader() async {
+    if (!veriLiquidGlassLensAvailable) {
+      return;
+    }
+    await VeriLiquidGlassBarProgram.load();
+    final program = VeriLiquidGlassBarProgram.program;
+    if (!mounted || program == null) {
+      return;
+    }
+    setState(() => _shader = program.fragmentShader());
+  }
+
+  @override
+  void dispose() {
+    _shader?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    final dark = brightness == Brightness.dark;
+    final highContrast = MediaQuery.highContrastOf(context);
+    final borderRadius = BorderRadius.circular(widget.radius);
+
+    // 降级：无折射着色器或高对比度时，退回模糊玻璃面板。
+    final useRefraction = _shader != null && !highContrast;
+    if (!useRefraction) {
+      return VeriLiquidGlassSurface(
+        radius: widget.radius,
+        tint: highContrast ? null : veriLiquidGlassTint(brightness),
+        child: widget.child,
+      );
+    }
+
+    final shader = _shader!;
+    shader.setFloat(2, dark ? 1.0 : 0.0);
+    shader.setFloat(3, widget.motion.clamp(-1.0, 1.0));
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: borderRadius,
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Colors.black.withValues(alpha: dark ? 0.30 : 0.12),
+            blurRadius: 16,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: borderRadius,
+        child: BackdropFilter(
+          blendMode: BlendMode.srcOver,
+          filter: ui.ImageFilter.shader(shader),
+          child: widget.child,
+        ),
+      ),
+    );
+  }
 }
 
 /// 共用玻璃内容表面：背景模糊、中性填色与沿边缘的方向高光。

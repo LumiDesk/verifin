@@ -2,6 +2,8 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        // 液态玻璃底栏：QWEA0 Liquid-Glass-Android，MIT。
+        maven { url = uri("https://jitpack.io") }
     }
 }
 

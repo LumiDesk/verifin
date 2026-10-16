@@ -106,6 +106,9 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     // 备份目录 SAF 读写（DocumentFile 树操作）。
     implementation("androidx.documentfile:documentfile:1.0.1")
+    // 液态玻璃底栏：QWEA0 原生玻璃库（AGSL 折射 + 水滴
+    // TabBar）；MIT，经 JitPack 分发。
+    implementation("com.github.QWEA0:liquidglass:90f4ea28e3")
     // flutter_local_notifications 定时通知所需的 desugaring 运行库。
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     // 截图识账的中文离线识别库：google_mlkit_text_recognition 插件对各脚本库只

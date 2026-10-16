@@ -64,6 +64,23 @@ void main() {
     expect(find.byType(BackdropFilter), findsWidgets);
   });
 
+  testWidgets('折射着色器不可用时降级为模糊玻璃面板', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(360, 800);
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const _LiquidGlassHarness());
+    expect(tester.takeException(), isNull);
+
+    // widget 测试环境无 Impeller，折射着色器不可用：面板退回模糊玻璃，
+    // 仍保留 BackdropFilter 与全部条目，不因为降级而丢失交互。
+    expect(find.byType(BackdropFilter), findsWidgets);
+    expect(
+      find.byKey(const ValueKey<String>('main_nav_item_0')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('液态玻璃底栏向读屏暴露选中态，并回调正确下标', (tester) async {
     final selected = <int>[];
     final handle = tester.ensureSemantics();

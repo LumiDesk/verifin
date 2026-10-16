@@ -13,7 +13,12 @@
 
 四个根页面使用同一条底部导航，样式经 `VeriRootNavigationStyle` 注册、由 `VeriRootNavigationHost` 渲染。当前默认样式是**停靠式**：整宽、不透明、贴底，条目由自有的 `VeriBottomBar` 绘制（未选中线框图标、选中填充图标，中文标签常显）。选中项用 `colorScheme.primary`（默认 Veri Royal）强调，底栏表面和未选中项保持中性，不给整条导航背景染色。
 
-第二个已注册样式是**液态玻璃**（`root_navigation_liquid_glass.dart` + `liquid_glass_surface.dart` + `liquid_glass_lens.dart`）：浮动胶囊（高 60、左右 12、底部留白 24）+ 背景模糊 + 沿边方向高光，透镜只在拖动/按压时对导航自身内容做形变。它声明 `extendBody: true`，页面内容从胶囊下方滚过；按下即滑向目标、拖动跟手、松手吸附最近一项，纯点击与拖动都会把目标交给 Shell。`ImageFilter.shader` 只在 Impeller 下可用，不可用时自动降级为不含折射的玻璃面板，条目、标签与读屏语义不受影响。玻璃实现必须留在该样式自己的文件与着色器内，其他样式与界面不得引用。
+第二个已注册样式是**液态玻璃**，双模实现：
+
+- **原生模式**（Android 13+，真机）：玻璃、折射、色散、水滴、tab 条目与拖拽全部由原生 QWEA0 `LiquidGlassTabBar` 绘制（`LiquidGlassBarController.kt`，同一条 AGSL 渲染管线）；Flutter 侧只渲染几何占位并经 `AppGlassBridge` 驱动原生栏、同步选中态。条目图标由 Flutter 光栅化为白色剪影（`VeriGlassIconRaster`）交原生 `imageTintList` 上色，玻璃底色与水滴仍由库驱动、保持库的默认外观；**选中项的图标与文字用主题主色**（`veriLiquidGlassAccentPair` 由主色只沿明度派生浅底、深底两档，各档对画布达到 4.5:1，色相不变），**未选中项**用中性墨色（浅底 70% 黑、深底 85% 白，由原生逐项覆写——库给未选中项的白字在浅色玻璃上几乎看不见）。两档按**主题亮度**选用：库的 `BackdropLuminanceMeter` 在 `RenderMode.texture` 下取不到内容（实测平滑亮度衰减到 0、`isOverLight()` 从不翻转），不能用于决定极性。主题切换或换主题色时经 `updateLiquidGlassAppearance` 同步。**整个应用因此以 `RenderMode.texture`（FlutterTextureView）呈现**——这是原生玻璃能采样到 Flutter 内容的唯一途径，不得改回 SurfaceView。键盘弹出时以 `viewInsets.bottom` 下发原生栏避让。
+- **fallback 模式**（非 Android、SDK<33、原生初始化失败、高对比度、样式选择页预览）：Flutter 自有实现——浮动胶囊（高 60、左右 12、底部留白 24），`BackdropFilter + ImageFilter.shader` 对页面内容做模糊 + 折射 + 色散 + 染色 + 边缘光（`shaders/liquid_glass_bar.frag`），水滴透镜（`liquid_glass_lens.dart`）对导航自身内容形变；`Listener` 指针状态机驱动拖动，按下即滑向目标、松手吸附、纯点击与拖动都把目标交给 Shell。
+
+它声明 `extendBody: true`，页面内容从胶囊下方滚过。玻璃实现必须留在该样式自己的文件（Dart 五件 + 着色器两个）与原生 `LiquidGlassBarController.kt` 内，其他样式与界面不得引用。
 
 **记账按钮与导航栏无关**：它是右下角的独立浮动圆角方形，只在首页显示，由 Shell 自己渲染；样式不参与，也不得占用它的区域（内容延伸到栏背后时，Shell 按样式声明的 `occupiedHeight` 把按钮抬到栏上方）。
 

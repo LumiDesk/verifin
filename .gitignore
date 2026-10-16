@@ -45,3 +45,6 @@ app.*.map.json
 /android/app/release
 
 .vscode/
+
+# Agent 工具的本地会话与计划文件（每台机器各自生成，不入库）
+.zcode/
