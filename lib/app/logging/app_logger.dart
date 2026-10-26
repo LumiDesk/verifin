@@ -107,27 +107,51 @@ class AppLogger extends ChangeNotifier {
     String? source,
     StackTrace? stackTrace,
   }) {
-    final rawStack = stackTrace?.toString().trimRight();
-    final stack = rawStack == null || rawStack.isEmpty
-        ? null
-        : rawStack.length <= _maxStackCharacters
-        ? rawStack
-        : '${rawStack.substring(0, _maxStackCharacters)}\n[stack truncated]';
-    _records.insert(
-      0,
+    _add(
       AppLogRecord(
         time: DateTime.now(),
         level: level,
         message: message,
         source: source,
-        stack: stack,
+        stack: _normalizeStack(stackTrace?.toString()),
       ),
     );
+  }
+
+  /// 追加一条**已带原始时间戳**的记录。
+  ///
+  /// 供启动早期缓冲回放使用：`main()` 在 KV 打开前就把错误攒进
+  /// `StartupErrorSink`，logger 可用后按原时间回放，日志里不会出现「所有
+  /// 启动错误都发生在同一秒」的失真。正常记录仍走 [log]。
+  void append(AppLogRecord record) {
+    _add(
+      AppLogRecord(
+        time: record.time,
+        level: record.level,
+        message: record.message,
+        source: record.source,
+        stack: _normalizeStack(record.stack),
+      ),
+    );
+  }
+
+  void _add(AppLogRecord record) {
+    _records.insert(0, record);
     if (_records.length > _maxRecords) {
       _records.removeRange(_maxRecords, _records.length);
     }
     _persist();
     notifyListeners();
+  }
+
+  static String? _normalizeStack(String? raw) {
+    final trimmed = raw?.trimRight();
+    if (trimmed == null || trimmed.isEmpty) {
+      return null;
+    }
+    return trimmed.length <= _maxStackCharacters
+        ? trimmed
+        : '${trimmed.substring(0, _maxStackCharacters)}\n[stack truncated]';
   }
 
   void clear() {

@@ -8,6 +8,43 @@
   "dbErrorBody": "Your data is most likely still safe on this device. Please do not clear the app's data or uninstall the app.",
   "dbErrorHint": "If you just installed an older version, please reinstall the latest version and try again. If the problem persists, take a screenshot of this page to report it.",
   "dbErrorDetail": "Error details",
+  "startupPreparingTitle": "Preparing your ledger",
+  "startupPreparingBody": "Loading your data for the first time can take a moment.",
+  "startupStagePreferences": "Reading local settings",
+  "startupStageDatabase": "Opening the ledger database",
+  "startupStageController": "Loading ledger data",
+  "startupStageRecurring": "Posting due recurring entries",
+  "startupStageWarmUp": "Preparing interface resources",
+  "startupStageReady": "Almost ready",
+  "startupElapsed": "Waiting {seconds}s",
+  "@startupElapsed": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "startupSlowTitle": "Startup is slower than usual",
+  "startupSlowBody": "Still working on: {stage}. Your ledger data will not be changed. You can keep waiting or retry.",
+  "@startupSlowBody": {
+    "placeholders": {
+      "stage": {
+        "type": "String"
+      }
+    }
+  },
+  "startupFailedTitle": "Startup didn't finish",
+  "startupFailedBody": "The \"{stage}\" step didn't finish. Your ledger data is still on this device — please do not clear the app's data or uninstall it.",
+  "@startupFailedBody": {
+    "placeholders": {
+      "stage": {
+        "type": "String"
+      }
+    }
+  },
+  "startupRetry": "Retry",
+  "startupCopyDiagnostics": "Copy diagnostics",
+  "startupDiagnosticsCopied": "Copied",
   "tabHome": "Home",
   "tabAssets": "Assets",
   "tabReports": "Reports",

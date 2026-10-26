@@ -35,6 +35,61 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dbErrorDetail => 'Error details';
 
   @override
+  String get startupPreparingTitle => 'Preparing your ledger';
+
+  @override
+  String get startupPreparingBody =>
+      'Loading your data for the first time can take a moment.';
+
+  @override
+  String get startupStagePreferences => 'Reading local settings';
+
+  @override
+  String get startupStageDatabase => 'Opening the ledger database';
+
+  @override
+  String get startupStageController => 'Loading ledger data';
+
+  @override
+  String get startupStageRecurring => 'Posting due recurring entries';
+
+  @override
+  String get startupStageWarmUp => 'Preparing interface resources';
+
+  @override
+  String get startupStageReady => 'Almost ready';
+
+  @override
+  String startupElapsed(int seconds) {
+    return 'Waiting ${seconds}s';
+  }
+
+  @override
+  String get startupSlowTitle => 'Startup is slower than usual';
+
+  @override
+  String startupSlowBody(String stage) {
+    return 'Still working on: $stage. Your ledger data will not be changed. You can keep waiting or retry.';
+  }
+
+  @override
+  String get startupFailedTitle => 'Startup didn\'t finish';
+
+  @override
+  String startupFailedBody(String stage) {
+    return 'The \"$stage\" step didn\'t finish. Your ledger data is still on this device — please do not clear the app\'s data or uninstall it.';
+  }
+
+  @override
+  String get startupRetry => 'Retry';
+
+  @override
+  String get startupCopyDiagnostics => 'Copy diagnostics';
+
+  @override
+  String get startupDiagnosticsCopied => 'Copied';
+
+  @override
   String get tabHome => 'Home';
 
   @override
