@@ -19,12 +19,13 @@
 
 ```text
 lib/
-├── main.dart                 # 入口：KV/日志/SQLite/Controller 初始化，周期补记、备份、提醒、小组件、应用锁与生命周期
-├── app/                      # 领域模型、Controller、主题、纯计算、通用组件、备份、AI、提醒、日志与平台适配
+├── main.dart                 # 入口：绑定初始化、错误捕获与启动壳挂载；数据初始化在 lib/app/startup/
+├── app/                      # 领域模型、Controller、主题、纯计算、通用组件、启动、备份、AI、提醒、日志与平台适配
 │   ├── models/               # 领域模型与 JSON 映射；models.dart 是稳定 barrel
 │   ├── backup/               # 备份/恢复编解码与账单导入 parser
 │   ├── ai/                   # AI 会话、协议轮次与只读查询工具
 │   ├── logging/              # AppLogger
+│   ├── startup/              # 启动壳、阶段协调、单阶段看门狗与启动早期错误缓冲
 │   └── widgets/              # 桌面小组件词表、投影、实例配置与刷新管线
 ├── pages/                    # 页面层；共享弹窗入口在 pages/sheets.dart
 ├── data/                     # AppDatabase、LedgerRepository、SqliteLedgerRepository
