@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/logging/app_logger.dart';
 import 'package:verifin/app/models.dart';
@@ -80,6 +82,54 @@ void main() {
     logger.clear();
     expect(logger.isEmpty, isTrue);
     expect(AppLogger(store).isEmpty, isTrue);
+  });
+
+  test('组件配置引擎的日志在下次启动时合并进主日志并清理旁路键', () {
+    final store = LocalKeyValueStore();
+    final configLogger = AppLogger.widgetConfiguration(store);
+    configLogger.error('config failed', source: 'widgets');
+    expect(store.read(AppLogger.widgetConfigStorageKey), isNotNull);
+    expect(
+      store.read('verifin.logs.v1'),
+      isNull,
+      reason: '配置引擎不能写主日志键，否则与主引擎互相覆盖',
+    );
+
+    final main = AppLogger(store);
+    expect(
+      main.records.any((record) => record.message.contains('config failed')),
+      isTrue,
+    );
+    expect(store.read(AppLogger.widgetConfigStorageKey), isNull);
+
+    // 合并结果已持久化到主日志键，下次启动仍能看到。
+    expect(
+      AppLogger(
+        store,
+      ).records.any((record) => record.message.contains('config failed')),
+      isTrue,
+    );
+  });
+
+  test('合并旁路日志时按内容去重', () {
+    final store = LocalKeyValueStore();
+    final record = AppLogRecord(
+      time: DateTime(2026, 1, 1, 9),
+      level: AppLogLevel.error,
+      message: 'duplicated',
+      source: 'widgets',
+    );
+    final encoded = jsonEncode(<Object?>[record.toJson()]);
+    store.write('verifin.logs.v1', encoded);
+    store.write(AppLogger.widgetConfigStorageKey, encoded);
+
+    final main = AppLogger(store);
+
+    expect(
+      main.records.where((item) => item.message == 'duplicated').length,
+      1,
+    );
+    expect(store.read(AppLogger.widgetConfigStorageKey), isNull);
   });
 
   test('落库失败触发 onPersistError 并记入日志', () async {

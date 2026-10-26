@@ -65,15 +65,30 @@ class AppLogRecord {
 /// 持久化到 KV（设备本地、不进 JSON 备份），供「软件日志」页查看/复制/分享，
 /// 方便用户反馈问题时提供诊断线索。
 class AppLogger extends ChangeNotifier {
-  AppLogger(this._store) {
+  AppLogger(this._store) : _storageKey = _mainStorageKey {
     _load();
   }
 
-  static const String _storageKey = 'verifin.logs.v1';
+  /// 组件配置页（独立 Flutter 引擎）专用的 logger。
+  ///
+  /// 两个引擎同时整表写 `verifin.logs.v1` 会互相覆盖，所以配置引擎只写
+  /// [widgetConfigStorageKey]；主引擎下次启动时合并进主日志并清掉该键，
+  /// 用户仍然只需要看「软件日志」一处。
+  AppLogger.widgetConfiguration(this._store)
+    : _storageKey = widgetConfigStorageKey {
+    _load();
+  }
+
+  static const String _mainStorageKey = 'verifin.logs.v1';
+
+  /// 组件配置引擎的旁路日志键（设备本地，不进备份）。
+  static const String widgetConfigStorageKey = 'verifin.logs.widget_config.v1';
+
   static const int _maxRecords = 200;
   static const int _maxStackCharacters = 12000;
 
   final LocalKeyValueStore _store;
+  final String _storageKey;
 
   /// 最新在前。
   final List<AppLogRecord> _records = <AppLogRecord>[];
@@ -184,21 +199,68 @@ class AppLogger extends ChangeNotifier {
 
   void _load() {
     final raw = _store.read(_storageKey);
-    if (raw == null || raw.isEmpty) return;
-    try {
-      final decoded = jsonDecode(raw);
-      if (decoded is! List) return;
-      for (final item in decoded) {
-        final record = AppLogRecord.fromJson(item);
-        if (record != null) _records.add(record);
+    if (raw != null && raw.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          for (final item in decoded) {
+            final record = AppLogRecord.fromJson(item);
+            if (record != null) _records.add(record);
+          }
+          if (_records.length > _maxRecords) {
+            _records.removeRange(_maxRecords, _records.length);
+          }
+        }
+      } catch (_) {
+        _store.delete(_storageKey);
       }
-      if (_records.length > _maxRecords) {
-        _records.removeRange(_maxRecords, _records.length);
-      }
-    } catch (_) {
-      _store.delete(_storageKey);
+    }
+    if (_storageKey == _mainStorageKey) {
+      _mergeWidgetConfigurationLogs();
     }
   }
+
+  /// 合并组件配置引擎写的旁路日志，并删除该键。
+  ///
+  /// 配置引擎与主引擎极少同时存活；即便同时写，按「时间 + 级别 + 来源 + 文本」
+  /// 去重也不会让合并结果出现重复行。解析失败时直接丢弃旁路日志，不污染主日志。
+  void _mergeWidgetConfigurationLogs() {
+    final raw = _store.read(widgetConfigStorageKey);
+    if (raw == null || raw.isEmpty) {
+      return;
+    }
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) {
+        _store.delete(widgetConfigStorageKey);
+        return;
+      }
+      final signatures = _records.map(_signatureOf).toSet();
+      final merged = <AppLogRecord>[];
+      for (final item in decoded) {
+        final record = AppLogRecord.fromJson(item);
+        if (record != null && signatures.add(_signatureOf(record))) {
+          merged.add(record);
+        }
+      }
+      if (merged.isNotEmpty) {
+        _records
+          ..addAll(merged)
+          ..sort((a, b) => b.time.compareTo(a.time));
+        if (_records.length > _maxRecords) {
+          _records.removeRange(_maxRecords, _records.length);
+        }
+        _persist();
+      }
+      _store.delete(widgetConfigStorageKey);
+    } catch (_) {
+      _store.delete(widgetConfigStorageKey);
+    }
+  }
+
+  static String _signatureOf(AppLogRecord record) =>
+      '${record.time.toIso8601String()}|${record.level.name}|'
+      '${record.source ?? ''}|${record.message}';
 
   void _persist() {
     _store.write(

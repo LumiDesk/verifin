@@ -24,15 +24,99 @@ import 'app_lock_page.dart';
 ///
 /// 页面主题跟随系统：这个引擎不读应用的主题偏好（那是主应用的 KV 状态）。
 /// 组件的深/浅色由实例自己的外观设置决定，与这里显示的选项一致。
+///
+/// 初始化本身必须**有界**：这是由桌面组件拉起的独立引擎，一旦卡在 `runApp`
+/// 之前，用户看到的是配置页的空白窗口，表现和主应用「黑屏」一模一样。
 Future<void> runWidgetConfiguration() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final store = await LocalKeyValueStore.create();
-  final logger = AppLogger(store);
+  LocalKeyValueStore? store;
+  try {
+    store = await LocalKeyValueStore.create().timeout(
+      const Duration(seconds: 5),
+    );
+  } on Object {
+    // 读不到偏好就无法判断应用锁是否启用：下面会以「不可用页」收场，
+    // 绝不绕过锁展示账本名称与预览。
+    store = null;
+  }
+  final logger = store == null ? null : AppLogger.widgetConfiguration(store);
+  final previousOnError = FlutterError.onError;
+  FlutterError.onError = (details) {
+    logger?.error(
+      details.exceptionAsString(),
+      source: 'flutter/widget-config',
+      stackTrace: details.stack,
+    );
+    previousOnError?.call(details);
+  };
+  if (store == null) {
+    runApp(const _WidgetConfigurationUnavailableApp());
+    return;
+  }
   final appLock = AppLockConfig.fromStorage(store.read(appLockStorageKey));
-  final locale = await HomeWidget.getWidgetData<String>(widgetLocaleKey);
+  String? locale;
+  try {
+    // 语言只是显示偏好：拿不到就跟随系统，不阻塞配置页。
+    locale = await HomeWidget.getWidgetData<String>(
+      widgetLocaleKey,
+    ).timeout(const Duration(seconds: 3));
+  } on Object catch (error, stackTrace) {
+    logger?.error(
+      'Widget configuration locale unavailable',
+      source: 'widgets',
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
   runApp(
     WidgetConfigurationApp(logger: logger, locale: locale, appLock: appLock),
   );
+}
+
+/// 读不到本机偏好时的兜底页（fail closed：不展示任何账本信息）。
+class _WidgetConfigurationUnavailableApp extends StatelessWidget {
+  const _WidgetConfigurationUnavailableApp();
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      theme: buildVeriFinTheme(Brightness.light),
+      darkTheme: buildVeriFinTheme(Brightness.dark),
+      themeMode: ThemeMode.system,
+      home: Builder(
+        builder: (context) {
+          final l10n = AppLocalizations.of(context);
+          return Scaffold(
+            body: SafeArea(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        l10n.widgetConfigurationFailed,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 20),
+                      FilledButton(
+                        onPressed: SystemNavigator.pop,
+                        child: Text(l10n.commonBack),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
 class WidgetConfigurationApp extends StatefulWidget {

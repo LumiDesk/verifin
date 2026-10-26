@@ -46,9 +46,15 @@ class MainActivity : FlutterFragmentActivity() {
     private var pendingBackupFilePick: MethodChannel.Result? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        rememberQuickEntryIntent(intent)
-        rememberWidgetRouteIntent(intent)
-        rememberCaptureIntent(intent)
+        // 进程/Activity 恢复时 getIntent() 仍是「最后一次启动意图」，可能正是用户
+        // 已经消费过的组件快捷记账或分享采集。再次登记会把入口重放一遍（从图标
+        // 或最近任务回到应用时凭空弹出记账键盘、或重跑一次 OCR）。只有真正的新
+        // 启动才登记这些一次性入口。
+        if (savedInstanceState == null) {
+            rememberQuickEntryIntent(intent)
+            rememberWidgetRouteIntent(intent)
+            rememberCaptureIntent(intent)
+        }
         super.onCreate(savedInstanceState)
         if (AppLockPreferences.isEnabled(this)) {
             window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
