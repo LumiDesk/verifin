@@ -380,9 +380,9 @@ class _VeriFinShellState extends State<VeriFinShell> {
                             clipBehavior: Clip.antiAlias,
                             child: InkWell(
                               key: const Key('quick_entry_action'),
-                              onTap: () => _startQuickEntry(context),
+                              onTap: _requestQuickEntry,
                               onLongPress: () =>
-                                  _startQuickEntry(context, longPress: true),
+                                  _requestQuickEntry(longPress: true),
                               child: Icon(
                                 Icons.add_rounded,
                                 size: 28,
@@ -477,6 +477,56 @@ class _VeriFinShellState extends State<VeriFinShell> {
     }
   }
 
+  /// 正在进行的快速记账请求（键盘/编辑页/「记一笔」AI 面板）。
+  ///
+  /// 组件、磁贴与右下角按钮共用这一条单飞通道：重复投递（组件 PendingIntent 被
+  /// 连点、磁贴与组件同时到达、按钮连点）只能复用已打开的那一层，绝不再叠一个
+  /// 一模一样的数字键盘——那会表现成「卡在记账页面、怎么关都还在」。
+  Future<void>? _quickEntryTask;
+
+  /// 打开快速记账（单飞）。[fromPlatform] 为真时先等解锁并切回首页。
+  Future<void> _requestQuickEntry({
+    bool longPress = false,
+    bool fromPlatform = false,
+  }) async {
+    final existing = _quickEntryTask;
+    if (existing != null) {
+      return existing;
+    }
+    final task = _runQuickEntry(
+      longPress: longPress,
+      fromPlatform: fromPlatform,
+    );
+    _quickEntryTask = task;
+    try {
+      await task;
+    } finally {
+      if (identical(_quickEntryTask, task)) {
+        _quickEntryTask = null;
+      }
+    }
+  }
+
+  Future<void> _runQuickEntry({
+    required bool longPress,
+    required bool fromPlatform,
+  }) async {
+    if (fromPlatform) {
+      await AppLockSessionScope.waitUntilUnlocked(context);
+      if (!mounted) {
+        return;
+      }
+      if (_index != 0) {
+        _goToTab(0);
+        await Future<void>.delayed(const Duration(milliseconds: 120));
+      }
+      if (!mounted) {
+        return;
+      }
+    }
+    await _startQuickEntry(context, longPress: longPress);
+  }
+
   Future<void> _startQuickEntry(
     BuildContext context, {
     bool longPress = false,
@@ -521,20 +571,8 @@ class _VeriFinShellState extends State<VeriFinShell> {
     );
   }
 
-  Future<void> _openQuickEntryFromPlatform() async {
-    await AppLockSessionScope.waitUntilUnlocked(context);
-    if (!mounted) {
-      return;
-    }
-    if (_index != 0) {
-      _goToTab(0);
-      await Future<void>.delayed(const Duration(milliseconds: 120));
-    }
-    if (!mounted) {
-      return;
-    }
-    await _startQuickEntry(context);
-  }
+  Future<void> _openQuickEntryFromPlatform() =>
+      _requestQuickEntry(fromPlatform: true);
 
   /// 应用运行中收到分享/外部采集内容（原生 onNewIntent 通知）时拉取并识别。
   Future<void> _openSharedCaptureFromPlatform() async {
