@@ -52,10 +52,7 @@ class _VeriFinBootstrapState extends State<VeriFinBootstrap> {
         return;
       }
       // 首帧已经可见：之后即使某个阶段卡住，用户也不会再面对空白窗口。
-      widget.errors.info(
-        'Startup: first frame rendered (bootstrap shell)',
-        source: 'startup',
-      );
+      widget.errors.info('Startup: first frame rendered', source: 'startup');
     });
   }
 

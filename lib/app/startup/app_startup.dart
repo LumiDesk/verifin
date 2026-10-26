@@ -26,6 +26,13 @@ class StartupSession {
   VeriFinController? controller;
 
   bool _disposed = false;
+  bool _controllerHandedOff = false;
+
+  /// 把控制器交给 `VeriFinApp`：应用自身 dispose 时会释放它，本 session 不再
+  /// 二次 dispose（否则退出应用时 ChangeNotifier 会被释放两次）。
+  void handOffController() {
+    _controllerHandedOff = true;
+  }
 
   Future<void> dispose() async {
     if (_disposed) {
@@ -34,7 +41,9 @@ class StartupSession {
     _disposed = true;
     final controller = this.controller;
     this.controller = null;
-    controller?.dispose();
+    if (!_controllerHandedOff) {
+      controller?.dispose();
+    }
     final database = this.database;
     this.database = null;
     if (database != null) {
@@ -72,8 +81,17 @@ class AppStartup {
 
   /// 当前一轮启动创建的控制器；仅在 [StartupStage.ready] 之后读取。
   ///
-  /// 取自「当前这一轮的 session」，重试后旧一轮晚到的控制器不会被误当成新结果。
-  VeriFinController? get controller => _currentSession?.controller;
+  /// 读取即视为「交给应用」：`VeriFinApp` 会在自身 dispose 时释放控制器，
+  /// session 退出时就不再重复释放。取自「当前这一轮的 session」，重试后旧一轮
+  /// 晚到的控制器不会被误当成新结果。
+  VeriFinController? get controller {
+    final session = _currentSession;
+    final controller = session?.controller;
+    if (controller != null) {
+      session!.handOffController();
+    }
+    return controller;
+  }
 
   StartupCoordinator createCoordinator() {
     final session = StartupSession();
