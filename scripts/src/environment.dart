@@ -153,13 +153,78 @@ String? adbPath(String? sdkPath) {
   return null;
 }
 
+/// 查找可用的 java：JAVA_HOME → PATH → Android Studio 自带 JBR。
+///
+/// Flutter 自身会优先使用 Android Studio 的 JBR；脚本如果只按 PATH 查找，
+/// 会在「Flutter 能构建、doctor 却报缺 JDK」时给出错误结论。
+String? _javaExecutable() {
+  final javaHome = Platform.environment['JAVA_HOME'];
+  if (javaHome != null && javaHome.isNotEmpty) {
+    final candidate = p.join(
+      javaHome,
+      'bin',
+      Platform.isWindows ? 'java.exe' : 'java',
+    );
+    if (File(candidate).existsSync()) {
+      return candidate;
+    }
+  }
+  final fromPath = resolveCommand('java');
+  if (fromPath != null) {
+    return fromPath;
+  }
+  for (final candidate in _androidStudioJavaPaths()) {
+    if (File(candidate).existsSync()) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+Iterable<String> _androidStudioJavaPaths() sync* {
+  final programFiles = Platform.environment['ProgramFiles'];
+  if (Platform.isWindows && programFiles != null) {
+    yield p.join(
+      programFiles,
+      'Android',
+      'Android Studio',
+      'jbr',
+      'bin',
+      'java.exe',
+    );
+  }
+  final localAppData = Platform.environment['LOCALAPPDATA'];
+  if (Platform.isWindows && localAppData != null) {
+    yield p.join(
+      localAppData,
+      'Programs',
+      'Android Studio',
+      'jbr',
+      'bin',
+      'java.exe',
+    );
+  }
+  if (Platform.isMacOS) {
+    yield '/Applications/Android Studio.app/Contents/jbr/Contents/Home/bin/java';
+  }
+  if (Platform.isLinux) {
+    yield '/opt/android-studio/jbr/bin/java';
+    final home =
+        Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
+    if (home != null) {
+      yield p.join(home, 'android-studio', 'jbr', 'bin', 'java');
+    }
+  }
+}
+
 /// `java -version`（输出在 stderr）解析出主版本号。
 Future<({int major, String raw})?> javaVersion() async {
-  if (!hasCommand('java')) {
+  final executable = _javaExecutable();
+  if (executable == null) {
     return null;
   }
   final result = await capture(<String>[
-    'java',
+    executable,
     '-version',
   ], allowFailure: true);
   final raw = '${result.stderr}\n${result.stdout}'.trim();
@@ -172,7 +237,12 @@ Future<({int major, String raw})?> javaVersion() async {
   final major = first == 1 && match.group(2) != null
       ? int.parse(match.group(2)!)
       : first;
-  return (major: major, raw: raw.split('\n').first.trim());
+  final lines = raw.split(RegExp(r'\r?\n'));
+  final versionLine = lines.firstWhere(
+    (line) => line.contains('version "'),
+    orElse: () => lines.first,
+  );
+  return (major: major, raw: versionLine.trim());
 }
 
 List<String> _commonSdkPaths() {
@@ -183,7 +253,6 @@ List<String> _commonSdkPaths() {
       p.join(Platform.environment['LOCALAPPDATA']!, 'Android', 'Sdk'),
     if (home != null) p.join(home, 'Android', 'Sdk'),
     if (home != null) p.join(home, 'Library', 'Android', 'sdk'),
-    if (Platform.isWindows) r'C:\Dev\android-sdk',
     if (Platform.isWindows) r'C:\Android\Sdk',
     '/usr/lib/android-sdk',
   ];

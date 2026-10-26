@@ -121,7 +121,11 @@ Future<int> _run(List<String> arguments) async {
   // ---- JDK ----
   final java = await javaVersion();
   if (java == null) {
-    add('Java', _Level.fail, '未找到 java（CI 使用 Java 17）');
+    add(
+      'Java',
+      _Level.fail,
+      '未找到 java（已检查 PATH、JAVA_HOME 与 Android Studio JBR；CI 使用 Java 17）',
+    );
   } else if (java.major < 17) {
     add('Java', _Level.fail, '${java.raw}（需要 17 及以上）');
   } else {

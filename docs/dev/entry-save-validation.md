@@ -228,7 +228,7 @@ flutter test
 
 只改文档时至少执行 `git diff --check`、检查相对链接和路径。
 
-Android 真机/模拟器手动验收：用 `diagnostic` flavor 在 `emulator-5554` 上复现“已有部分退款 + 默认剩余金额”路径；不要并行执行 `input`。发布包验收仍以 CI 生成的 GitHub release APK 为准。
+Android 真机/模拟器手动验收：用 `diagnostic` flavor 在 `<device-id>` 上复现“已有部分退款 + 默认剩余金额”路径；不要并行执行 `input`。发布包验收仍以 CI 生成的 GitHub release APK 为准。
 
 ## 非目标
 

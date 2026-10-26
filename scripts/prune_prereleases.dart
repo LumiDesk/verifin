@@ -15,7 +15,7 @@
 // - 只处理「预发布且非草稿」的 Release；正式版与草稿一概不动。
 // - 默认跳过被标记为 Latest 的 Release（即使它是预发布）。
 // - 默认只删 Release 页面与其附件，**保留 git 标签**——标签是各版本的归档来源
-//   （见 AGENTS.md「文档、CHANGELOG 与交付」）。要连标签一起删时加 --cleanup-tag。
+//   （见 AGENTS.md 的「CI 与发版」）。要连标签一起删时加 --cleanup-tag。
 // - 删除不可撤销（附件会一并消失）；先用 --dry-run 核对列表。
 
 import 'dart:convert';

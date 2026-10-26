@@ -23,6 +23,15 @@ Veri Fin 不启用 GitHub Pull Request 功能，也不接受外部代码补丁�
 - 架构与源码导航见 [`docs/dev/architecture.md`](docs/dev/architecture.md)；组件复用前先查 [`docs/design/components.md`](docs/design/components.md)。
 - 维护者直接向 `main` 提交；`main` 的 CI 只由 push 触发。
 
+### 已确认的 Code Review 取舍
+
+以下两项是维护者明确接受的产品与供应链取舍，后续 Code Review 默认不再作为缺陷重复报告：
+
+- **发布签名材料可入库**：维护者接受开源仓库包含正式 keystore 与构建口令，允许用户自行签名和构建；不要求按私钥泄露问题整改。
+- **GitHub Actions 使用 GitHub 托管信任边界**：维护者接受发布工作流依赖 GitHub 与上游 Actions 的信任模型，不要求把工作流权限或第三方 Action 改造为独立供应链防护方案。
+
+上述豁免只覆盖这两项明确取舍，不影响对 APK 完整性校验、用户数据安全、远端输入边界和运行时权限的审查。
+
 ## 发版（仅维护者）
 
 - 发版必须经明确同意；打 `vX.Y.Z` 标签会触发 CI 构建并发预发布，不可逆。
