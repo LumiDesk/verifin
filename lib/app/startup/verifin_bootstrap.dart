@@ -305,35 +305,36 @@ class _StartupPageState extends State<_StartupPage> {
                   ),
                 ),
               ],
+              if (failed || stalled) ...<Widget>[
+                const SizedBox(height: 20),
+                // 动作放在技术细节之前：恢复入口要第一眼可见，细节可以往下滚。
+                // 竖排而不是左右分栏：窄屏 + 系统大字号时两种语言的按钮文案
+                // 都会变长，横排会把文字挤到溢出。
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: widget.onRetry,
+                    child: Text(l10n.startupRetry),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: _copy,
+                    child: Text(
+                      _copied
+                          ? l10n.startupDiagnosticsCopied
+                          : l10n.startupCopyDiagnostics,
+                    ),
+                  ),
+                ),
+              ],
               if (failed) ...<Widget>[
                 const SizedBox(height: 20),
                 _FailureDetails(
                   label: l10n.dbErrorDetail,
                   detail: _failureDetail(coordinator),
-                ),
-              ],
-              if (failed || stalled) ...<Widget>[
-                const SizedBox(height: 20),
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: _copy,
-                        child: Text(
-                          _copied
-                              ? l10n.startupDiagnosticsCopied
-                              : l10n.startupCopyDiagnostics,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: FilledButton(
-                        onPressed: widget.onRetry,
-                        child: Text(l10n.startupRetry),
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ],
