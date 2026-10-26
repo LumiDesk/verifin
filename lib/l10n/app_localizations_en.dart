@@ -4169,6 +4169,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appLogCopied => 'Copied to clipboard';
 
   @override
+  String get appLogCopyRecord => 'Copy this entry';
+
+  @override
+  String get appLogDetails => 'Technical details';
+
+  @override
   String get appLogClear => 'Clear logs';
 
   @override

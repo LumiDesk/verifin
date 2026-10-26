@@ -1574,6 +1574,8 @@
   "appLogEmpty": "No log records yet",
   "appLogCopyAll": "Copy all",
   "appLogCopied": "Copied to clipboard",
+  "appLogCopyRecord": "Copy this entry",
+  "appLogDetails": "Technical details",
   "appLogClear": "Clear logs",
   "appLogClearConfirm": "Clear all logs?",
   "appLogCount": "{count} records",

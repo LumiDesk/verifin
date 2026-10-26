@@ -4054,6 +4054,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appLogCopied => '已复制到剪贴板';
 
   @override
+  String get appLogCopyRecord => '复制这条';
+
+  @override
+  String get appLogDetails => '技术细节';
+
+  @override
   String get appLogClear => '清空日志';
 
   @override

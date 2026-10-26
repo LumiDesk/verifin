@@ -7448,6 +7448,18 @@ abstract class AppLocalizations {
   /// **'已复制到剪贴板'**
   String get appLogCopied;
 
+  /// 复制单条日志（含堆栈）
+  ///
+  /// In zh, this message translates to:
+  /// **'复制这条'**
+  String get appLogCopyRecord;
+
+  /// 展开单条日志的堆栈
+  ///
+  /// In zh, this message translates to:
+  /// **'技术细节'**
+  String get appLogDetails;
+
   /// No description provided for @appLogClear.
   ///
   /// In zh, this message translates to:

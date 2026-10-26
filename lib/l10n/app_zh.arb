@@ -2673,6 +2673,14 @@
   "appLogEmpty": "暂无日志记录",
   "appLogCopyAll": "复制全部",
   "appLogCopied": "已复制到剪贴板",
+  "appLogCopyRecord": "复制这条",
+  "@appLogCopyRecord": {
+    "description": "复制单条日志（含堆栈）"
+  },
+  "appLogDetails": "技术细节",
+  "@appLogDetails": {
+    "description": "展开单条日志的堆栈"
+  },
   "appLogClear": "清空日志",
   "appLogClearConfirm": "确定要清空全部日志吗？",
   "appLogCount": "共 {count} 条记录",

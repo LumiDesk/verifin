@@ -160,13 +160,46 @@ class AppLogPage extends StatelessWidget {
   }
 }
 
-class _LogTile extends StatelessWidget {
+class _LogTile extends StatefulWidget {
   const _LogTile({required this.record});
 
   final AppLogRecord record;
 
   @override
+  State<_LogTile> createState() => _LogTileState();
+}
+
+class _LogTileState extends State<_LogTile> {
+  bool _expanded = false;
+
+  AppLogRecord get record => widget.record;
+
+  bool get _hasStack {
+    final stack = record.stack;
+    return stack != null && stack.isNotEmpty;
+  }
+
+  Future<void> _copy() async {
+    final l10n = AppLocalizations.of(context);
+    await Clipboard.setData(
+      ClipboardData(text: AppLogger.exportRecord(record)),
+    );
+    if (!mounted) {
+      return;
+    }
+    unawaited(
+      VeriFeedbackHost.of(context).showMessage(
+        message: l10n.appLogCopied,
+        tone: VeriFeedbackTone.success,
+        duration: VeriFeedbackDuration.short,
+        dedupeKey: 'app-log-copy',
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final color = switch (record.level) {
       AppLogLevel.error => veriSemantic(context, veriExpense),
       AppLogLevel.warning => const Color(0xFFE8A33D),
@@ -176,61 +209,125 @@ class _LogTile extends StatelessWidget {
     final stamp =
         '${time.year}-${_two(time.month)}-${_two(time.day)} '
         '${_two(time.hour)}:${_two(time.minute)}:${_two(time.second)}';
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Container(
-            margin: const EdgeInsets.only(top: 4, right: 10),
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    final header = Row(
+      children: <Widget>[
+        Text(
+          record.level.name.toUpperCase(),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: color,
           ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Text(
-                      record.level.name.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: color,
-                      ),
-                    ),
-                    if (record.source != null &&
-                        record.source!.isNotEmpty) ...<Widget>[
-                      const SizedBox(width: 6),
-                      Text(
-                        record.source!,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Theme.of(context).hintColor,
-                        ),
-                      ),
-                    ],
-                    const Spacer(),
-                    Text(
-                      stamp,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Theme.of(context).hintColor,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(record.message, style: const TextStyle(fontSize: 13)),
-              ],
+        ),
+        if (record.source != null && record.source!.isNotEmpty) ...<Widget>[
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              record.source!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                color: Theme.of(context).hintColor,
+              ),
             ),
           ),
         ],
+        const Spacer(),
+        Text(
+          stamp,
+          style: TextStyle(fontSize: 11, color: Theme.of(context).hintColor),
+        ),
+        _TileAction(
+          tooltip: l10n.appLogCopyRecord,
+          icon: Icons.copy_all_outlined,
+          onPressed: _copy,
+        ),
+        if (_hasStack)
+          _TileAction(
+            tooltip: l10n.appLogDetails,
+            icon: _expanded ? Icons.expand_less : Icons.expand_more,
+            onPressed: () => setState(() => _expanded = !_expanded),
+          ),
+      ],
+    );
+    return InkWell(
+      onTap: _hasStack ? () => setState(() => _expanded = !_expanded) : null,
+      borderRadius: BorderRadius.circular(veriRadiusSm),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Container(
+              margin: const EdgeInsets.only(top: 4, right: 10),
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  header,
+                  const SizedBox(height: 4),
+                  Text(record.message, style: const TextStyle(fontSize: 13)),
+                  if (_expanded && _hasStack) ...<Widget>[
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      constraints: const BoxConstraints(maxHeight: 240),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(veriRadiusSm),
+                      ),
+                      child: SingleChildScrollView(
+                        child: SelectableText(
+                          record.stack!,
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   String _two(int value) => value.toString().padLeft(2, '0');
+}
+
+/// 日志行右侧的小动作钮：固定紧凑尺寸，不把标题行撑高。
+class _TileAction extends StatelessWidget {
+  const _TileAction({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      icon: Icon(icon, size: 17),
+      onPressed: onPressed,
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+    );
+  }
 }

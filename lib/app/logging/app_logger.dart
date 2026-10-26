@@ -181,17 +181,23 @@ class AppLogger extends ChangeNotifier {
     final buffer = StringBuffer();
     for (var i = 0; i < _records.length; i += 1) {
       if (i > 0) buffer.writeln();
-      final r = _records[i];
-      final ts = r.time.toIso8601String();
-      final src = (r.source == null || r.source!.isEmpty)
-          ? ''
-          : ' [${r.source}]';
-      buffer.writeln('$ts ${r.level.name.toUpperCase()}$src ${r.message}');
-      final stack = r.stack;
-      if (stack != null && stack.isNotEmpty) {
-        for (final line in stack.split('\n')) {
-          buffer.writeln('  $line');
-        }
+      buffer.writeln(exportRecord(_records[i]));
+    }
+    return buffer.toString().trimRight();
+  }
+
+  /// 单条记录的纯文本（时间 + 级别 + 来源 + 消息 + stack），供「复制这条」使用。
+  static String exportRecord(AppLogRecord record) {
+    final ts = record.time.toIso8601String();
+    final src = (record.source == null || record.source!.isEmpty)
+        ? ''
+        : ' [${record.source}]';
+    final buffer = StringBuffer()
+      ..writeln('$ts ${record.level.name.toUpperCase()}$src ${record.message}');
+    final stack = record.stack;
+    if (stack != null && stack.isNotEmpty) {
+      for (final line in stack.split('\n')) {
+        buffer.writeln('  $line');
       }
     }
     return buffer.toString().trimRight();
