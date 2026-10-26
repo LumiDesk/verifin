@@ -9,7 +9,7 @@ Controller 经 repository 写库。`VeriFinController.create()` 是生产初始�
 
 | 领域 | 源码与维护文档 |
 | --- | --- |
-| 根初始化、生命周期 | `lib/main.dart`；备份、周期补记、提醒、小组件与应用锁挂钩；锁状态经 `app/app_lock_session.dart` 向 Shell 暴露 |
+| 根初始化、启动壳、生命周期 | `main.dart`、`lib/app/startup/`（`VeriFinBootstrap` / `StartupCoordinator` / `StartupErrorSink` / `AppStartup`）；首帧由启动壳渲染，数据库与控制器在首帧之后按阶段载入；备份、周期补记、提醒、小组件与应用锁挂钩；锁状态经 `app/app_lock_session.dart` 向 Shell 暴露 |
 | Controller | `veri_fin_controller.dart`、`veri_fin_controller_state.dart`、`veri_fin_controller_ops.dart` |
 | SQLite 与持久化 | `lib/data/`；[技术决策](tech-decisions.md)、repository contract 与 migration matrix 测试 |
 | 模型 | `lib/app/models/`；`models.dart` 稳定导出；JSON/SQLite 映射须同步 |
