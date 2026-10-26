@@ -105,7 +105,11 @@ class AppStartup {
           final logger = AppLogger(store);
           session.logger = logger;
           // 从这里开始，启动错误直接落盘；之前的记录由 sink 回放。
-          errors.attach(logger);
+          // 只有仍是当前一轮时才接上 logger：重试后晚到的旧一轮不能把 sink
+          // 重新指回旧实例（那会让后续日志落进一个不再被读取的日志对象）。
+          if (identical(_currentSession, session)) {
+            errors.attach(logger);
+          }
         },
       ),
       (
@@ -141,6 +145,10 @@ class AppStartup {
           final controller = session.controller;
           if (controller == null) {
             throw StateError('启动顺序错误：控制器尚未就绪');
+          }
+          // 重试后晚到的旧一轮不再写库：补记是幂等的，但没必要让两轮同时提交易。
+          if (!identical(_currentSession, session)) {
+            return;
           }
           await controller.applyDueRecurring(_clock());
         },
