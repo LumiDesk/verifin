@@ -146,6 +146,102 @@ abstract class AppLocalizations {
   /// **'错误详情'**
   String get dbErrorDetail;
 
+  /// 启动页标题：正常初始化中
+  ///
+  /// In zh, this message translates to:
+  /// **'正在准备账本'**
+  String get startupPreparingTitle;
+
+  /// 启动页正文：正常初始化中
+  ///
+  /// In zh, this message translates to:
+  /// **'首次载入数据可能需要一点时间，请稍候。'**
+  String get startupPreparingBody;
+
+  /// 启动阶段：读取偏好设置
+  ///
+  /// In zh, this message translates to:
+  /// **'读取本机设置'**
+  String get startupStagePreferences;
+
+  /// 启动阶段：打开 SQLite 数据库
+  ///
+  /// In zh, this message translates to:
+  /// **'打开账本数据库'**
+  String get startupStageDatabase;
+
+  /// 启动阶段：从数据库载入账目
+  ///
+  /// In zh, this message translates to:
+  /// **'载入账本数据'**
+  String get startupStageController;
+
+  /// 启动阶段：补记到期周期规则
+  ///
+  /// In zh, this message translates to:
+  /// **'补记周期账目'**
+  String get startupStageRecurring;
+
+  /// 启动阶段：可选的界面资源预热
+  ///
+  /// In zh, this message translates to:
+  /// **'准备界面资源'**
+  String get startupStageWarmUp;
+
+  /// 启动阶段：初始化完成
+  ///
+  /// In zh, this message translates to:
+  /// **'即将进入'**
+  String get startupStageReady;
+
+  /// 启动页已等待时长
+  ///
+  /// In zh, this message translates to:
+  /// **'已等待 {seconds} 秒'**
+  String startupElapsed(int seconds);
+
+  /// 启动阶段超过阈值仍未完成时的标题
+  ///
+  /// In zh, this message translates to:
+  /// **'启动比平时慢'**
+  String get startupSlowTitle;
+
+  /// 启动阶段超过阈值仍未完成时的正文
+  ///
+  /// In zh, this message translates to:
+  /// **'仍在进行：{stage}。你的账目数据不会被改动；可以继续等待，或重试一次。'**
+  String startupSlowBody(String stage);
+
+  /// 启动失败页标题（非数据库阶段）
+  ///
+  /// In zh, this message translates to:
+  /// **'启动没有完成'**
+  String get startupFailedTitle;
+
+  /// 启动失败页正文
+  ///
+  /// In zh, this message translates to:
+  /// **'在「{stage}」阶段没有完成。账目数据仍保存在本机，请不要清除应用数据或卸载应用。'**
+  String startupFailedBody(String stage);
+
+  /// 启动失败/过慢时重新初始化
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get startupRetry;
+
+  /// 复制启动阶段、耗时与错误，便于反馈
+  ///
+  /// In zh, this message translates to:
+  /// **'复制诊断信息'**
+  String get startupCopyDiagnostics;
+
+  /// 诊断信息复制成功
+  ///
+  /// In zh, this message translates to:
+  /// **'已复制'**
+  String get startupDiagnosticsCopied;
+
   /// 底部导航:首页
   ///
   /// In zh, this message translates to:
@@ -7351,6 +7447,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'已复制到剪贴板'**
   String get appLogCopied;
+
+  /// 复制单条日志（含堆栈）
+  ///
+  /// In zh, this message translates to:
+  /// **'复制这条'**
+  String get appLogCopyRecord;
+
+  /// 展开单条日志的堆栈
+  ///
+  /// In zh, this message translates to:
+  /// **'技术细节'**
+  String get appLogDetails;
 
   /// No description provided for @appLogClear.
   ///

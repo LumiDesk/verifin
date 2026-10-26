@@ -33,6 +33,60 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dbErrorDetail => '错误详情';
 
   @override
+  String get startupPreparingTitle => '正在准备账本';
+
+  @override
+  String get startupPreparingBody => '首次载入数据可能需要一点时间，请稍候。';
+
+  @override
+  String get startupStagePreferences => '读取本机设置';
+
+  @override
+  String get startupStageDatabase => '打开账本数据库';
+
+  @override
+  String get startupStageController => '载入账本数据';
+
+  @override
+  String get startupStageRecurring => '补记周期账目';
+
+  @override
+  String get startupStageWarmUp => '准备界面资源';
+
+  @override
+  String get startupStageReady => '即将进入';
+
+  @override
+  String startupElapsed(int seconds) {
+    return '已等待 $seconds 秒';
+  }
+
+  @override
+  String get startupSlowTitle => '启动比平时慢';
+
+  @override
+  String startupSlowBody(String stage) {
+    return '仍在进行：$stage。你的账目数据不会被改动；可以继续等待，或重试一次。';
+  }
+
+  @override
+  String get startupFailedTitle => '启动没有完成';
+
+  @override
+  String startupFailedBody(String stage) {
+    return '在「$stage」阶段没有完成。账目数据仍保存在本机，请不要清除应用数据或卸载应用。';
+  }
+
+  @override
+  String get startupRetry => '重试';
+
+  @override
+  String get startupCopyDiagnostics => '复制诊断信息';
+
+  @override
+  String get startupDiagnosticsCopied => '已复制';
+
+  @override
   String get tabHome => '首页';
 
   @override
@@ -3998,6 +4052,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get appLogCopied => '已复制到剪贴板';
+
+  @override
+  String get appLogCopyRecord => '复制这条';
+
+  @override
+  String get appLogDetails => '技术细节';
 
   @override
   String get appLogClear => '清空日志';

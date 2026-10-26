@@ -42,6 +42,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | 名称 | 类型 | 位置 | 用途 |
 |---|---|---|---|
 | `VeriPage` | Widget | `common_widgets.dart` | 纯色背景 + 居中 + `maxWidth` 约束的页根容器 |
+| `VeriFinBootstrap` / `StartupCoordinator` / `StartupErrorSink` | Widget / 协调器 / 错误缓冲 | `app/startup/` | **启动壳**：`main()` 不再在 `runApp()` 前等待数据，首帧先画启动页，再由协调器逐阶段载入偏好、数据库、控制器、周期补记与可选的着色器预热。单阶段看门狗超时显示「启动较慢」，任一阶段失败显示阶段、错误与「复制诊断 / 重试」；`StartupErrorSink` 在 KV 打开前缓冲错误、logger 就绪后按原时间回放。启动壳只显示阶段与诊断，不读账目，也不替代 `PrivacyConsentGate` / `AppLockGate` / `OnboardingGate` |
 | `VeriCard` | Widget | `common_widgets.dart` | 统一圆角/描边/阴影卡片，可点击（`quietTap` 长按吞噬变体） |
 | `VeriHeader` | Widget | `common_widgets.dart` | 页眉（标题+副标题+返回+actions，最小高度 56；用最小高度而非固定高度，系统字号放大时两行标题不会被裁掉） |
 | `PageHeader` | Widget | `common_widgets.dart` | `VeriHeader` 的薄封装（单 trailing）；`subtitle` 为 `String?`，`null` 时整行不渲染；副标题里带「单位：x」必须用 `currencyUnitSubtitle`（族 7）——隐藏单位且无上下文时它返回 `null`，直接传进去即可整段省略 |

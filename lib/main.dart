@@ -1,34 +1,29 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
 import 'app/app_theme.dart';
-import 'app/attachments/attachment_store.dart';
 import 'app/backup/backup_coordinator.dart';
 import 'app/feedback.dart';
 import 'app/l10n_outside_context.dart';
-import 'app/logging/app_logger.dart';
 import 'app/models.dart';
 import 'app/platform_bridge.dart';
 import 'app/reminder/notification_scheduler.dart';
 import 'app/reminder/reminder_settings.dart';
+import 'app/startup/app_startup.dart';
+import 'app/startup/startup_error_sink.dart';
+import 'app/startup/verifin_bootstrap.dart';
 import 'app/veri_fin_controller.dart';
 import 'app/veri_fin_scope.dart';
-import 'app/widgets/widget_service.dart';
 import 'app/widgets/widget_refresh_coordinator.dart';
 import 'app/widgets/widget_refresh_scope.dart';
-import 'data/app_database.dart';
-import 'data/ledger_repository.dart';
+import 'app/widgets/widget_service.dart';
 import 'l10n/app_localizations.dart';
-import 'local_storage/local_storage.dart';
 import 'pages/app_lock_gate.dart';
-import 'pages/privacy_consent_gate.dart';
 import 'pages/onboarding_page.dart';
+import 'pages/privacy_consent_gate.dart';
 import 'pages/shell.dart';
 import 'pages/widget_configuration_page.dart';
 
@@ -36,169 +31,45 @@ import 'pages/widget_configuration_page.dart';
 Future<void> configureMain() => runWidgetConfiguration();
 
 Future<void> main() async {
-  AppLogger? logger;
+  // 启动早期（KV 打开之前）也要有地方记录错误：这些记录先攒在内存里，
+  // 存储就绪后由 AppStartup 回放进真正的软件日志。
+  final errors = StartupErrorSink();
+  final systemIsEnglish =
+      PlatformDispatcher.instance.locale.languageCode.toLowerCase() != 'zh';
+  final startup = AppStartup(errors: errors, systemIsEnglish: systemIsEnglish);
   // 应用运行的顶层 zone，故意不 await（fire-and-forget）；未捕获错误交给下方 onError。
   unawaited(
     runZonedGuarded(
       () async {
         WidgetsFlutterBinding.ensureInitialized();
-        // 预加载可选液态玻璃底栏所需的着色器；初始化只做异步资源读取。
-        await LiquidGlassWidgets.initialize(enablePerformanceMonitor: false);
-        final store = await LocalKeyValueStore.create();
-        final appLogger = AppLogger(store);
-        logger = appLogger;
         // 未捕获的框架错误与异步错误都记入软件日志，便于用户反馈时提供诊断线索。
+        // 安装位置必须在任何存储/插件调用之前，否则启动阶段的崩溃不会留下线索。
         final previousOnError = FlutterError.onError;
         FlutterError.onError = (details) {
-          appLogger.error(
-            details.exceptionAsString(),
-            source: details.library == null || details.library!.isEmpty
-                ? 'flutter'
-                : 'flutter/${details.library}',
-            stackTrace: details.stack,
-          );
+          errors.recordFlutterError(details);
           previousOnError?.call(details);
         };
-        final VeriFinController controller;
-        try {
-          final database = await AppDatabase.open();
-          final supportDirectory = await getApplicationSupportDirectory();
-          final attachmentStore = FileAttachmentStore(
-            root: Directory(p.join(supportDirectory.path, 'attachments')),
-          );
-          controller = await VeriFinController.create(
-            store,
-            repository: SqliteLedgerRepository(database),
-            attachmentStore: attachmentStore,
-            logger: logger,
-            // 语言偏好为「跟随系统」时，首启动播种的默认数据（账本/分类/简介）按系统语言选文案。
-            systemIsEnglish:
-                PlatformDispatcher.instance.locale.languageCode.toLowerCase() !=
-                'zh',
-          );
-        } catch (error) {
-          // 数据库损坏或版本降级（用户安装了更旧 APK）时打开会抛异常。不做破坏性
-          // 处理（绝不删库），而是展示可诊断的错误页，明确告知用户数据很可能仍在、
-          // 不要清除应用数据，避免「白屏 → 误以为数据丢了 → 清数据 → 真丢」。
-          appLogger.error(
-            'Database open failed: $error',
-            source: 'startup',
-            error: error,
-          );
-          runApp(DatabaseErrorApp(detail: '$error'));
-          return;
-        }
-        // 打开应用时补记到期的周期交易。
-        await controller.applyDueRecurring(DateTime.now());
+        // 首帧交给启动壳：数据库/控制器等初始化全部发生在首帧之后，并且有
+        // 阶段进度、单阶段看门狗与失败页——不再让用户停在空白启动窗口。
         runApp(
-          LiquidGlassWidgets.wrap(
-            child: VeriFinApp(controller: controller),
-            brightnessResolver: Theme.maybeBrightnessOf,
+          VeriFinBootstrap(
+            errors: errors,
+            createCoordinator: startup.createCoordinator,
+            buildApp: () => LiquidGlassWidgets.wrap(
+              child: VeriFinApp(controller: startup.controller!),
+              brightnessResolver: Theme.maybeBrightnessOf,
+            ),
           ),
         );
       },
       (error, stack) {
-        // runZonedGuarded 兜底：logger 尚未创建时（极早期崩溃）仅调试打印。
-        logger?.error(
-          'Uncaught zone error',
-          source: 'zone',
-          error: error,
-          stackTrace: stack,
-        );
+        // runZonedGuarded 兜底：logger 尚未创建时（极早期崩溃）记录到启动缓冲，
+        // 存储就绪后自动补进软件日志。
+        errors.recordUncaught(error, stack);
         debugPrint('Uncaught zone error: $error');
       },
     ),
   );
-}
-
-/// 数据库无法打开时的兜底错误页。用最小依赖自绘（不依赖 controller），
-/// 语言跟随系统。核心目的：把「白屏」换成明确「数据很可能还在、别清数据」的提示。
-class DatabaseErrorApp extends StatelessWidget {
-  const DatabaseErrorApp({super.key, required this.detail});
-
-  final String detail;
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
-      debugShowCheckedModeBanner: false,
-      supportedLocales: AppLocalizations.supportedLocales,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      theme: buildVeriFinTheme(Brightness.light),
-      darkTheme: buildVeriFinTheme(Brightness.dark),
-      home: Builder(
-        builder: (context) {
-          final l10n = AppLocalizations.of(context);
-          final scheme = Theme.of(context).colorScheme;
-          return Scaffold(
-            body: SafeArea(
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      Icon(
-                        Icons.storage_rounded,
-                        size: 56,
-                        color: scheme.error,
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        l10n.dbErrorTitle,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        l10n.dbErrorBody,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        l10n.dbErrorHint,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          l10n.dbErrorDetail,
-                          style: Theme.of(context).textTheme.labelMedium,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: scheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: SelectableText(
-                          detail,
-                          style: const TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
 }
 
 class VeriFinApp extends StatefulWidget {
@@ -321,7 +192,7 @@ class _VeriFinAppState extends State<VeriFinApp> with WidgetsBindingObserver {
       // 补记前的旧数据备份出去、推到桌面小组件上。
       unawaited(_postDueRecurringAndRefresh());
       // 每次回前台都重排提醒：每日提醒底层是「触发时自排下一天」的精确闹钟链，
-      // 一旦某次因 Doze / force-stop / 重启 / 时区变化断掉，就再不会自愈。只在
+      // 一旦某次因 Doze / force-stop / 重启 / 时区变化断掉，就再也不会自愈。只在
       // 冷启动重排会漏掉「常驻后台、只热恢复」的用户；apply 幂等（先 cancel 再排），
       // 每次回前台对齐一次能把断掉的链重新排上。
       _notifications.apply(

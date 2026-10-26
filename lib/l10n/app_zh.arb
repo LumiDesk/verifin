@@ -29,6 +29,85 @@
   "@dbErrorDetail": {
     "description": "数据库打开失败错误页技术详情标题"
   },
+  "startupPreparingTitle": "正在准备账本",
+  "@startupPreparingTitle": {
+    "description": "启动页标题：正常初始化中"
+  },
+  "startupPreparingBody": "首次载入数据可能需要一点时间，请稍候。",
+  "@startupPreparingBody": {
+    "description": "启动页正文：正常初始化中"
+  },
+  "startupStagePreferences": "读取本机设置",
+  "@startupStagePreferences": {
+    "description": "启动阶段：读取偏好设置"
+  },
+  "startupStageDatabase": "打开账本数据库",
+  "@startupStageDatabase": {
+    "description": "启动阶段：打开 SQLite 数据库"
+  },
+  "startupStageController": "载入账本数据",
+  "@startupStageController": {
+    "description": "启动阶段：从数据库载入账目"
+  },
+  "startupStageRecurring": "补记周期账目",
+  "@startupStageRecurring": {
+    "description": "启动阶段：补记到期周期规则"
+  },
+  "startupStageWarmUp": "准备界面资源",
+  "@startupStageWarmUp": {
+    "description": "启动阶段：可选的界面资源预热"
+  },
+  "startupStageReady": "即将进入",
+  "@startupStageReady": {
+    "description": "启动阶段：初始化完成"
+  },
+  "startupElapsed": "已等待 {seconds} 秒",
+  "@startupElapsed": {
+    "description": "启动页已等待时长",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "startupSlowTitle": "启动比平时慢",
+  "@startupSlowTitle": {
+    "description": "启动阶段超过阈值仍未完成时的标题"
+  },
+  "startupSlowBody": "仍在进行：{stage}。你的账目数据不会被改动；可以继续等待，或重试一次。",
+  "@startupSlowBody": {
+    "description": "启动阶段超过阈值仍未完成时的正文",
+    "placeholders": {
+      "stage": {
+        "type": "String"
+      }
+    }
+  },
+  "startupFailedTitle": "启动没有完成",
+  "@startupFailedTitle": {
+    "description": "启动失败页标题（非数据库阶段）"
+  },
+  "startupFailedBody": "在「{stage}」阶段没有完成。账目数据仍保存在本机，请不要清除应用数据或卸载应用。",
+  "@startupFailedBody": {
+    "description": "启动失败页正文",
+    "placeholders": {
+      "stage": {
+        "type": "String"
+      }
+    }
+  },
+  "startupRetry": "重试",
+  "@startupRetry": {
+    "description": "启动失败/过慢时重新初始化"
+  },
+  "startupCopyDiagnostics": "复制诊断信息",
+  "@startupCopyDiagnostics": {
+    "description": "复制启动阶段、耗时与错误，便于反馈"
+  },
+  "startupDiagnosticsCopied": "已复制",
+  "@startupDiagnosticsCopied": {
+    "description": "诊断信息复制成功"
+  },
   "tabHome": "首页",
   "@tabHome": {
     "description": "底部导航:首页"
@@ -2594,6 +2673,14 @@
   "appLogEmpty": "暂无日志记录",
   "appLogCopyAll": "复制全部",
   "appLogCopied": "已复制到剪贴板",
+  "appLogCopyRecord": "复制这条",
+  "@appLogCopyRecord": {
+    "description": "复制单条日志（含堆栈）"
+  },
+  "appLogDetails": "技术细节",
+  "@appLogDetails": {
+    "description": "展开单条日志的堆栈"
+  },
   "appLogClear": "清空日志",
   "appLogClearConfirm": "确定要清空全部日志吗？",
   "appLogCount": "共 {count} 条记录",
