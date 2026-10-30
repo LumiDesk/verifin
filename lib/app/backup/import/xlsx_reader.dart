@@ -49,7 +49,10 @@ String? _firstWorksheet(Archive archive) {
 final RegExp _siRe = RegExp(r'<si>(.*?)</si>', dotAll: true);
 final RegExp _tRe = RegExp(r'<t[^>]*>(.*?)</t>', dotAll: true);
 final RegExp _rowRe = RegExp(r'<row[^>]*>(.*?)</row>', dotAll: true);
-final RegExp _cellRe = RegExp(r'<c\b([^>]*)(?:/>|>(.*?)</c>)', dotAll: true);
+// 属性段必须惰性匹配：`<c r="I2"/>` 这类空单元格没有 `<v>`，贪婪的 `[^>]*` 会把
+// `/>` 里的 `/` 一起吞掉，转而匹配到下一格，导致整行列错位（随手记导出大量使用
+// 带样式的空单元格）。惰性匹配先尝试 `/>`，正常单元格再回退到 `>...</c>`。
+final RegExp _cellRe = RegExp(r'<c\b([^>]*?)(?:/>|>(.*?)</c>)', dotAll: true);
 final RegExp _vRe = RegExp(r'<v>(.*?)</v>', dotAll: true);
 final RegExp _isTRe = RegExp(r'<is>.*?<t[^>]*>(.*?)</t>.*?</is>', dotAll: true);
 final RegExp _tAttrRe = RegExp(r't="([^"]*)"');
