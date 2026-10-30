@@ -6,6 +6,7 @@ import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/backup/import/plan_builder.dart';
 import 'package:verifin/app/backup/import/suishouji.dart';
+import 'package:verifin/app/backup/payment_import.dart';
 import 'package:verifin/app/models.dart';
 
 String _columnLetters(int index) {
@@ -217,6 +218,21 @@ void main() {
       expect(plan.entries.any((entry) => entry.note.contains('成员A')), isFalse);
       expect(plan.entries.any((entry) => entry.note.contains('日常消费')), isFalse);
     });
+  });
+
+  test('平台注册表按 suishouji 解析，文件过滤只接受 xlsx', () {
+    final bytes = File('test/fixtures/suishouji_sample.xlsx').readAsBytesSync();
+    final plan = buildPlatformImportPlan(
+      platform: ImportPlatform.suishouji,
+      bytes: Uint8List.fromList(bytes),
+      bookId: 'book_default',
+      existingAccounts: const <Account>[],
+      existingCategories: const <Category>[],
+      now: DateTime(2026, 9, 1, 12),
+    );
+
+    expect(plan.importedCount, 7);
+    expect(ImportPlatform.suishouji.fileExtensions, <String>['xlsx']);
   });
 
   test('单行日期非法时按工作表给出逐行错误，不产生交易', () {

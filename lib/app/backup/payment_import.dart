@@ -7,6 +7,7 @@ import 'import/mint.dart';
 import 'import/plan_builder.dart';
 import 'import/qianji.dart';
 import 'import/raw_import.dart';
+import 'import/suishouji.dart';
 import 'import/tally.dart';
 import 'import/wechat.dart';
 import 'import/yimu.dart';
@@ -28,12 +29,14 @@ enum ImportPlatform {
   yimuBill,
   yimuTransfer,
   qianji,
+  suishouji,
   tally,
   csvTemplate;
 
   /// 该来源可选择的文件扩展名（用于文件选择器过滤）。
   List<String> get fileExtensions => switch (this) {
     ImportPlatform.wechat => const <String>['xlsx'],
+    ImportPlatform.suishouji => const <String>['xlsx'],
     ImportPlatform.yimuBill => const <String>['xls'],
     ImportPlatform.yimuTransfer => const <String>['xls'],
     ImportPlatform.tally => const <String>['zip'],
@@ -50,6 +53,7 @@ ParsedImport parsePlatformBytes(ImportPlatform platform, Uint8List bytes) =>
       ImportPlatform.yimuBill => parseYimuBill(bytes),
       ImportPlatform.yimuTransfer => parseYimuTransfer(bytes),
       ImportPlatform.qianji => parseQianji(bytes),
+      ImportPlatform.suishouji => parseSuishouji(bytes),
       ImportPlatform.tally => parseTally(bytes),
       ImportPlatform.csvTemplate => parseCsvTemplate(bytes),
     };

@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:anchored_menu/anchored_menu.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../app/app_theme.dart';
 import '../app/backup/backup_service.dart';
@@ -1399,6 +1400,13 @@ class _DataManagementPageState extends State<DataManagementPage> {
         assetPath: 'assets/import_icons/qianji.png',
       ),
       _PlatformOption(
+        ImportPlatform.suishouji,
+        Icons.note_alt_outlined,
+        l10n.platformSuishouji,
+        l10n.platformSuishoujiHint,
+        assetPath: 'assets/import_icons/suishouji.svg',
+      ),
+      _PlatformOption(
         ImportPlatform.tally,
         Icons.receipt_long_outlined,
         l10n.platformTally,
@@ -1537,20 +1545,28 @@ class _DataManagementPageState extends State<DataManagementPage> {
     );
   }
 
-  /// 平台选项前的图标：有品牌图标用圆角 PNG，否则回退矢量图标；统一占 32×32 方框，
-  /// 各行文字左边缘对齐。
+  /// 平台选项前的图标：有品牌图标用圆角 PNG/SVG，否则回退矢量图标；统一占 32×32
+  /// 方框，各行文字左边缘对齐。
   Widget _platformLeading(_PlatformOption item) {
-    final Widget child = item.assetPath == null
+    final assetPath = item.assetPath;
+    final Widget child = assetPath == null
         ? Icon(item.icon, size: 28)
         : ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: Image.asset(
-              item.assetPath!,
-              width: 32,
-              height: 32,
-              fit: BoxFit.cover,
-              filterQuality: FilterQuality.medium,
-            ),
+            child: assetPath.endsWith('.svg')
+                ? SvgPicture.asset(
+                    assetPath,
+                    width: 32,
+                    height: 32,
+                    fit: BoxFit.cover,
+                  )
+                : Image.asset(
+                    assetPath,
+                    width: 32,
+                    height: 32,
+                    fit: BoxFit.cover,
+                    filterQuality: FilterQuality.medium,
+                  ),
           );
     return SizedBox(width: 32, height: 32, child: Center(child: child));
   }
@@ -1564,6 +1580,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
       ImportPlatform.yimuBill => l10n.platformYimuBill,
       ImportPlatform.yimuTransfer => l10n.platformYimuTransfer,
       ImportPlatform.qianji => l10n.platformQianji,
+      ImportPlatform.suishouji => l10n.platformSuishouji,
       ImportPlatform.tally => l10n.platformTally,
       ImportPlatform.csvTemplate => l10n.platformCsvTemplate,
     };
@@ -1578,6 +1595,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
       ImportPlatform.yimuBill => l10n.yimuBillImportGuide,
       ImportPlatform.yimuTransfer => l10n.yimuTransferImportGuide,
       ImportPlatform.qianji => l10n.qianjiImportGuide,
+      ImportPlatform.suishouji => l10n.suishoujiImportGuide,
       ImportPlatform.tally => l10n.tallyImportGuide,
       ImportPlatform.csvTemplate => l10n.csvTemplateImportGuide,
     };
@@ -1946,7 +1964,7 @@ class _PlatformOption {
   final String title;
   final String subtitle;
 
-  /// 软件品牌图标资源路径；为 null 时回退到 [icon]。
+  /// 软件品牌图标资源路径（PNG/SVG）；为 null 时回退到 [icon]。
   /// 注意：这是记账/支付软件的品牌图标，与账户图标（`assets/account_icons/`）不同。
   final String? assetPath;
 }

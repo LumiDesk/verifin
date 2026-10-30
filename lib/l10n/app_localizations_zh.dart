@@ -2747,6 +2747,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get platformQianjiHint => '明细导出 CSV';
 
   @override
+  String get platformSuishouji => '随手记';
+
+  @override
+  String get platformSuishoujiHint => '账单导出（.xlsx）';
+
+  @override
   String get platformTally => 'Tally 记账';
 
   @override
@@ -2792,6 +2798,10 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get qianjiImportGuide =>
       '钱迹 App →「我的」→「设置」→「备份与导出」→「导出账单」→ 选择「CSV」格式（明细）、时间范围为「全部」，得到 QianJi 开头的 .csv 文件，保存到本机后在此选择。\n\n支出、收入、转账、信用卡还款、退款、报销都会导入：退款按「关联账单」自动冲抵原支出（净额=原额−退款），分类按二级分类还原层级、标签一并导入。钱迹的「债务 / 借贷」记录（借出、收款、利息等）不会导入——本应用没有债务功能、无法忠实表达；这类多是「垫钱再收回」的一进一出，跳过不影响你的真实收支。菜单以实际 App 版本为准。';
+
+  @override
+  String get suishoujiImportGuide =>
+      '随手记 App →「我的」→「数据导出」/「导出账单」→ 选择 Excel（.xlsx）导出，保存到本机后在此选择。\n\n同一个文件里的支出、收入、转账和退款会导入：一级/二级分类还原层级，账户保留来源币种；退款因导出没有原支出编号会按收入导入（账户余额正确，但原支出净额不冲减）；「余额变更」按正负差额记入「余额调整」。「收债 / 借出 / 还债 / 借入」等债务记录和「负债变更」不会导入——本应用没有债务功能，负债变更的方向也无法从导出确定。成员、项目、记账人不导入，商家会并入备注。账户统一建为现金账户，导入后可在资产页调整类型。菜单以实际 App 版本为准。';
 
   @override
   String get tallyImportGuide =>
