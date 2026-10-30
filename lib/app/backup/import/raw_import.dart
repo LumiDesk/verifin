@@ -30,6 +30,7 @@ class RawImportRecord {
     this.rateDate,
     this.category = '',
     this.subCategory = '',
+    this.categoryKey,
     this.account = '',
     this.toAccount = '',
     this.note = '',
@@ -71,6 +72,11 @@ class RawImportRecord {
 
   /// 二级分类名（'' = 无）；与 [category] 一起还原父子层级。
   final String subCategory;
+
+  /// 系统分类语义键（如余额调整的 `balance_adjust_income`）。非 null 时
+  /// [buildImportPlanFromRecords] 按 key 解析系统分类，不再用 [category] /
+  /// [subCategory] 建普通分类。仅用于来源明确表达「余额调整」类记录的场景。
+  final String? categoryKey;
 
   /// 账户名（'' = 无账户，只记金额不动余额）。
   final String account;
@@ -117,6 +123,7 @@ class RawImportRecord {
       rateDate: date,
       category: category,
       subCategory: subCategory,
+      categoryKey: categoryKey,
       account: account,
       toAccount: toAccount,
       note: note,
@@ -203,8 +210,10 @@ double? parseImportAmount(String raw) {
   return value;
 }
 
-/// 与 [parseImportAmount] 相同，但允许 0；供转账 `baseAmount = 0` 等可选字段使用。
-double? parseImportAmountAllowZero(String raw) {
+/// 带符号金额：去币种符号/千分位/空白后保留正负。仅供来源明确用正负表达方向
+/// （如随手记「余额变更」）的字段使用；常规收支仍走 [parseImportAmount] 取绝对值。
+/// 空、非数字或非有限值返回 null。
+double? parseImportSignedAmount(String raw) {
   final cleaned = raw
       .trim()
       .replaceAll(RegExp(r'[¥$,\s]'), '')
@@ -216,7 +225,12 @@ double? parseImportAmountAllowZero(String raw) {
   if (value == null || value.isNaN || value.isInfinite) {
     return null;
   }
-  return value.abs();
+  return value;
+}
+
+/// 与 [parseImportAmount] 相同，但允许 0；供转账 `baseAmount = 0` 等可选字段使用。
+double? parseImportAmountAllowZero(String raw) {
+  return parseImportSignedAmount(raw)?.abs();
 }
 
 /// 手续费/退款额：可空/可为 0，非法或负数按 0 处理（不像金额那样使整行失败）。

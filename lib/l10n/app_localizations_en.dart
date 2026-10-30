@@ -2806,6 +2806,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get platformQianjiHint => 'Detail export CSV';
 
   @override
+  String get platformSuishouji => 'Suishouji';
+
+  @override
+  String get platformSuishoujiHint => 'Bill export (.xlsx)';
+
+  @override
   String get platformTally => 'Tally';
 
   @override
@@ -2851,6 +2857,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get qianjiImportGuide =>
       'In Qianji (钱迹): Me → Settings → Backup & export → Export bills → choose the \"CSV\" (detail) format with the \"All\" time range. You get a .csv file starting with \"QianJi\"; save it to your phone, then choose it here.\n\nExpense, income, transfer, credit-card repayment, refund and reimbursement are all imported: refunds offset the original expense via their linked bill (net = original − refund); categories restore the two-level hierarchy and tags are imported too. Qianji\'s debt/loan records (lend, collect, interest, etc.) are NOT imported — this app has no debt feature and can\'t represent them faithfully; they are mostly \"pay then get repaid\" round-trips, so skipping them doesn\'t affect your real income/expense. Menu paths may vary by app version.';
+
+  @override
+  String get suishoujiImportGuide =>
+      'In Suishouji (随手记): Me → Data export / Export bills → choose Excel (.xlsx), save it to your phone, then choose it here.\n\nThe single workbook contains expense, income, transfer and refund sheets: first- and second-level categories keep their hierarchy, and accounts keep their source currency. Refunds have no original-expense link in the export, so they are imported as income (account balances stay correct, but the original expense is not offset); \"balance change\" rows become \"balance adjustment\" entries based on their sign. Debt sheets (collect debt, lend, repay debt, borrow) and \"liability change\" are NOT imported — this app has no debt feature, and the direction of a liability change can\'t be determined from the export. Member, project and bookkeeper fields are ignored; merchant is merged into the note. Accounts are created as cash accounts; adjust their type in Assets after import. Menu paths may vary by app version.';
 
   @override
   String get tallyImportGuide =>

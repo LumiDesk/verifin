@@ -264,6 +264,28 @@ ImportPlan buildImportPlanFromRecords({
     return resolveCategory(subLabel, type, parentId: parentId);
   }
 
+  // 解析系统分类（目前只有余额调整）：按账本与语义键复用，缺失时补建。不能走
+  // resolveCategory——系统分类的 label 可能与用户手建的「余额调整」同名，普通建分类
+  // 会撞上 (book_id,label,type,parent_id) 唯一索引；按键查建才能保持幂等并与账本
+  // 自愈落到同一条记录上。
+  String resolveSystemCategory(String key, EntryType type) {
+    final existing = workingCategories
+        .where((category) => category.bookId == bookId && category.key == key)
+        .firstOrNull;
+    if (existing != null) {
+      return existing.id;
+    }
+    final category = buildBalanceAdjustCategory(
+      nextId('category'),
+      bookId,
+      type,
+      english: seedEnglish,
+    );
+    workingCategories.add(category);
+    newCategories.add(category);
+    return category.id;
+  }
+
   // 解析标签名列表：按归一化名去空去重，复用现有同名标签、否则新建，返回标签 id 列表。
   List<String> resolveTags(List<String> labels) {
     if (labels.isEmpty) {
@@ -627,11 +649,13 @@ ImportPlan buildImportPlanFromRecords({
       addConversionIssue(record, currencyCode, '本位币金额与汇率换算结果不一致');
       continue;
     }
-    final categoryId = resolveCategoryHierarchy(
-      record.category,
-      record.subCategory,
-      record.type,
-    );
+    final categoryId = record.categoryKey == null
+        ? resolveCategoryHierarchy(
+            record.category,
+            record.subCategory,
+            record.type,
+          )
+        : resolveSystemCategory(record.categoryKey!, record.type);
     // 支出可带退款（部分/全额）：钳制在 [0, 金额]，使净额=金额−退款、退款回原账户
     // （与 App 内退款冲抵语义一致）。收入行忽略。
     final hasExplicitRefunds =
