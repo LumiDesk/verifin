@@ -119,6 +119,8 @@ class _ReportsPageState extends State<ReportsPage> {
             keyMonth: budgetKeyMonth,
             snapshots: categoryBudgetSnapshots,
           );
+        case 'category_stats':
+          return _CategoryStatsPanel(window: monthWindow);
         case 'ranking':
           return _RankingPanel(
             window: _tab == ReportPeriodTab.yearly ? yearWindow : monthWindow,
@@ -486,18 +488,10 @@ class _AssetSummaryChartState extends State<_AssetSummaryChart> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final brightness = Theme.of(context).brightness;
     final neutral = Theme.of(
       context,
     ).colorScheme.onSurface.withValues(alpha: 0.45);
-    final colors = <Color>[
-      Theme.of(context).colorScheme.primary,
-      veriSemanticFor(brightness, veriBlue),
-      veriCyan,
-      veriMint,
-      veriSemanticFor(brightness, veriWarning),
-      neutral,
-    ];
+    final colors = veriChartPalette(context);
     final limit = _showAll ? widget.holdings.length : 5;
     final visible = widget.holdings.take(limit).toList();
     final hidden = widget.holdings.skip(limit).toList();
@@ -1120,6 +1114,319 @@ class _BudgetExecutionCard extends StatelessWidget {
                     : AppLocalizations.of(context).normalLabel,
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 分类统计的展示范围：前 5 个分类 + 其他，或全部分类各自成段。
+enum _CategoryStatsRange { top5, all }
+
+const String _categoryStatsOtherKey = '__category_stats_other__';
+
+/// 一个分类环图分段。`key` 用聚合原始 key（分类 id）而不是显示对象，避免
+/// 「已删除分类」占位或分类排序变化后选中项指向别的分类。
+class _CategoryStatsSlice {
+  const _CategoryStatsSlice({
+    required this.key,
+    required this.label,
+    required this.amount,
+    required this.percent,
+    this.isOther = false,
+  });
+
+  final String key;
+  final String label;
+  final double amount;
+  final double percent;
+  final bool isOther;
+}
+
+List<_CategoryStatsSlice> _categoryStatsSlices({
+  required List<ReportCategoryStat> stats,
+  required double total,
+  required _CategoryStatsRange range,
+  required AppLocalizations l10n,
+}) {
+  if (total <= 0) {
+    return const <_CategoryStatsSlice>[];
+  }
+  _CategoryStatsSlice sliceOf(ReportCategoryStat stat) => _CategoryStatsSlice(
+    key: stat.categoryId,
+    label: stat.category.label,
+    amount: stat.amount,
+    percent: stat.amount / total,
+  );
+  if (range == _CategoryStatsRange.all || stats.length <= 5) {
+    return <_CategoryStatsSlice>[for (final stat in stats) sliceOf(stat)];
+  }
+  final otherAmount = stats
+      .skip(5)
+      .fold<double>(0, (sum, stat) => sum + stat.amount);
+  return <_CategoryStatsSlice>[
+    for (final stat in stats.take(5)) sliceOf(stat),
+    if (otherAmount > 0)
+      _CategoryStatsSlice(
+        key: _categoryStatsOtherKey,
+        label: l10n.othersLabel,
+        amount: otherAmount,
+        percent: otherAmount / total,
+        isOther: true,
+      ),
+  ];
+}
+
+/// 月统计的支出分类构成卡：默认前 5 个顶级分类 + 其他，右上角可切「前5 / 全部」。
+///
+/// 取数复用 `reportCategoryStats`：按顶级分类归总、使用已到账退款冲减后的净额，
+/// 不读取 `excludedFromBudget`——本卡与排行、月收支摘要同属「实际支出」口径，
+/// 预算执行卡才排除「不计入预算」的交易。
+class _CategoryStatsPanel extends StatefulWidget {
+  const _CategoryStatsPanel({required this.window});
+
+  final DateWindow window;
+
+  @override
+  State<_CategoryStatsPanel> createState() => _CategoryStatsPanelState();
+}
+
+class _CategoryStatsPanelState extends State<_CategoryStatsPanel> {
+  _CategoryStatsRange _range = _CategoryStatsRange.top5;
+  String? _selectedKey;
+
+  @override
+  void didUpdateWidget(covariant _CategoryStatsPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 换月份后旧分类可能已不在结果里；清掉选中，避免中心显示上个月的选择。
+    if (oldWidget.window.start != widget.window.start ||
+        oldWidget.window.end != widget.window.end) {
+      _selectedKey = null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = VeriFinScope.of(context);
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final stats = reportCategoryStats(
+      entriesInWindow(controller.entries, widget.window),
+      controller.categories,
+      EntryType.expense,
+    ).where((stat) => stat.amount > 0).toList(growable: false);
+    final total = normalizeAmount(
+      stats.fold<double>(0, (sum, stat) => sum + stat.amount),
+    );
+    final canToggle = stats.length > 5;
+    final range = canToggle ? _range : _CategoryStatsRange.top5;
+    final slices = _categoryStatsSlices(
+      stats: stats,
+      total: total,
+      range: range,
+      l10n: l10n,
+    );
+    final rawSelectedIndex = _selectedKey == null
+        ? -1
+        : slices.indexWhere((slice) => slice.key == _selectedKey);
+    final selectedIndex = rawSelectedIndex >= 0 ? rawSelectedIndex : null;
+    final selected = selectedIndex == null ? null : slices[selectedIndex];
+    final palette = veriChartPalette(context);
+    final neutral = theme.colorScheme.onSurface.withValues(alpha: 0.45);
+    final segmentColors = <Color>[
+      for (var i = 0; i < slices.length; i++)
+        slices[i].isOther ? neutral : palette[i % palette.length],
+    ];
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.56);
+
+    return VeriCard(
+      key: const Key('category_stats_card'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          SectionTitle(
+            title: l10n.panelCategoryStatsLabel,
+            trailingWidget: canToggle
+                ? VeriSegmentedControl<_CategoryStatsRange>(
+                    compact: true,
+                    values: const <_CategoryStatsRange>[
+                      _CategoryStatsRange.top5,
+                      _CategoryStatsRange.all,
+                    ],
+                    selected: range,
+                    semanticLabel: l10n.categoryStatsModeLabel,
+                    labelOf: (value) => value == _CategoryStatsRange.top5
+                        ? l10n.categoryStatsModeTop5
+                        : l10n.categoryStatsModeAll,
+                    keyOf: (value) => value == range
+                        ? Key('category_stats_range_${value.name}')
+                        : null,
+                    onChanged: (value) => setState(() {
+                      _range = value;
+                      _selectedKey = null;
+                    }),
+                  )
+                : null,
+          ),
+          const SizedBox(height: 12),
+          if (isZeroAmount(total))
+            EmptyState(
+              icon: Icons.donut_small_outlined,
+              title: l10n.noDimData(l10n.entryTypeExpense),
+              description: l10n.noDimDesc(l10n.entryTypeExpense),
+            )
+          else ...<Widget>[
+            Center(
+              child: SizedBox(
+                width: 156,
+                height: 156,
+                child: VeriDonutChart(
+                  segments: <VeriDonutSegment>[
+                    for (var i = 0; i < slices.length; i++)
+                      VeriDonutSegment(
+                        label: slices[i].label,
+                        value: slices[i].amount,
+                        color: segmentColors[i],
+                      ),
+                  ],
+                  selectedIndex: selectedIndex,
+                  onSelected: (index) => setState(() {
+                    _selectedKey = index == null ? null : slices[index].key;
+                  }),
+                  onCenterTap: () => setState(() => _selectedKey = null),
+                  ringWidth: 30,
+                  showPercentTitles: true,
+                  semanticsLabel: l10n.panelCategoryStatsLabel,
+                  center: SizedBox(
+                    width: 88,
+                    height: 88,
+                    child: Center(
+                      child: selected == null
+                          ? Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Text(
+                                  l10n.entryTypeExpense,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: muted,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                Text(
+                                  formatExpenseAmount(total),
+                                  key: const Key('category_stats_center_total'),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.labelLarge?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Text(
+                                  selected.label,
+                                  key: const Key('category_stats_center_label'),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: muted,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                Text(
+                                  formatExpenseAmount(selected.amount),
+                                  key: const Key(
+                                    'category_stats_center_amount',
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.labelLarge?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                Text(
+                                  '${(selected.percent * 100).toStringAsFixed(1)}%',
+                                  key: const Key(
+                                    'category_stats_center_percent',
+                                  ),
+                                  maxLines: 1,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: muted,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            for (var i = 0; i < slices.length; i++)
+              _CategoryStatsLegendRow(
+                color: segmentColors[i],
+                label: slices[i].label,
+                amount: slices[i].amount,
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// 分类统计图例的一行：色点 + 名称 + 金额。金额与圆环同为本位币实际支出。
+class _CategoryStatsLegendRow extends StatelessWidget {
+  const _CategoryStatsLegendRow({
+    required this.color,
+    required this.label,
+    required this.amount,
+  });
+
+  final Color color;
+  final String label;
+  final double amount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              formatExpenseAmount(amount),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.end,
+              style: Theme.of(
+                context,
+              ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),

@@ -1226,6 +1226,36 @@ abstract class AppLocalizations {
   /// **'按账户占比查看正资产或负资产'**
   String get panelAssetSummaryDesc;
 
+  /// 看板月统计面板:支出分类占比环形图
+  ///
+  /// In zh, this message translates to:
+  /// **'分类统计'**
+  String get panelCategoryStatsLabel;
+
+  /// 看板月统计面板:分类统计卡片描述
+  ///
+  /// In zh, this message translates to:
+  /// **'按顶级分类查看支出占比，可切换前5或全部'**
+  String get panelCategoryStatsDesc;
+
+  /// 分类统计:右上角前5/全部切换的无障碍标签
+  ///
+  /// In zh, this message translates to:
+  /// **'分类显示范围'**
+  String get categoryStatsModeLabel;
+
+  /// 分类统计:前5个分类加其他
+  ///
+  /// In zh, this message translates to:
+  /// **'前5'**
+  String get categoryStatsModeTop5;
+
+  /// 分类统计:展示全部分类，不合并其他
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get categoryStatsModeAll;
+
   /// 看板月统计面板:排行卡(原统计分析页排行能力迁入)
   ///
   /// In zh, this message translates to:

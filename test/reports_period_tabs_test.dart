@@ -60,7 +60,7 @@ void main() {
       scrollable: firstVerticalScrollable(),
     );
     expect(monthlyEntry, findsOneWidget);
-    expect(find.text('4个月统计面板'), findsOneWidget);
+    expect(find.text('5个月统计面板'), findsOneWidget);
   });
 
   testWidgets('日常面板：时间范围与收支口径可切换', (tester) async {

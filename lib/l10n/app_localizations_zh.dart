@@ -587,6 +587,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get panelAssetSummaryDesc => '按账户占比查看正资产或负资产';
 
   @override
+  String get panelCategoryStatsLabel => '分类统计';
+
+  @override
+  String get panelCategoryStatsDesc => '按顶级分类查看支出占比，可切换前5或全部';
+
+  @override
+  String get categoryStatsModeLabel => '分类显示范围';
+
+  @override
+  String get categoryStatsModeTop5 => '前5';
+
+  @override
+  String get categoryStatsModeAll => '全部';
+
+  @override
   String get panelRankingLabel => '分类 · 标签排行';
 
   @override

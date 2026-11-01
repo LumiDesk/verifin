@@ -42,6 +42,15 @@ void main() {
     expect(theme.colorScheme.onPrimary.a, 1);
   });
 
+  test('构成图调色盘提供 10 个不重复的分类色', () {
+    final colors = veriChartPaletteFor(veriRoyal);
+
+    expect(colors.length, 10);
+    expect(colors.toSet().length, colors.length);
+    expect(colors.first, veriRoyal);
+    expect(colors.every((color) => color.a == 1), isTrue);
+  });
+
   test('自定义主题色的明暗前景保持可读', () {
     const seed = Color(0xFFB3261E);
     final theme = buildVeriFinTheme(

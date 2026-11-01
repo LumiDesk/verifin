@@ -603,6 +603,22 @@ class AppLocalizationsEn extends AppLocalizations {
       'Positive or negative assets by account share';
 
   @override
+  String get panelCategoryStatsLabel => 'Category breakdown';
+
+  @override
+  String get panelCategoryStatsDesc =>
+      'Spending share by top-level category, with top 5 or all';
+
+  @override
+  String get categoryStatsModeLabel => 'Category display range';
+
+  @override
+  String get categoryStatsModeTop5 => 'Top 5';
+
+  @override
+  String get categoryStatsModeAll => 'All';
+
+  @override
   String get panelRankingLabel => 'Categories & tags';
 
   @override

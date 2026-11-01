@@ -38,6 +38,12 @@ const Color veriLine = Color(0xFFE1E8F1);
 const Color veriExpense = Color(0xFFE84D6A);
 const Color veriIncome = Color(0xFF12B8A6);
 const Color veriWarning = Color(0xFFFFB33E);
+// 构成图（分类 / 账户占比）的分类色。前 5 色沿用资产汇总原配色，后 4 色用于
+// 展开更多分类；它们只表达「彼此不同的类别」，不承载收入 / 支出等语义。
+const Color veriChartOrange = Color(0xFFE8894A);
+const Color veriChartPink = Color(0xFFE36A9A);
+const Color veriChartViolet = Color(0xFF9B7BE8);
+const Color veriChartSlate = Color(0xFF8C99A8);
 // 浅色底语义色变体。上面的亮色在白底上对比度不足（veriIncome 2.49:1、veriWarning 1.78:1、
 // veriBlue 3.15:1、veriExpense 3.68:1，均低于正文级 AA 要求的 4.5:1）。以下变体保持原色相、
 // 只压暗明度，在 #FFFFFF 与 #F3F5F8 上均 ≥ 4.5:1。深色主题继续用亮色。
@@ -64,6 +70,31 @@ Color veriSemanticFor(Brightness brightness, Color semanticColor) {
     _ => semanticColor,
   };
 }
+
+const List<Color> _veriChartPaletteTail = <Color>[
+  veriBlue,
+  veriCyan,
+  veriMint,
+  veriWarning,
+  veriChartOrange,
+  veriChartPink,
+  veriChartViolet,
+  veriIndigo,
+  veriChartSlate,
+];
+
+/// 构成图（分类 / 账户占比）的 10 色分类调色盘。
+///
+/// 首色跟随用户主题色，其余固定；前 5 色保留资产汇总原有的视觉顺序，后 5 色
+/// 只在展开更多类别时出现。「其他」不占用分类色，始终由调用方使用中性色。
+List<Color> veriChartPaletteFor(Color primary) => <Color>[
+  primary,
+  ..._veriChartPaletteTail,
+];
+
+/// [veriChartPaletteFor] 的主题入口；分类图与资产汇总共用同一套顺序。
+List<Color> veriChartPalette(BuildContext context) =>
+    veriChartPaletteFor(Theme.of(context).colorScheme.primary);
 
 const Color veriSurfaceLight = Color(0xFFFFFFFF);
 const Color veriSurfaceDark = Color(0xFF0E1117);

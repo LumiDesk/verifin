@@ -334,6 +334,8 @@ class PagePanelSpec {
         return l10n.calendarTitle;
       case 'budget_execution':
         return l10n.panelBudgetExecutionLabel;
+      case 'category_stats':
+        return l10n.panelCategoryStatsLabel;
       case 'summary':
         return l10n.panelSummaryLabel;
       case 'daily_trend':
@@ -366,6 +368,8 @@ class PagePanelSpec {
         return l10n.panelCalendarDesc;
       case 'budget_execution':
         return l10n.panelBudgetExecutionDesc;
+      case 'category_stats':
+        return l10n.panelCategoryStatsDesc;
       case 'summary':
         return l10n.panelSummaryDesc;
       case 'daily_trend':
@@ -399,6 +403,7 @@ const List<PagePanelSpec> homePanelSpecs = <PagePanelSpec>[
 const List<PagePanelSpec> reportMonthlyPanelSpecs = <PagePanelSpec>[
   PagePanelSpec(id: 'summary'),
   PagePanelSpec(id: 'budget_execution'),
+  PagePanelSpec(id: 'category_stats'),
   PagePanelSpec(id: 'ranking'),
   PagePanelSpec(id: 'daily_trend'),
 ];

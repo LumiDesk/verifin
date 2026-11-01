@@ -418,6 +418,26 @@
   "@panelAssetSummaryDesc": {
     "description": "看板日常面板:资产汇总卡片描述"
   },
+  "panelCategoryStatsLabel": "分类统计",
+  "@panelCategoryStatsLabel": {
+    "description": "看板月统计面板:支出分类占比环形图"
+  },
+  "panelCategoryStatsDesc": "按顶级分类查看支出占比，可切换前5或全部",
+  "@panelCategoryStatsDesc": {
+    "description": "看板月统计面板:分类统计卡片描述"
+  },
+  "categoryStatsModeLabel": "分类显示范围",
+  "@categoryStatsModeLabel": {
+    "description": "分类统计:右上角前5/全部切换的无障碍标签"
+  },
+  "categoryStatsModeTop5": "前5",
+  "@categoryStatsModeTop5": {
+    "description": "分类统计:前5个分类加其他"
+  },
+  "categoryStatsModeAll": "全部",
+  "@categoryStatsModeAll": {
+    "description": "分类统计:展示全部分类，不合并其他"
+  },
   "panelRankingLabel": "分类 · 标签排行",
   "@panelRankingLabel": {
     "description": "看板月统计面板:排行卡(原统计分析页排行能力迁入)"
