@@ -82,6 +82,16 @@ void main() {
     expect(inCategoryCard(find.text('餐饮')), findsOneWidget);
     expect(inCategoryCard(find.text('咖啡')), findsNothing);
     expect(inCategoryCard(find.text('交通')), findsOneWidget);
+
+    // 图例金额必须贴卡片内容右缘，而不是停在行中间。
+    // VeriCard 默认横向内边距 14，内容右缘 = 卡片右缘 - 14。
+    final cardRect = tester.getRect(card);
+    final legendAmountRect = tester.getRect(inCategoryCard(find.text('60')));
+    expect(
+      legendAmountRect.right,
+      moreOrLessEquals(cardRect.right - 14, epsilon: 1),
+    );
+
     // 只有两个分类，没有可切换的「其他」范围。
     expect(find.byKey(const Key('category_stats_range_top5')), findsNothing);
     expect(inCategoryCard(find.text('前5')), findsNothing);

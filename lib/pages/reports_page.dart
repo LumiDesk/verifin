@@ -1418,6 +1418,9 @@ class _CategoryStatsLegendRow extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Flexible(
+            // 紧约束占满右侧槽位，textAlign:end 才会把数字推到卡片内容右缘；
+            // 只用宽松 Flexible 时 Text 会缩回自身宽度，数字停在行中间。
+            fit: FlexFit.tight,
             child: Text(
               formatExpenseAmount(amount),
               maxLines: 1,

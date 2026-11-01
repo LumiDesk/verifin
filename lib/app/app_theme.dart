@@ -83,13 +83,35 @@ const List<Color> _veriChartPaletteTail = <Color>[
   veriChartSlate,
 ];
 
+/// 把分类色统一压到深色档（相对亮度约 0.22）。
+///
+/// 分类盘里的青、薄荷、黄等原色亮度差异很大；只按 HSL 明度压暗仍会让黄绿比
+/// 蓝紫亮一大截，导致环内文字一会儿黑一会儿白。这里按实际相对亮度做二分，
+/// 让 10 个颜色落在同一档，统一使用白字，浅色 / 深色主题下都不再翻转。
+Color _veriChartTone(Color color) {
+  final hsl = HSLColor.fromColor(color);
+  var low = 0.0;
+  var high = 1.0;
+  for (var i = 0; i < 24; i++) {
+    final mid = (low + high) / 2;
+    final luminance = hsl.withLightness(mid).toColor().computeLuminance();
+    if (luminance < 0.22) {
+      low = mid;
+    } else {
+      high = mid;
+    }
+  }
+  return hsl.withLightness((low + high) / 2).toColor();
+}
+
 /// 构成图（分类 / 账户占比）的 10 色分类调色盘。
 ///
-/// 首色跟随用户主题色，其余固定；前 5 色保留资产汇总原有的视觉顺序，后 5 色
-/// 只在展开更多类别时出现。「其他」不占用分类色，始终由调用方使用中性色。
+/// 首色取用户主题主色的同色相并压到统一深色档，其余固定；前 5 色保留资产汇总
+/// 原有的视觉顺序，后 5 色只在展开更多类别时出现。「其他」不占用分类色，始终
+/// 由调用方使用中性色。
 List<Color> veriChartPaletteFor(Color primary) => <Color>[
-  primary,
-  ..._veriChartPaletteTail,
+  _veriChartTone(primary),
+  for (final color in _veriChartPaletteTail) _veriChartTone(color),
 ];
 
 /// [veriChartPaletteFor] 的主题入口；分类图与资产汇总共用同一套顺序。

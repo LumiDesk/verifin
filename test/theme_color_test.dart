@@ -42,13 +42,21 @@ void main() {
     expect(theme.colorScheme.onPrimary.a, 1);
   });
 
-  test('构成图调色盘提供 10 个不重复的分类色', () {
+  test('构成图调色盘统一为深色档并固定白字', () {
     final colors = veriChartPaletteFor(veriRoyal);
 
     expect(colors.length, 10);
     expect(colors.toSet().length, colors.length);
-    expect(colors.first, veriRoyal);
     expect(colors.every((color) => color.a == 1), isTrue);
+    // 所有分类色的相对亮度都压在 0.22 附近：白字可读，且不会出现深浅混排。
+    for (final color in colors) {
+      expect(color.computeLuminance(), inInclusiveRange(0.18, 0.27));
+      expect(
+        ThemeData.estimateBrightnessForColor(color),
+        Brightness.dark,
+        reason: '分类色应为深色档，环内统一使用白字',
+      );
+    }
   });
 
   test('自定义主题色的明暗前景保持可读', () {

@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart' show listEquals, setEquals;
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
-import 'app_theme.dart';
 
 /// 图表气泡内容模型。适配层负责把外部图表库的触摸回调映射到这里。
 class ChartTooltip {
@@ -929,21 +928,6 @@ class _InteractiveBarChartState extends State<InteractiveBarChart> {
   }
 }
 
-/// 环内百分比文字的前景色：分类盘同时包含亮青、亮黄等浅色段，固定白字会在
-/// 这些分段上失去对比度，因此按分段明度选择深 / 浅前景。
-TextStyle _donutTitleStyleFor(Color color) {
-  final useDarkText =
-      ThemeData.estimateBrightnessForColor(color) == Brightness.light;
-  return TextStyle(
-    color: useDarkText ? veriInk : Colors.white,
-    fontSize: 10,
-    fontWeight: FontWeight.w800,
-    shadows: useDarkText
-        ? null
-        : const <Shadow>[Shadow(color: Color(0x40000000), blurRadius: 2)],
-  );
-}
-
 /// 环形图数据段。
 class VeriDonutSegment {
   const VeriDonutSegment({
@@ -1025,7 +1009,14 @@ class VeriDonutChart extends StatelessWidget {
                   title: totalValue > 0
                       ? '${(segments[i].value / totalValue * 100).round()}%'
                       : '',
-                  titleStyle: _donutTitleStyleFor(segments[i].color),
+                  titleStyle: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    shadows: <Shadow>[
+                      Shadow(color: Color(0x40000000), blurRadius: 2),
+                    ],
+                  ),
                   cornerRadius: ringWidth * 0.32,
                 ),
             ],
