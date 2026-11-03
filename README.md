@@ -104,13 +104,13 @@ flutter analyze && flutter test
 
 ## Star History
 
-<div align="center">
-
-<a href="https://star-history.com/#LumiDesk/verifin&Date">
-  <img src="https://api.star-history.com/svg?repos=LumiDesk/verifin&type=Date" alt="Veri Fin Star History" width="720" />
+<a href="https://www.star-history.com/?type=date&repos=LumiDesk%2Fverifin">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=LumiDesk/verifin&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=LumiDesk/verifin&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=LumiDesk/verifin&type=date&legend=top-left" />
+ </picture>
 </a>
-
-</div>
 
 ## 支持项目
 
