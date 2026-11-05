@@ -208,7 +208,7 @@ dart run scripts/widget_previews.dart
 3. 提交 CHANGELOG 变更，确认当前分支是 `main` 且工作树完全干净。
 4. 运行发布脚本，参数可取 `patch`、`minor`、`major` 或显式版本号（如 `1.2.3`）：`dart run scripts/publish.dart patch`。脚本会再次校验「本机 Flutter 版本 == CI 固定版本」，不一致直接失败（analyzer 的 lint 集合随版本变化，本地绿不代表 CI 绿）；`--dry-run` 只打印将要执行的步骤。
 5. 脚本更新 `pubspec.yaml` 与 `lib/app/app_version.dart`，执行格式化、依赖安装、analyze、test，创建 `chore: release vX.Y.Z` 提交、标签并推送；推送标签触发 CI 构建 APK/AAB 并创建 GitHub **预发布**（不标记 Latest）。
-6. 下载 CI 生成的预发布 APK 真机验收；通过后在 GitHub 上把该 Release **提升为正式版并标记 Latest**（`prerelease` 去掉）。
+6. 下载 CI 生成的预发布 APK 真机验收；通过后在 GitHub 上把该 Release **提升为正式版并标记 Latest**（`prerelease` 去掉），同时用 `--notes-file` 重写说明：删掉开头的「⚠️ 预发布（待验证）」与结尾「仍为预发布」两段，保留版本内容与覆盖安装提示。
 7. 清理没被提升的预发布（见下）。
 
 **Release 标题与说明（规范）：**
@@ -216,7 +216,7 @@ dart run scripts/widget_previews.dart
 - **标题固定等于标签名**：`vX.Y.Z`，不加中文摘要等后缀。CI 建预发布时使用标签名，提升为正式版时不再改标题。
 - **说明正文由 `CHANGELOG.md` 的对应版本段落自动生成**，模板在 `.github/workflows/flutter.yml` 的 `Compose release notes` 步骤里，只补固定文案：预发布时期的验收提示、「直接覆盖安装 + 更新前先备份」提示。
 - **不写安装包自身的说明**：架构 / ABI / 体积 / 机型限制属于构建与分发口径，只记在 `README.md` 与 `docs/dev/tech-decisions.md`，不进 Release 说明。
-- 提升为正式版：`gh release edit vX.Y.Z --prerelease=false --latest`（不动 git 标签与附件），完成后回读 `gh release view` / `gh release list` 确认 `isPrerelease=false` 且 Latest 已指向它。
+- 提升为正式版：`gh release edit vX.Y.Z --prerelease=false --latest`（不动 git 标签与附件），再用 `--notes-file` 去掉说明里仅适用于预发布的两段（开头的验收提示与结尾的「仍为预发布」说明）；完成后回读 `gh release view` / `gh release list` 确认 `isPrerelease=false`、Latest 已指向它，且说明里不再出现「预发布」。
 
 ### 版本归档与预发布清理
 
