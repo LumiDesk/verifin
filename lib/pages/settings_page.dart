@@ -495,24 +495,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 VeriCard(
                   child: Column(
                     children: <Widget>[
-                      // 检查更新只在 GitHub 自分发版提供；Play 版由商店负责更新
-                      // （见 build_config.dart）。
-                      if (kUpdateCheckEnabled)
-                        SettingsRow(
-                          icon: Icons.system_update_alt_outlined,
-                          title: AppLocalizations.of(context).checkUpdate,
-                          trailing: _checkingUpdate
-                              ? AppLocalizations.of(context).checkingLabel
-                              : 'GitHub Release',
-                          trailingIcon: _checkingUpdate
-                              ? null
-                              : Icons.chevron_right,
-                          onTap: _checkingUpdate ? null : _checkForUpdate,
-                        ),
                       for (final entry
                           in LegalDocument.values.indexed) ...<Widget>[
-                        if (kUpdateCheckEnabled || entry.$1 > 0)
-                          const Divider(height: 1),
+                        if (entry.$1 > 0) const Divider(height: 1),
                         SettingsRow(
                           icon: entry.$2 == LegalDocument.privacyPolicy
                               ? Icons.privacy_tip_outlined
@@ -545,6 +530,42 @@ class _SettingsPageState extends State<SettingsPage> {
                             ),
                           );
                         },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _sectionLabel(
+                  context,
+                  AppLocalizations.of(context).settingsSectionMore,
+                ),
+                VeriCard(
+                  child: Column(
+                    children: <Widget>[
+                      // 检查更新只在 GitHub 自分发版提供；Play 版由商店负责更新
+                      // （见 build_config.dart）。
+                      if (kUpdateCheckEnabled) ...<Widget>[
+                        SettingsRow(
+                          icon: Icons.system_update_alt_outlined,
+                          title: AppLocalizations.of(context).checkUpdate,
+                          trailing: _checkingUpdate
+                              ? AppLocalizations.of(context).checkingLabel
+                              : 'GitHub Release',
+                          trailingIcon: _checkingUpdate
+                              ? null
+                              : Icons.chevron_right,
+                          onTap: _checkingUpdate ? null : _checkForUpdate,
+                        ),
+                        const Divider(height: 1),
+                      ],
+                      SettingsRow(
+                        icon: Icons.code_rounded,
+                        title: AppLocalizations.of(
+                          context,
+                        ).githubRepositoryLabel,
+                        trailing: 'LumiDesk/verifin',
+                        trailingIcon: Icons.chevron_right,
+                        onTap: _openGitHubRepository,
                       ),
                     ],
                   ),
@@ -729,6 +750,24 @@ class _SettingsPageState extends State<SettingsPage> {
           );
         }
     }
+  }
+
+  /// 用系统浏览器打开项目仓库主页（源码、Issue 与更新记录都在那里）。
+  Future<void> _openGitHubRepository() async {
+    final opened = await ExternalLinks.openVerifinRepository();
+    if (opened || !mounted) {
+      return;
+    }
+    VeriFinScope.of(context).logger?.warning(
+      'Failed to open the GitHub repository',
+      source: 'settings',
+    );
+    unawaited(
+      VeriFeedbackHost.of(context).showMessage(
+        message: AppLocalizations.of(context).openLinkFailed,
+        tone: VeriFeedbackTone.error,
+      ),
+    );
   }
 
   static Widget _sectionLabel(BuildContext context, String text) {

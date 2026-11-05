@@ -54,7 +54,13 @@ void main() {
 
     final card = find.byKey(const Key('veri_feedback_card_0'));
     final icon = find.byKey(const Key('veri_feedback_icon_0'));
-    expect(tester.getSize(card), const Size(208, 48));
+    final message = find.byKey(const Key('veri_feedback_message_0'));
+    final cardSize = tester.getSize(card);
+    // 宽度贴合正文：正文实测 + 图标 / 关闭按钮 / 内边距（10+28+8+32+6），
+    // 不再套 208dp 的固定下限。
+    expect(cardSize.width, closeTo(tester.getSize(message).width + 84, 2));
+    expect(cardSize.width, lessThan(208));
+    expect(cardSize.height, 48);
     expect(
       tester.getRect(icon).center.dy,
       closeTo(tester.getRect(card).center.dy, 0.1),
@@ -111,9 +117,16 @@ void main() {
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 240));
+    final cardWidth = tester
+        .getSize(find.byKey(const Key('veri_feedback_card_0')))
+        .width;
+    // 有操作按钮时同样按内容测量，不再固定 252dp；正文与操作文字都必须可见。
+    expect(cardWidth, lessThan(252));
     expect(
-      tester.getSize(find.byKey(const Key('veri_feedback_card_0'))).width,
-      252,
+      cardWidth,
+      greaterThan(
+        tester.getSize(find.byKey(const Key('veri_feedback_message_0'))).width,
+      ),
     );
 
     await tester.tap(find.byKey(const Key('veri_feedback_action_0')));

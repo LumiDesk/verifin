@@ -2552,6 +2552,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsSectionAbout => '关于';
 
   @override
+  String get settingsSectionMore => '更多';
+
+  @override
   String get creditsTitle => '鸣谢';
 
   @override
@@ -2672,6 +2675,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get checkUpdate => '检查更新';
+
+  @override
+  String get githubRepositoryLabel => 'GitHub 仓库';
 
   @override
   String get viewLabel => '查看';

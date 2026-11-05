@@ -790,20 +790,20 @@ class _VeriFeedbackCardState extends State<_VeriFeedbackCard>
       textScaler: textScaler,
     )..layout();
 
-    // 卡片宽度由实际字形测量决定；只保留视觉下限和屏幕安全边距。
+    // 卡片宽度由实际字形测量决定：短提示贴合正文，长提示到屏幕安全边距为止。
     const horizontalChrome = 10.0 + 28.0 + 8.0 + 32.0 + 6.0;
     final actionWidth = request.actionLabel == null
         ? 0.0
         : 4.0 + actionPainter.width + 16.0;
-    final naturalWidth = messagePainter.width + horizontalChrome + actionWidth;
+    // 向上取整，避免字形测量与布局的亚像素差把单行文案挤成省略号。
+    final naturalWidth = (messagePainter.width + horizontalChrome + actionWidth)
+        .ceilToDouble();
     final viewportWidth = MediaQuery.sizeOf(context).width;
     final maxWidth = math.min(360.0, math.max(0.0, viewportWidth - 28.0));
-    final preferredMinWidth = request.actionLabel == null ? 208.0 : 252.0;
-    final minWidth = math.min(preferredMinWidth, maxWidth);
 
     messagePainter.dispose();
     actionPainter.dispose();
-    return naturalWidth.clamp(minWidth, maxWidth).toDouble();
+    return math.min(naturalWidth, maxWidth);
   }
 }
 

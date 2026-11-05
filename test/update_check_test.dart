@@ -10,7 +10,7 @@ import 'package:verifin/app/update/update_check.dart';
 
 import 'support/test_harness.dart';
 
-/// 从「我的」进设置页，并滚到「关于」组的检查更新行。
+/// 从「我的」进设置页，并滚到「更多」分组的检查更新行。
 Future<void> _openSettings(WidgetTester tester) async {
   await tapBottomTab(tester, 3);
   await tester.tap(find.byIcon(Icons.settings_outlined));

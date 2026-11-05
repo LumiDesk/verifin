@@ -22,12 +22,20 @@ class ExternalLinks {
   static const String verifinReleasesUrl =
       'https://github.com/LumiDesk/verifin/releases';
 
+  /// Veri Fin 的 GitHub 仓库主页（源码、Issue 与更新记录）。
+  static const String verifinRepositoryUrl =
+      'https://github.com/LumiDesk/verifin';
+
   /// 测试注入点：替换真正打开浏览器的动作，返回是否成功。
   @visibleForTesting
   static Future<bool> Function(Uri url)? debugOpener;
 
   /// 打开赞助主页，返回是否真的把链接交给了浏览器。
   static Future<bool> openDonation() => open(Uri.parse(donationUrl));
+
+  /// 打开 GitHub 仓库主页，返回是否真的把链接交给了浏览器。
+  static Future<bool> openVerifinRepository() =>
+      open(Uri.parse(verifinRepositoryUrl));
 
   /// 打开指定 tag 的 Release 页面，返回是否真的把链接交给了浏览器。
   ///

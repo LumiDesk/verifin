@@ -4664,6 +4664,12 @@ abstract class AppLocalizations {
   /// **'关于'**
   String get settingsSectionAbout;
 
+  /// No description provided for @settingsSectionMore.
+  ///
+  /// In zh, this message translates to:
+  /// **'更多'**
+  String get settingsSectionMore;
+
   /// No description provided for @creditsTitle.
   ///
   /// In zh, this message translates to:
@@ -4891,6 +4897,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'检查更新'**
   String get checkUpdate;
+
+  /// No description provided for @githubRepositoryLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'GitHub 仓库'**
+  String get githubRepositoryLabel;
 
   /// No description provided for @viewLabel.
   ///

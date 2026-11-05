@@ -2606,6 +2606,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSectionAbout => 'About';
 
   @override
+  String get settingsSectionMore => 'More';
+
+  @override
   String get creditsTitle => 'Credits';
 
   @override
@@ -2730,6 +2733,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get checkUpdate => 'Check for updates';
+
+  @override
+  String get githubRepositoryLabel => 'GitHub repository';
 
   @override
   String get viewLabel => 'View';
