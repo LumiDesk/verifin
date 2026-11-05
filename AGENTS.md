@@ -183,7 +183,7 @@ dart run scripts/widget_previews.dart
 ### 日常开发
 
 - 日常调试使用独立 `diagnostic` flavor 运行正式入口做 hot reload，避免覆盖用户账目；`diagnostic` 使用独立 applicationId 与正式数据隔离，可以运行 `lib/main.dart` 或最小绘制入口，但**不是交付物**。
-- 验证 GitHub 渠道、自更新或正式包外观时使用 `--flavor github`；验证 Play 渠道时使用 `--flavor play --dart-define=SELF_UPDATE=false`。所有构建都显式带 flavor。桌面 widget 测试不能替代 Android 原生能力、生命周期和性能验收。
+- 验证 GitHub 渠道、检查更新或正式包外观时使用 `--flavor github`；验证 Play 渠道时使用 `--flavor play --dart-define=UPDATE_CHECK=false`。所有构建都显式带 flavor。桌面 widget 测试不能替代 Android 原生能力、生命周期和性能验收。
 - 不再维护 Web 预览、WASM 或浏览器测试；不要创建独立演示 UI。布局测试保留 393×852 与窄屏尺寸；视觉迭代保留首页预算圆环、支出/剩余日均、概览指标方块和“我的”四列宫格。
 - 手机开发前先按 `docs/dev/android-development.md` 检测 Flutter（与 CI 固定版本一致）、Java、Android SDK、adb 与 `local.properties`。缺工具时优先复用已安装版本；**需要安装或升级会改动现有 SDK/JDK/PATH 的，先说明影响并取得用户同意**，安装后复检。权限、下载或手机授权实际受阻时才请求用户处理。
 - **Android 构建的 NDK/CMake 前置**：Flutter 3.47 的 Gradle 插件会强制使用 NDK `28.2.13676358`；AGP 9 默认使用 CMake `3.22.1`。构建前确认 `<android-sdk>/ndk/28.2.13676358/source.properties` 与 `<android-sdk>/cmake/3.22.1/bin/cmake.exe` 存在。`cmdline-tools` 23 已弃用 `sdkmanager`，不要依赖 Flutter 的自动 NDK 安装；用 Android Studio SDK Manager 或 `android sdk install` 安装。
@@ -195,9 +195,9 @@ dart run scripts/widget_previews.dart
 - `.github/workflows/ci.yml` 在每次 push 到 `main` 时执行格式检查、analyze、全量测试和 `github` flavor Android debug APK 编译门禁；该 APK 只用于提前发现 Kotlin/Manifest/原生桥编译错误，不作为交付物。
 - `.github/workflows/flutter.yml` 只在推送 `vX.Y.Z` 标签时触发发布构建：
   - GitHub 自分发：arm64-v8a APK，`--flavor github --split-per-abi`；必须保持 `force-version-code-ignoring-abi=true`，否则 ABI 版本号偏移会破坏 GitHub / Play 渠道间的覆盖升级。
-  - Google Play：AAB，`--flavor play --dart-define=SELF_UPDATE=false`。
+  - Google Play：AAB，`--flavor play --dart-define=UPDATE_CHECK=false`。
 - 两种 release 都开启 R8 代码压缩与资源裁剪。新增依赖若使用反射，必须同步检查 `android/app/proguard-rules.pro`；OCR、通知等问题可能只在 release/R8 下暴露。
-- `play` flavor 移除 `REQUEST_INSTALL_PACKAGES` 和 `USE_EXACT_ALARM`，保留可申请的 `SCHEDULE_EXACT_ALARM` 并在无授权时回退；自更新入口通过 `kSelfUpdateEnabled` 隐藏。渠道差异放在 flavor Manifest 或构建开关中表达。
+- `play` flavor 移除 `USE_EXACT_ALARM`，保留可申请的 `SCHEDULE_EXACT_ALARM` 并在无授权时回退；检查更新入口通过 `kUpdateCheckEnabled` 隐藏（GitHub flavor 保留：只查询版本并跳转 Release 页面，应用内不下载、不安装 APK，不申请安装未知应用权限）。渠道差异放在 flavor Manifest 或构建开关中表达。
 - CI 创建 GitHub **预发布**且不标记 Latest；真机验收通过后再由维护者手动提升为正式版。Release 使用项目内稳定 keystore；不要替换、重生成或泄露签名材料。
 
 **发版必须得到用户明确授权。** 打标签会推送远端并触发 CI，不能自行执行。实际顺序如下：

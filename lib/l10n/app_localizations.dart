@@ -4694,11 +4694,11 @@ abstract class AppLocalizations {
   /// **'在爱发电支持 Veri Fin'**
   String get creditsSupportAction;
 
-  /// No description provided for @creditsOpenFailed.
+  /// No description provided for @openLinkFailed.
   ///
   /// In zh, this message translates to:
   /// **'没能打开浏览器，请稍后再试。'**
-  String get creditsOpenFailed;
+  String get openLinkFailed;
 
   /// No description provided for @themeMode.
   ///
@@ -6944,29 +6944,11 @@ abstract class AppLocalizations {
   /// **'确认初始化'**
   String get resetConfirmAction;
 
-  /// No description provided for @currentVersion.
-  ///
-  /// In zh, this message translates to:
-  /// **'当前版本'**
-  String get currentVersion;
-
-  /// No description provided for @latestVersion.
-  ///
-  /// In zh, this message translates to:
-  /// **'最新版本'**
-  String get latestVersion;
-
   /// No description provided for @checkingLabel.
   ///
   /// In zh, this message translates to:
   /// **'检查中...'**
   String get checkingLabel;
-
-  /// No description provided for @queryingGithub.
-  ///
-  /// In zh, this message translates to:
-  /// **'正在查询 GitHub Release...'**
-  String get queryingGithub;
 
   /// No description provided for @updateCheckFailed.
   ///
@@ -6974,89 +6956,35 @@ abstract class AppLocalizations {
   /// **'检查更新失败，请稍后再试。'**
   String get updateCheckFailed;
 
-  /// No description provided for @downloadingPercent.
+  /// No description provided for @updateAvailableTitle.
   ///
   /// In zh, this message translates to:
-  /// **'下载中 {percent}%'**
-  String downloadingPercent(int percent);
+  /// **'发现新版本'**
+  String get updateAvailableTitle;
 
-  /// No description provided for @downloadingLabel.
+  /// No description provided for @updateAvailableMessage.
   ///
   /// In zh, this message translates to:
-  /// **'正在下载...'**
-  String get downloadingLabel;
+  /// **'当前版本：v{current}\n最新版本：v{latest}'**
+  String updateAvailableMessage(String current, String latest);
+
+  /// No description provided for @updateUpToDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'已是最新版本'**
+  String get updateUpToDate;
+
+  /// No description provided for @updateOpenRelease.
+  ///
+  /// In zh, this message translates to:
+  /// **'前往'**
+  String get updateOpenRelease;
 
   /// No description provided for @closeLabel.
   ///
   /// In zh, this message translates to:
   /// **'关闭'**
   String get closeLabel;
-
-  /// No description provided for @retryLabel.
-  ///
-  /// In zh, this message translates to:
-  /// **'重试'**
-  String get retryLabel;
-
-  /// No description provided for @downloadingShort.
-  ///
-  /// In zh, this message translates to:
-  /// **'下载中'**
-  String get downloadingShort;
-
-  /// No description provided for @continueDownload.
-  ///
-  /// In zh, this message translates to:
-  /// **'继续下载'**
-  String get continueDownload;
-
-  /// No description provided for @downloadPausedPercent.
-  ///
-  /// In zh, this message translates to:
-  /// **'已保留 {percent}% · 等待继续'**
-  String downloadPausedPercent(int percent);
-
-  /// No description provided for @downloadNewVersion.
-  ///
-  /// In zh, this message translates to:
-  /// **'下载新版本'**
-  String get downloadNewVersion;
-
-  /// No description provided for @installNow.
-  ///
-  /// In zh, this message translates to:
-  /// **'立即安装'**
-  String get installNow;
-
-  /// No description provided for @includePrereleaseLabel.
-  ///
-  /// In zh, this message translates to:
-  /// **'包含预发布版本（Beta）'**
-  String get includePrereleaseLabel;
-
-  /// No description provided for @prereleaseNoticeInline.
-  ///
-  /// In zh, this message translates to:
-  /// **'这是预发布（测试）版本，可能存在不稳定或缺陷。'**
-  String get prereleaseNoticeInline;
-
-  /// No description provided for @prereleaseWarningTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'下载预发布版本？'**
-  String get prereleaseWarningTitle;
-
-  /// No description provided for @prereleaseWarningMessage.
-  ///
-  /// In zh, this message translates to:
-  /// **'预发布版本可能存在不稳定、功能缺陷或数据异常等问题，建议仅在了解风险时使用。确定继续下载并安装吗？'**
-  String get prereleaseWarningMessage;
-
-  /// No description provided for @prereleaseDownloadAnyway.
-  ///
-  /// In zh, this message translates to:
-  /// **'仍要下载'**
-  String get prereleaseDownloadAnyway;
 
   /// No description provided for @backupFreqManual.
   ///

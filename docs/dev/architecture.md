@@ -19,6 +19,7 @@ Controller 经 repository 写库。`VeriFinController.create()` 是生产初始�
 | 导入、备份 | `lib/app/backup/import/`、`lib/app/backup/`；只在预览确认后落库，字节格式仅由 BackupService 编解码 |
 | 图片附件 | `lib/app/attachments/attachment_store.dart` 是字节唯一入口（文件存储、暂存、孤儿回收、迁移期物化）；SQLite 只存元数据；`image_picker_cleanup_io.dart` 只删除选择器缓存副本；[设计](attachment-storage-and-backup.md) |
 | AI | `lib/app/ai/`：`ai_chat_session_controller.dart` 管页面内会话，`ai_ledger_snapshot.dart` 冻结账本/余额/预算，`ai_agent_engine.dart` 管协议轮次，`ai_query_tool.dart` 注册只读工具；[渠道预设与模型发现](ai-provider-presets.md)、[只读查询工具](ai-tools.md)、[截图识别与外部采集](auto-capture.md) |
+| 应用内更新检查 | `lib/app/update/update_check.dart`：用户手点「检查更新」时只读 GitHub Release 最新正式版版本号并比较，设置页弹窗跳转系统浏览器；应用内不下载、不安装 APK |
 | Android 系统能力 | `platform_bridge*.dart`、`android/`；单一 MethodChannel 分发，真实权限与冷启动验收；`AppLockPreferences.kt` 在 Flutter 启动前读取锁状态，`availableBytes` 为备份解包提供 `StatFs` 空间预检；[桌面小组件](home-widgets.md) |
 | 国际化 | `lib/l10n/*.arb` 与 gen-l10n 输出；[国际化验收](i18n-verification.md) |
 | 本地调试、发布 | [Android 开发](android-development.md)、`scripts/*.dart`（`dart run scripts/doctor.dart` 环境自检、`publish.dart` 发版、`prune_prereleases.dart` 清理预发布、`clean.dart` 清构建产物） |

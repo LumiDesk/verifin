@@ -1,11 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <!-- Google Play 版：移除 REQUEST_INSTALL_PACKAGES。
-         Play 负责应用更新，政策禁止应用自行下载 APK 更新；应用内自更新入口由构建参数
-         SELF_UPDATE=false（dart-define）一并隐藏，见 lib/app/build_config.dart。 -->
-    <uses-permission
-        android:name="android.permission.REQUEST_INSTALL_PACKAGES"
-        tools:node="remove" />
+    <!-- Google Play 版：隐藏应用内「检查更新」入口（Play 负责更新，也不允许引导用户
+         到站外下载）。由构建参数 UPDATE_CHECK=false（dart-define）关闭，
+         见 lib/app/build_config.dart。 -->
     <!-- Google Play 仅允许「闹钟/日历」类应用使用 USE_EXACT_ALARM，记账应用不符合，
          故 Play 版移除。记账提醒改由 SCHEDULE_EXACT_ALARM（用户可授权的精确闹钟，Play
          允许）驱动，未授权时代码自动回退 inexact；GitHub 版仍保留 USE_EXACT_ALARM。 -->

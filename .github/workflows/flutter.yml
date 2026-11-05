@@ -71,7 +71,7 @@ jobs:
         run: flutter test test/design_consistency_test.dart test/page_smoke_test.dart test/home_density_test.dart test/anchored_menu_test.dart test/material_stability_test.dart test/navigation_settings_test.dart
 
       - name: Build release APK (github flavor)
-        # GitHub 自分发包：github flavor，保留应用内一键自更新（REQUEST_INSTALL_PACKAGES）。
+        # GitHub 自分发包：github flavor，保留应用内「检查更新」入口（只跳转 Release 页面）。
         # --target-platform 只控制 Flutter 自身的 ABI；--split-per-abi 才会同时剔除
         # 第三方 AAR（如 ML Kit）带入的 x86_64 / armeabi-v7a 原生库。
         # ABI split 默认会改写 versionCode；这里关闭该偏移，保持与 Play AAB 一致，
@@ -106,10 +106,10 @@ jobs:
           fi
 
       - name: Build release App Bundle (play flavor)
-        # Google Play 上架用 AAB：play flavor 移除 REQUEST_INSTALL_PACKAGES（Play 政策禁止
-        # 应用自更新），并 --dart-define=SELF_UPDATE=false 隐藏应用内自更新入口。
+        # Google Play 上架用 AAB：play flavor 隐藏应用内检查更新入口（Play 负责更新，
+        # 也不允许引导用户到站外下载）。
         # 与 APK 同用 verifinRelease 签名；AAB 含全部 ABI，由 Play 按设备分发。
-        run: flutter build appbundle --release --flavor play --dart-define=SELF_UPDATE=false
+        run: flutter build appbundle --release --flavor play --dart-define=UPDATE_CHECK=false
 
       - name: Prepare release artifacts
         shell: bash
@@ -164,7 +164,7 @@ jobs:
             echo
             echo "请下载 APK 直接覆盖安装，**不要卸载旧版本或清除应用数据**。换机或重装前请先在「数据管理」导出备份。"
             echo
-            echo "应用内更新请开启「包含预发布版本（Beta）」以检测此版本；本次仍为预发布，不标记 Latest。"
+            echo "应用内「检查更新」只识别正式版，本次仍为预发布，请在 Releases 页面手动下载；验收通过后才提升为正式版（不标记 Latest）。"
           } > release-notes.md
 
       - name: Create pre-release

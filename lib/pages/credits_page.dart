@@ -81,7 +81,7 @@ class CreditsPage extends StatelessWidget {
     VeriFinScope.of(context).logger?.error('打开赞助主页失败', source: 'credits_page');
     unawaited(
       VeriFeedbackHost.of(context).showMessage(
-        message: AppLocalizations.of(context).creditsOpenFailed,
+        message: AppLocalizations.of(context).openLinkFailed,
         tone: VeriFeedbackTone.error,
       ),
     );

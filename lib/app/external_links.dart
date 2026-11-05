@@ -18,12 +18,32 @@ class ExternalLinks {
   /// 爱发电赞助主页：与 `.github/FUNDING.yml`、README 的赞助入口保持同一地址。
   static const String donationUrl = 'https://afdian.com/a/talyra42';
 
+  /// Veri Fin 的 GitHub Releases 页面（检查更新的跳转目标）。
+  static const String verifinReleasesUrl =
+      'https://github.com/LumiDesk/verifin/releases';
+
   /// 测试注入点：替换真正打开浏览器的动作，返回是否成功。
   @visibleForTesting
   static Future<bool> Function(Uri url)? debugOpener;
 
   /// 打开赞助主页，返回是否真的把链接交给了浏览器。
   static Future<bool> openDonation() => open(Uri.parse(donationUrl));
+
+  /// 打开指定 tag 的 Release 页面，返回是否真的把链接交给了浏览器。
+  ///
+  /// [tag] 来自远端 JSON，因此先按版本号形态严格校验，只有合法 tag 才拼成
+  /// `/releases/tag/<tag>`；不合法时回落到 Releases 列表页。这样「只打开本文件
+  /// 定义的地址」这条约定不被远端数据绕过。
+  static Future<bool> openVerifinRelease(String tag) {
+    final normalized = tag.trim();
+    final safeTag = RegExp(r'^v?\d+(?:\.\d+)*$').hasMatch(normalized)
+        ? normalized
+        : null;
+    final url = safeTag == null
+        ? Uri.parse(verifinReleasesUrl)
+        : Uri.parse('$verifinReleasesUrl/tag/${Uri.encodeComponent(safeTag)}');
+    return open(url);
+  }
 
   /// 只接受 `https`：其余 scheme（http、intent、file…）一律拒绝并返回 false。
   static Future<bool> open(Uri url) async {

@@ -2569,7 +2569,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get creditsSupportAction => '在爱发电支持 Veri Fin';
 
   @override
-  String get creditsOpenFailed => '没能打开浏览器，请稍后再试。';
+  String get openLinkFailed => '没能打开浏览器，请稍后再试。';
 
   @override
   String get themeMode => '主题模式';
@@ -3793,66 +3793,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get resetConfirmAction => '确认初始化';
 
   @override
-  String get currentVersion => '当前版本';
-
-  @override
-  String get latestVersion => '最新版本';
-
-  @override
   String get checkingLabel => '检查中...';
-
-  @override
-  String get queryingGithub => '正在查询 GitHub Release...';
 
   @override
   String get updateCheckFailed => '检查更新失败，请稍后再试。';
 
   @override
-  String downloadingPercent(int percent) {
-    return '下载中 $percent%';
+  String get updateAvailableTitle => '发现新版本';
+
+  @override
+  String updateAvailableMessage(String current, String latest) {
+    return '当前版本：v$current\n最新版本：v$latest';
   }
 
   @override
-  String get downloadingLabel => '正在下载...';
+  String get updateUpToDate => '已是最新版本';
+
+  @override
+  String get updateOpenRelease => '前往';
 
   @override
   String get closeLabel => '关闭';
-
-  @override
-  String get retryLabel => '重试';
-
-  @override
-  String get downloadingShort => '下载中';
-
-  @override
-  String get continueDownload => '继续下载';
-
-  @override
-  String downloadPausedPercent(int percent) {
-    return '已保留 $percent% · 等待继续';
-  }
-
-  @override
-  String get downloadNewVersion => '下载新版本';
-
-  @override
-  String get installNow => '立即安装';
-
-  @override
-  String get includePrereleaseLabel => '包含预发布版本（Beta）';
-
-  @override
-  String get prereleaseNoticeInline => '这是预发布（测试）版本，可能存在不稳定或缺陷。';
-
-  @override
-  String get prereleaseWarningTitle => '下载预发布版本？';
-
-  @override
-  String get prereleaseWarningMessage =>
-      '预发布版本可能存在不稳定、功能缺陷或数据异常等问题，建议仅在了解风险时使用。确定继续下载并安装吗？';
-
-  @override
-  String get prereleaseDownloadAnyway => '仍要下载';
 
   @override
   String get backupFreqManual => '仅手动';

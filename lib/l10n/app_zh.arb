@@ -1916,7 +1916,7 @@
   },
   "creditsSupportNote": "这里没有会员特权，也没有解锁内容——你支持的是这款软件本身能继续做下去。",
   "creditsSupportAction": "在爱发电支持 Veri Fin",
-  "creditsOpenFailed": "没能打开浏览器，请稍后再试。",
+  "openLinkFailed": "没能打开浏览器，请稍后再试。",
   "themeMode": "主题模式",
   "themeColorLabel": "主题色",
   "themeColorDefault": "默认主题色",
@@ -2587,35 +2587,19 @@
   "resetConfirmTitle": "再次确认初始化",
   "resetConfirmMessage": "确认后会立即清空所有本地数据，并恢复默认状态。此操作不能撤销。",
   "resetConfirmAction": "确认初始化",
-  "currentVersion": "当前版本",
-  "latestVersion": "最新版本",
   "checkingLabel": "检查中...",
-  "queryingGithub": "正在查询 GitHub Release...",
   "updateCheckFailed": "检查更新失败，请稍后再试。",
-  "downloadingPercent": "下载中 {percent}%",
-  "@downloadingPercent": {
+  "updateAvailableTitle": "发现新版本",
+  "updateAvailableMessage": "当前版本：v{current}\n最新版本：v{latest}",
+  "@updateAvailableMessage": {
     "placeholders": {
-      "percent": {
-        "type": "int"
-      }
+      "current": {"type": "String"},
+      "latest": {"type": "String"}
     }
   },
-  "downloadingLabel": "正在下载...",
+  "updateUpToDate": "已是最新版本",
+  "updateOpenRelease": "前往",
   "closeLabel": "关闭",
-  "retryLabel": "重试",
-  "downloadingShort": "下载中",
-  "continueDownload": "继续下载",
-  "downloadPausedPercent": "已保留 {percent}% · 等待继续",
-  "@downloadPausedPercent": {
-    "placeholders": {"percent": {"type": "int"}}
-  },
-  "downloadNewVersion": "下载新版本",
-  "installNow": "立即安装",
-  "includePrereleaseLabel": "包含预发布版本（Beta）",
-  "prereleaseNoticeInline": "这是预发布（测试）版本，可能存在不稳定或缺陷。",
-  "prereleaseWarningTitle": "下载预发布版本？",
-  "prereleaseWarningMessage": "预发布版本可能存在不稳定、功能缺陷或数据异常等问题，建议仅在了解风险时使用。确定继续下载并安装吗？",
-  "prereleaseDownloadAnyway": "仍要下载",
   "backupFreqManual": "仅手动",
   "backupFreqOnOpen": "每次打开应用",
   "backupFreqOnEntry": "每次记账后",

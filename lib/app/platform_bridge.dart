@@ -1,11 +1,10 @@
 /// Android MethodChannel 桥（channel：`verifin/app`）。
 ///
-/// 出站能力（Flutter → 原生）按域拆分为四个 Bridge 类，各在自己的 part 文件里、
-/// 互不相干，新增原生能力放进对应域（或新开一个 part），不要再堆回一个类：
+/// 出站能力（Flutter → 原生）按域拆分到三个 part 文件（另有本文件的
+/// [AppSecurityBridge]），各域互不相干；新增原生能力放进对应域（或新开一个 part），
+/// 不要再堆回一个类：
 /// - [AppCaptureBridge]（platform_bridge_capture.dart）：快速记账磁贴入口、
 ///   分享/外部采集内容消费；
-/// - [AppUpdateBridge]（platform_bridge_update.dart）：GitHub Release 更新
-///   检查与下载；
 /// - [AppWidgetBridge]（platform_bridge_widget.dart）：桌面小组件预览渲染、
 ///   实例计数与点击路由；
 /// - [AppStorageBridge]（platform_bridge_storage.dart）：系统下载目录写出、
@@ -16,12 +15,10 @@
 /// 约束，统一由本文件的 [_ensureInboundDispatcher] 分发到各域注册的回调。
 library;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 part 'platform_bridge_capture.dart';
 part 'platform_bridge_storage.dart';
-part 'platform_bridge_update.dart';
 part 'platform_bridge_widget.dart';
 
 const MethodChannel _channel = MethodChannel('verifin/app');
@@ -44,15 +41,6 @@ void _ensureInboundDispatcher() {
     }
     if (call.method == 'openSharedCapture') {
       await _sharedCaptureHandler?.call();
-      return;
-    }
-    if (call.method == 'updateDownloadProgress') {
-      final args = Map<String, Object?>.from(
-        call.arguments as Map<dynamic, dynamic>? ?? <dynamic, dynamic>{},
-      );
-      AppUpdateBridge.updateProgress.value = UpdateDownloadProgress.fromMap(
-        args,
-      );
       return;
     }
     if (call.method == 'openWidgetRoute') {

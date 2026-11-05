@@ -64,6 +64,8 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `SaveHeaderAction` | Widget | `common_widgets.dart` | 全屏编辑页统一保存动作；固定软碟语义的 `Icons.save_outlined` 和本地化 tooltip，支持禁用态 |
 | `SortModeHeaderActions` | Widget | `common_widgets.dart` | 管理页显式排序模式的统一 Header 动作；普通态进入排序，排序态提供取消与软碟保存，未改动时禁用保存 |
 | `CreditsPage` | 页面 Widget | `credits_page.dart` | 鸣谢名单页（设置 → 关于 → 鸣谢）：头像墙（`CreditsAvatar` + 常显称呼，分组标题只在有分组时渲染）+ 底部赞助入口。名单是包内常量（`credits.dart`），页面不读账目状态，只在打开浏览器失败时记日志并给轻提示；赞助链接统一经 `external_links.dart`（`ExternalLinks.donationUrl`）打开系统浏览器，不要在页面里直接调插件或硬写 URL |
+| `ExternalLinks` | 工具类 | `external_links.dart` | **打开外部链接的唯一出口**：只接受本文件定义常量与 `https`，一律交系统默认浏览器；`openDonation()` 打开赞助页，`openVerifinRelease(tag)` 打开指定版本的 GitHub Release 页面（tag 严格校验，非法回落 Releases 列表，不让远端数据拼任意地址）。`debugOpener` 供测试注入。页面不得直接调 `url_launcher` |
+| `UpdateCheckResult` / `UpdateAvailable` / `UpdateUpToDate` / `UpdateCheckFailed` / `UpdateRelease` / `checkForUpdate` / `compareVersions` / `currentAppVersionNumber` / `purgeLegacyUpdateDownloads` | 密封类 / 值类 / 纯函数 / 异步入口 | `app/update/update_check.dart` | **应用内检查更新**：用户手点「检查更新」时只读 GitHub Release 最新正式版版本号（不自动检查、不下载安装 APK），与当前版本比较后返回「有更新 / 已最新 / 失败」；`compareVersions` 是纯函数（忽略 `+build` 与预发布后缀），`parseLatestRelease` 与 `debugUpdateCheckOverride` 供测试。失败原因只写日志，界面用本地化文案 |
 
 ## 族 2 — 图标渲染（统一入口，勿绕过）
 

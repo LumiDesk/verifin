@@ -11,6 +11,7 @@ import '../../local_storage/local_storage.dart';
 import '../attachments/attachment_store.dart';
 import '../logging/app_logger.dart';
 import '../models.dart';
+import '../update/update_check.dart';
 import '../veri_fin_controller.dart';
 import 'startup_coordinator.dart';
 import 'startup_error_sink.dart';
@@ -137,6 +138,9 @@ class AppStartup {
             systemIsEnglish: systemIsEnglish,
           );
           session.controller = controller;
+          // 旧版本曾把更新 APK 下到 `<cache>/updates`；现在只跳转 Release 页面，
+          // 启动后顺手清一次缓存，不阻塞启动、失败只记日志。
+          unawaited(purgeLegacyUpdateDownloads(logger: session.logger));
         },
       ),
       (

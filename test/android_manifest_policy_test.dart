@@ -11,6 +11,20 @@ void main() {
     expect(manifest, contains('android:allowBackup="false"'));
   });
 
+  test('应用内更新不再下载安装 APK，也不申请安装未知应用权限', () {
+    final manifest = File(
+      'android/app/src/main/AndroidManifest.xml',
+    ).readAsStringSync();
+
+    expect(manifest, isNot(contains('REQUEST_INSTALL_PACKAGES')));
+    // FileProvider 此前只用于把下载的 APK 交给系统安装器；一并移除后不应复活。
+    expect(manifest, isNot(contains('androidx.core.content.FileProvider')));
+    expect(
+      File('android/app/src/main/res/xml/file_paths.xml').existsSync(),
+      isFalse,
+    );
+  });
+
   test('桌面只注册固定模板 Provider，并统一接入 home_widget 配置 Activity', () {
     final manifest = File(
       'android/app/src/main/AndroidManifest.xml',
