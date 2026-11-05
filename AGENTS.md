@@ -26,6 +26,7 @@ lib/
 │   ├── ai/                   # AI 会话、协议轮次与只读查询工具
 │   ├── logging/              # AppLogger
 │   ├── startup/              # 启动壳、阶段协调、单阶段看门狗与启动早期错误缓冲
+│   ├── update/               # 应用内检查更新：只读 GitHub Release 版本并跳转浏览器
 │   └── widgets/              # 桌面小组件词表、投影、实例配置与刷新管线
 ├── pages/                    # 页面层；共享弹窗入口在 pages/sheets.dart
 ├── data/                     # AppDatabase、LedgerRepository、SqliteLedgerRepository
