@@ -1,12 +1,12 @@
 name: CI
 
-# 质量门禁：推送到 main 时跑格式检查、静态分析、测试与 debug APK 构建。
-# 本仓库不接受 Pull Request（见 CONTRIBUTING.md），因此没有 pull_request 触发。
+# 质量门禁：PR 只跑格式检查、静态分析、测试；推送到 main 时额外构建 debug APK。
 # 发版构建（打 tag 出 APK/AAB）在 flutter.yml，两者分离。
 on:
   push:
     branches:
       - main
+  pull_request:
 
 jobs:
   verify:
@@ -57,8 +57,9 @@ jobs:
 
       # Dart analyze/test 不会编译 android/ 下的 Kotlin。main CI 额外构建
       # github debug APK，提前拦截 MethodChannel、Manifest 和原生桥编译错误，避免
-      # 只在打发布标签后才发现 Kotlin 无法编译。
+      # 只在打发布标签后才发现 Kotlin 无法编译。PR 上不构建，省掉一半以上的时间。
       - name: Build Android debug APK
+        if: github.event_name != 'pull_request'
         run: flutter build apk --debug --flavor github
 
 # 集成测试（integration_test/）刻意不挂在 CI：它们需要真实引擎与真实帧时序，

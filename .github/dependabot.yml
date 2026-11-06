@@ -1,0 +1,28 @@
+version: 2
+# 依赖与 Actions 每周检查，同生态合成一个 PR、最多 1 个未合并。
+# 本仓库 PR 仅限协作者创建；若 dependabot 因该限制无法开 PR，可在仓库设置里
+# 把 pull_request_creation_policy 改回 all（或按提示手动合并）。
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 1
+    groups:
+      actions:
+        patterns:
+          - '*'
+    commit-message:
+      prefix: ci
+
+  - package-ecosystem: pub
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 1
+    groups:
+      pub:
+        patterns:
+          - '*'
+    commit-message:
+      prefix: deps

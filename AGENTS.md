@@ -77,13 +77,13 @@ third_party/                  # 本地 vendor 源码（jdenticon_dart、liquid_g
 - `docs/dev/known-limitations.md`：已接受的限制、技术债及触发整改的阈值。
 - `docs/dev/android-development.md`：工具链检测与安装、真机调试、日志、隔离验收及测试应用清理。
 - 领域文档：`docs/dev/attachment-storage-and-backup.md`、`docs/dev/refund.md`、`docs/dev/multi-currency.md`、`docs/dev/entry-save-validation.md`、`docs/dev/category-budget-override.md`、`docs/dev/ai-tools.md`、`docs/dev/ai-provider-presets.md`、`docs/dev/auto-capture.md`、`docs/dev/i18n-verification.md`、`docs/dev/feedback-system.md`、`docs/dev/home-widgets.md`、`docs/dev/anchored-menu.md`、`docs/dev/account-icon-assets.md`。
-- 产品与样例：`docs/product/product.md`、`docs/product/acceptance-checklist.md`、`docs/product/automation.md`、`docs/fixtures/`、`docs/screenshots/`；仓库级说明见 `README.md`、`CONTRIBUTING.md`、`CHANGELOG.md`。维护约定与已确认的 Code Review 取舍见 `CONTRIBUTING.md`。
+- 产品与样例：`docs/product/product.md`、`docs/product/acceptance-checklist.md`、`docs/product/automation.md`、`docs/fixtures/`、`docs/screenshots/`；发布说明在 `docs/release-notes/`（模板 `_template.md`）；仓库级说明见 `README.md`、`CONTRIBUTING.md`、`CHANGELOG.md`。维护约定与已确认的 Code Review 取舍见 `CONTRIBUTING.md`。
 
-**不保留过程记录。** `docs/` 只陈述**当前状态**：规范、口径、契约、验收清单、样例数据。方案草稿、实施计划、评审记录、决策过程、迁移中间态一律不进 `docs/`——完成时把仍然有效的结论并入对应规范（界面交互进 `docs/design/`，技术取舍进 `docs/dev/tech-decisions.md`，领域口径进 `docs/dev/`），其余删除。`docs/dev/tech-decisions.md` 的「UI 组件库选型」等行就是被否决库的结论记录，不要另建选型或规划文档。
+**不保留过程记录。** `docs/` 只陈述**当前状态**：规范、口径、契约、验收清单、样例数据。方案草稿、实施计划、评审记录、决策过程、迁移中间态一律不进 `docs/`——完成时把仍然有效的结论并入对应规范（界面交互进 `docs/design/`，技术取舍进 `docs/dev/tech-decisions.md`，领域口径进 `docs/dev/`）。
 
 需要保留「为什么这么定、当时否掉了什么」的来龙去脉时，写进 `.agents/notes/`（`proposed/` → `implemented/` → `rejected/`），规则见 `.agents/notes/README.md`；那里**不是权威事实**，判断当前实现仍以源码、测试与工作流为准。
 
-发版的可执行步骤固定在 `.agents/skills/release/SKILL.md`；`AGENTS.md` 与 `docs/dev/` 只写规则与口径。
+发布说明固定为 `docs/release-notes/vX.Y.Z.md`（Release 正文的唯一来源，模板 `_template.md`）；发版的可执行步骤在 `.agents/skills/release/SKILL.md`。
 
 - 与用户沟通、说明方案和汇报结果时使用中文；代码符号、命令和提交类型保留英文。
 - 改动聚焦用户请求，不顺手重构无关代码，不覆盖用户已有修改；开始任务前先确认工作树状态。

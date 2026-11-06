@@ -104,6 +104,23 @@ Future<int> _run(List<String> arguments) async {
   final next = current.bump(spec);
   info('  ${current.label} → ${next.label}（tag ${next.tag}）');
 
+  // Release 正文的唯一来源；CI 直接把它当 body，缺文件时在打 tag 之前就停下。
+  final releaseNotes = File('${root.path}/docs/release-notes/${next.tag}.md');
+  if (!releaseNotes.existsSync() || releaseNotes.lengthSync() == 0) {
+    throw ScriptException(
+      '缺少发布说明：docs/release-notes/${next.tag}.md\n'
+      '按 docs/release-notes/_template.md 写好再发版；CI 会把它当 Release 正文。',
+    );
+  }
+  success('发布说明就位：docs/release-notes/${next.tag}.md');
+
+  // CHANGELOG 是用户可见变化的唯一清单；版本段缺失说明这版还没写变更记录。
+  final changelog = File('${root.path}/CHANGELOG.md').readAsStringSync();
+  if (!changelog.contains('## [${next.name}]')) {
+    throw ScriptException('CHANGELOG.md 缺少 ## [${next.name}] 段；先记录用户可见变化再发版。');
+  }
+  success('CHANGELOG 段就位：## [${next.name}]');
+
   for (final command in <List<String>>[
     <String>[
       'git',
