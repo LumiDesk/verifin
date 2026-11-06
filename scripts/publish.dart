@@ -158,18 +158,34 @@ Future<int> _run(List<String> arguments) async {
 
   if (dryRun) {
     step('dry-run：将要执行');
-    info('  1. 写入 pubspec.yaml 与 lib/app/app_version.dart：${next.label}');
+    info(
+      '  1. 切出 release/${next.tag}，写入 pubspec.yaml 与 lib/app/app_version.dart',
+    );
     info(
       '  2. dart format . && flutter pub get && flutter analyze && flutter test',
     );
-    info('  3. git add -A && git commit -m "chore: release ${next.tag}"');
-    info(
-      '  4. git tag ${next.tag} && git push origin main && git push origin ${next.tag}',
-    );
+    info('  3. 提交 chore: release ${next.tag} 并推送分支');
+    info('  4. 开 PR，等检查通过后合并（main 受保护分支）');
+    info('  5. git tag ${next.tag} && git push origin ${next.tag}');
     info('');
     success('dry-run 结束：未做任何改动。');
     return 0;
   }
+
+  final gh = await capture(
+    <String>['gh', '--version'],
+    allowFailure: true,
+    workingDirectory: root,
+  );
+  if (gh.exitCode != 0) {
+    throw ScriptException('找不到 gh CLI：合并受保护分支需要它，请安装并 gh auth login。');
+  }
+
+  // main 是受保护分支：发版提交必须走 PR，合并后才能在历史上打 tag；
+  // 直接 push main 会被分支保护拒绝。
+  final branch = 'release/${next.tag}';
+  step('切出发版分支');
+  await run(<String>['git', 'checkout', '-b', branch], workingDirectory: root);
 
   step('写入版本号');
   writeRepoVersion(root, next);
@@ -181,7 +197,7 @@ Future<int> _run(List<String> arguments) async {
   await run(<String>['flutter', 'analyze'], workingDirectory: root);
   await run(<String>['flutter', 'test'], workingDirectory: root);
 
-  step('提交、打标签、推送');
+  step('提交、开 PR、合并、打标签');
   await run(<String>['git', 'add', '-A'], workingDirectory: root);
   await run(<String>[
     'git',
@@ -189,8 +205,56 @@ Future<int> _run(List<String> arguments) async {
     '-m',
     'chore: release ${next.tag}',
   ], workingDirectory: root);
-  await run(<String>['git', 'tag', next.tag], workingDirectory: root);
-  await run(<String>['git', 'push', 'origin', 'main'], workingDirectory: root);
+  final sha = await capture(<String>[
+    'git',
+    'rev-parse',
+    'HEAD',
+  ], workingDirectory: root);
+  await run(<String>[
+    'git',
+    'push',
+    '-u',
+    'origin',
+    branch,
+  ], workingDirectory: root);
+  await run(<String>[
+    'gh',
+    'pr',
+    'create',
+    '--fill',
+    '--base',
+    'main',
+  ], workingDirectory: root);
+  info('等待 PR 检查（格式、analyze、测试都在 PR 上跑）…');
+  await run(<String>[
+    'gh',
+    'pr',
+    'checks',
+    '--watch',
+    '--interval',
+    '20',
+  ], workingDirectory: root);
+  await run(<String>[
+    'gh',
+    'pr',
+    'merge',
+    '--merge',
+    '--delete-branch',
+  ], workingDirectory: root);
+
+  await run(<String>['git', 'checkout', 'main'], workingDirectory: root);
+  await run(<String>['git', 'pull', '--ff-only'], workingDirectory: root);
+  await capture(
+    <String>['git', 'branch', '-D', branch],
+    allowFailure: true,
+    workingDirectory: root,
+  );
+  await run(<String>[
+    'git',
+    'tag',
+    next.tag,
+    sha.stdout.trim(),
+  ], workingDirectory: root);
   await run(<String>[
     'git',
     'push',
@@ -198,7 +262,7 @@ Future<int> _run(List<String> arguments) async {
     next.tag,
   ], workingDirectory: root);
 
-  success('已推送 ${next.tag}（${next.label}）');
+  success('已合并 PR 并推送 ${next.tag}（${next.label}）');
   info('CI 将构建 APK/AAB 并创建预发布；真机验收后在 GitHub 提升为正式版。');
   return 0;
 }

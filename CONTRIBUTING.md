@@ -42,7 +42,8 @@
   `docs/release-notes/vX.Y.Z.md`（**Release 正文的唯一来源**，模板见 `docs/release-notes/_template.md`）。
   缺发布说明时 `scripts/publish.dart` 在改版本号之前就退出，CI 也会在构建前再查一次。
 - 流程：先 `dart run scripts/doctor.dart` 确认环境；确认当前分支为 `main` 且工作树干净后，
-  运行 `dart run scripts/publish.dart patch`。
+  运行 `dart run scripts/publish.dart patch`。脚本会切出 `release/vX.Y.Z` 分支、开 PR、
+  等检查通过后合并，再打 tag 推送——`main` 受保护，不接受直接推送。
 - CI 默认创建**预发布**（不标 Latest）；真机验收通过后由维护者手动提升为正式版并标记 Latest，
   同时把发布说明里仅适用于预发布的那行删掉。
 - 未被提升的预发布用 `dart run scripts/prune_prereleases.dart` 清理；先加 `--dry-run` 核对，默认保留 git 标签。
