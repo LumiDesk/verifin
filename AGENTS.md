@@ -74,6 +74,8 @@ third_party/                  # 本地 vendor 源码（jdenticon_dart、liquid_g
 - `docs/dev/tech-decisions.md`：数据口径、备份范围和关键技术取舍；判断当前实现仍以源码、测试与工作流为准。
 - `.agents/notes/`：设计稿、技术选型与被否决方案的**来龙去脉**；不是当前事实，规则见 `.agents/notes/README.md`。
 - `.agents/skills/release/SKILL.md`：**发版的可执行步骤**（合并、清理分支、发版、等 CI、处置失败、汇报）。
+- `.agents/skills/merge-pr/SKILL.md`：合并 PR 的可执行流程（状态判定、合并、回滚）。
+- `.agents/CONVENTIONS.md`：跨项目共用的体系约定（分支合并、依赖更新、文档分层、授权边界）。
 - `docs/dev/known-limitations.md`：已接受的限制、技术债及触发整改的阈值。
 - `docs/dev/android-development.md`：工具链检测与安装、真机调试、日志、隔离验收及测试应用清理。
 - 领域文档：`docs/dev/attachment-storage-and-backup.md`、`docs/dev/refund.md`、`docs/dev/multi-currency.md`、`docs/dev/entry-save-validation.md`、`docs/dev/category-budget-override.md`、`docs/dev/ai-tools.md`、`docs/dev/ai-provider-presets.md`、`docs/dev/auto-capture.md`、`docs/dev/i18n-verification.md`、`docs/dev/feedback-system.md`、`docs/dev/home-widgets.md`、`docs/dev/anchored-menu.md`、`docs/dev/account-icon-assets.md`。
@@ -248,6 +250,15 @@ dart run scripts/widget_previews.dart
 - 退款是关联原支出的独立条目；只有已到账退款影响余额和净额，原支出的 `refundedBaseAmount` 是已到账退款 `baseAmount` 之和的派生缓存。修改退款逻辑前必须阅读 `docs/dev/refund.md` 和 `docs/dev/multi-currency.md` 并以当前代码/测试为准。
 - 自定义预算周期只改变预算体系口径，统计报表仍按自然月。默认预算使用哨兵键，单月覆盖优先于默认值。
 - 「不计入预算」标记（借款、垫付等）只脱离**预算**口径。预算取数一律走 `ledger_math.dart` 的 `budgetExpenseTotal` / `countsTowardBudget`（预算总览、首页与看板预算卡、按日预算、预算趋势、桌面小组件预算、AI `budgetStatus`）；收支统计、账户余额、报表与分类统计仍走 `sumByType` / `signedAmount`，**不读该标记**。新增预算取数不要在调用点手写过滤条件。
+
+## 合并与依赖更新
+
+- `main` 受保护：必须经 PR，且必需状态检查通过；合并只用 **merge commit**。
+- 合并前确认 `mergeStateStatus=CLEAN` 且 `mergeable`，不要凭"看起来绿了"判断。
+- 依赖 PR（dependabot）只应改 `.github/workflows/*`、`pubspec.yaml`、`pubspec.lock`；动了别的就停下问。
+- 大版本跳跃合并后必须确认 `main` 的 CI：PR 上不构建安装包，只有 `main` 会真正打包。
+- 合坏了用 `git revert -m 1 <merge-sha>` 开 PR 回滚；不 force push、不 reset 远端。
+- 步骤见 `.agents/skills/merge-pr/SKILL.md`；授权边界见 `.agents/CONVENTIONS.md`。
 
 ## Never 规则
 
