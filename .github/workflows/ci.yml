@@ -1,7 +1,8 @@
 name: CI
 
-# 质量门禁：每次推送到 main 都跑格式检查 + 静态分析 + 测试。
-# 发版构建（打 tag 出 APK）在 flutter.yml，两者分离。
+# 质量门禁：推送到 main 时跑格式检查、静态分析、测试与 debug APK 构建。
+# 本仓库不接受 Pull Request（见 CONTRIBUTING.md），因此没有 pull_request 触发。
+# 发版构建（打 tag 出 APK/AAB）在 flutter.yml，两者分离。
 on:
   push:
     branches:
@@ -20,6 +21,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+
+      # Gradle 依赖与任务缓存跨运行复用：首次仍要下载，之后 APK 构建能省掉一半以上。
+      - uses: gradle/actions/setup-gradle@v4
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2

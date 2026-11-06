@@ -39,7 +39,9 @@ assets/                       # 品牌、账户图标、AI 渠道 Logo 等包内
 test/                         # 单元/widget/ffi SQLite/迁移/契约测试；共享脚手架 test/support/
 integration_test/             # 设备侧冒烟与帧耗时采样（不进 CI）
 scripts/                      # Dart 任务脚本（doctor/publish/prune/clean/widget_previews）
-docs/                         # 产品、设计、开发文档与测试样例
+docs/                         # 当前事实：产品、设计、开发文档与测试样例
+.agents/notes/                # 设计与决策记录（为什么这么定、否掉了什么）
+.agents/skills/               # 固化流程（release：合并→发版→等 CI→汇报）
 third_party/                  # 本地 vendor 源码（jdenticon_dart、liquid_glass_widgets）
 ```
 
@@ -70,12 +72,18 @@ third_party/                  # 本地 vendor 源码（jdenticon_dart、liquid_g
 - `docs/design/components.md`：组件、弹窗、格式化与纯函数注册表；写任何 Widget、弹窗、对话框、格式化或计算前先查。
 - `docs/design/ui-guidelines.md`：页面骨架、交互、图表和视觉规范；新增根导航样式前先读「根导航」小节及其契约测试清单。
 - `docs/dev/tech-decisions.md`：数据口径、备份范围和关键技术取舍；判断当前实现仍以源码、测试与工作流为准。
+- `.agents/notes/`：设计稿、技术选型与被否决方案的**来龙去脉**；不是当前事实，规则见 `.agents/notes/README.md`。
+- `.agents/skills/release/SKILL.md`：**发版的可执行步骤**（合并、清理分支、发版、等 CI、处置失败、汇报）。
 - `docs/dev/known-limitations.md`：已接受的限制、技术债及触发整改的阈值。
 - `docs/dev/android-development.md`：工具链检测与安装、真机调试、日志、隔离验收及测试应用清理。
 - 领域文档：`docs/dev/attachment-storage-and-backup.md`、`docs/dev/refund.md`、`docs/dev/multi-currency.md`、`docs/dev/entry-save-validation.md`、`docs/dev/category-budget-override.md`、`docs/dev/ai-tools.md`、`docs/dev/ai-provider-presets.md`、`docs/dev/auto-capture.md`、`docs/dev/i18n-verification.md`、`docs/dev/feedback-system.md`、`docs/dev/home-widgets.md`、`docs/dev/anchored-menu.md`、`docs/dev/account-icon-assets.md`。
 - 产品与样例：`docs/product/product.md`、`docs/product/acceptance-checklist.md`、`docs/product/automation.md`、`docs/fixtures/`、`docs/screenshots/`；仓库级说明见 `README.md`、`CONTRIBUTING.md`、`CHANGELOG.md`。维护约定与已确认的 Code Review 取舍见 `CONTRIBUTING.md`。
 
-**不保留过程记录。** `docs/` 只陈述**当前状态**：规范、口径、契约、验收清单、样例数据。方案草稿、实施计划、评审记录、决策过程、迁移中间态一律不进仓库——完成时把仍然有效的结论并入对应规范（界面交互进 `docs/design/`，技术取舍进 `docs/dev/tech-decisions.md`，领域口径进 `docs/dev/`），其余删除。`docs/dev/tech-decisions.md` 的「UI 组件库选型」等行就是被否决库的唯一记录，不要另建选型或规划文档。
+**不保留过程记录。** `docs/` 只陈述**当前状态**：规范、口径、契约、验收清单、样例数据。方案草稿、实施计划、评审记录、决策过程、迁移中间态一律不进 `docs/`——完成时把仍然有效的结论并入对应规范（界面交互进 `docs/design/`，技术取舍进 `docs/dev/tech-decisions.md`，领域口径进 `docs/dev/`），其余删除。`docs/dev/tech-decisions.md` 的「UI 组件库选型」等行就是被否决库的结论记录，不要另建选型或规划文档。
+
+需要保留「为什么这么定、当时否掉了什么」的来龙去脉时，写进 `.agents/notes/`（`proposed/` → `implemented/` → `rejected/`），规则见 `.agents/notes/README.md`；那里**不是权威事实**，判断当前实现仍以源码、测试与工作流为准。
+
+发版的可执行步骤固定在 `.agents/skills/release/SKILL.md`；`AGENTS.md` 与 `docs/dev/` 只写规则与口径。
 
 - 与用户沟通、说明方案和汇报结果时使用中文；代码符号、命令和提交类型保留英文。
 - 改动聚焦用户请求，不顺手重构无关代码，不覆盖用户已有修改；开始任务前先确认工作树状态。

@@ -34,6 +34,9 @@ Veri Fin 不启用 GitHub Pull Request 功能，也不接受外部代码补丁�
 
 ## 发版（仅维护者）
 
+可执行的分步流程（合并、清理分支、写 CHANGELOG、等 CI、失败处置、汇报）见
+[`.agents/skills/release/SKILL.md`](.agents/skills/release/SKILL.md)；本节写规则与红线。
+
 - 发版必须经明确同意；打 `vX.Y.Z` 标签会触发 CI 构建并发预发布，不可逆。
 - 流程：先 `dart run scripts/doctor.dart` 确认环境；提升并提交 `CHANGELOG.md`；确认当前分支为 `main` 且工作树干净后，运行 `dart run scripts/publish.dart patch`。
 - CI 默认创建**预发布**（不标 Latest）；真机验收通过后由维护者手动提升为正式版并标记 Latest，同时去掉说明里仅适用于预发布的提示（开头验收提示与结尾「仍为预发布」说明）。
