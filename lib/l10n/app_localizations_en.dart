@@ -1721,10 +1721,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noteEditTitle => 'Edit note';
 
   @override
-  String get transferNeedsTwoAccounts =>
-      'Transfers need two different accounts; add a destination account first.';
-
-  @override
   String noAccountTransferCurrencyChangeTitle(String from, String to) {
     return 'Destination currency changes from $from to $to';
   }
@@ -2562,13 +2558,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get nicknameLabel => 'Nickname';
-
-  @override
-  String get nicknameEmptyTitle => 'No nickname set';
-
-  @override
-  String get nicknameEmptyMessage =>
-      'You haven\'t set a nickname. The default \"Veri Fin\" will be used. Save anyway?';
 
   @override
   String get bioLabel => 'Bio';

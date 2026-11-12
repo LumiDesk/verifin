@@ -61,8 +61,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `AssetMissingRateNotice` | Widget | `common_widgets_scaffold.dart` | 「缺汇率」提示：受影响账户数 + 缺失币种，点按跳 `CurrencyRatesPage`。裸用（看板资产汇总卡）传 `onTap` 时自带点击区与 8dp 纵向内边距；已放在可点卡片里（资产页缺率卡）不要传，避免嵌套点击区 |
 | `HeaderAction` / `HeaderTextAction` / `HeaderInline` / `VeriSectionAction` | Widget | `common_widgets.dart` | 页眉动作族（图标钮/文字钮/宽度约束/填充色小图标钮）；需要弹出操作菜单时使用外部库的 `AnchoredMenuButton` |
 | `AnchoredMenuAnchor` / `AnchoredMenuButton` / `AnchoredMenuChoice<T>` / `AnchoredMenuItem` / `AnchoredMenuDivider` | Widget / 菜单模型 | `package:anchored_menu/anchored_menu.dart` | 外部锚点菜单库：图标、标题、副标题、分割线、选中/禁用态、内容自适应宽度、从点击行原位展开的容器变换、完整祖先卡片栈、键盘与 RTL 支持；任意触发器用 `Anchor`，Header 图标入口用 `Button`，2–8 项静态受控单选优先用 `Choice`。应用在 `app_theme.dart` 桥接视觉令牌；完整约定见 [anchored-menu.md](../dev/anchored-menu.md) |
-| `SaveHeaderAction` | Widget | `common_widgets.dart` | 全屏编辑页统一保存动作；固定软碟语义的 `Icons.save_outlined` 和本地化 tooltip，支持禁用态 |
-| `SortModeHeaderActions` | Widget | `common_widgets.dart` | 管理页显式排序模式的统一 Header 动作；普通态进入排序，排序态提供取消与软碟保存，未改动时禁用保存 |
+| `SaveHeaderAction` | Widget | `common_widgets.dart` | 新建类显式提交页的统一保存动作（添加账户、新建周期规则、还款等）；固定软碟语义的 `Icons.save_outlined` 和本地化 tooltip，支持禁用态。偏好/已有实体编辑页使用自动保存，不再使用本组件 |
 | `CreditsPage` | 页面 Widget | `credits_page.dart` | 鸣谢名单页（设置 → 关于 → 鸣谢）：头像墙（`CreditsAvatar` + 常显称呼，分组标题只在有分组时渲染）+ 底部赞助入口。名单是包内常量（`credits.dart`），页面不读账目状态，只在打开浏览器失败时记日志并给轻提示；赞助链接统一经 `external_links.dart`（`ExternalLinks.donationUrl`）打开系统浏览器，不要在页面里直接调插件或硬写 URL |
 | `ExternalLinks` | 工具类 | `external_links.dart` | **打开外部链接的唯一出口**：只接受本文件定义常量与 `https`，一律交系统默认浏览器；`openDonation()` 打开赞助页，`openVerifinRepository()` 打开 GitHub 仓库主页，`openVerifinRelease(tag)` 打开指定版本的 GitHub Release 页面（tag 严格校验，非法回落 Releases 列表，不让远端数据拼任意地址）。`debugOpener` 供测试注入。页面不得直接调 `url_launcher` |
 | `UpdateCheckResult` / `UpdateAvailable` / `UpdateUpToDate` / `UpdateCheckFailed` / `UpdateRelease` / `checkForUpdate` / `compareVersions` / `currentAppVersionNumber` / `purgeLegacyUpdateDownloads` | 密封类 / 值类 / 纯函数 / 异步入口 | `app/update/update_check.dart` | **应用内检查更新**：用户手点「检查更新」时只读 GitHub Release 最新正式版版本号（不自动检查、不下载安装 APK），与当前版本比较后返回「有更新 / 已最新 / 失败」；`compareVersions` 是纯函数（忽略 `+build` 与预发布后缀），`parseLatestRelease` 与 `debugUpdateCheckOverride` 供测试。失败原因只写日志，界面用本地化文案 |
@@ -90,7 +89,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `CardNumberFields` | Widget | `common_widgets.dart` | 完整卡号 + 后四位输入组，含「后四位跟随卡号」开关（信用卡/储蓄卡录入用）；**受控**：`follows`/`onFollowsChanged` 由调用方持久化（`Account.cardLast4Follows`），组件不自行反推 |
 | `showCardNumberDialog` | Dialog 函数 | `sheets.dart` | 编辑完整卡号+后四位+跟随开关，返回 `({number, last4, follows})?`（内部用 `CardNumberFields`，后四位以 `cardLast4Of` 归一化） |
 | `CreditRepaymentPage` | 页面 Widget | `credit_repayment_page.dart` | 信用卡/信用账户还款页；预填欠款、扣款账户可选/可代还，落一笔转账 |
-| `AccountSectionCard` | Widget | `common_widgets.dart` | 资产页账户分区卡（可折叠 + 分区合计）；普通资产页折叠状态由 Controller 按账本/视图模式持久化，设置页可在草稿中调整；同时服务类型、文件夹分组和隐藏账户等分区，拖拽只由 `sectionDragIndex != null` 开启，`sectionDragImmediate` 控制即时/延迟拖拽 |
+| `AccountSectionCard` | Widget | `common_widgets.dart` | 资产页账户分区卡（可折叠 + 分区合计）；普通资产页折叠状态由 Controller 按账本/视图模式持久化，资产显示设置页修改后立即自动保存；同时服务类型、文件夹分组和隐藏账户等分区，拖拽只由 `sectionDragIndex != null` 开启，`sectionDragImmediate` 控制即时/延迟拖拽 |
 | `accountBalanceColor` | 纯函数 | `common_widgets.dart` | **账户余额上色**（不计入资产=弱化，负=红，正=青绿） |
 | `accountDisplayName` | 纯函数 | `model_lookup.dart` | 按 id 取账户名，空 id→noneLabel（**展示层用它**，避免误回退首个账户） |
 | `accountById` | 纯函数 | `model_lookup.dart` | 按 id 取账户（会回退首个，展示层慎用） |
@@ -134,7 +133,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `EntryTagField` | Widget | `common_widgets.dart` | 记账表单标签行 |
 | `AttachmentsEditor` | Widget | `attachments_editor.dart` | 多图片附件横向缩略图、全屏查看和逐张删除；默认自带标题与拍照/相册添加入口，记账页的轻量元数据布局通过 `showHeader:false` / `showAddButton:false` 只复用缩略图条，添加入口由页面标签触发 |
 | `TagSelectorSheet` / `pickEntryTags` | Widget / Sheet 函数 | `entry_sheets.dart` / `sheets.dart` | 交易标签多选（即时新建）/ 接 controller 的弹窗封装。**标签同样是账本内数据**（`Tag.bookId`）：列表取 `controller.tags`（当前账本），跨账本数据用 `tagsForBook(bookId)` |
-| `RefundSection` / `showRefundSheet` | Widget / Sheet 函数 | `refund_editor.dart` | 支出详情页的受控「退款」草稿区（列退款明细+净支出+添加）/ 添加·编辑退款弹窗（金额截剩余可退、到账账户、已到账开关+到账日期、发起日期、备注、删除）；默认剩余可退金额按原币 minor unit 归一化；Sheet 保存只回传父交易草稿，交易页最终与本体、附件原子保存。待退款清单独立编辑时由调用方在 Sheet 确认后提交 |
+| `RefundSection` / `showRefundSheet` | Widget / Sheet 函数 | `refund_editor.dart` | 支出详情页的受控「退款」区（列退款明细+净支出+添加）/ 添加·编辑退款弹窗（金额截剩余可退、到账账户、已到账开关+到账日期、发起日期、备注、删除）；默认剩余可退金额按原币 minor unit 归一化；Sheet 确认只把退款草稿交回父交易，父交易页自动保存时与本体、附件原子提交。待退款清单独立编辑时由调用方在 Sheet 确认后提交 |
 | `PendingRefundsPage` | Widget | `pending_refunds_page.dart` | 「待退款」清单页（汇总当前账本所有待到账退款、一键标记已到账核销）；入口在交易列表页头 |
 
 ## 族 7 — 表单 / 设置行 / 通用列表行

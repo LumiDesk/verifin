@@ -1158,7 +1158,6 @@
   },
   "pickTypeTitle": "选择类型",
   "noteEditTitle": "编辑备注",
-  "transferNeedsTwoAccounts": "转账需要两个不同的账户,请先添加转入账户。",
   "noAccountTransferCurrencyChangeTitle": "转入币种由 {from} 改为 {to}",
   "@noAccountTransferCurrencyChangeTitle": {
     "placeholders": {
@@ -1889,8 +1888,6 @@
   },
   "personalInfo": "个人信息",
   "nicknameLabel": "昵称",
-  "nicknameEmptyTitle": "未设置昵称",
-  "nicknameEmptyMessage": "未设置昵称，将使用默认昵称「Veri Fin」。是否继续保存？",
   "bioLabel": "简介",
   "genderLabel": "性别",
   "birthdayLabel": "生日",

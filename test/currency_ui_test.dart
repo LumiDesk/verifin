@@ -796,8 +796,6 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('固定当前金额'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('保存'));
-    await tester.pumpAndSettle();
 
     expect(
       controller.recurringRules.single.ratePolicy,

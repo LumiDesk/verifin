@@ -593,7 +593,6 @@
   "pendingRefundsCount": "{count} on the way",
   "pickTypeTitle": "Choose type",
   "noteEditTitle": "Edit note",
-  "transferNeedsTwoAccounts": "Transfers need two different accounts; add a destination account first.",
   "noAccountTransferCurrencyChangeTitle": "Destination currency changes from {from} to {to}",
   "@noAccountTransferCurrencyChangeTitle": {
     "placeholders": {
@@ -975,8 +974,6 @@
   "tagDeleteMessage": "Tag \"{name}\" cannot be restored once deleted.",
   "personalInfo": "Personal info",
   "nicknameLabel": "Nickname",
-  "nicknameEmptyTitle": "No nickname set",
-  "nicknameEmptyMessage": "You haven't set a nickname. The default \"Veri Fin\" will be used. Save anyway?",
   "bioLabel": "Bio",
   "genderLabel": "Gender",
   "birthdayLabel": "Birthday",

@@ -1680,9 +1680,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get noteEditTitle => '编辑备注';
 
   @override
-  String get transferNeedsTwoAccounts => '转账需要两个不同的账户,请先添加转入账户。';
-
-  @override
   String noAccountTransferCurrencyChangeTitle(String from, String to) {
     return '转入币种由 $from 改为 $to';
   }
@@ -2508,12 +2505,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get nicknameLabel => '昵称';
-
-  @override
-  String get nicknameEmptyTitle => '未设置昵称';
-
-  @override
-  String get nicknameEmptyMessage => '未设置昵称，将使用默认昵称「Veri Fin」。是否继续保存？';
 
   @override
   String get bioLabel => '简介';

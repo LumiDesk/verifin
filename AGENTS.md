@@ -121,6 +121,14 @@ third_party/                  # 本地 vendor 源码（jdenticon_dart、liquid_g
 - 日期和月份使用 l10n 的 `dateMonthDay` / `yearMonth` 等格式，不能手拼用户可见日期字符串。
 - **日历日算术禁止裸用绝对时长**：相隔天数用 `calendarDaysBetween`，推前/推后 N 天用 `addCalendarDays`。不要用 `difference().inDays` 或 `add(Duration(days: n))` 表达日历日；夏令时地区一天可能是 23/25 小时，这类 bug 在 UTC/中国时区 CI 中不会显现。秒、小时等真实时间间隔仍使用 `Duration`。
 
+### 自动保存与显式提交
+
+- 偏好设置和**已有实体**的编辑页默认自动保存：选择、开关、拖动结束或确认输入后立即落库；文本停止输入约 500ms 后提交，输入法组合期间不提交，失焦/返回前必须 flush。不要重新引入页面级「保存」按钮或 `UnsavedChangesGuard` 的三选一退出询问。
+- 自动保存页使用 `AutoSave` + `AutoSavePopScope` + `AutoSaveFailureBanner`（`lib/app/auto_save.dart`、`common_widgets.dart`）：只有失败时才提示并可重试；保存失败必须保留页面状态，不能先退出再在上一级提示。
+- **新建类流程**（添加账户、新建周期规则、信用卡还款、退款编辑、导入预览、桌面组件配置、引导页）保留一个明确的创建/确认动作，不从无到有地自动落库。
+- **快速记账 `EntryDetailPage` 的返回是取消**：直接丢弃草稿、清理本次暂存附件，不弹保存询问也不落账；保存仍由底部主按钮显式提交。
+- 排序页拖动结束即保存排名，排序模式只保留完成入口；删除、初始化、导入、恢复、备份/上传、还款、余额调整、应用锁等明确命令仍按自身确认立即执行。
+
 ### 弹窗与输入
 
 - 页面不得裸写 `showModalBottomSheet`；由顶层 `show<名>Sheet` helper 统一封装 chrome。确认框用 `showConfirmDialog`，文本输入用 `showTextInputDialog`；2–8 项静态受控单选用外部库的 `AnchoredMenuChoice<T>`，动态、较长或需分区的简单单选用 `showOptionSheet`；金额用数字键盘，分类/账户用各自选择器。

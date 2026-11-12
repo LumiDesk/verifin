@@ -17,7 +17,7 @@ Veri Fin 关键技术选型与理由。变更相关实现时同步更新本表�
 | 跨表命令提交顺序 | 重置、恢复、删账本与账单确认导入先构建完整 `LedgerDataSnapshot`，`await replaceAllLedgerData` 成功后才替换内存与 KV；失败保持旧状态并返回失败，附件物化失败清理本次新文件 | 这些操作跨多张表，逐表 fire-and-forget 或先改内存会造成「界面成功、重启回滚」与跨表悬空引用；忘记密码解锁必须先确认清库事务成功 |
 | 备份/恢复内存上界 | 打包用 `ZipEncoder` 增量写盘（附件逐张读、逐张写）、解包用 `ZipDecoder.decodeStream(InputFileStream)` 逐条落盘、加密用 `AesGcm.encryptStream/decryptStream`、平台通道只传缓存文件路径并在原生侧边读边写，旧版明文 JSON 用 `json_events` 前向事件流重写；冷启动只读附件元数据列（`data_url` 逐条读、转换后删列 + VACUUM）；WebDAV 只保留流式上传/下载。单个 ZIP 条目（索引或附件）限制为 64 MiB，并在解压输出端再次限流，防止伪造 header 的 ZIP 炸弹 | 峰值内存只与单张附件、固定分块有关，备份可达 GB 级；原生写盘时同步计算 SHA-256 与字节数，避免整份回读校验 |
 | 偏好类数据 | 保留 KV（SharedPreferences），不迁 SQLite | 小而简单，迁移无收益 |
-| 数字键盘布局 | `NumberPadLayout.standard/phone` 存 KV `verifin.number_pad_layout.v1`，默认标准布局；设置页随主设置草稿保存 | 数字排列属于设备上的输入肌肉记忆，不影响账目口径，换设备后回到默认布局即可；统一金额数字键盘从 Controller 读取，避免各调用点分叉 |
+| 数字键盘布局 | `NumberPadLayout.standard/phone` 存 KV `verifin.number_pad_layout.v1`，默认标准布局；设置页选择后立即自动保存 | 数字排列属于设备上的输入肌肉记忆，不影响账目口径，换设备后回到默认布局即可；统一金额数字键盘从 Controller 读取，避免各调用点分叉 |
 | SQLite 权威存储 | 账目数据只走 SQLite，不做 KV→SQLite 迁移、不留 KV 回退双路径；`LedgerRepository` 抽为接口，`SqliteLedgerRepository` 为生产实现，全新库首启动播种默认数据 | 只维护一条数据路径，避免双写与回退分支带来的长期隐患；偏好类小数据仍走 KV |
 | 测试仓储 | widget/控制器逻辑测试注入 `InMemoryLedgerRepository`（同步、无真实 I/O），数据层真实 SQLite 用 ffi 单独覆盖 | sqflite 的后台 isolate 与 `testWidgets` 的 fake-async 会死锁；内存实现规避且更快 |
 | 备份目录 | Android 走 SAF（`ACTION_OPEN_DOCUMENT_TREE` + 持久化 URI 权限 + `DocumentFile`），桌面走 `file_selector` 目录 + `dart:io` | 分区存储下唯一可长期读写用户可见目录的方式；条件导入 `lib/app/backup/backup_storage_*.dart` |
