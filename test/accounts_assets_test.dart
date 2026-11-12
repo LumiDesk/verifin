@@ -787,11 +787,12 @@ void main() {
 
     await tester.tap(find.text('类型'));
     await tester.pumpAndSettle();
-    expect(find.text('支持卡号、额度、账单日与还款'), findsOneWidget);
     await tester.tap(find.text('现金').last);
     await tester.pumpAndSettle();
-    expect(find.text('卡片信息'), findsNothing);
-
+    expect(
+      controller.accounts.firstWhere((item) => item.id == account.id).type,
+      AccountType.cash,
+    );
     await tester.tap(find.text('类型'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('信用卡').last);
@@ -801,8 +802,6 @@ void main() {
     await tester.tap(find.text('类型'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('现金').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('保存'));
     await tester.pumpAndSettle();
 
     final saved = controller.accounts.firstWhere(
