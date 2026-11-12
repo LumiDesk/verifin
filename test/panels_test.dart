@@ -51,7 +51,7 @@ void main() {
     // 恢复日历面板,返回首页验证渲染与数量文案。
     await tester.tap(find.byKey(const Key('panel_switch_calendar')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('保存'));
+    await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();
 
     expect(find.byType(BudgetPanel), findsNothing);
@@ -130,19 +130,7 @@ void main() {
     await tester.tap(find.byKey(const Key('panel_sort_toggle')));
     await tester.pumpAndSettle();
 
-    final beforeSave = await makeController(store);
-    expect(
-      beforeSave
-          .panelSettings(PanelPageKind.reportsMonthly)
-          .map((panel) => panel.id)
-          .take(2),
-      <String>['summary', 'budget_execution'],
-    );
-    beforeSave.dispose();
-
-    await tester.tap(find.byTooltip('保存'));
-    await tester.pumpAndSettle();
-
+    // 拖动结束即自动保存，不再需要进入保存按钮。
     final controller = await makeController(store);
     expect(
       controller
@@ -190,18 +178,12 @@ void main() {
     expect(beforeReset.enabledPanelIds(PanelPageKind.home).length, 3);
     beforeReset.dispose();
 
-    // 确认后只恢复页面草稿。
+    // 确认后立即恢复默认并落库。
     await tester.tap(find.byKey(const Key('panel_reset')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('恢复默认'));
     await tester.pumpAndSettle();
 
-    final beforeSave = await makeController(store);
-    expect(beforeSave.enabledPanelIds(PanelPageKind.home).length, 3);
-    beforeSave.dispose();
-
-    await tester.tap(find.byTooltip('保存'));
-    await tester.pumpAndSettle();
     final afterReset = await makeController(store);
     expect(
       afterReset.panelSettings(PanelPageKind.home).map((panel) => panel.id),
