@@ -3371,6 +3371,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'This clears the base URL, API key and model. You\'ll need to re-enter them to use AI features.';
 
   @override
+  String get aiSwitchProviderTitle => 'Switch AI provider?';
+
+  @override
+  String get aiSwitchProviderMessage =>
+      'Switching providers clears the current API key and model, and you\'ll need to enter them again.';
+
+  @override
   String get aiConfigCleared => 'Configuration cleared';
 
   @override

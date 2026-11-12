@@ -1250,6 +1250,8 @@
   "aiImageBlocked": "Image not loaded for privacy",
   "aiClearConfig": "Clear configuration",
   "aiClearConfigMessage": "This clears the base URL, API key and model. You'll need to re-enter them to use AI features.",
+  "aiSwitchProviderTitle": "Switch AI provider?",
+  "aiSwitchProviderMessage": "Switching providers clears the current API key and model, and you'll need to enter them again.",
   "aiConfigCleared": "Configuration cleared",
   "aiBaseUrlLabel": "Request URL (base)",
   "aiBaseUrlHint": "e.g. https://api.openai.com/v1",

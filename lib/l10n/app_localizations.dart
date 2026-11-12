@@ -6056,6 +6056,18 @@ abstract class AppLocalizations {
   /// **'将清空请求地址、API Key 与模型。清空后需重新填写才能使用 AI 功能。'**
   String get aiClearConfigMessage;
 
+  /// No description provided for @aiSwitchProviderTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换 AI 渠道？'**
+  String get aiSwitchProviderTitle;
+
+  /// No description provided for @aiSwitchProviderMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换渠道会清空当前 API Key 与模型，需要重新填写。'**
+  String get aiSwitchProviderMessage;
+
   /// No description provided for @aiConfigCleared.
   ///
   /// In zh, this message translates to:

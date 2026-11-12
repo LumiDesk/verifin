@@ -3289,6 +3289,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiClearConfigMessage => '将清空请求地址、API Key 与模型。清空后需重新填写才能使用 AI 功能。';
 
   @override
+  String get aiSwitchProviderTitle => '切换 AI 渠道？';
+
+  @override
+  String get aiSwitchProviderMessage => '切换渠道会清空当前 API Key 与模型，需要重新填写。';
+
+  @override
   String get aiConfigCleared => '配置已清空';
 
   @override

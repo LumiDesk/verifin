@@ -2235,6 +2235,8 @@
   "aiImageBlocked": "出于隐私考虑，未加载图片",
   "aiClearConfig": "清空配置",
   "aiClearConfigMessage": "将清空请求地址、API Key 与模型。清空后需重新填写才能使用 AI 功能。",
+  "aiSwitchProviderTitle": "切换 AI 渠道？",
+  "aiSwitchProviderMessage": "切换渠道会清空当前 API Key 与模型，需要重新填写。",
   "aiConfigCleared": "配置已清空",
   "aiBaseUrlLabel": "请求地址（Base URL）",
   "aiBaseUrlHint": "如 https://api.openai.com/v1",
