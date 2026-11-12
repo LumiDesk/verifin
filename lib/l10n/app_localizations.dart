@@ -2678,6 +2678,24 @@ abstract class AppLocalizations {
   /// **'不保存'**
   String get discardChanges;
 
+  /// No description provided for @autoSaveFailedMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近的修改还没有保存成功。可以重试，或放弃这些修改后离开。'**
+  String get autoSaveFailedMessage;
+
+  /// No description provided for @autoSaveRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get autoSaveRetry;
+
+  /// No description provided for @autoSaveDiscardAndLeave.
+  ///
+  /// In zh, this message translates to:
+  /// **'放弃修改并离开'**
+  String get autoSaveDiscardAndLeave;
+
   /// No description provided for @amountEditTitle.
   ///
   /// In zh, this message translates to:

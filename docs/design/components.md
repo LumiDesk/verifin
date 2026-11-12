@@ -164,6 +164,10 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `showInfoDialog` | Dialog 函数 | `common_widgets.dart` | 统一只读说明框（标题、正文、单个“知道了”按钮）；新调用使用具名 `context:` |
 | `showUnsavedChangesDialog` / `EditorExitDecision` | Dialog 函数 / 枚举 | `common_widgets.dart` | 未保存修改的“保存 / 不保存 / 取消”三操作对话框；点遮罩或系统返回视为取消 |
 | `UnsavedChangesGuard` / `EditorExitController` | Widget / Controller | `common_widgets.dart` | 统一拦截编辑页 Header、系统与预测性返回；仅 `onSave` 成功后放行，未修改时不拦截；显式保存成功后用 `EditorExitController.exit()` 走同一受控退出路径，避免同帧旧 dirty 状态拦截程序化返回 |
+| `AutoSave` / `AutoSaveState` | Controller / 枚举 | `app/auto_save.dart` | 自动保存协调器：防抖、合并连续改动、串行提交，保存进行中又有改动时用最新草稿再存一次；`flush()` 供失焦/返回冲刷；`hasPendingWork` 与 `failed` 驱动返回守卫和失败提示。保存闭包返回 `false` 表示校验或持久化失败，协调器保留待保存状态 |
+| `bindAutoSaveText` | 纯函数 | `app/auto_save.dart` | 把 `TextEditingController` 接到自动保存：输入法组合期间不触发，组合结束后按防抖提交；返回移除监听的函数 |
+| `AutoSaveFailureBanner` | Widget | `common_widgets.dart` | 自动保存失败的页内提示（只有失败时出现），提供重试；成功与保存中不占版面 |
+| `AutoSavePopScope` | Widget | `common_widgets.dart` | 自动保存页的返回守卫：无未落盘改动时直接退出；有改动先 `flush()`，成功才退出，失败才询问是否放弃修改并离开。与 `UnsavedChangesGuard` 的三选一对话框不同 |
 | `showTextInputDialog` | Dialog 函数 | `sheets.dart` | **统一文本输入**；`allowEmpty`、`keyboardType`；返回 trim 后 `String?` |
 | `showOptionSheet<T>` | Sheet 函数 | `sheets.dart` | 动态、较长或需 `sectionOf` 分区的通用单选底部弹窗；2–8 项静态受控单选优先用 `AnchoredMenuChoice<T>`；返回 `T?` |
 | `showVeriModalSheet<T>` | Sheet 函数 | `sheets.dart` | 领域弹窗的统一 chrome 入口；页面需要自定义内容时使用它，不得直接调用 `showModalBottomSheet`；支持拖拽把手、滚动控制、安全区、表面色和泛型返回值 |

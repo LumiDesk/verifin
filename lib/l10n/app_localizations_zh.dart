@@ -1389,6 +1389,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discardChanges => '不保存';
 
   @override
+  String get autoSaveFailedMessage => '最近的修改还没有保存成功。可以重试，或放弃这些修改后离开。';
+
+  @override
+  String get autoSaveRetry => '重试';
+
+  @override
+  String get autoSaveDiscardAndLeave => '放弃修改并离开';
+
+  @override
   String get amountEditTitle => '修改金额';
 
   @override

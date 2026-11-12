@@ -1426,6 +1426,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discardChanges => 'Don\'t save';
 
   @override
+  String get autoSaveFailedMessage =>
+      'Your latest changes haven\'t been saved. Retry, or discard them and leave.';
+
+  @override
+  String get autoSaveRetry => 'Retry';
+
+  @override
+  String get autoSaveDiscardAndLeave => 'Discard changes and leave';
+
+  @override
   String get amountEditTitle => 'Edit amount';
 
   @override
