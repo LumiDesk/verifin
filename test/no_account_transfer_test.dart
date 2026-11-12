@@ -71,7 +71,7 @@ void main() {
     );
   }
 
-  testWidgets('无账户转账转入外币账户：币种跟随转入账户并可保存', (tester) async {
+  testWidgets('无账户转账转入外币账户：币种跟随转入账户并自动保存', (tester) async {
     final controller = await setup();
     addTearDown(controller.dispose);
     controller.addEntry(noAccountTransfer(controller));
@@ -93,9 +93,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('转入币种由 CNY 改为 USD'), findsOneWidget);
     await tester.tap(find.textContaining('保留原金额数字'));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byTooltip('保存'));
     await tester.pumpAndSettle();
 
     final saved = controller.entries.firstWhere((e) => e.id == 'transfer-1');
@@ -126,9 +123,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('转入币种由 CNY 改为 USD'), findsOneWidget);
     await tester.tap(find.textContaining('按汇率换算为'));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byTooltip('保存'));
     await tester.pumpAndSettle();
 
     final saved = controller.entries.firstWhere((e) => e.id == 'transfer-1');
