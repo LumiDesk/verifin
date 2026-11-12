@@ -9,15 +9,13 @@ class AssetDisplaySettingsPage extends StatefulWidget {
 }
 
 class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
-  final EditorExitController _exitController = EditorExitController();
+  late final AutoSave _autoSave;
   final Set<String> _collapsedSections = <String>{};
   late AssetAccountViewMode _viewMode;
   late String _coverUrl;
   late Map<AssetAccountViewMode, List<String>> _sectionOrders;
   late Map<AssetAccountViewMode, Map<String, List<String>>> _accountOrders;
-  late String _initialFingerprint;
   bool _initialized = false;
-  bool _saving = false;
 
   @override
   void didChangeDependencies() {
@@ -27,6 +25,7 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
     }
     _initialized = true;
     final controller = VeriFinScope.of(context);
+    _autoSave = AutoSave(save: _save, logger: controller.logger);
     _viewMode = controller.assetAccountViewMode;
     _coverUrl = controller.assetCoverUrl;
     _sectionOrders = <AssetAccountViewMode, List<String>>{};
@@ -59,7 +58,17 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
         }
       }
     }
-    _initialFingerprint = _fingerprint;
+  }
+
+  @override
+  void dispose() {
+    _autoSave.dispose();
+    super.dispose();
+  }
+
+  void _apply(VoidCallback update) {
+    setState(update);
+    _autoSave.schedule(immediate: true);
   }
 
   List<_AssetAccountSection> _baseSections(
@@ -129,24 +138,6 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
     return result;
   }
 
-  String get _fingerprint => jsonEncode(<String, Object?>{
-    'viewMode': _viewMode.name,
-    'coverUrl': _coverUrl.trim(),
-    'sectionOrders': <String, Object?>{
-      for (final entry in _sectionOrders.entries) entry.key.name: entry.value,
-    },
-    'accountOrders': <String, Object?>{
-      for (final modeEntry in _accountOrders.entries)
-        modeEntry.key.name: <String, Object?>{
-          for (final sectionEntry in modeEntry.value.entries)
-            sectionEntry.key: sectionEntry.value,
-        },
-    },
-    'collapsedSections': _collapsedSections.toList()..sort(),
-  });
-
-  bool get _isDirty => _initialized && _fingerprint != _initialFingerprint;
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -162,10 +153,8 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
       ),
     );
 
-    return UnsavedChangesGuard(
-      isDirty: _isDirty,
-      onSave: _save,
-      exitController: _exitController,
+    return AutoSavePopScope(
+      autoSave: _autoSave,
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -175,11 +164,9 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
                 VeriHeader(
                   title: l10n.assetDisplaySettingsTitle,
                   showBack: true,
-                  actions: <Widget>[
-                    SaveHeaderAction(onPressed: _isDirty ? _saveAndExit : null),
-                  ],
                 ),
                 const SizedBox(height: 10),
+                AutoSaveFailureBanner(autoSave: _autoSave),
                 VeriCard(
                   child: Column(
                     children: <Widget>[
@@ -258,7 +245,7 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
                           sectionDragIndex: index,
                           sectionDragImmediate: true,
                           hapticsEnabled: controller.hapticsEnabled,
-                          onToggleCollapsed: () => setState(() {
+                          onToggleCollapsed: () => _apply(() {
                             final key = '${_viewMode.name}:${section.id}';
                             if (!_collapsedSections.add(key)) {
                               _collapsedSections.remove(key);
@@ -296,7 +283,7 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
 
   void _selectViewMode(AssetAccountViewMode mode) {
     if (_viewMode == mode) return;
-    setState(() {
+    _apply(() {
       _viewMode = mode;
       _collapsedSections.clear();
     });
@@ -310,7 +297,7 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
         newIndex > visible.length) {
       return;
     }
-    setState(() {
+    _apply(() {
       final visibleIds = visible.map((section) => section.id).toList();
       final moved = visibleIds.removeAt(oldIndex);
       visibleIds.insert(newIndex.clamp(0, visibleIds.length), moved);
@@ -332,7 +319,7 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
         newIndex >= order.length) {
       return;
     }
-    setState(() {
+    _apply(() {
       final moved = order.removeAt(oldIndex);
       order.insert(newIndex, moved);
     });
@@ -350,7 +337,7 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
               id: 'asset_cover_preset_${preset.id}',
               title: preset.label(l10n),
               selected: preset.url == _coverUrl,
-              onPressed: () => setState(() => _coverUrl = preset.url),
+              onPressed: () => _apply(() => _coverUrl = preset.url),
             ),
         ],
       ),
@@ -373,7 +360,7 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
         title: l10n.coverClear,
         enabled: _coverUrl.isNotEmpty,
         foregroundColor: Theme.of(context).colorScheme.error,
-        onPressed: () => setState(() => _coverUrl = ''),
+        onPressed: () => _apply(() => _coverUrl = ''),
       ),
     ];
   }
@@ -387,7 +374,7 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
       initialValue: _coverUrl.startsWith('http') ? _coverUrl : '',
     );
     if (url != null && mounted) {
-      setState(() => _coverUrl = url);
+      _apply(() => _coverUrl = url);
     }
   }
 
@@ -419,32 +406,15 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
       ),
     );
     if (dataUrl != null && mounted) {
-      setState(() => _coverUrl = dataUrl);
+      _apply(() => _coverUrl = dataUrl);
     }
   }
 
-  Future<bool> _save() async {
-    if (_saving) {
-      return false;
-    }
-    _saving = true;
-    final saved = await VeriFinScope.of(context).saveAssetDisplayDraft(
-      viewMode: _viewMode,
-      coverUrl: _coverUrl,
-      sectionOrders: _sectionOrders,
-      accountOrders: _accountOrders,
-      collapsedSections: _collapsedSections,
-    );
-    if (mounted) {
-      _saving = false;
-    }
-    return saved;
-  }
-
-  Future<void> _saveAndExit() async {
-    if (await _save() && mounted) {
-      setState(() => _initialFingerprint = _fingerprint);
-      _exitController.exit();
-    }
-  }
+  Future<bool> _save() => VeriFinScope.of(context).saveAssetDisplayDraft(
+    viewMode: _viewMode,
+    coverUrl: _coverUrl,
+    sectionOrders: _sectionOrders,
+    accountOrders: _accountOrders,
+    collapsedSections: _collapsedSections,
+  );
 }

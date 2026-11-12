@@ -268,7 +268,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('资产显示设置'), findsOneWidget);
-    expect(find.byTooltip('保存'), findsOneWidget);
+    expect(find.byIcon(Icons.save_outlined), findsNothing);
     await tester.tap(find.text('资产卡片背景'));
     await tester.pumpAndSettle();
     expect(find.text('资产卡片背景'), findsWidgets);
@@ -276,7 +276,7 @@ void main() {
     expect(find.text('选择本地图片'), findsOneWidget);
   });
 
-  testWidgets('资产背景在线预设在二级菜单中选择且保存前不落库', (tester) async {
+  testWidgets('资产背景在线预设选择即保存', (tester) async {
     final controller = await pumpApp(tester);
     await tapBottomTab(tester, 1);
     await tester.tap(find.byTooltip('资产操作'));
@@ -296,12 +296,8 @@ void main() {
     await tester.tap(find.text('蓝色城市'));
     await tester.pumpAndSettle();
 
-    expect(controller.assetCoverUrl, isEmpty);
-    final saveButton = find.ancestor(
-      of: find.byIcon(Icons.save_outlined),
-      matching: find.byType(IconButton),
-    );
-    expect(tester.widget<IconButton>(saveButton).onPressed, isNotNull);
+    expect(controller.assetCoverUrl, isNotEmpty);
+    expect(find.byIcon(Icons.save_outlined), findsNothing);
   });
 
   testWidgets('starts with no default accounts', (WidgetTester tester) async {
@@ -820,7 +816,7 @@ void main() {
     expect(saved.dueDay, isNull);
   });
 
-  testWidgets('资产视图保存前不生效，普通折叠状态持久化', (WidgetTester tester) async {
+  testWidgets('资产视图切换即保存，普通折叠状态持久化', (WidgetTester tester) async {
     final store = LocalKeyValueStore();
     final seed = await makeController(store);
     seed.addAccount(
@@ -851,9 +847,9 @@ void main() {
     await tester.tap(find.text('分类视图'));
     await tester.pumpAndSettle();
 
-    // 设置页只更新草稿，Controller 仍保持类型视图。
-    expect(controller.assetAccountViewMode, AssetAccountViewMode.type);
-    await tester.tap(find.byTooltip('保存'));
+    // 设置页切换视图即写入 Controller。
+    expect(controller.assetAccountViewMode, AssetAccountViewMode.group);
+    await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();
 
     expect(find.text('未分组'), findsOneWidget);
@@ -871,7 +867,7 @@ void main() {
     expect(find.text('支付宝账户'), findsNothing);
   });
 
-  testWidgets('资产显示设置返回时可放弃草稿', (tester) async {
+  testWidgets('资产显示设置返回直接保留已保存的改动', (tester) async {
     final controller = await pumpApp(tester);
     await tapBottomTab(tester, 1);
     await tester.tap(find.byTooltip('资产操作'));
@@ -886,10 +882,8 @@ void main() {
     await tester.tap(find.byTooltip('返回'));
     await tester.pumpAndSettle();
 
-    expect(find.text('保存修改？'), findsOneWidget);
-    await tester.tap(find.text('不保存'));
-    await tester.pumpAndSettle();
-    expect(controller.assetAccountViewMode, AssetAccountViewMode.type);
+    expect(find.text('保存修改？'), findsNothing);
+    expect(controller.assetAccountViewMode, AssetAccountViewMode.group);
     expect(find.text('资产显示设置'), findsNothing);
   });
 
@@ -1020,7 +1014,7 @@ void main() {
     target.dispose();
   });
 
-  testWidgets('资产分区排序先留在设置草稿，保存后才写入 Controller', (WidgetTester tester) async {
+  testWidgets('资产分区排序拖动结束即写入 Controller', (WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(460, 1600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final controller = await makeController();
@@ -1081,17 +1075,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // 拖动只改变页面草稿。
-    expect(
-      controller.sortedAssetSections<String>(
-        mode: AssetAccountViewMode.type,
-        sections: const <String>['creditCard', 'cash'],
-        idOf: (section) => section,
-      ),
-      const <String>['creditCard', 'cash'],
-    );
-    await tester.tap(find.byTooltip('保存'));
-    await tester.pumpAndSettle();
+    // 拖动结束即自动保存。
     expect(
       controller.sortedAssetSections<String>(
         mode: AssetAccountViewMode.type,
