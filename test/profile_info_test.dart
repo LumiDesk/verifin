@@ -20,40 +20,37 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('清空简介后保存，简介被真正清空（不再回填默认简介）', (tester) async {
+  Future<void> settleTextAutoSave(WidgetTester tester) async {
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pump();
+  }
+
+  testWidgets('清空简介后自动保存，简介被真正清空', (tester) async {
     final controller = await makeController();
+    addTearDown(controller.dispose);
     controller.updateProfile(
       controller.profile.copyWith(nickname: '张三', bio: '原来的简介'),
     );
 
     await pumpProfilePage(tester, controller);
 
-    // 清空简介输入框后保存。
     await tester.enterText(find.text('原来的简介'), '');
-    await tester.pump();
-    final saveButton = tester.widget<IconButton>(
-      find.widgetWithIcon(IconButton, Icons.save_outlined),
-    );
-    expect(saveButton.onPressed, isNotNull);
-    await tester.tap(find.byTooltip('保存'));
-    await tester.pumpAndSettle();
+    await settleTextAutoSave(tester);
 
-    // 昵称非空 → 直接保存，简介为空字符串，不回填默认简介。
+    // 昵称非空 → 简介为空字符串，不回填默认简介。
     expect(controller.profile.bio, '');
     expect(controller.profile.nickname, '张三');
   });
 
-  testWidgets('个人资料未修改时保存按钮禁用', (tester) async {
+  testWidgets('个人资料页不再显示保存按钮', (tester) async {
     final controller = await makeController();
+    addTearDown(controller.dispose);
     await pumpProfilePage(tester, controller);
 
-    final saveButton = tester.widget<IconButton>(
-      find.widgetWithIcon(IconButton, Icons.save_outlined),
-    );
-    expect(saveButton.onPressed, isNull);
+    expect(find.byTooltip('保存'), findsNothing);
   });
 
-  testWidgets('性别使用锚点菜单并在保存后提交', (tester) async {
+  testWidgets('性别选择后立即提交', (tester) async {
     final controller = await makeController();
     addTearDown(controller.dispose);
     await pumpProfilePage(tester, controller);
@@ -71,14 +68,10 @@ void main() {
     );
     await tester.tap(find.text('女').last);
     await tester.pumpAndSettle();
-    expect(controller.profile.gender, ProfileGender.unset);
-
-    await tester.tap(find.byTooltip('保存'));
-    await tester.pumpAndSettle();
     expect(controller.profile.gender, ProfileGender.female);
   });
 
-  testWidgets('已设置生日可清除并在保存后提交', (tester) async {
+  testWidgets('已设置生日可清除并立即提交', (tester) async {
     final store = LocalKeyValueStore();
     final controller = await makeController(store);
     addTearDown(controller.dispose);
@@ -90,7 +83,7 @@ void main() {
 
     expect(find.text('1990-01-02'), findsOneWidget);
     await tester.tap(find.byKey(const Key('profile_birthday_clear')));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(
       find.descendant(
@@ -100,17 +93,15 @@ void main() {
       findsOneWidget,
     );
     expect(find.byType(DatePickerDialog), findsNothing);
-    expect(controller.profile.birthday, '1990-01-02');
-    await tester.tap(find.byTooltip('保存'));
-    await tester.pumpAndSettle();
     expect(controller.profile.birthday, '');
     final restored = await makeController(store);
     addTearDown(restored.dispose);
     expect(restored.profile.birthday, '');
   });
 
-  testWidgets('昵称留空保存时弹确认框，取消则不保存', (tester) async {
+  testWidgets('昵称留空自动回退默认昵称，不再弹确认框', (tester) async {
     final controller = await makeController();
+    addTearDown(controller.dispose);
     controller.updateProfile(
       controller.profile.copyWith(nickname: '张三', bio: '简介'),
     );
@@ -118,35 +109,9 @@ void main() {
     await pumpProfilePage(tester, controller);
 
     await tester.enterText(find.text('张三'), '');
-    await tester.pump();
-    await tester.tap(find.byTooltip('保存'));
-    await tester.pumpAndSettle();
+    await settleTextAutoSave(tester);
 
-    // 弹出提示框。
-    expect(find.text('未设置昵称'), findsOneWidget);
-
-    // 取消：不写入，昵称保持原值。
-    await tester.tap(find.text('取消'));
-    await tester.pumpAndSettle();
-    expect(controller.profile.nickname, '张三');
-  });
-
-  testWidgets('昵称留空确认后使用默认昵称保存', (tester) async {
-    final controller = await makeController();
-    controller.updateProfile(
-      controller.profile.copyWith(nickname: '张三', bio: '简介'),
-    );
-
-    await pumpProfilePage(tester, controller);
-
-    await tester.enterText(find.text('张三'), '');
-    await tester.pump();
-    await tester.tap(find.byTooltip('保存'));
-    await tester.pumpAndSettle();
-
-    // 确认框里点「保存」→ 用默认昵称落库。
-    await tester.tap(find.widgetWithText(FilledButton, '保存'));
-    await tester.pumpAndSettle();
+    expect(find.text('未设置昵称'), findsNothing);
     expect(controller.profile.nickname, 'Veri Fin');
   });
 }
