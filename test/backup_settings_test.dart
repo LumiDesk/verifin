@@ -174,7 +174,7 @@ void main() {
       expect(controller.backupSettings.frequency, BackupFrequency.manual);
     });
 
-    testWidgets('数据管理页只在明确保存后提交备份频率', (tester) async {
+    testWidgets('数据管理页备份频率变更即保存', (tester) async {
       await tester.binding.setSurfaceSize(const Size(460, 1800));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final controller = await makeController();
@@ -194,9 +194,6 @@ void main() {
       await tester.tap(find.text('每次打开应用'));
       await tester.pumpAndSettle();
 
-      expect(controller.backupSettings.frequency, BackupFrequency.manual);
-      await tester.tap(find.byTooltip('保存'));
-      await tester.pumpAndSettle();
       expect(controller.backupSettings.frequency, BackupFrequency.onOpen);
     });
 
@@ -265,7 +262,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('每次打开应用'));
       await tester.pumpAndSettle();
-      expect(controller.backupSettings.frequency, BackupFrequency.manual);
+      expect(controller.backupSettings.frequency, BackupFrequency.onOpen);
 
       await tester.ensureVisible(find.text('初始化数据'));
       await tester.tap(find.text('初始化数据'));

@@ -171,6 +171,17 @@ class AutoSave extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 放弃尚未落库的改动（用于删除/重置等命令性退出），不写库。
+  ///
+  /// 只清掉待提交标记；已经开始的保存无法取消，仍会按调用时的草稿完成。
+  void discardPending() {
+    _timer?.cancel();
+    _timer = null;
+    _revision = _savedRevision;
+    _failed = false;
+    _setState(AutoSaveState.idle);
+  }
+
   @override
   void dispose() {
     _disposed = true;
