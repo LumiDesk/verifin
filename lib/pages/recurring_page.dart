@@ -4,6 +4,7 @@ import 'package:anchored_menu/anchored_menu.dart';
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
+import '../app/auto_save.dart';
 import '../app/common_widgets.dart';
 import '../app/currency_catalog.dart';
 import '../app/currency_math.dart';
@@ -25,8 +26,7 @@ class RecurringRulesPage extends StatefulWidget {
 }
 
 class _RecurringRulesPageState extends State<RecurringRulesPage> {
-  final EditorExitController _exitController = EditorExitController();
-  final Map<String, bool> _initialActive = <String, bool>{};
+  late final AutoSave _autoSave;
   final Map<String, bool> _draftActive = <String, bool>{};
   bool _initialized = false;
 
@@ -36,8 +36,16 @@ class _RecurringRulesPageState extends State<RecurringRulesPage> {
     if (_initialized) {
       return;
     }
-    _syncRules(VeriFinScope.of(context).recurringRules);
+    final controller = VeriFinScope.of(context);
+    _autoSave = AutoSave(save: _save, logger: controller.logger);
+    _syncRules(controller.recurringRules);
     _initialized = true;
+  }
+
+  @override
+  void dispose() {
+    _autoSave.dispose();
+    super.dispose();
   }
 
   @override
@@ -47,10 +55,8 @@ class _RecurringRulesPageState extends State<RecurringRulesPage> {
     final missingByRule = controller.dueRecurringMissingRates(DateTime.now());
     _syncRules(rules);
 
-    return UnsavedChangesGuard(
-      isDirty: _isDirty,
-      onSave: _save,
-      exitController: _exitController,
+    return AutoSavePopScope(
+      autoSave: _autoSave,
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -67,10 +73,10 @@ class _RecurringRulesPageState extends State<RecurringRulesPage> {
                       tooltip: AppLocalizations.of(context).recurringAddTooltip,
                       onPressed: () => _openEditor(context, null),
                     ),
-                    SaveHeaderAction(onPressed: _isDirty ? _saveAndExit : null),
                   ],
                 ),
                 const SizedBox(height: 10),
+                AutoSaveFailureBanner(autoSave: _autoSave),
                 if (missingByRule.isNotEmpty) ...<Widget>[
                   VeriCard(
                     child: Row(
@@ -132,6 +138,7 @@ class _RecurringRulesPageState extends State<RecurringRulesPage> {
                             onTap: () => _openEditor(context, rule),
                             onToggle: (value) {
                               setState(() => _draftActive[rule.id] = value);
+                              _autoSave.schedule(immediate: true);
                             },
                           ),
                       ],
@@ -147,21 +154,10 @@ class _RecurringRulesPageState extends State<RecurringRulesPage> {
 
   void _syncRules(List<RecurringRule> rules) {
     final ids = rules.map((rule) => rule.id).toSet();
-    _initialActive.removeWhere((id, _) => !ids.contains(id));
     _draftActive.removeWhere((id, _) => !ids.contains(id));
     for (final rule in rules) {
-      _initialActive.putIfAbsent(rule.id, () => rule.active);
       _draftActive.putIfAbsent(rule.id, () => rule.active);
     }
-  }
-
-  bool get _isDirty {
-    if (_draftActive.length != _initialActive.length) {
-      return true;
-    }
-    return _draftActive.entries.any(
-      (entry) => _initialActive[entry.key] != entry.value,
-    );
   }
 
   Future<void> _openEditor(BuildContext context, RecurringRule? rule) async {
@@ -174,17 +170,6 @@ class _RecurringRulesPageState extends State<RecurringRulesPage> {
       setState(() {
         _syncRules(VeriFinScope.of(context).recurringRules);
       });
-    }
-  }
-
-  Future<void> _saveAndExit() async {
-    if (await _save() && mounted) {
-      setState(() {
-        _initialActive
-          ..clear()
-          ..addAll(_draftActive);
-      });
-      _exitController.exit();
     }
   }
 
@@ -318,7 +303,7 @@ class RecurringRuleEditPage extends StatefulWidget {
 }
 
 class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
-  final EditorExitController _exitController = EditorExitController();
+  late final AutoSave _autoSave;
   late EntryType _type;
   late double _amount;
   late String _currencyCode;
@@ -348,6 +333,7 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
     }
     _initialized = true;
     final controller = VeriFinScope.of(context);
+    _autoSave = AutoSave(save: _save, logger: controller.logger);
     final rule = widget.rule;
     if (rule != null) {
       _type = rule.type;
@@ -389,8 +375,16 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
 
   @override
   void dispose() {
+    _autoSave.dispose();
     _noteController.dispose();
     super.dispose();
+  }
+
+  void _change(VoidCallback update) {
+    setState(update);
+    if (widget.rule != null) {
+      _autoSave.schedule(immediate: true);
+    }
   }
 
   Account? _findAccount(List<Account> accounts, String? id) {
@@ -490,208 +484,207 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
     final accounts = controller.accounts;
     final category = controller.categoryById(_categoryId);
     final account = accounts.where((a) => a.id == _accountId).firstOrNull;
+    final editing = widget.rule != null;
 
-    return UnsavedChangesGuard(
-      isDirty: _isDirty,
-      onSave: _save,
-      exitController: _exitController,
-      child: Scaffold(
-        body: SafeArea(
-          child: VeriPage(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
-              children: <Widget>[
-                VeriHeader(
-                  title: widget.rule == null
-                      ? AppLocalizations.of(context).recurringNewTitle
-                      : AppLocalizations.of(context).recurringEditTitle,
-                  showBack: true,
-                  actions: <Widget>[
-                    if (widget.rule != null)
-                      HeaderAction(
-                        icon: Icons.delete_outline,
-                        tooltip: AppLocalizations.of(
-                          context,
-                        ).recurringDeleteTooltip,
-                        destructive: true,
-                        onPressed: _delete,
-                      ),
+    final content = Scaffold(
+      body: SafeArea(
+        child: VeriPage(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
+            children: <Widget>[
+              VeriHeader(
+                title: editing
+                    ? AppLocalizations.of(context).recurringEditTitle
+                    : AppLocalizations.of(context).recurringNewTitle,
+                showBack: true,
+                actions: <Widget>[
+                  if (editing)
+                    HeaderAction(
+                      icon: Icons.delete_outline,
+                      tooltip: AppLocalizations.of(
+                        context,
+                      ).recurringDeleteTooltip,
+                      destructive: true,
+                      onPressed: _delete,
+                    ),
+                  if (!editing)
                     SaveHeaderAction(
                       onPressed: _isDirty && _canSave(accounts)
                           ? _saveAndExit
                           : null,
                     ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                VeriSegmentedControl<EntryType>(
-                  values: EntryType.userSelectable,
-                  selected: _type,
-                  labelOf: (type) => type.label(AppLocalizations.of(context)),
-                  // 支出/收入/转账各用各的语义色，与记账页的分段条保持一致。
-                  accentOf: (type) => type == EntryType.expense
-                      ? veriSemantic(context, veriExpense)
-                      : type == EntryType.income
-                      ? veriSemantic(context, veriIncome)
-                      : veriSemantic(context, veriBlue),
-                  onChanged: (type) {
-                    setState(() {
-                      _type = type;
-                      _categoryId = controller
-                          .categoriesForType(_type)
-                          .first
-                          .id;
-                      if (_type == EntryType.transfer) {
-                        _currencyTouched = false;
-                      }
-                      _resolveAmounts(
-                        controller,
-                        accounts,
-                        forceAccount: true,
-                        forceToAccount: true,
-                        forceBase: true,
-                      );
-                    });
-                  },
-                ),
-                const SizedBox(height: 12),
-                VeriCard(
-                  child: Column(
-                    children: <Widget>[
+                ],
+              ),
+              const SizedBox(height: 10),
+              if (editing) AutoSaveFailureBanner(autoSave: _autoSave),
+              VeriSegmentedControl<EntryType>(
+                values: EntryType.userSelectable,
+                selected: _type,
+                labelOf: (type) => type.label(AppLocalizations.of(context)),
+                // 支出/收入/转账各用各的语义色，与记账页的分段条保持一致。
+                accentOf: (type) => type == EntryType.expense
+                    ? veriSemantic(context, veriExpense)
+                    : type == EntryType.income
+                    ? veriSemantic(context, veriIncome)
+                    : veriSemantic(context, veriBlue),
+                onChanged: (type) {
+                  _change(() {
+                    _type = type;
+                    _categoryId = controller.categoriesForType(_type).first.id;
+                    if (_type == EntryType.transfer) {
+                      _currencyTouched = false;
+                    }
+                    _resolveAmounts(
+                      controller,
+                      accounts,
+                      forceAccount: true,
+                      forceToAccount: true,
+                      forceBase: true,
+                    );
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+              VeriCard(
+                child: Column(
+                  children: <Widget>[
+                    DetailInfoRow(
+                      label: AppLocalizations.of(context).amountLabel,
+                      value: _amount > 0
+                          ? formatUserMoney(_amount, _currencyCode)
+                          : AppLocalizations.of(context).tapToFill,
+                      placeholder: _amount <= 0,
+                      onTap: _editAmount,
+                    ),
+                    DetailInfoRow(
+                      label: AppLocalizations.of(context).entryCurrencyLabel,
+                      value: _currencyCode,
+                      onTap: _type == EntryType.transfer ? null : _pickCurrency,
+                    ),
+                    DetailInfoRow(
+                      label: AppLocalizations.of(context).commonCategory,
+                      value: category.label,
+                      onTap: _pickCategory,
+                    ),
+                    DetailInfoRow(
+                      label: _type == EntryType.transfer
+                          ? AppLocalizations.of(context).transferOutAccount
+                          : AppLocalizations.of(context).accountLabel,
+                      value: accounts.isEmpty
+                          ? AppLocalizations.of(context).addAccountFirst
+                          : _accountId.isEmpty
+                          ? AppLocalizations.of(context).noAccountLabel
+                          : account?.name ??
+                                AppLocalizations.of(context).noAccountLabel,
+                      placeholder: accounts.isEmpty,
+                      onTap: accounts.isEmpty
+                          ? null
+                          : () => _pickAccount(false),
+                    ),
+                    if (_type == EntryType.transfer)
                       DetailInfoRow(
-                        label: AppLocalizations.of(context).amountLabel,
-                        value: _amount > 0
-                            ? formatUserMoney(_amount, _currencyCode)
-                            : AppLocalizations.of(context).tapToFill,
-                        placeholder: _amount <= 0,
-                        onTap: _editAmount,
-                      ),
-                      DetailInfoRow(
-                        label: AppLocalizations.of(context).entryCurrencyLabel,
-                        value: _currencyCode,
-                        onTap: _type == EntryType.transfer
+                        label: AppLocalizations.of(context).transferInAccount,
+                        value:
+                            accounts
+                                .where((a) => a.id == _toAccountId)
+                                .firstOrNull
+                                ?.name ??
+                            AppLocalizations.of(context).pleaseSelect,
+                        placeholder: _toAccountId == null,
+                        onTap: accounts.length < 2
                             ? null
-                            : _pickCurrency,
+                            : () => _pickAccount(true),
                       ),
-                      DetailInfoRow(
-                        label: AppLocalizations.of(context).commonCategory,
-                        value: category.label,
-                        onTap: _pickCategory,
-                      ),
-                      DetailInfoRow(
-                        label: _type == EntryType.transfer
-                            ? AppLocalizations.of(context).transferOutAccount
-                            : AppLocalizations.of(context).accountLabel,
-                        value: accounts.isEmpty
-                            ? AppLocalizations.of(context).addAccountFirst
-                            : _accountId.isEmpty
-                            ? AppLocalizations.of(context).noAccountLabel
-                            : account?.name ??
-                                  AppLocalizations.of(context).noAccountLabel,
-                        placeholder: accounts.isEmpty,
-                        onTap: accounts.isEmpty
-                            ? null
-                            : () => _pickAccount(false),
-                      ),
-                      if (_type == EntryType.transfer)
-                        DetailInfoRow(
-                          label: AppLocalizations.of(context).transferInAccount,
-                          value:
-                              accounts
-                                  .where((a) => a.id == _toAccountId)
-                                  .firstOrNull
-                                  ?.name ??
-                              AppLocalizations.of(context).pleaseSelect,
-                          placeholder: _toAccountId == null,
-                          onTap: accounts.length < 2
-                              ? null
-                              : () => _pickAccount(true),
-                        ),
-                      ..._currencyAmountFields(controller, accounts),
-                      AnchoredMenuChoice<RecurringRatePolicy>(
-                        values: RecurringRatePolicy.values,
-                        selected: _ratePolicy,
-                        idOf: (value) => 'recurring_rate_${value.name}',
-                        labelOf: (value) =>
-                            value == RecurringRatePolicy.latestAvailable
+                    ..._currencyAmountFields(controller, accounts),
+                    AnchoredMenuChoice<RecurringRatePolicy>(
+                      values: RecurringRatePolicy.values,
+                      selected: _ratePolicy,
+                      idOf: (value) => 'recurring_rate_${value.name}',
+                      labelOf: (value) =>
+                          value == RecurringRatePolicy.latestAvailable
+                          ? AppLocalizations.of(
+                              context,
+                            ).recurringRatePolicyLatest
+                          : AppLocalizations.of(
+                              context,
+                            ).recurringRatePolicyFixed,
+                      iconOf: (value) =>
+                          value == RecurringRatePolicy.latestAvailable
+                          ? Icons.currency_exchange_outlined
+                          : Icons.lock_clock_outlined,
+                      onSelected: (value) => _change(() => _ratePolicy = value),
+                      semanticLabel: AppLocalizations.of(
+                        context,
+                      ).recurringRatePolicyLabel,
+                      builder: (context, openMenu, menuOpen) => DetailInfoRow(
+                        label: AppLocalizations.of(
+                          context,
+                        ).recurringRatePolicyLabel,
+                        value:
+                            _ratePolicy == RecurringRatePolicy.latestAvailable
                             ? AppLocalizations.of(
                                 context,
                               ).recurringRatePolicyLatest
                             : AppLocalizations.of(
                                 context,
                               ).recurringRatePolicyFixed,
-                        iconOf: (value) =>
-                            value == RecurringRatePolicy.latestAvailable
-                            ? Icons.currency_exchange_outlined
-                            : Icons.lock_clock_outlined,
-                        onSelected: (value) =>
-                            setState(() => _ratePolicy = value),
-                        semanticLabel: AppLocalizations.of(
-                          context,
-                        ).recurringRatePolicyLabel,
-                        builder: (context, openMenu, menuOpen) => DetailInfoRow(
-                          label: AppLocalizations.of(
-                            context,
-                          ).recurringRatePolicyLabel,
-                          value:
-                              _ratePolicy == RecurringRatePolicy.latestAvailable
-                              ? AppLocalizations.of(
-                                  context,
-                                ).recurringRatePolicyLatest
-                              : AppLocalizations.of(
-                                  context,
-                                ).recurringRatePolicyFixed,
-                          onTap: openMenu,
-                        ),
+                        onTap: openMenu,
                       ),
-                      AnchoredMenuChoice<RecurringFrequency>(
-                        values: RecurringFrequency.values,
-                        selected: _frequency,
-                        idOf: (value) => 'recurring_frequency_${value.name}',
-                        labelOf: (value) =>
-                            value.label(AppLocalizations.of(context)),
-                        iconOf: (value) => switch (value) {
-                          RecurringFrequency.daily => Icons.today_outlined,
-                          RecurringFrequency.weekly => Icons.view_week_outlined,
-                          RecurringFrequency.monthly =>
-                            Icons.calendar_month_outlined,
-                          RecurringFrequency.yearly => Icons.event_outlined,
-                        },
-                        onSelected: (value) =>
-                            setState(() => _frequency = value),
-                        semanticLabel: AppLocalizations.of(
-                          context,
-                        ).pickFrequencyTitle,
-                        builder: (context, openMenu, menuOpen) => DetailInfoRow(
-                          label: AppLocalizations.of(context).frequencyLabel,
-                          value: _frequency.label(AppLocalizations.of(context)),
-                          onTap: openMenu,
-                        ),
+                    ),
+                    AnchoredMenuChoice<RecurringFrequency>(
+                      values: RecurringFrequency.values,
+                      selected: _frequency,
+                      idOf: (value) => 'recurring_frequency_${value.name}',
+                      labelOf: (value) =>
+                          value.label(AppLocalizations.of(context)),
+                      iconOf: (value) => switch (value) {
+                        RecurringFrequency.daily => Icons.today_outlined,
+                        RecurringFrequency.weekly => Icons.view_week_outlined,
+                        RecurringFrequency.monthly =>
+                          Icons.calendar_month_outlined,
+                        RecurringFrequency.yearly => Icons.event_outlined,
+                      },
+                      onSelected: (value) => _change(() => _frequency = value),
+                      semanticLabel: AppLocalizations.of(
+                        context,
+                      ).pickFrequencyTitle,
+                      builder: (context, openMenu, menuOpen) => DetailInfoRow(
+                        label: AppLocalizations.of(context).frequencyLabel,
+                        value: _frequency.label(AppLocalizations.of(context)),
+                        onTap: openMenu,
                       ),
-                      DetailInfoRow(
-                        label: AppLocalizations.of(context).startDateLabel,
-                        value: AppLocalizations.of(
-                          context,
-                        ).dateMonthDay(_startDate),
-                        onTap: _pickStartDate,
-                      ),
-                      DetailInfoRow(
-                        label: AppLocalizations.of(context).commonNote,
-                        value: _noteController.text.trim().isEmpty
-                            ? AppLocalizations.of(context).noteHint
-                            : _noteController.text.trim(),
-                        placeholder: _noteController.text.trim().isEmpty,
-                        onTap: _editNote,
-                      ),
-                    ],
-                  ),
+                    ),
+                    DetailInfoRow(
+                      label: AppLocalizations.of(context).startDateLabel,
+                      value: AppLocalizations.of(
+                        context,
+                      ).dateMonthDay(_startDate),
+                      onTap: _pickStartDate,
+                    ),
+                    DetailInfoRow(
+                      label: AppLocalizations.of(context).commonNote,
+                      value: _noteController.text.trim().isEmpty
+                          ? AppLocalizations.of(context).noteHint
+                          : _noteController.text.trim(),
+                      placeholder: _noteController.text.trim().isEmpty,
+                      onTap: _editNote,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
+    if (!editing) {
+      return UnsavedChangesGuard(
+        isDirty: _isDirty,
+        onSave: _save,
+        child: content,
+      );
+    }
+    return AutoSavePopScope(autoSave: _autoSave, child: content);
   }
 
   bool _canSave(List<Account> accounts) {
@@ -795,7 +788,7 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
       ],
     );
     if (!mounted || selected == null || selected.code == _currencyCode) return;
-    setState(() {
+    _change(() {
       _currencyCode = selected.code;
       _currencyTouched = true;
       _amount = normalizeCurrencyAmount(_amount, _currencyCode);
@@ -820,7 +813,7 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
     if (amount == null || amount <= 0 || !mounted) {
       return;
     }
-    setState(() {
+    _change(() {
       final controller = VeriFinScope.of(context);
       final previousAmount = _amount;
       _amount = normalizeCurrencyAmount(amount, _currencyCode);
@@ -873,7 +866,7 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
       maxFractionDigits: CurrencyCatalog.require(currencyCode).minorUnit,
     );
     if (!mounted || value == null || value <= 0) return;
-    setState(() {
+    _change(() {
       _accountAmount = normalizeCurrencyAmount(value, currencyCode);
       _accountAmountTouched = true;
       if (currencyCode ==
@@ -896,7 +889,7 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
       maxFractionDigits: CurrencyCatalog.require(currencyCode).minorUnit,
     );
     if (!mounted || value == null || value <= 0) return;
-    setState(() {
+    _change(() {
       _toAccountAmount = normalizeCurrencyAmount(value, currencyCode);
       _toAccountAmountTouched = true;
       _missingRateCodes.clear();
@@ -914,7 +907,7 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
       maxFractionDigits: CurrencyCatalog.require(baseCode).minorUnit,
     );
     if (!mounted || value == null || value <= 0) return;
-    setState(() {
+    _change(() {
       _baseAmount = normalizeCurrencyAmount(value, baseCode);
       _baseAmountTouched = true;
       final account = _findAccount(
@@ -937,7 +930,7 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
       selectedId: _categoryId,
     );
     if (selected != null && mounted) {
-      setState(() => _categoryId = selected);
+      _change(() => _categoryId = selected);
     }
   }
 
@@ -973,7 +966,7 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
     if (selected == null || !mounted) {
       return;
     }
-    setState(() {
+    _change(() {
       if (toAccount) {
         _toAccountId = selected.id;
         _toAccountAmountTouched = false;
@@ -1006,7 +999,7 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
       lastDate: DateTime(2100),
     );
     if (picked != null && mounted) {
-      setState(() {
+      _change(() {
         _startDate = dateOnly(picked);
         final controller = VeriFinScope.of(context);
         _resolveAmounts(controller, controller.accounts);
@@ -1023,7 +1016,7 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
       allowEmpty: true,
     );
     if (note != null && mounted) {
-      setState(() => _noteController.text = note);
+      _change(() => _noteController.text = note);
     }
   }
 
@@ -1048,7 +1041,7 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
   Future<void> _saveAndExit() async {
     if (await _save() && mounted) {
       setState(() => _initialDraft = _draftSnapshot);
-      _exitController.exit();
+      Navigator.of(context).pop();
     }
   }
 
@@ -1119,6 +1112,9 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
       return;
     }
     VeriFinScope.of(context).deleteRecurringRule(widget.rule!.id);
-    _exitController.exit();
+    _autoSave.discardPending();
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
   }
 }

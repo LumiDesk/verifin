@@ -324,7 +324,7 @@ void main() {
     target.dispose();
   });
 
-  testWidgets('周期规则开关只在明确保存后提交', (tester) async {
+  testWidgets('周期规则开关变更即保存', (tester) async {
     final controller = await makeController();
     addTearDown(controller.dispose);
     final rule = _rule(
@@ -342,10 +342,6 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.byType(Switch));
-    await tester.pumpAndSettle();
-    expect(controller.recurringRules.single.active, isTrue);
-
-    await tester.tap(find.byTooltip('保存'));
     await tester.pumpAndSettle();
     expect(controller.recurringRules.single.active, isFalse);
     expect(find.text('未保存的修改'), findsNothing);
@@ -389,7 +385,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       controller.recurringRules.single.frequency,
-      RecurringFrequency.monthly,
+      RecurringFrequency.weekly,
     );
 
     await tester.tap(find.byTooltip('删除规则'));
