@@ -11,19 +11,21 @@ class BudgetSettingsPage extends StatefulWidget {
 }
 
 class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
-  final EditorExitController _exitController = EditorExitController();
+  late final AutoSave _autoSave;
   // 收起的父分类 id（默认折叠：首次构建时把所有含子类的分类加入）。
   final Set<String> _collapsedCategories = <String>{};
   bool _collapseInitialized = false;
   bool _draftInitialized = false;
-  late double _initialDefaultBudget;
   late double _draftDefaultBudget;
-  late double _initialDailyBudget;
   late double _draftDailyBudget;
-  late int _initialStartDay;
   late int _draftStartDay;
-  final Map<String, double> _initialCategoryBudgets = <String, double>{};
   final Map<String, double> _draftCategoryBudgets = <String, double>{};
+
+  @override
+  void dispose() {
+    _autoSave.dispose();
+    super.dispose();
+  }
 
   void _initCollapse(VeriFinController controller) {
     if (_collapseInitialized) {
@@ -42,15 +44,20 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
       return;
     }
     _draftInitialized = true;
-    _initialDefaultBudget = _draftDefaultBudget =
-        controller.defaultMonthlyBudget;
-    _initialDailyBudget = _draftDailyBudget = controller.dailyBudget();
-    _initialStartDay = _draftStartDay = controller.budgetCycleStartDay;
+    _autoSave = AutoSave(save: _save, logger: controller.logger);
+    _draftDefaultBudget = controller.defaultMonthlyBudget;
+    _draftDailyBudget = controller.dailyBudget();
+    _draftStartDay = controller.budgetCycleStartDay;
     for (final category in controller.categoriesForType(EntryType.expense)) {
-      final amount = controller.defaultCategoryBudget(category.id);
-      _initialCategoryBudgets[category.id] = amount;
-      _draftCategoryBudgets[category.id] = amount;
+      _draftCategoryBudgets[category.id] = controller.defaultCategoryBudget(
+        category.id,
+      );
     }
+  }
+
+  void _apply(VoidCallback update) {
+    setState(update);
+    _autoSave.schedule(immediate: true);
   }
 
   @override
@@ -88,10 +95,8 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
     final dailyBudget = _draftDailyBudget;
     final startDay = _draftStartDay;
 
-    return UnsavedChangesGuard(
-      isDirty: _isDirty,
-      onSave: _save,
-      exitController: _exitController,
+    return AutoSavePopScope(
+      autoSave: _autoSave,
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -106,11 +111,9 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
                     controller.activeBook.baseCurrencyCode,
                   ),
                   showBack: true,
-                  actions: <Widget>[
-                    SaveHeaderAction(onPressed: _isDirty ? _saveAndExit : null),
-                  ],
                 ),
                 const SizedBox(height: 10),
+                AutoSaveFailureBanner(autoSave: _autoSave),
                 _sectionLabel(context, l10n.budgetSettingsSectionOverall),
                 VeriCard(
                   child: Column(
@@ -224,7 +227,7 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
         context: context,
         hasBudget: (_draftCategoryBudgets[category.id] ?? 0) > 0,
         onSet: () => unawaited(_editDefaultCategoryBudget(category)),
-        onClear: () => setState(() {
+        onClear: () => _apply(() {
           _draftCategoryBudgets[category.id] = 0;
         }),
       );
@@ -282,7 +285,7 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
     if (amount == null || !mounted) {
       return;
     }
-    setState(() => _draftDefaultBudget = amount);
+    _apply(() => _draftDefaultBudget = amount);
   }
 
   Future<void> _editDailyBudget() async {
@@ -293,7 +296,7 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
     if (amount == null || !mounted) {
       return;
     }
-    setState(() => _draftDailyBudget = amount);
+    _apply(() => _draftDailyBudget = amount);
   }
 
   /// 选择预算周期起始日（1–28，账本级）。改起始日只是换周期口径，各键月已存
@@ -317,7 +320,7 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
           : l10n.budgetCycleStartDayOption(day),
     );
     if (selected != null && mounted) {
-      setState(() => _draftStartDay = selected);
+      _apply(() => _draftStartDay = selected);
     }
   }
 
@@ -331,36 +334,7 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
     if (amount == null || !mounted) {
       return;
     }
-    setState(() => _draftCategoryBudgets[category.id] = amount);
-  }
-
-  bool get _isDirty {
-    if (_draftDefaultBudget != _initialDefaultBudget ||
-        _draftDailyBudget != _initialDailyBudget ||
-        _draftStartDay != _initialStartDay ||
-        _draftCategoryBudgets.length != _initialCategoryBudgets.length) {
-      return true;
-    }
-    for (final entry in _draftCategoryBudgets.entries) {
-      if (_initialCategoryBudgets[entry.key] != entry.value) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  Future<void> _saveAndExit() async {
-    if (await _save() && mounted) {
-      setState(() {
-        _initialDefaultBudget = _draftDefaultBudget;
-        _initialDailyBudget = _draftDailyBudget;
-        _initialStartDay = _draftStartDay;
-        _initialCategoryBudgets
-          ..clear()
-          ..addAll(_draftCategoryBudgets);
-      });
-      _exitController.exit();
-    }
+    _apply(() => _draftCategoryBudgets[category.id] = amount);
   }
 
   Future<bool> _save() => VeriFinScope.of(context).saveBudgetSettingsDraft(
