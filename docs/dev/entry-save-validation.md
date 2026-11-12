@@ -8,7 +8,7 @@
 
 覆盖 `VeriFinController.saveEntryAggregateDraftResult` 的以下链路：
 
-- 原交易、关联退款和附件作为一次聚合草稿提交；
+- 原交易、关联退款和附件作为自动保存的聚合草稿，有效改动一次原子提交；
 - 保存结果 `EntrySaveResult` 与校验错误码 `EntryValidationCode`；
 - 校验失败写入 `AppLogger` 的方式；
 - 交易编辑页、交易详情页和信用卡还款页对校验失败的提示；
@@ -122,7 +122,7 @@ Entry save validation failed: <EntryValidationCode>[ (ledger: <LedgerDataValidat
 - 已选币种缺少必要汇率；
 - 附件引用异常。
 
-保存按钮的禁用态和字段提示沿用现有页面骨架与 `docs/design/ui-guidelines.md`，不新增自定义 Toast。
+自动保存页的字段提示沿用现有页面骨架与 `docs/design/ui-guidelines.md`：无效中间态不落库并显示原因，不新增自定义 Toast。新建类显式提交页在校验不通过时保持保存按钮禁用。
 
 ### 通用兜底与精确提示
 
@@ -133,7 +133,7 @@ Entry save validation failed: <EntryValidationCode>[ (ledger: <LedgerDataValidat
 - 对可操作 code 使用具体文案；`invalidAmounts` 保留现有 `entrySaveValidationFailed` 兜底，scope code 提示重新选择分类/标签；
 - 新增文案同时写入 `lib/l10n/app_zh.arb` 与 `app_en.arb`，不手改生成文件；
 - 提示仍使用根级 `VeriFeedbackHost`、`VeriFeedbackTone.warning`，不新增旧式 Material 横条或 Toast；
-- 持久化失败（`EntrySavePersistenceFailure`）继续由 `onPersistError` 统一记录和反馈，提示“保存失败”并保留草稿，不并入校验提示。
+- 持久化失败（`EntrySavePersistenceFailure`）继续由 `onPersistError` 统一记录和反馈；自动保存页显示可重试的失败提示并保留页面状态，新建类页面的保存按钮保持可用，不并入校验提示。
 
 映射 helper 放在 UI 层（例如 `lib/app/entry_save_feedback.dart`），不要把 `AppLocalizations` 依赖塞进 Controller。
 
@@ -200,10 +200,10 @@ double remainingRefundableAmount(
 - 已有退款编辑时排除自身，不会把自己的旧值重复扣减；
 - 保存成功后 `refundedBaseAmount` 等于已到账退款 `baseAmount` 之和；
 - 冷启动/重载后金额和退款关系一致；
-- SQLite 写入失败时停留在原页、保留草稿、记录日志并提示；
+- SQLite 写入失败时停留在原页、保留页面状态、记录日志并提示；
 - 校验失败日志只含 code，不含金额、备注、名称或 id；
 - 可操作 code 显示具体提示，通用 code 仍显示兜底提示；
-- 全屏编辑页的返回/未保存拦截行为不变。
+- 自动保存编辑页返回前先 flush 待保存改动；新建类显式提交页仍走未保存拦截。
 
 ### 测试矩阵
 
@@ -211,7 +211,7 @@ double remainingRefundableAmount(
 |---|---|
 | 纯函数 | `remainingRefundableAmount`：小数尾差、待退款、排除自身、超额 clamp、零剩余、非支出 |
 | Controller | 部分退款后新增默认退款成功；缓存重算；跨账本/悬空分类/标签仍被拒绝；持久化失败保持内存 |
-| Widget | 交易详情添加默认退款后保存；交易编辑页保存；信用卡还款页失败提示；已全额退款时按钮禁用 |
+| Widget | 交易详情添加默认退款后自动保存；交易编辑页有效改动自动保存；信用卡还款页失败提示；已全额退款时按钮禁用 |
 | SQLite/ffi | 聚合保存后重载，退款金额与 `refundedBaseAmount` 一致 |
 | 日志 | 注入 `AppLogger`，断言 `warning`/`entry_save`/code，且不含敏感文本 |
 | 布局 | 393×852、360dp、大字号下退款弹层和提示不溢出 |
