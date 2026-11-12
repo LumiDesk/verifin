@@ -3,18 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/app/root_navigation.dart';
-import 'package:verifin/app/root_navigation_docked.dart';
 import 'package:verifin/app/root_navigation_styles.dart';
-import 'package:verifin/l10n/app_localizations.dart';
+import 'package:verifin/app/veri_fin_scope.dart';
 import 'package:verifin/local_storage/local_storage.dart';
 import 'package:verifin/pages/navigation_style_settings_page.dart';
 
 import 'support/test_harness.dart';
 
 /// 导航栏样式偏好与样式选择页。
-///
-/// 目前注册表里只有默认的停靠样式，因此「选择另一个样式」这条路径用测试专用的假样式
-/// 覆盖：选择页只认样式的持久化标识，不依赖具体实现。
 void main() {
   useTestDatabases();
 
@@ -160,9 +156,13 @@ void main() {
   });
 
   testWidgets('样式选择页渲染名称、说明与真机同源预览；停靠预览不绘制模糊', (tester) async {
+    final controller = await makeController();
     await tester.pumpWidget(
-      zhMaterialApp(
-        home: const NavigationStyleSettingsPage(initialStyleId: 'docked'),
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(
+          home: const NavigationStyleSettingsPage(initialStyleId: 'docked'),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -219,112 +219,57 @@ void main() {
     }
   });
 
-  testWidgets('样式选择页选中后保存会回传该样式标识', (tester) async {
-    String? popped;
+  testWidgets('样式选择页选中后立即保存，返回不弹未保存询问', (tester) async {
+    final controller = await makeController();
     await tester.pumpWidget(
-      zhMaterialApp(home: _PickerLauncher(onResult: (value) => popped = value)),
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(home: const _PickerLauncher()),
+      ),
     );
     await tester.tap(find.text('打开选择页'));
     await tester.pumpAndSettle();
 
     expect(find.text('停靠底栏'), findsOneWidget);
-    expect(find.text('备用样式'), findsOneWidget);
+    expect(find.text('液态玻璃'), findsOneWidget);
 
     // 点卡片上缘、也就是预览区域：预览整块 IgnorePointer，点击要穿到卡片自己的
     // onTap，即"点预览也能选中这个样式"。
     final card = tester.getRect(
-      find.byKey(const ValueKey<String>('navigation_style_alternate')),
+      find.byKey(const ValueKey<String>('navigation_style_liquidGlass')),
     );
     await tester.tapAt(Offset(card.center.dx, card.top + 8));
     await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.save_outlined));
-    await tester.pumpAndSettle();
-
-    expect(popped, _AlternateStyle.styleId);
-  });
-
-  testWidgets('样式选择页修改后返回会询问是否保存', (tester) async {
-    await tester.pumpWidget(
-      zhMaterialApp(home: _PickerLauncher(onResult: (_) {})),
+    expect(
+      controller.navigationStylePreference,
+      NavigationStylePreference.liquidGlass,
     );
-    await tester.tap(find.text('打开选择页'));
-    await tester.pumpAndSettle();
 
-    await tester.tap(
-      find.byKey(const ValueKey<String>('navigation_style_alternate')),
-    );
-    await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();
-
-    expect(find.text('保存修改？'), findsOneWidget);
-    await tester.tap(find.text('不保存'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('打开选择页'), findsOneWidget, reason: '放弃修改后应退回上一页');
+    expect(find.text('保存修改？'), findsNothing);
+    expect(find.text('打开选择页'), findsOneWidget);
   });
 }
 
-/// 打开样式选择页并把返回值交回测试的入口。
+/// 打开样式选择页的测试入口。
 class _PickerLauncher extends StatelessWidget {
-  const _PickerLauncher({required this.onResult});
-
-  final ValueChanged<String?> onResult;
+  const _PickerLauncher();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
         child: TextButton(
-          onPressed: () async {
-            final selected = await Navigator.of(context).push<String>(
-              MaterialPageRoute<String>(
-                builder: (context) => const NavigationStyleSettingsPage(
-                  initialStyleId: 'docked',
-                  styles: <VeriRootNavigationStyle>[
-                    VeriDockedRootNavigationStyle(),
-                    _AlternateStyle(),
-                  ],
-                ),
-              ),
-            );
-            onResult(selected);
-          },
+          onPressed: () => Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(
+              builder: (context) =>
+                  const NavigationStyleSettingsPage(initialStyleId: 'docked'),
+            ),
+          ),
           child: const Text('打开选择页'),
         ),
       ),
-    );
-  }
-}
-
-/// 测试专用样式：只关心标识、名称与说明，绘制一个固定高度的实色条。
-class _AlternateStyle implements VeriRootNavigationStyle {
-  const _AlternateStyle();
-
-  static const String styleId = 'alternate';
-
-  @override
-  String get id => styleId;
-
-  @override
-  String label(AppLocalizations l10n) => '备用样式';
-
-  @override
-  String description(AppLocalizations l10n) => '测试用样式';
-
-  @override
-  VeriRootNavigationLayout get layout =>
-      const VeriRootNavigationLayout(extendBody: true, occupiedHeight: 56);
-
-  @override
-  Duration get switchDuration => VeriRootNavigationStyle.defaultSwitchDuration;
-
-  @override
-  Widget buildBar(BuildContext context, VeriRootNavigationSpec spec) {
-    return ColoredBox(
-      key: ValueKey<String>(spec.keyOf('bottom_nav')),
-      color: Theme.of(context).colorScheme.primary,
-      child: const SizedBox(height: 56),
     );
   }
 }

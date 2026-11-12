@@ -598,20 +598,22 @@ class _SettingsPageState extends State<SettingsPage> {
 
   /// 进入导航栏样式选择页。
   ///
-  /// 选择结果回到本页后立即自动保存；样式页本身不写 KV，仍由本页统一提交。
+  /// 样式页选中即写入设备偏好；返回后只需把本页显示值同步到 Controller，
+  /// 不再触发一次全量设置保存。
   Future<void> _pickNavigationStyle() async {
-    final selected = await Navigator.of(context).push<String>(
-      MaterialPageRoute<String>(
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
         builder: (context) =>
             NavigationStyleSettingsPage(initialStyleId: _navigationStyle.name),
       ),
     );
-    if (!mounted || selected == null) {
+    if (!mounted) {
       return;
     }
-    _change(
-      () => _navigationStyle = NavigationStylePreference.fromStorage(selected),
-    );
+    final current = VeriFinScope.of(context).navigationStylePreference;
+    if (current != _navigationStyle) {
+      setState(() => _navigationStyle = current);
+    }
   }
 
   Future<void> _editThemeColor() async {
