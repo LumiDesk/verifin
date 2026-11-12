@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:anchored_menu/anchored_menu.dart';
-import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 import '../app/account_icon_assets.dart';

@@ -11,7 +11,7 @@ import 'support/test_harness.dart';
 void main() {
   useTestDatabases();
 
-  testWidgets('标签拖动只改排序草稿，点击软碟后才提交', (tester) async {
+  testWidgets('标签拖动结束即保存排序', (tester) async {
     final controller = await makeController();
     controller
       ..addTag('工作')
@@ -28,7 +28,7 @@ void main() {
 
     await tester.tap(find.byTooltip('排序'));
     await tester.pumpAndSettle();
-    expect(find.byTooltip('保存'), findsOneWidget);
+    expect(find.byTooltip('完成排序'), findsOneWidget);
     final handles = find.byIcon(Icons.drag_handle);
     final firstHandle = tester.getCenter(handles.at(0));
     final secondHandle = tester.getCenter(handles.at(1));
@@ -39,9 +39,6 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(controller.tags.map((tag) => tag.label), <String>['工作', '旅行']);
-    await tester.tap(find.byTooltip('保存'));
-    await tester.pumpAndSettle();
     expect(controller.tags.map((tag) => tag.label), <String>['旅行', '工作']);
   });
 
@@ -95,7 +92,7 @@ void main() {
     expect(find.text('删除'), findsOneWidget);
   });
 
-  testWidgets('账户分组向下拖动会产生排序草稿并可保存', (tester) async {
+  testWidgets('账户分组向下拖动结束即保存排序', (tester) async {
     final controller = await makeController();
     await controller.addAccountGroup('测试1');
     await controller.addAccountGroup('测试2');
@@ -121,19 +118,6 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(controller.accountGroups.map((group) => group.name), <String>[
-      '测试1',
-      '测试2',
-    ], reason: '拖动阶段只应修改页面草稿');
-    final saveButton = tester.widget<IconButton>(
-      find.ancestor(
-        of: find.byIcon(Icons.save_outlined),
-        matching: find.byType(IconButton),
-      ),
-    );
-    expect(saveButton.onPressed, isNotNull);
-    await tester.tap(find.byTooltip('保存'));
-    await tester.pumpAndSettle();
     expect(controller.accountGroups.map((group) => group.name), <String>[
       '测试2',
       '测试1',
@@ -183,7 +167,7 @@ void main() {
     expect(controller.accounts.single.groupId, 'ungrouped');
   });
 
-  test('分类、标签、账户分组排序草稿保存后可重载', () async {
+  test('分类、标签、账户分组排序写入后可重载', () async {
     final store = LocalKeyValueStore();
     final controller = await makeController(store);
 

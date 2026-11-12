@@ -1,11 +1,11 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:anchored_menu/anchored_menu.dart';
-import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
+import '../app/auto_save.dart';
 import '../app/category_tree.dart';
 import '../app/common_widgets.dart';
 import '../app/entry_sheets.dart';
@@ -27,15 +27,19 @@ class CategoryManagementPage extends StatefulWidget {
 
 class _CategoryManagementPageState extends State<CategoryManagementPage> {
   EntryType _type = EntryType.expense;
-  final EditorExitController _exitController = EditorExitController();
+  late final AutoSave _autoSave = AutoSave(save: _saveOrder);
   bool _sorting = false;
-  bool _savingOrder = false;
   List<Category> _draftCategories = <Category>[];
-  List<String> _initialOrder = <String>[];
 
   // 收起的父分类 id；首次进入时默认收起所有有子分类的父节点。
   final Set<String> _collapsed = <String>{};
   bool _collapseDefaultsInitialized = false;
+
+  @override
+  void dispose() {
+    _autoSave.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,11 +55,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
     }
     final roots = rootCategories(categories, _type);
 
-    return UnsavedChangesGuard(
-      isDirty: _isOrderDirty,
-      onSave: _saveOrder,
-      onDiscard: _discardOrder,
-      exitController: _exitController,
+    return AutoSavePopScope(
+      autoSave: _autoSave,
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -73,20 +74,28 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
                         tooltip: AppLocalizations.of(context).addTopCategory,
                         onPressed: () => _createCategory(),
                       ),
-                    SortModeHeaderActions(
-                      sorting: _sorting,
-                      canSort: categories
-                          .where((category) => category.type == _type)
-                          .skip(1)
-                          .isNotEmpty,
-                      dirty: _isOrderDirty,
-                      onStart: () => _startSorting(controller),
-                      onCancel: _cancelSorting,
-                      onSave: _saveOrderAndFinish,
-                    ),
+                    if (_sorting)
+                      HeaderAction(
+                        icon: Icons.check,
+                        tooltip: AppLocalizations.of(context).panelSortDone,
+                        onPressed: _finishSorting,
+                      )
+                    else
+                      HeaderAction(
+                        icon: Icons.swap_vert,
+                        tooltip: AppLocalizations.of(context).sortLabel,
+                        onPressed:
+                            categories
+                                .where((category) => category.type == _type)
+                                .skip(1)
+                                .isNotEmpty
+                            ? () => _startSorting(controller)
+                            : null,
+                      ),
                   ],
                 ),
                 const SizedBox(height: 10),
+                AutoSaveFailureBanner(autoSave: _autoSave),
                 VeriSegmentedControl<EntryType>(
                   values: EntryType.userSelectable,
                   selected: _type,
@@ -200,18 +209,17 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
     );
   }
 
-  bool get _isOrderDirty =>
-      _sorting &&
-      !listEquals(
-        _draftCategories.map((category) => category.id).toList(),
-        _initialOrder,
-      );
-
   void _startSorting(VeriFinController controller) {
     setState(() {
       _sorting = true;
       _draftCategories = List<Category>.of(controller.categories);
-      _initialOrder = _draftCategories.map((category) => category.id).toList();
+    });
+  }
+
+  void _finishSorting() {
+    setState(() {
+      _sorting = false;
+      _draftCategories = <Category>[];
     });
   }
 
@@ -239,54 +247,12 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
         _draftCategories[positions[index]] = siblings[index];
       }
     });
+    _autoSave.schedule(immediate: true);
   }
 
-  Future<bool> _saveOrder() async {
-    if (_savingOrder || !_isOrderDirty) {
-      return !_isOrderDirty;
-    }
-    _savingOrder = true;
-    final saved = await VeriFinScope.of(context).saveCategoryOrderDraft(
-      _draftCategories.map((category) => category.id).toList(),
-    );
-    _savingOrder = false;
-    return saved;
-  }
-
-  Future<void> _saveOrderAndFinish() async {
-    if (await _saveOrder() && mounted) {
-      setState(() {
-        _sorting = false;
-        _draftCategories = <Category>[];
-        _initialOrder = <String>[];
-      });
-    }
-  }
-
-  void _discardOrder() {
-    _sorting = false;
-    _draftCategories = <Category>[];
-    _initialOrder = <String>[];
-  }
-
-  Future<void> _cancelSorting() async {
-    if (!_isOrderDirty) {
-      setState(_discardOrder);
-      return;
-    }
-    final decision = await showUnsavedChangesDialog(context: context);
-    if (!mounted) {
-      return;
-    }
-    switch (decision) {
-      case EditorExitDecision.save:
-        await _saveOrderAndFinish();
-      case EditorExitDecision.discard:
-        setState(_discardOrder);
-      case EditorExitDecision.cancel:
-        break;
-    }
-  }
+  Future<bool> _saveOrder() => VeriFinScope.of(context).saveCategoryOrderDraft(
+    _draftCategories.map((category) => category.id).toList(),
+  );
 
   Future<void> _createCategory({Category? parent}) async {
     final typeLabel = (parent?.type ?? _type).label(
