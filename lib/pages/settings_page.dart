@@ -4,6 +4,7 @@ import 'package:anchored_menu/anchored_menu.dart';
 import 'package:flutter/material.dart';
 
 import '../app/app_version.dart';
+import '../app/auto_save.dart';
 import '../app/build_config.dart';
 import '../app/common_widgets.dart';
 import '../app/credits.dart';
@@ -32,37 +33,30 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  final EditorExitController _exitController = EditorExitController();
-  late ThemePreference _initialTheme;
+  late final AutoSave _autoSave;
   late ThemePreference _theme;
-  late ThemeColorPreference _initialThemeColor;
   late ThemeColorPreference _themeColor;
-  late LocalePreference _initialLocale;
   late LocalePreference _locale;
-  late NavigationStylePreference _initialNavigationStyle;
   late NavigationStylePreference _navigationStyle;
-  late bool _initialHaptics;
   late bool _haptics;
-  late bool _initialTwoDecimals;
   late bool _twoDecimals;
-  late MoneyUnitStyle _initialMoneyUnitStyle;
   late MoneyUnitStyle _moneyUnitStyle;
-  late bool _initialHideSingleCurrencyUnit;
   late bool _hideSingleCurrencyUnit;
-  late FabActionMode _initialFabAction;
   late FabActionMode _fabAction;
-  late NumberPadLayout _initialNumberPadLayout;
   late NumberPadLayout _numberPadLayout;
-  String? _initialDefaultAccountId;
   String? _defaultAccountId;
-  late bool _initialAutoSuggest;
   late bool _autoSuggest;
-  late bool _initialShowRunningBalance;
   late bool _showRunningBalance;
   bool _initialized = false;
 
   /// 「检查更新」正在进行：设置行显示「检查中…」并禁用点击，避免重复发请求。
   bool _checkingUpdate = false;
+
+  @override
+  void dispose() {
+    _autoSave.dispose();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -71,34 +65,35 @@ class _SettingsPageState extends State<SettingsPage> {
       return;
     }
     final controller = VeriFinScope.of(context);
-    _initialTheme = _theme = controller.themePreference;
-    _initialThemeColor = _themeColor = controller.themeColorPreference;
-    _initialLocale = _locale = controller.localePreference;
-    _initialNavigationStyle = _navigationStyle =
-        controller.navigationStylePreference;
-    _initialHaptics = _haptics = controller.hapticsEnabled;
-    _initialTwoDecimals = _twoDecimals =
+    _autoSave = AutoSave(save: _save, logger: controller.logger);
+    _theme = controller.themePreference;
+    _themeColor = controller.themeColorPreference;
+    _locale = controller.localePreference;
+    _navigationStyle = controller.navigationStylePreference;
+    _haptics = controller.hapticsEnabled;
+    _twoDecimals =
         controller.currencyFractionStyle == CurrencyFractionStyle.standard;
-    _initialMoneyUnitStyle = _moneyUnitStyle = controller.moneyUnitStyle;
-    _initialHideSingleCurrencyUnit = _hideSingleCurrencyUnit =
-        controller.hideUnitInSingleCurrency;
-    _initialFabAction = _fabAction = controller.fabActionMode;
-    _initialNumberPadLayout = _numberPadLayout = controller.numberPadLayout;
-    _initialDefaultAccountId = _defaultAccountId = controller.defaultAccountId;
-    _initialAutoSuggest = _autoSuggest = controller.autoSuggestEnabled;
-    _initialShowRunningBalance = _showRunningBalance =
-        controller.showRunningBalance;
+    _moneyUnitStyle = controller.moneyUnitStyle;
+    _hideSingleCurrencyUnit = controller.hideUnitInSingleCurrency;
+    _fabAction = controller.fabActionMode;
+    _numberPadLayout = controller.numberPadLayout;
+    _defaultAccountId = controller.defaultAccountId;
+    _autoSuggest = controller.autoSuggestEnabled;
+    _showRunningBalance = controller.showRunningBalance;
     _initialized = true;
+  }
+
+  void _change(VoidCallback update) {
+    setState(update);
+    _autoSave.schedule(immediate: true);
   }
 
   @override
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
 
-    return UnsavedChangesGuard(
-      isDirty: _isDirty,
-      onSave: _save,
-      exitController: _exitController,
+    return AutoSavePopScope(
+      autoSave: _autoSave,
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -108,11 +103,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 VeriHeader(
                   title: AppLocalizations.of(context).settingsTitle,
                   showBack: true,
-                  actions: <Widget>[
-                    SaveHeaderAction(onPressed: _isDirty ? _saveAndExit : null),
-                  ],
                 ),
                 const SizedBox(height: 10),
+                AutoSaveFailureBanner(autoSave: _autoSave),
                 _sectionLabel(
                   context,
                   AppLocalizations.of(context).settingsSectionAppearance,
@@ -132,7 +125,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           ThemePreference.light => Icons.light_mode_outlined,
                           ThemePreference.dark => Icons.dark_mode_outlined,
                         },
-                        onSelected: (value) => setState(() => _theme = value),
+                        onSelected: (value) => _change(() => _theme = value),
                         semanticLabel: AppLocalizations.of(
                           context,
                         ).themePickerTitle,
@@ -165,7 +158,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           ThemeColorMode.system => Icons.auto_awesome,
                           ThemeColorMode.custom => Icons.palette_outlined,
                         },
-                        onSelected: (value) => setState(
+                        onSelected: (value) => _change(
                           () => _themeColor = _themeColor.copyWith(mode: value),
                         ),
                         semanticLabel: AppLocalizations.of(
@@ -237,7 +230,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         value: _twoDecimals,
                         onChanged: (value) =>
-                            setState(() => _twoDecimals = value),
+                            _change(() => _twoDecimals = value),
                       ),
                       const Divider(height: 1),
                       AnchoredMenuChoice<MoneyUnitStyle>(
@@ -253,7 +246,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           MoneyUnitStyle.code => Icons.code_rounded,
                         },
                         onSelected: (value) =>
-                            setState(() => _moneyUnitStyle = value),
+                            _change(() => _moneyUnitStyle = value),
                         semanticLabel: AppLocalizations.of(
                           context,
                         ).moneyUnitStyleLabel,
@@ -286,7 +279,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         value: _hideSingleCurrencyUnit,
                         onChanged: (value) =>
-                            setState(() => _hideSingleCurrencyUnit = value),
+                            _change(() => _hideSingleCurrencyUnit = value),
                       ),
                       const Divider(height: 1),
                       CompactSwitchRow(
@@ -300,7 +293,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         value: _showRunningBalance,
                         onChanged: (value) =>
-                            setState(() => _showRunningBalance = value),
+                            _change(() => _showRunningBalance = value),
                       ),
                     ],
                   ),
@@ -325,7 +318,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           LocalePreference.zh => Icons.translate_outlined,
                           LocalePreference.en => Icons.abc_rounded,
                         },
-                        onSelected: (value) => setState(() => _locale = value),
+                        onSelected: (value) => _change(() => _locale = value),
                         semanticLabel: AppLocalizations.of(
                           context,
                         ).languagePickerTitle,
@@ -342,7 +335,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         icon: Icons.touch_app_outlined,
                         title: Text(AppLocalizations.of(context).hapticsLabel),
                         value: _haptics,
-                        onChanged: (value) => setState(() => _haptics = value),
+                        onChanged: (value) => _change(() => _haptics = value),
                       ),
                       const Divider(height: 1),
                       SettingsRow(
@@ -384,7 +377,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             Icons.touch_app_outlined,
                         },
                         onSelected: (value) =>
-                            setState(() => _fabAction = value),
+                            _change(() => _fabAction = value),
                         semanticLabel: AppLocalizations.of(
                           context,
                         ).fabActionPickerTitle,
@@ -411,7 +404,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           NumberPadLayout.phone => Icons.dialpad_outlined,
                         },
                         onSelected: (value) =>
-                            setState(() => _numberPadLayout = value),
+                            _change(() => _numberPadLayout = value),
                         semanticLabel: AppLocalizations.of(
                           context,
                         ).numberPadLayoutPickerTitle,
@@ -447,7 +440,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         value: _autoSuggest,
                         onChanged: (value) =>
-                            setState(() => _autoSuggest = value),
+                            _change(() => _autoSuggest = value),
                       ),
                       const Divider(height: 1),
                       SettingsRow(
@@ -605,8 +598,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   /// 进入导航栏样式选择页。
   ///
-  /// 选择结果只回写本页草稿：真正的 KV 写入仍由本页统一保存完成，所以「换样式」
-  /// 与「改主题」等其它外观偏好是同一种保存语义。
+  /// 选择结果回到本页后立即自动保存；样式页本身不写 KV，仍由本页统一提交。
   Future<void> _pickNavigationStyle() async {
     final selected = await Navigator.of(context).push<String>(
       MaterialPageRoute<String>(
@@ -617,7 +609,7 @@ class _SettingsPageState extends State<SettingsPage> {
     if (!mounted || selected == null) {
       return;
     }
-    setState(
+    _change(
       () => _navigationStyle = NavigationStylePreference.fromStorage(selected),
     );
   }
@@ -628,7 +620,7 @@ class _SettingsPageState extends State<SettingsPage> {
       initialColor: Color(_themeColor.customColorValue),
     );
     if (!mounted || picked == null) return;
-    setState(
+    _change(
       () => _themeColor = _themeColor.copyWith(
         mode: ThemeColorMode.custom,
         customColorValue:
@@ -683,7 +675,7 @@ class _SettingsPageState extends State<SettingsPage> {
       return;
     }
     if (mounted) {
-      setState(
+      _change(
         () => _defaultAccountId = selected.id.isEmpty ? null : selected.id,
       );
     }
@@ -772,42 +764,6 @@ class _SettingsPageState extends State<SettingsPage> {
 
   static Widget _sectionLabel(BuildContext context, String text) {
     return SectionLabel(text);
-  }
-
-  bool get _isDirty =>
-      _theme != _initialTheme ||
-      _themeColor != _initialThemeColor ||
-      _locale != _initialLocale ||
-      _navigationStyle != _initialNavigationStyle ||
-      _haptics != _initialHaptics ||
-      _twoDecimals != _initialTwoDecimals ||
-      _moneyUnitStyle != _initialMoneyUnitStyle ||
-      _hideSingleCurrencyUnit != _initialHideSingleCurrencyUnit ||
-      _fabAction != _initialFabAction ||
-      _numberPadLayout != _initialNumberPadLayout ||
-      _defaultAccountId != _initialDefaultAccountId ||
-      _autoSuggest != _initialAutoSuggest ||
-      _showRunningBalance != _initialShowRunningBalance;
-
-  Future<void> _saveAndExit() async {
-    if (await _save() && mounted) {
-      setState(() {
-        _initialTheme = _theme;
-        _initialThemeColor = _themeColor;
-        _initialLocale = _locale;
-        _initialNavigationStyle = _navigationStyle;
-        _initialHaptics = _haptics;
-        _initialTwoDecimals = _twoDecimals;
-        _initialMoneyUnitStyle = _moneyUnitStyle;
-        _initialHideSingleCurrencyUnit = _hideSingleCurrencyUnit;
-        _initialFabAction = _fabAction;
-        _initialNumberPadLayout = _numberPadLayout;
-        _initialDefaultAccountId = _defaultAccountId;
-        _initialAutoSuggest = _autoSuggest;
-        _initialShowRunningBalance = _showRunningBalance;
-      });
-      _exitController.exit();
-    }
   }
 
   Future<bool> _save() {

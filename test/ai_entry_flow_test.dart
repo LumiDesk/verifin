@@ -23,7 +23,7 @@ void main() {
     expect(find.text('未配置'), findsOneWidget);
   });
 
-  testWidgets('switching FAB action persists only after explicit save', (
+  testWidgets('switching FAB action saves immediately', (
     WidgetTester tester,
   ) async {
     final store = LocalKeyValueStore();
@@ -45,11 +45,6 @@ void main() {
     await tester.tap(find.text('AI 记账').last);
     await tester.pumpAndSettle();
 
-    expect(store.read('verifin.fab_action.v1'), isNull);
-    await tester.fling(find.byType(ListView), const Offset(0, 1000), 1000);
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('保存'));
-    await tester.pumpAndSettle();
     expect(store.read('verifin.fab_action.v1'), 'ai');
   });
 
