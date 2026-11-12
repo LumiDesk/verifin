@@ -237,4 +237,43 @@ void main() {
       reason: '转账选中色应与本页下方金额用的是同一支语义蓝',
     );
   });
+
+  testWidgets('快速记账返回静默取消且不落账', (tester) async {
+    final controller = await makeController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: FilledButton(
+                  key: const Key('open_entry'),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const EntryDetailPage(initialAmount: 30),
+                    ),
+                  ),
+                  child: const Text('打开'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('open_entry')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('收入'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('返回'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('open_entry')), findsOneWidget);
+    expect(find.text('保存修改？'), findsNothing);
+    expect(controller.entries, isEmpty);
+  });
 }
