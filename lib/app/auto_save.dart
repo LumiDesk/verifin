@@ -58,7 +58,12 @@ class AutoSave extends ChangeNotifier {
     if (_disposed) {
       return;
     }
+    final hadPendingWork = hasPendingWork;
     _revision += 1;
+    if (!hadPendingWork) {
+      // 让 AutoSavePopScope 立即把 canPop 切成 false；后续连续输入不重复通知。
+      notifyListeners();
+    }
     if (_running) {
       // 当前保存循环结束时会发现 revision 变了，自动再提交一次。
       return;

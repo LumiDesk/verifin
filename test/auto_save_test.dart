@@ -1,8 +1,11 @@
 import 'dart:async';
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/auto_save.dart';
+import 'package:verifin/app/common_widgets.dart';
+
+import 'support/test_harness.dart';
 
 void main() {
   testWidgets('连续改动在防抖结束后只提交最后一次', (WidgetTester tester) async {
@@ -148,5 +151,131 @@ void main() {
     detach();
     controller.text = '你 好';
     expect(changes, 1);
+  });
+
+  testWidgets('失败提示只在失败时出现并可重试', (WidgetTester tester) async {
+    var fail = true;
+    final autoSave = AutoSave(
+      save: () async => !fail,
+      debounce: const Duration(milliseconds: 10),
+    );
+    addTearDown(autoSave.dispose);
+
+    await tester.pumpWidget(
+      zhMaterialApp(
+        home: Scaffold(body: AutoSaveFailureBanner(autoSave: autoSave)),
+      ),
+    );
+    expect(find.text('保存失败，请重试'), findsNothing);
+
+    autoSave.schedule();
+    await tester.pump(const Duration(milliseconds: 10));
+    await tester.pump();
+    expect(find.text('保存失败，请重试'), findsOneWidget);
+    expect(find.text('重试'), findsOneWidget);
+
+    fail = false;
+    await tester.tap(find.text('重试'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('保存失败，请重试'), findsNothing);
+  });
+
+  testWidgets('自动保存页返回前先冲刷待保存改动', (WidgetTester tester) async {
+    var saves = 0;
+    final autoSave = AutoSave(
+      save: () async {
+        saves += 1;
+        return true;
+      },
+      debounce: const Duration(milliseconds: 500),
+    );
+    addTearDown(autoSave.dispose);
+
+    await tester.pumpWidget(
+      zhMaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: FilledButton(
+                key: const Key('open_auto_save_page'),
+                onPressed: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => AutoSavePopScope(
+                      autoSave: autoSave,
+                      child: const Scaffold(
+                        body: Center(child: Text('自动保存编辑页')),
+                      ),
+                    ),
+                  ),
+                ),
+                child: const Text('打开'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('open_auto_save_page')));
+    await tester.pumpAndSettle();
+    autoSave.schedule();
+    expect(saves, 0);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(saves, 1);
+    expect(find.byKey(const Key('open_auto_save_page')), findsOneWidget);
+  });
+
+  testWidgets('冲刷失败时询问放弃修改后离开', (WidgetTester tester) async {
+    final autoSave = AutoSave(
+      save: () async => false,
+      debounce: const Duration(milliseconds: 500),
+    );
+    addTearDown(autoSave.dispose);
+
+    await tester.pumpWidget(
+      zhMaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: FilledButton(
+                key: const Key('open_failing_auto_save_page'),
+                onPressed: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => AutoSavePopScope(
+                      autoSave: autoSave,
+                      child: const Scaffold(
+                        body: Center(child: Text('自动保存编辑页')),
+                      ),
+                    ),
+                  ),
+                ),
+                child: const Text('打开'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('open_failing_auto_save_page')));
+    await tester.pumpAndSettle();
+    autoSave.schedule();
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.text('放弃修改并离开'), findsOneWidget);
+    expect(find.text('自动保存编辑页'), findsOneWidget);
+
+    await tester.tap(find.text('放弃修改并离开'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('open_failing_auto_save_page')),
+      findsOneWidget,
+    );
   });
 }

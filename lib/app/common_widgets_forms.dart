@@ -984,7 +984,8 @@ class _AutoSavePopScopeState extends State<AutoSavePopScope> {
       child: widget.child,
       builder: (context, child) {
         return PopScope<Object?>(
-          canPop: _leaving || !widget.autoSave.hasPendingWork,
+          // 始终接管返回：即使当前帧还没因 schedule() 重建，也不会绕过 flush。
+          canPop: _leaving,
           onPopInvokedWithResult: (didPop, result) {
             if (didPop) {
               return;
