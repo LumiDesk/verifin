@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../app/auto_save.dart';
 import '../app/common_widgets.dart';
 import '../app/feedback.dart';
 import '../app/reminder/notification_scheduler.dart';
@@ -18,10 +19,10 @@ class ReminderSettingsPage extends StatefulWidget {
 }
 
 class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
-  final EditorExitController _exitController = EditorExitController();
+  late final AutoSave _autoSave;
   final NotificationScheduler _scheduler = NotificationScheduler();
-  late ReminderSettings _initialSettings;
   late ReminderSettings _draftSettings;
+  bool _permissionCheckedForEnabled = false;
   bool _initialized = false;
 
   @override
@@ -30,9 +31,22 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
     if (_initialized) {
       return;
     }
-    final settings = VeriFinScope.of(context).reminderSettings;
-    _initialSettings = _draftSettings = settings;
     _initialized = true;
+    final controller = VeriFinScope.of(context);
+    _draftSettings = controller.reminderSettings;
+    _permissionCheckedForEnabled = _draftSettings.enabled;
+    _autoSave = AutoSave(save: _save, logger: controller.logger);
+  }
+
+  @override
+  void dispose() {
+    _autoSave.dispose();
+    super.dispose();
+  }
+
+  void _apply(ReminderSettings settings) {
+    setState(() => _draftSettings = settings);
+    _autoSave.schedule(immediate: true);
   }
 
   Future<void> _pickTime() async {
@@ -45,12 +59,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
       helpText: AppLocalizations.of(context).reminderPickTime,
     );
     if (picked != null && mounted) {
-      setState(() {
-        _draftSettings = _draftSettings.copyWith(
-          hour: picked.hour,
-          minute: picked.minute,
-        );
-      });
+      _apply(_draftSettings.copyWith(hour: picked.hour, minute: picked.minute));
     }
   }
 
@@ -61,10 +70,8 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
       context,
     ).colorScheme.onSurface.withValues(alpha: 0.55);
 
-    return UnsavedChangesGuard(
-      isDirty: _isDirty,
-      onSave: _save,
-      exitController: _exitController,
+    return AutoSavePopScope(
+      autoSave: _autoSave,
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -74,11 +81,9 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                 VeriHeader(
                   title: AppLocalizations.of(context).reminderTitle,
                   showBack: true,
-                  actions: <Widget>[
-                    SaveHeaderAction(onPressed: _isDirty ? _saveAndExit : null),
-                  ],
                 ),
                 const SizedBox(height: 10),
+                AutoSaveFailureBanner(autoSave: _autoSave),
                 VeriCard(
                   child: Column(
                     children: <Widget>[
@@ -86,11 +91,8 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                         icon: Icons.notifications_active_outlined,
                         title: Text(AppLocalizations.of(context).reminderDaily),
                         value: settings.enabled,
-                        onChanged: (enabled) => setState(
-                          () => _draftSettings = settings.copyWith(
-                            enabled: enabled,
-                          ),
-                        ),
+                        onChanged: (enabled) =>
+                            _apply(settings.copyWith(enabled: enabled)),
                       ),
                       if (settings.enabled) ...<Widget>[
                         const Divider(height: 1),
@@ -176,20 +178,12 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
     );
   }
 
-  bool get _isDirty => _draftSettings != _initialSettings;
-
-  Future<void> _saveAndExit() async {
-    if (await _save() && mounted) {
-      setState(() => _initialSettings = _draftSettings);
-      _exitController.exit();
-    }
-  }
-
   Future<bool> _save() async {
     final feedback = VeriFeedbackHost.of(context);
     final l10n = AppLocalizations.of(context);
     var granted = true;
-    if (_draftSettings.enabled && !_initialSettings.enabled) {
+    if (_draftSettings.enabled && !_permissionCheckedForEnabled) {
+      _permissionCheckedForEnabled = true;
       granted = await _scheduler.requestPermission();
       if (!mounted) {
         return false;
