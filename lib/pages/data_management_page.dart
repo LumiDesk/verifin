@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../app/app_theme.dart';
+import '../app/auto_save.dart';
 import '../app/backup/backup_service.dart';
 import '../app/backup/backup_settings.dart';
 import '../app/backup/payment_import.dart';
@@ -39,16 +40,18 @@ class DataManagementPage extends StatefulWidget {
 }
 
 class _DataManagementPageState extends State<DataManagementPage> {
-  final EditorExitController _exitController = EditorExitController();
-  late BackupFrequency _initialFrequency;
+  late final AutoSave _autoSave;
   late BackupFrequency _draftFrequency;
-  late int _initialIntervalHours;
   late int _draftIntervalHours;
-  late int _initialRetention;
   late int _draftRetention;
-  late bool _initialWebdavAutoUpload;
   late bool _draftWebdavAutoUpload;
   bool _initialized = false;
+
+  @override
+  void dispose() {
+    _autoSave.dispose();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -56,24 +59,27 @@ class _DataManagementPageState extends State<DataManagementPage> {
     if (_initialized) {
       return;
     }
+    _initialized = true;
     final controller = VeriFinScope.of(context);
     final backup = controller.backupSettings;
-    _initialFrequency = _draftFrequency = backup.frequency;
-    _initialIntervalHours = _draftIntervalHours = backup.intervalHours;
-    _initialRetention = _draftRetention = backup.retention;
-    _initialWebdavAutoUpload = _draftWebdavAutoUpload =
-        controller.webdavConfig.autoUpload;
-    _initialized = true;
+    _draftFrequency = backup.frequency;
+    _draftIntervalHours = backup.intervalHours;
+    _draftRetention = backup.retention;
+    _draftWebdavAutoUpload = controller.webdavConfig.autoUpload;
+    _autoSave = AutoSave(save: _save, logger: controller.logger);
+  }
+
+  void _apply(VoidCallback update) {
+    setState(update);
+    _autoSave.schedule(immediate: true);
   }
 
   @override
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
 
-    return UnsavedChangesGuard(
-      isDirty: _isDirty,
-      onSave: _save,
-      exitController: _exitController,
+    return AutoSavePopScope(
+      autoSave: _autoSave,
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -84,11 +90,9 @@ class _DataManagementPageState extends State<DataManagementPage> {
                   title: AppLocalizations.of(context).dataManagement,
                   subtitle: AppLocalizations.of(context).dataMgmtSubtitle,
                   showBack: true,
-                  actions: <Widget>[
-                    SaveHeaderAction(onPressed: _isDirty ? _saveAndExit : null),
-                  ],
                 ),
                 const SizedBox(height: 10),
+                AutoSaveFailureBanner(autoSave: _autoSave),
                 _sectionLabel(
                   context,
                   AppLocalizations.of(context).dataSectionLocalBackup,
@@ -173,7 +177,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
                               Icons.schedule_outlined,
                           },
                           onSelected: (value) =>
-                              setState(() => _draftFrequency = value),
+                              _apply(() => _draftFrequency = value),
                           semanticLabel: AppLocalizations.of(
                             context,
                           ).pickBackupFrequency,
@@ -205,7 +209,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
                               context,
                             ).everyNHoursLabel(value),
                             onSelected: (value) =>
-                                setState(() => _draftIntervalHours = value),
+                                _apply(() => _draftIntervalHours = value),
                             semanticLabel: AppLocalizations.of(
                               context,
                             ).backupIntervalTitle,
@@ -234,7 +238,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
                           labelOf: (value) =>
                               AppLocalizations.of(context).latestNCopies(value),
                           onSelected: (value) =>
-                              setState(() => _draftRetention = value),
+                              _apply(() => _draftRetention = value),
                           semanticLabel: AppLocalizations.of(
                             context,
                           ).retentionTitle,
@@ -328,7 +332,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
                           ),
                           value: _draftWebdavAutoUpload,
                           onChanged: (value) =>
-                              setState(() => _draftWebdavAutoUpload = value),
+                              _apply(() => _draftWebdavAutoUpload = value),
                         ),
                         const Divider(),
                         SettingsRow(
@@ -966,9 +970,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
       if (!await confirmCleartextIfRisky(context, saved.url)) return;
       controller.setWebdavConfig(saved);
       if (mounted) {
-        setState(() {
-          _initialWebdavAutoUpload = _draftWebdavAutoUpload = saved.autoUpload;
-        });
+        setState(() => _draftWebdavAutoUpload = saved.autoUpload);
       }
       if (context.mounted) {
         _notify(
@@ -995,27 +997,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
       return;
     }
     controller.clearBackupDirectory();
-    setState(() {
-      _initialFrequency = _draftFrequency = BackupFrequency.manual;
-    });
-  }
-
-  bool get _isDirty =>
-      _draftFrequency != _initialFrequency ||
-      _draftIntervalHours != _initialIntervalHours ||
-      _draftRetention != _initialRetention ||
-      _draftWebdavAutoUpload != _initialWebdavAutoUpload;
-
-  Future<void> _saveAndExit() async {
-    if (await _save() && mounted) {
-      setState(() {
-        _initialFrequency = _draftFrequency;
-        _initialIntervalHours = _draftIntervalHours;
-        _initialRetention = _draftRetention;
-        _initialWebdavAutoUpload = _draftWebdavAutoUpload;
-      });
-      _exitController.exit();
-    }
+    _apply(() => _draftFrequency = BackupFrequency.manual);
   }
 
   Future<bool> _save() =>
@@ -1944,7 +1926,10 @@ class _DataManagementPageState extends State<DataManagementPage> {
       );
       return;
     }
-    _exitController.exit();
+    _autoSave.discardPending();
+    if (context.mounted) {
+      Navigator.of(context).pop();
+    }
   }
 }
 

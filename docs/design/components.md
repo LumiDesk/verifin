@@ -51,7 +51,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `VeriDockedRootNavigationStyle` / `VeriDockedRootNavigation` | 样式实现 / Widget | `root_navigation_docked.dart` | **停靠式底栏**：整宽、不透明、贴底，底色铺到屏幕最底（含系统导航条背后，否则会分成两块）。条目由 `VeriBottomBar`（`veri_bottom_bar.dart`）绘制，**未选中用 `destination.icon`（线框）、选中用 `selectedIcon`（填充）**，中文标签常显。**安全区**用 `SafeArea(minimum: 12, maintainBottomViewPadding: true)` 取 `max(系统留白, 12)`：系统留白可能是 0，不给下限条目会贴边；`maintainBottomViewPadding` 让键盘弹起时底栏不跳。这是**默认样式**，条高 64、列表留白 12 |
 | `VeriLiquidGlassRootNavigationStyle` / `VeriLiquidGlassRootNavigation` | 样式实现 / 适配 Widget | `root_navigation_liquid_glass.dart` | **液态玻璃底栏（可选样式）**：适配本地 vendor `third_party/liquid_glass_widgets` 的 `GlassTabBar.bottom`，保留 60dp 胶囊、12dp 左右边距和 24dp 底部留白；`layout` 声明 `extendBody: true`、列表留白 16。四个目的地、选中态、标签常显和 `spec.onSelect` 仍由应用契约提供；条目的稳定 key 由未选中图标上的 `KeyedSubtree` 提供，选中层不重复挂 key。深色模式使用低压白色 tint、低饱和轻磨砂与轻黑色 backer，避免底栏发蓝、发白或形成厚重雾块；浅色模式保持库默认材质。其他页面不得直接使用第三方玻璃组件。 |
 | `GlassTabBar.bottom`（本地 vendor） | 第三方 Widget | `third_party/liquid_glass_widgets` | 背景采样、玻璃面板、模糊/折射、Jelly 指示器、拖动切换和选中态语义由库实现；只在 `root_navigation_liquid_glass.dart` 引用，其他页面不得直接使用第三方玻璃组件。 |
-| `NavigationStyleSettingsPage` | 页面 Widget | `navigation_style_settings_page.dart` | 导航栏样式选择页（设置 → 外观 → 导航栏样式）。逐样式渲染**冻结预览**：直接复用 `buildBar`，因此预览与真机同源（真实标签、真实表面色）；液态玻璃预览使用 `GlassQuality.minimal` 的静态降级路径，避免父级滚动时 premium shader 沿用旧位置，真实根导航仍使用 premium。预览整块 `IgnorePointer`（条目没有回调），点预览区域等于选中该样式。点选只改页面草稿，保存经 `UnsavedChangesGuard` 回传**样式标识字符串**；页面不写 Controller/KV，落盘由设置页统一保存完成。`styles` 参数默认取注册表，测试或画廊可传子集。 |
+| `NavigationStyleSettingsPage` | 页面 Widget | `navigation_style_settings_page.dart` | 导航栏样式选择页（设置 → 外观 → 导航栏样式）。逐样式渲染**冻结预览**：直接复用 `buildBar`，因此预览与真机同源（真实标签、真实表面色）；液态玻璃预览使用 `GlassQuality.minimal` 的静态降级路径，避免父级滚动时 premium shader 沿用旧位置，真实根导航仍使用 premium。预览整块 `IgnorePointer`（条目没有回调），点预览区域等于选中该样式。**点选即通过 `saveNavigationStyleDraft` 写入设备偏好**，不再有页面保存按钮；返回由 `AutoSavePopScope` 先冲刷待保存改动。`styles` 参数默认取注册表，测试或画廊可传子集。 |
 | `veriRootNavigationDestinations` | 纯函数 | `root_navigation.dart` | 四个根目的地（首页/资产/看板/我的）的**唯一定义**：Shell 与样式选择页预览共用，新增样式不要再各写一套图标与标签 |
 | `NavigationStylePreference` | 枚举 | `models/preferences.dart` | 导航样式偏好（当前 `docked` 默认、`liquidGlass` 可选），枚举名即样式标识、存 KV `verifin.nav_style.v1`；设备本地、不进备份、初始化数据时保留、`resetAllData` 恢复默认。新增样式须同时加枚举值与注册项（测试断言两者一一对应） |
 | `VeriBottomBar` / `VeriBottomBarItem` | Widget / 值类 | `veri_bottom_bar.dart` | 停靠样式的条目绘制：切换时两条圆弧扫过、两枚圆点飞过，图标由灰渐变为主题主色并轻微摆动。颜色缺省取 `Theme.of(context).colorScheme.primary`（`circle1Color` / `circle2Color` 缺省跟随主色），不写死品牌蓝；每个条目用 `MergeSemantics` + `Semantics(selected:)` 向读屏软件报告选中态，并按 `itemKey` 暴露稳定条目 key。**自持实现，不依赖上游包**：选中态完全由 `selectedIndex` 驱动并同步更新，`onSelect` 每次点击恰好一次；父级重建不重置图标状态，进度动画不断档，旋转方向随切换方向，`onSelect` 立即回调 |
@@ -61,8 +61,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `AssetMissingRateNotice` | Widget | `common_widgets_scaffold.dart` | 「缺汇率」提示：受影响账户数 + 缺失币种，点按跳 `CurrencyRatesPage`。裸用（看板资产汇总卡）传 `onTap` 时自带点击区与 8dp 纵向内边距；已放在可点卡片里（资产页缺率卡）不要传，避免嵌套点击区 |
 | `HeaderAction` / `HeaderTextAction` / `HeaderInline` / `VeriSectionAction` | Widget | `common_widgets.dart` | 页眉动作族（图标钮/文字钮/宽度约束/填充色小图标钮）；需要弹出操作菜单时使用外部库的 `AnchoredMenuButton` |
 | `AnchoredMenuAnchor` / `AnchoredMenuButton` / `AnchoredMenuChoice<T>` / `AnchoredMenuItem` / `AnchoredMenuDivider` | Widget / 菜单模型 | `package:anchored_menu/anchored_menu.dart` | 外部锚点菜单库：图标、标题、副标题、分割线、选中/禁用态、内容自适应宽度、从点击行原位展开的容器变换、完整祖先卡片栈、键盘与 RTL 支持；任意触发器用 `Anchor`，Header 图标入口用 `Button`，2–8 项静态受控单选优先用 `Choice`。应用在 `app_theme.dart` 桥接视觉令牌；完整约定见 [anchored-menu.md](../dev/anchored-menu.md) |
-| `SaveHeaderAction` | Widget | `common_widgets.dart` | 全屏编辑页统一保存动作；固定软碟语义的 `Icons.save_outlined` 和本地化 tooltip，支持禁用态 |
-| `SortModeHeaderActions` | Widget | `common_widgets.dart` | 管理页显式排序模式的统一 Header 动作；普通态进入排序，排序态提供取消与软碟保存，未改动时禁用保存 |
+| `SaveHeaderAction` | Widget | `common_widgets.dart` | 新建类显式提交页的统一保存动作（添加账户、新建周期规则、还款等）；固定软碟语义的 `Icons.save_outlined` 和本地化 tooltip，支持禁用态。偏好/已有实体编辑页使用自动保存，不再使用本组件 |
 | `CreditsPage` | 页面 Widget | `credits_page.dart` | 鸣谢名单页（设置 → 关于 → 鸣谢）：头像墙（`CreditsAvatar` + 常显称呼，分组标题只在有分组时渲染）+ 底部赞助入口。名单是包内常量（`credits.dart`），页面不读账目状态，只在打开浏览器失败时记日志并给轻提示；赞助链接统一经 `external_links.dart`（`ExternalLinks.donationUrl`）打开系统浏览器，不要在页面里直接调插件或硬写 URL |
 | `ExternalLinks` | 工具类 | `external_links.dart` | **打开外部链接的唯一出口**：只接受本文件定义常量与 `https`，一律交系统默认浏览器；`openDonation()` 打开赞助页，`openVerifinRepository()` 打开 GitHub 仓库主页，`openVerifinRelease(tag)` 打开指定版本的 GitHub Release 页面（tag 严格校验，非法回落 Releases 列表，不让远端数据拼任意地址）。`debugOpener` 供测试注入。页面不得直接调 `url_launcher` |
 | `UpdateCheckResult` / `UpdateAvailable` / `UpdateUpToDate` / `UpdateCheckFailed` / `UpdateRelease` / `checkForUpdate` / `compareVersions` / `currentAppVersionNumber` / `purgeLegacyUpdateDownloads` | 密封类 / 值类 / 纯函数 / 异步入口 | `app/update/update_check.dart` | **应用内检查更新**：用户手点「检查更新」时只读 GitHub Release 最新正式版版本号（不自动检查、不下载安装 APK），与当前版本比较后返回「有更新 / 已最新 / 失败」；`compareVersions` 是纯函数（忽略 `+build` 与预发布后缀），`parseLatestRelease` 与 `debugUpdateCheckOverride` 供测试。失败原因只写日志，界面用本地化文案 |
@@ -90,7 +89,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `CardNumberFields` | Widget | `common_widgets.dart` | 完整卡号 + 后四位输入组，含「后四位跟随卡号」开关（信用卡/储蓄卡录入用）；**受控**：`follows`/`onFollowsChanged` 由调用方持久化（`Account.cardLast4Follows`），组件不自行反推 |
 | `showCardNumberDialog` | Dialog 函数 | `sheets.dart` | 编辑完整卡号+后四位+跟随开关，返回 `({number, last4, follows})?`（内部用 `CardNumberFields`，后四位以 `cardLast4Of` 归一化） |
 | `CreditRepaymentPage` | 页面 Widget | `credit_repayment_page.dart` | 信用卡/信用账户还款页；预填欠款、扣款账户可选/可代还，落一笔转账 |
-| `AccountSectionCard` | Widget | `common_widgets.dart` | 资产页账户分区卡（可折叠 + 分区合计）；普通资产页折叠状态由 Controller 按账本/视图模式持久化，设置页可在草稿中调整；同时服务类型、文件夹分组和隐藏账户等分区，拖拽只由 `sectionDragIndex != null` 开启，`sectionDragImmediate` 控制即时/延迟拖拽 |
+| `AccountSectionCard` | Widget | `common_widgets.dart` | 资产页账户分区卡（可折叠 + 分区合计）；普通资产页折叠状态由 Controller 按账本/视图模式持久化，资产显示设置页修改后立即自动保存；同时服务类型、文件夹分组和隐藏账户等分区，拖拽只由 `sectionDragIndex != null` 开启，`sectionDragImmediate` 控制即时/延迟拖拽 |
 | `accountBalanceColor` | 纯函数 | `common_widgets.dart` | **账户余额上色**（不计入资产=弱化，负=红，正=青绿） |
 | `accountDisplayName` | 纯函数 | `model_lookup.dart` | 按 id 取账户名，空 id→noneLabel（**展示层用它**，避免误回退首个账户） |
 | `accountById` | 纯函数 | `model_lookup.dart` | 按 id 取账户（会回退首个，展示层慎用） |
@@ -134,7 +133,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `EntryTagField` | Widget | `common_widgets.dart` | 记账表单标签行 |
 | `AttachmentsEditor` | Widget | `attachments_editor.dart` | 多图片附件横向缩略图、全屏查看和逐张删除；默认自带标题与拍照/相册添加入口，记账页的轻量元数据布局通过 `showHeader:false` / `showAddButton:false` 只复用缩略图条，添加入口由页面标签触发 |
 | `TagSelectorSheet` / `pickEntryTags` | Widget / Sheet 函数 | `entry_sheets.dart` / `sheets.dart` | 交易标签多选（即时新建）/ 接 controller 的弹窗封装。**标签同样是账本内数据**（`Tag.bookId`）：列表取 `controller.tags`（当前账本），跨账本数据用 `tagsForBook(bookId)` |
-| `RefundSection` / `showRefundSheet` | Widget / Sheet 函数 | `refund_editor.dart` | 支出详情页的受控「退款」草稿区（列退款明细+净支出+添加）/ 添加·编辑退款弹窗（金额截剩余可退、到账账户、已到账开关+到账日期、发起日期、备注、删除）；默认剩余可退金额按原币 minor unit 归一化；Sheet 保存只回传父交易草稿，交易页最终与本体、附件原子保存。待退款清单独立编辑时由调用方在 Sheet 确认后提交 |
+| `RefundSection` / `showRefundSheet` | Widget / Sheet 函数 | `refund_editor.dart` | 支出详情页的受控「退款」区（列退款明细+净支出+添加）/ 添加·编辑退款弹窗（金额截剩余可退、到账账户、已到账开关+到账日期、发起日期、备注、删除）；默认剩余可退金额按原币 minor unit 归一化；Sheet 确认只把退款草稿交回父交易，父交易页自动保存时与本体、附件原子提交。待退款清单独立编辑时由调用方在 Sheet 确认后提交 |
 | `PendingRefundsPage` | Widget | `pending_refunds_page.dart` | 「待退款」清单页（汇总当前账本所有待到账退款、一键标记已到账核销）；入口在交易列表页头 |
 
 ## 族 7 — 表单 / 设置行 / 通用列表行
@@ -163,7 +162,11 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `showConfirmDialog` | Dialog 函数 | `common_widgets.dart` | **统一确认框**；`destructive` 红色；返回 `bool`（取消/点外=false）。**禁止内联两按钮 `AlertDialog`** |
 | `showInfoDialog` | Dialog 函数 | `common_widgets.dart` | 统一只读说明框（标题、正文、单个“知道了”按钮）；新调用使用具名 `context:` |
 | `showUnsavedChangesDialog` / `EditorExitDecision` | Dialog 函数 / 枚举 | `common_widgets.dart` | 未保存修改的“保存 / 不保存 / 取消”三操作对话框；点遮罩或系统返回视为取消 |
-| `UnsavedChangesGuard` / `EditorExitController` | Widget / Controller | `common_widgets.dart` | 统一拦截编辑页 Header、系统与预测性返回；仅 `onSave` 成功后放行，未修改时不拦截；显式保存成功后用 `EditorExitController.exit()` 走同一受控退出路径，避免同帧旧 dirty 状态拦截程序化返回 |
+| `UnsavedChangesGuard` / `EditorExitController` | Widget / Controller | `common_widgets.dart` | **新建类/显式提交页**（添加账户、还款、新建周期规则等）的退出守卫：统一拦截 Header、系统与预测性返回；仅 `onSave` 成功后放行，未修改时不拦截；显式保存成功后用 `EditorExitController.exit()` 走同一受控退出路径。偏好/已有实体自动保存页改用 `AutoSavePopScope` |
+| `AutoSave` / `AutoSaveState` | Controller / 枚举 | `app/auto_save.dart` | 自动保存协调器：防抖、合并连续改动、串行提交，保存进行中又有改动时用最新草稿再存一次；`flush()` 供失焦/返回冲刷；`hasPendingWork` 与 `failed` 驱动返回守卫和失败提示。保存闭包返回 `false` 表示校验或持久化失败，协调器保留待保存状态 |
+| `bindAutoSaveText` | 纯函数 | `app/auto_save.dart` | 把 `TextEditingController` 接到自动保存：输入法组合期间不触发，组合结束后按防抖提交；返回移除监听的函数 |
+| `AutoSaveFailureBanner` | Widget | `common_widgets.dart` | 自动保存失败的页内提示（只有失败时出现），提供重试；成功与保存中不占版面 |
+| `AutoSavePopScope` | Widget | `common_widgets.dart` | 自动保存页的返回守卫：无未落盘改动时直接退出；有改动先 `flush()`，成功才退出，失败才询问是否放弃修改并离开。与 `UnsavedChangesGuard` 的三选一对话框不同 |
 | `showTextInputDialog` | Dialog 函数 | `sheets.dart` | **统一文本输入**；`allowEmpty`、`keyboardType`；返回 trim 后 `String?` |
 | `showOptionSheet<T>` | Sheet 函数 | `sheets.dart` | 动态、较长或需 `sectionOf` 分区的通用单选底部弹窗；2–8 项静态受控单选优先用 `AnchoredMenuChoice<T>`；返回 `T?` |
 | `showVeriModalSheet<T>` | Sheet 函数 | `sheets.dart` | 领域弹窗的统一 chrome 入口；页面需要自定义内容时使用它，不得直接调用 `showModalBottomSheet`；支持拖拽把手、滚动控制、安全区、表面色和泛型返回值 |
@@ -233,7 +236,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `showAiProviderSelectionSheet` | Sheet 函数 | `sheets.dart` + `ai_provider_picker.dart` | 稳定渠道选择入口；分组筛选、搜索、宫格 Logo/说明、选中态与无障碍语义；返回渠道 ID，取消返回 `null` |
 | `showAiModelSelectionSheet` | Sheet 函数 | `sheets.dart` + `ai_model_picker.dart` | 稳定模型选择入口；按 `ownedBy` 分组（缺失 `owned_by` 时回退模型 ID 的厂商前缀）、支持搜索和懒列表；返回模型 ID，取消返回 `null` |
 | `AiProviderLogo` | Widget | `ai_provider_logo.dart` | 渠道 Logo 统一实底托盘；SVG 走 `SvgPicture.asset`，PNG 原比例显示，未知/自定义回退网关图标，不联网加载 |
-| `AiSettingsPage` | 页面 Widget | `ai_settings_page.dart` | AI 渠道与模型设置：预设 Base URL 只读、切换渠道清空 Key/模型、API Key 可选、模型远端获取/手动输入、能力检测；连接参数使用可见描边输入框，工具调用协议以只读输入框作为选择入口，收起时只显示当前选项；所有变更先留草稿再统一保存 |
+| `AiSettingsPage` | 页面 Widget | `ai_settings_page.dart` | AI 渠道与模型设置：预设 Base URL 只读、切换渠道（已有配置时先确认）清空 Key/模型、API Key 可选、模型远端获取/手动输入、能力检测；连接参数使用可见描边输入框，工具调用协议以只读输入框作为选择入口，收起时只显示当前选项；文本停止输入后自动保存，切换渠道与协议立即保存 |
 
 ---
 

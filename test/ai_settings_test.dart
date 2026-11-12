@@ -49,7 +49,7 @@ void main() {
     restarted.dispose();
   });
 
-  testWidgets('AI 配置只在右上角保存后提交', (tester) async {
+  testWidgets('AI 配置输入停止后自动保存', (tester) async {
     final controller = await makeController();
     addTearDown(controller.dispose);
     await tester.pumpWidget(
@@ -66,16 +66,14 @@ void main() {
     );
     await tester.enterText(_textField('API Key（可选）'), 'secret');
     await tester.enterText(_textField('模型'), 'model');
-    await tester.pumpAndSettle();
-    expect(controller.aiSettings.isConfigured, isFalse);
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pump();
 
-    final saveButton = find.widgetWithIcon(IconButton, Icons.save_outlined);
-    expect(tester.widget<IconButton>(saveButton).onPressed, isNotNull);
-    await tester.tap(saveButton);
-    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.save_outlined), findsNothing);
     expect(controller.aiSettings.baseUrl, 'https://example.com/v1');
     expect(controller.aiSettings.apiKey, 'secret');
     expect(controller.aiSettings.model, 'model');
+    expect(controller.aiSettings.isConfigured, isTrue);
   });
 
   testWidgets('选择预设渠道后 Base URL 只读，空 Key 也可保存', (tester) async {
@@ -101,9 +99,8 @@ void main() {
     expect(_fieldText(tester, 'API Key（可选）'), isEmpty);
 
     await tester.enterText(_textField('模型'), 'deepseek-chat');
+    await tester.pump(const Duration(milliseconds: 600));
     await tester.pump();
-    await tester.tap(find.byIcon(Icons.save_outlined));
-    await tester.pumpAndSettle();
 
     expect(controller.aiSettings.providerId, 'deepseek');
     expect(controller.aiSettings.baseUrl, 'https://api.deepseek.com/v1');
@@ -152,7 +149,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(_fieldText(tester, '模型'), 'model-b');
-    expect(controller.aiSettings.isConfigured, isFalse);
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pump();
+    expect(controller.aiSettings.model, 'model-b');
+    expect(controller.aiSettings.isConfigured, isTrue);
   });
 
   testWidgets('工具调用协议使用锚点菜单并在保存后提交', (tester) async {
@@ -184,11 +184,6 @@ void main() {
     await tester.tap(find.text('兼容模式'));
     await tester.pumpAndSettle();
 
-    expect(controller.aiSettings.toolCallMode, AiToolCallMode.auto);
-    await tester.drag(find.byType(ListView), const Offset(0, 600));
-    await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithIcon(IconButton, Icons.save_outlined));
-    await tester.pumpAndSettle();
     expect(controller.aiSettings.toolCallMode, AiToolCallMode.prompt);
   });
 

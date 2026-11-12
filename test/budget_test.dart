@@ -91,18 +91,16 @@ void main() {
     }
     await tester.tap(find.byKey(const Key('number_pad_ok')));
     await tester.pumpAndSettle();
-    // 分类行不再在右上角重复展示预算数字；数值仍保留在设置草稿中。
+    // 分类行不再在右上角重复展示预算数字；金额已自动保存。
     expect(find.text('600'), findsNothing);
-
-    // 保存前只更新设置页草稿。
-    expect(controller.defaultMonthlyBudget, 0);
-    expect(controller.defaultCategoryBudget('dining'), 0);
-    await tester.fling(firstVerticalScrollable(), const Offset(0, 1600), 1000);
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('保存'));
-    await tester.pumpAndSettle();
     expect(controller.defaultMonthlyBudget, 2400);
     expect(controller.defaultCategoryBudget('dining'), 600);
+
+    // 自动保存不会关闭设置页；滚回顶部返回预算总览。
+    await tester.fling(firstVerticalScrollable(), const Offset(0, 1600), 1000);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
 
     // 返回总览再回主页：BudgetPanel 应显示沿用默认的「预算 2400」。
     Navigator.of(tester.element(find.byType(BudgetOverviewPage))).pop();

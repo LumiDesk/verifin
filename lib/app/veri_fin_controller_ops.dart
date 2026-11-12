@@ -1195,6 +1195,25 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
+  /// 自动保存入口：先在平台确认写入成功，再发布样式变化。
+  Future<bool> saveNavigationStyleDraft(
+    NavigationStylePreference preference,
+  ) async {
+    if (_navigationStylePreference == preference) {
+      return true;
+    }
+    try {
+      await _store.writeAndFlush(_navigationStyleKey, preference.name);
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return false;
+    }
+    _navigationStylePreference = preference;
+    navigationStylePreferenceListenable.value = preference;
+    notifyListeners();
+    return true;
+  }
+
   ReminderSettings get reminderSettings => _reminderSettings;
 
   /// 记账提醒配置变化时的回调（由 `main.dart` 注入，用于重排本地通知）。

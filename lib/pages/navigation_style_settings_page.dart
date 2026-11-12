@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
+import '../app/auto_save.dart';
 import '../app/common_widgets.dart';
+import '../app/models.dart';
 import '../app/root_navigation.dart';
 import '../app/root_navigation_styles.dart';
+import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
 
-/// 导航栏样式选择页：逐个预览样式，选中其一。
+/// 导航栏样式选择页：逐个预览样式，选中即生效。
 ///
-/// 页面只认样式的持久化标识（字符串），不依赖偏好枚举，因此任何实现了
-/// [VeriRootNavigationStyle] 的样式都能单独预览与测试。保存只把选中的标识
-/// **回传给设置页草稿**（`Navigator.pop(styleId)`），不写 Controller/KV；
-/// 真正落盘由设置页的统一保存完成，符合
-/// `docs/design/ui-guidelines.md`「编辑页保存与返回」的草稿与退出语义。
+/// 点卡片就把样式的持久化标识写入设备偏好，不再有页面级保存按钮；返回时
+/// 由 [AutoSavePopScope] 确保待写入的改动先落盘。样式标识仍是纯字符串，
+/// 因此任何实现了 [VeriRootNavigationStyle] 的样式都能单独预览与测试。
 class NavigationStyleSettingsPage extends StatefulWidget {
   const NavigationStyleSettingsPage({
     super.key,
@@ -20,7 +21,7 @@ class NavigationStyleSettingsPage extends StatefulWidget {
     this.styles = veriRootNavigationStyles,
   });
 
-  /// 打开时设置页草稿里的样式标识，用于判断是否有修改。
+  /// 打开时生效的样式标识。
   final String initialStyleId;
 
   /// 参与选择的样式；默认取全局注册表，测试或画廊可传子集。
@@ -33,28 +34,46 @@ class NavigationStyleSettingsPage extends StatefulWidget {
 
 class _NavigationStyleSettingsPageState
     extends State<NavigationStyleSettingsPage> {
-  final EditorExitController _exitController = EditorExitController();
-  late String _initialStyleId;
+  late final AutoSave _autoSave;
   late String _styleId;
+  bool _initialized = false;
 
   @override
-  void initState() {
-    super.initState();
-    _initialStyleId = widget.initialStyleId;
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) {
+      return;
+    }
+    _initialized = true;
     _styleId = widget.initialStyleId;
+    final controller = VeriFinScope.of(context);
+    _autoSave = AutoSave(
+      save: () => controller.saveNavigationStyleDraft(
+        NavigationStylePreference.fromStorage(_styleId),
+      ),
+      logger: controller.logger,
+    );
   }
 
-  bool get _isDirty => _styleId != _initialStyleId;
+  @override
+  void dispose() {
+    _autoSave.dispose();
+    super.dispose();
+  }
+
+  void _select(String styleId) {
+    if (_styleId == styleId) {
+      return;
+    }
+    setState(() => _styleId = styleId);
+    _autoSave.schedule(immediate: true);
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return UnsavedChangesGuard(
-      isDirty: _isDirty,
-      // 本页不落库：保存只把选择结果回传给设置页草稿，因此永远成功。
-      onSave: () async => true,
-      popResult: () => _styleId,
-      exitController: _exitController,
+    return AutoSavePopScope(
+      autoSave: _autoSave,
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -65,20 +84,14 @@ class _NavigationStyleSettingsPageState
                   title: l10n.navigationStyleLabel,
                   subtitle: l10n.navigationStylePickerHint,
                   showBack: true,
-                  actions: <Widget>[
-                    SaveHeaderAction(
-                      onPressed: _isDirty
-                          ? () => _exitController.exit(result: () => _styleId)
-                          : null,
-                    ),
-                  ],
                 ),
                 const SizedBox(height: 10),
+                AutoSaveFailureBanner(autoSave: _autoSave),
                 for (final style in widget.styles) ...<Widget>[
                   _NavigationStyleCard(
                     style: style,
                     selected: _styleId == style.id,
-                    onTap: () => setState(() => _styleId = style.id),
+                    onTap: () => _select(style.id),
                   ),
                   const SizedBox(height: 12),
                 ],

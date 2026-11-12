@@ -123,12 +123,13 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   // 防重复提交：极快双击「保存」可能在 pop 生效前触发两次、落两条交易。
   bool _saving = false;
   bool _saved = false;
+  // 保存成功或确认丢弃后置真，让 PopScope 放行程序化返回。
+  bool _allowPop = false;
   late final String _entryId =
       widget.draftEntry?.id ?? DateTime.now().microsecondsSinceEpoch.toString();
   LedgerEntry? _initialEntryDraft;
   List<String>? _initialAttachmentIds;
   LedgerEntry? _savedResult;
-  final EditorExitController _exitController = EditorExitController();
   // 程序化写入备注时置真，令备注监听忽略这次（不误判为用户输入）。
   bool _applyingSuggestion = false;
   bool _didInitialSuggest = false;
@@ -707,11 +708,14 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     };
     _captureInitialSnapshot();
 
-    return UnsavedChangesGuard(
-      isDirty: _isDirty,
-      onSave: _save,
-      popResult: () => _savedResult,
-      exitController: _exitController,
+    return PopScope<Object?>(
+      canPop: _allowPop,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          return;
+        }
+        unawaited(_discardAndPop());
+      },
       child: Scaffold(
         bottomNavigationBar: _EntryBottomSaveBar(
           enabled: _isDirty && _canSave(accounts),
@@ -1852,8 +1856,43 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
 
   Future<void> _saveAndExit() async {
     if (await _save() && mounted) {
-      _exitController.exit(result: () => _savedResult);
+      _popWithResult(_savedResult);
     }
+  }
+
+  /// 快速记账的返回语义是取消：删除本次新暂存的附件，不落任何账目。
+  Future<void> _discardAndPop() async {
+    final controller = VeriFinScope.of(context);
+    final initialIds = (_initialAttachmentIds ?? const <String>[]).toSet();
+    final stagedIds = _pendingAttachments
+        .map((attachment) => attachment.id)
+        .where((id) => !initialIds.contains(id))
+        .toList(growable: false);
+    if (stagedIds.isNotEmpty) {
+      try {
+        await controller.attachmentStore.deleteMany(stagedIds);
+      } on Object catch (error, stackTrace) {
+        controller.logger?.error(
+          '删除未保存记账草稿的附件失败',
+          source: 'entry_detail',
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }
+    }
+    if (!mounted) {
+      return;
+    }
+    _popWithResult(null);
+  }
+
+  void _popWithResult(Object? result) {
+    setState(() => _allowPop = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Navigator.of(context).pop(result);
+      }
+    });
   }
 
   Future<bool> _save() async {

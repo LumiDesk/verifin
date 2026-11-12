@@ -1,4 +1,4 @@
-part of 'assets_pages.dart';
+﻿part of 'assets_pages.dart';
 
 class HiddenAccountsPage extends StatelessWidget {
   const HiddenAccountsPage({super.key});
@@ -67,10 +67,15 @@ class AccountGroupsPage extends StatefulWidget {
 }
 
 class _AccountGroupsPageState extends State<AccountGroupsPage> {
+  late final AutoSave _autoSave = AutoSave(save: _saveOrder);
   bool _sorting = false;
-  bool _savingOrder = false;
   List<AccountGroup> _draftGroups = <AccountGroup>[];
-  List<String> _initialOrder = <String>[];
+
+  @override
+  void dispose() {
+    _autoSave.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,10 +83,8 @@ class _AccountGroupsPageState extends State<AccountGroupsPage> {
     final groups = _sorting ? _draftGroups : controller.accountGroups;
     final accounts = controller.accounts;
 
-    return UnsavedChangesGuard(
-      isDirty: _isOrderDirty,
-      onSave: _saveOrder,
-      onDiscard: _discardOrder,
+    return AutoSavePopScope(
+      autoSave: _autoSave,
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -99,16 +102,26 @@ class _AccountGroupsPageState extends State<AccountGroupsPage> {
                           tooltip: AppLocalizations.of(context).groupAdd,
                           onPressed: () => _showGroupNameDialog(context),
                         ),
-                      SortModeHeaderActions(
-                        sorting: _sorting,
-                        canSort: groups.length >= 2,
-                        dirty: _isOrderDirty,
-                        onStart: () => _startSorting(controller),
-                        onCancel: _cancelSorting,
-                        onSave: _saveOrderAndFinish,
-                      ),
+                      if (_sorting)
+                        HeaderAction(
+                          icon: Icons.check,
+                          tooltip: AppLocalizations.of(context).panelSortDone,
+                          onPressed: _finishSorting,
+                        )
+                      else
+                        HeaderAction(
+                          icon: Icons.swap_vert,
+                          tooltip: AppLocalizations.of(context).sortLabel,
+                          onPressed: groups.length >= 2
+                              ? () => _startSorting(controller)
+                              : null,
+                        ),
                     ],
                   ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: AutoSaveFailureBanner(autoSave: _autoSave),
                 ),
                 Expanded(
                   child: groups.isEmpty
@@ -197,18 +210,17 @@ class _AccountGroupsPageState extends State<AccountGroupsPage> {
     );
   }
 
-  bool get _isOrderDirty =>
-      _sorting &&
-      !listEquals(
-        _draftGroups.map((group) => group.id).toList(),
-        _initialOrder,
-      );
-
   void _startSorting(VeriFinController controller) {
     setState(() {
       _sorting = true;
       _draftGroups = List<AccountGroup>.of(controller.accountGroups);
-      _initialOrder = _draftGroups.map((group) => group.id).toList();
+    });
+  }
+
+  void _finishSorting() {
+    setState(() {
+      _sorting = false;
+      _draftGroups = <AccountGroup>[];
     });
   }
 
@@ -224,50 +236,12 @@ class _AccountGroupsPageState extends State<AccountGroupsPage> {
       final moved = _draftGroups.removeAt(oldIndex);
       _draftGroups.insert(newIndex.clamp(0, _draftGroups.length), moved);
     });
+    _autoSave.schedule(immediate: true);
   }
 
-  Future<bool> _saveOrder() async {
-    if (_savingOrder || !_isOrderDirty) {
-      return !_isOrderDirty;
-    }
-    _savingOrder = true;
-    final saved = await VeriFinScope.of(context).saveAccountGroupOrderDraft(
-      _draftGroups.map((group) => group.id).toList(),
-    );
-    _savingOrder = false;
-    return saved;
-  }
-
-  Future<void> _saveOrderAndFinish() async {
-    if (await _saveOrder() && mounted) {
-      setState(_discardOrder);
-    }
-  }
-
-  void _discardOrder() {
-    _sorting = false;
-    _draftGroups = <AccountGroup>[];
-    _initialOrder = <String>[];
-  }
-
-  Future<void> _cancelSorting() async {
-    if (!_isOrderDirty) {
-      setState(_discardOrder);
-      return;
-    }
-    final decision = await showUnsavedChangesDialog(context: context);
-    if (!mounted) {
-      return;
-    }
-    switch (decision) {
-      case EditorExitDecision.save:
-        await _saveOrderAndFinish();
-      case EditorExitDecision.discard:
-        setState(_discardOrder);
-      case EditorExitDecision.cancel:
-        break;
-    }
-  }
+  Future<bool> _saveOrder() => VeriFinScope.of(
+    context,
+  ).saveAccountGroupOrderDraft(_draftGroups.map((group) => group.id).toList());
 
   Future<void> _showGroupNameDialog(
     BuildContext context, {

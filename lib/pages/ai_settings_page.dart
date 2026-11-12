@@ -10,6 +10,7 @@ import '../app/ai/ai_provider_presentation.dart';
 import '../app/ai/ai_provider_presets.dart';
 import '../app/ai/ai_settings.dart';
 import '../app/app_theme.dart';
+import '../app/auto_save.dart';
 import '../app/common_widgets.dart';
 import '../app/feedback.dart';
 import '../app/veri_fin_scope.dart';
@@ -33,14 +34,13 @@ class AiSettingsPage extends StatefulWidget {
 }
 
 class _AiSettingsPageState extends State<AiSettingsPage> {
-  final EditorExitController _exitController = EditorExitController();
+  late final AutoSave _autoSave;
   final TextEditingController _baseUrlController = TextEditingController();
   final TextEditingController _apiKeyController = TextEditingController();
   final TextEditingController _modelController = TextEditingController();
   final TextEditingController _modelListUrlController = TextEditingController();
   final TextEditingController _toolModeController = TextEditingController();
   bool _seeded = false;
-  late AiSettings _initialSettings;
   bool _obscureKey = true;
   bool _testing = false;
   bool _fetchingModels = false;
@@ -55,8 +55,9 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_seeded) {
-      final settings = VeriFinScope.of(context).aiSettings;
-      _initialSettings = settings;
+      final controller = VeriFinScope.of(context);
+      _autoSave = AutoSave(save: _save, logger: controller.logger);
+      final settings = controller.aiSettings;
       _baseUrlController.text = settings.baseUrl;
       _apiKeyController.text = settings.apiKey;
       _modelController.text = settings.model;
@@ -64,7 +65,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       _providerId = aiProviderPresetFor(settings.providerId).id;
       _toolCallMode = settings.toolCallMode;
       _toolModeController.text = _toolModeLabel(settings.toolCallMode);
-      final cached = VeriFinScope.of(context).aiCapabilityProfile;
+      final cached = controller.aiCapabilityProfile;
       if (cached?.matches(settings) == true) {
         _detectedProfile = cached;
         _statusText = _capabilityStatus(cached!, settings);
@@ -75,6 +76,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
 
   @override
   void dispose() {
+    _autoSave.dispose();
     _baseUrlController.dispose();
     _apiKeyController.dispose();
     _modelController.dispose();
@@ -94,40 +96,15 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
 
   AiProviderPreset get _provider => aiProviderPresetFor(_providerId);
 
-  bool get _isDirty => _seeded && _current() != _initialSettings;
-
-  Future<void> _saveAndExit() async {
-    if (await _save() && mounted) {
-      setState(() => _initialSettings = _current());
-      _exitController.exit();
-    }
-  }
-
   Future<bool> _save() async {
-    final l10n = AppLocalizations.of(context);
-    final settings = _current();
-    if (!settings.isConfigured) {
-      setState(() {
-        _statusIsError = true;
-        _statusText = l10n.aiFillAllFields;
-      });
-      return false;
-    }
-    // http 发往公网主机会明文暴露 API Key，保存前提醒确认。
-    if (!await confirmCleartextIfRisky(context, settings.baseUrl)) return false;
-    if (!mounted) return false;
     final detected = _detectedProfile;
     final saved = await VeriFinScope.of(
       context,
-    ).saveAiSettingsDraft(settings, detectedProfile: detected);
+    ).saveAiSettingsDraft(_current(), detectedProfile: detected);
     if (!mounted || !saved) {
       return false;
     }
     FocusScope.of(context).unfocus();
-    setState(() {
-      _statusIsError = false;
-      _statusText = null;
-    });
     return true;
   }
 
@@ -141,6 +118,10 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       destructive: true,
     );
     if (!confirmed || !mounted) {
+      return;
+    }
+    await _autoSave.flush();
+    if (!mounted) {
       return;
     }
     final saved = await VeriFinScope.of(
@@ -159,7 +140,6 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     _toolCallMode = AiToolCallMode.auto;
     _toolModeController.text = _toolModeLabel(AiToolCallMode.auto);
     _detectedProfile = null;
-    _initialSettings = const AiSettings();
     FocusScope.of(context).unfocus();
     setState(() {
       _statusIsError = false;
@@ -181,6 +161,20 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     if (!mounted || selected == null || selected == _providerId) {
       return;
     }
+    final scope = VeriFinScope.of(context);
+    if (scope.aiSettings.isConfigured) {
+      final l10n = AppLocalizations.of(context);
+      final confirmed = await showConfirmDialog(
+        context,
+        title: l10n.aiSwitchProviderTitle,
+        message: l10n.aiSwitchProviderMessage,
+        confirmLabel: l10n.commonConfirm,
+        destructive: true,
+      );
+      if (!confirmed || !mounted) {
+        return;
+      }
+    }
     final provider = aiProviderPresetFor(selected);
     _fetchToken += 1;
     setState(() {
@@ -196,6 +190,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       _statusText = null;
       _fetchingModels = false;
     });
+    _autoSave.schedule(immediate: true);
   }
 
   Future<void> _fetchModels() async {
@@ -265,6 +260,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
         _statusIsError = false;
         _statusText = null;
       });
+      _autoSave.schedule();
     } on AiException catch (error) {
       if (!mounted || token != _fetchToken) {
         return;
@@ -377,6 +373,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
         _statusText = _capabilityStatus(profile, _current());
       }
     });
+    _autoSave.schedule(immediate: true);
   }
 
   String _toolModeLabel(AiToolCallMode mode) {
@@ -416,11 +413,19 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
   }
 
   void _onConfigChanged() {
+    // 输入法组合期间不落库，避免把半截拼音/候选串写成 API Key 或模型名。
+    if (_baseUrlController.value.composing.isValid ||
+        _apiKeyController.value.composing.isValid ||
+        _modelController.value.composing.isValid ||
+        _modelListUrlController.value.composing.isValid) {
+      return;
+    }
     setState(() {
       _detectedProfile = null;
       _statusText = null;
       _statusIsError = false;
     });
+    _autoSave.schedule();
   }
 
   InputDecoration _configInputDecoration({
@@ -467,10 +472,8 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurface.withValues(alpha: 0.55);
 
-    return UnsavedChangesGuard(
-      isDirty: _isDirty,
-      onSave: _save,
-      exitController: _exitController,
+    return AutoSavePopScope(
+      autoSave: _autoSave,
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -494,14 +497,10 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                           ? null
                           : _clearConfig,
                     ),
-                    SaveHeaderAction(
-                      onPressed: _isDirty && _current().isConfigured
-                          ? _saveAndExit
-                          : null,
-                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
+                AutoSaveFailureBanner(autoSave: _autoSave),
                 Semantics(
                   button: true,
                   label:

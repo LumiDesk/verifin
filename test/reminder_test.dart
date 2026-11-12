@@ -62,18 +62,10 @@ void main() {
     expect(find.text('每日提醒'), findsOneWidget);
     expect(find.text('提醒时间'), findsNothing);
 
-    // 打开开关后出现时间行，但保存前不写 Controller/KV。
+    // 打开开关后出现时间行，并立即写入 Controller/KV。
     await tester.tap(find.byType(Switch));
     await tester.pumpAndSettle();
     expect(find.text('提醒时间'), findsOneWidget);
-    expect(controller.reminderSettings.enabled, isFalse);
-    expect(
-      ReminderSettings.decode(store.read('verifin.reminder.v1')).enabled,
-      isFalse,
-    );
-
-    await tester.tap(find.byTooltip('保存'));
-    await tester.pumpAndSettle();
     expect(controller.reminderSettings.enabled, isTrue);
     expect(
       ReminderSettings.decode(store.read('verifin.reminder.v1')).enabled,

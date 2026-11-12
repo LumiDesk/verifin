@@ -165,7 +165,7 @@ void main() {
     expect(find.text('已删除分类'), findsOneWidget);
   });
 
-  testWidgets('切换账户类型到现金：保存前仅改草稿，保存后清空信用字段', (WidgetTester tester) async {
+  testWidgets('切换账户类型到现金后立即保存并清空信用字段', (WidgetTester tester) async {
     final store = LocalKeyValueStore();
     final controller = await makeController(store);
     final card = Account(
@@ -195,14 +195,6 @@ void main() {
     await tester.tap(find.text('现金'));
     await tester.pumpAndSettle();
 
-    expect(
-      controller.accounts.firstWhere((a) => a.id == 'cc2').type,
-      AccountType.creditCard,
-    );
-
-    await tester.tap(find.byTooltip('保存'));
-    await tester.pumpAndSettle();
-
     final updated = controller.accounts.firstWhere((a) => a.id == 'cc2');
     expect(updated.type, AccountType.cash);
     expect(updated.creditLimit, isNull);
@@ -212,7 +204,7 @@ void main() {
     expect(updated.cardLast4, '');
   });
 
-  testWidgets('设置信用额度：先更新草稿，点击保存后落库', (WidgetTester tester) async {
+  testWidgets('设置信用额度后立即落库', (WidgetTester tester) async {
     final store = LocalKeyValueStore();
     final controller = await makeController(store);
     // 初始无额度、无账单日 → 无信用信息卡，避免「信用额度」文本歧义。
@@ -242,20 +234,13 @@ void main() {
     await tester.tap(find.byKey(const Key('number_pad_ok')));
     await tester.pumpAndSettle();
 
-    // 草稿预览立即显示，但 Controller 尚未改变。
-    expect(
-      controller.accounts.firstWhere((a) => a.id == 'cc3').creditLimit,
-      isNull,
-    );
-    expect(find.text('可用额度'), findsOneWidget);
-    expect(find.textContaining('2000'), findsWidgets);
-
-    await tester.tap(find.byTooltip('保存'));
-    await tester.pumpAndSettle();
+    // 数字键盘确认后立即落库，页面预览同步更新。
     expect(
       controller.accounts.firstWhere((a) => a.id == 'cc3').creditLimit,
       3000,
     );
+    expect(find.text('可用额度'), findsOneWidget);
+    expect(find.textContaining('2000'), findsWidgets);
   });
 
   testWidgets('编辑后删除账户会直接退出，不再触发未保存提示', (tester) async {
@@ -307,7 +292,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       controller.accounts.firstWhere((a) => a.id == card.id).type,
-      AccountType.creditCard,
+      AccountType.cash,
     );
 
     await tester.ensureVisible(find.text('删除账户'));

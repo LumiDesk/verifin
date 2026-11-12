@@ -539,8 +539,6 @@ void main() {
     await tester.tap(find.text('2').last);
     await tester.tap(find.text('确定'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('保存'));
-    await tester.pumpAndSettle();
 
     final saved = controller.entries.singleWhere(
       (entry) => entry.id == 'usd-expense',
@@ -600,8 +598,6 @@ void main() {
     await tester.tap(find.byKey(const Key('number_key_2')));
     await tester.tap(find.byKey(const Key('number_key_0')));
     await tester.tap(find.byKey(const Key('number_pad_ok')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('保存'));
     await tester.pumpAndSettle();
 
     final saved = controller.entries.singleWhere(
@@ -740,8 +736,6 @@ void main() {
     expect(find.text('720 ¥'), findsAtLeastNWidgets(2));
     await tester.tap(find.text('保存'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('保存'));
-    await tester.pumpAndSettle();
 
     final refund = controller.refundsForEntry('usd-expense').single;
     expect(refund.currencyCode, 'USD');
@@ -801,8 +795,6 @@ void main() {
     await tester.tap(find.text('每次使用最新本地汇率'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('固定当前金额'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('保存'));
     await tester.pumpAndSettle();
 
     expect(

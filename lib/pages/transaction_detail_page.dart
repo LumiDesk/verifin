@@ -1,15 +1,14 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:anchored_menu/anchored_menu.dart';
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
+import '../app/auto_save.dart';
 import '../app/common_widgets.dart';
 import '../app/currency_catalog.dart';
 import '../app/currency_math.dart';
 import '../app/entry_currency_draft.dart';
-import '../app/entry_save_feedback.dart';
 import '../app/feedback.dart';
 import '../app/model_lookup.dart';
 import '../app/ledger_math.dart';
@@ -33,7 +32,7 @@ class TransactionDetailPage extends StatefulWidget {
 enum _NoAccountTransferCurrencyChoice { convert, reinterpret }
 
 class _TransactionDetailPageState extends State<TransactionDetailPage> {
-  final EditorExitController _exitController = EditorExitController();
+  late final AutoSave _autoSave = AutoSave(save: _save);
   LedgerEntry? _initialEntry;
   late EntryType _type;
   late double _amount;
@@ -61,8 +60,6 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
   late final TextEditingController _noteController;
   late List<LedgerEntry> _refunds;
   late List<Attachment> _attachments;
-  late String _initialFingerprint;
-  bool _saving = false;
 
   @override
   void didChangeDependencies() {
@@ -99,15 +96,19 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     _attachments = List<Attachment>.of(
       controller.attachmentsForEntry(entry.id),
     );
-    _initialFingerprint = _draftFingerprint;
   }
 
   @override
   void dispose() {
+    _autoSave.dispose();
     if (_initialEntry != null) {
       _noteController.dispose();
     }
     super.dispose();
+  }
+
+  void _touch() {
+    _autoSave.schedule(immediate: true);
   }
 
   @override
@@ -143,18 +144,6 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     final accountFieldValue = _noAccount
         ? noneLabel
         : '${account.name} (${formatUserMoney(controller.accountBalance(account), account.currencyCode)})';
-    final canSave =
-        (accounts.isNotEmpty || _noAccount) &&
-        (_type == EntryType.transfer ||
-            _baseAmount > 0 && (_noAccount || (_accountAmount ?? 0) > 0)) &&
-        (_type != EntryType.transfer ||
-            (_toAccountId != null &&
-                _toAccountId != _accountId &&
-                (_accountId.isEmpty || (_accountAmount ?? 0) > 0) &&
-                (_toAccountAmount ?? 0) > 0)) &&
-        (_type == EntryType.expense
-            ? _refundTotal <= _amount + currencyAmountTolerance(_currencyCode)
-            : _refunds.isEmpty);
     final amountColor = colorForType(context, _type);
     final formattedAmount = formatCurrencyNumber(_amount, _currencyCode);
     final amountText = switch (_type) {
@@ -164,10 +153,8 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       EntryType.refund => '+$formattedAmount',
     };
 
-    return UnsavedChangesGuard(
-      isDirty: _isDirty,
-      onSave: _save,
-      exitController: _exitController,
+    return AutoSavePopScope(
+      autoSave: _autoSave,
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -184,12 +171,10 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                       destructive: true,
                       onPressed: _delete,
                     ),
-                    SaveHeaderAction(
-                      onPressed: canSave && _isDirty ? _saveAndExit : null,
-                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
+                AutoSaveFailureBanner(autoSave: _autoSave),
                 VeriCard(
                   onTap: _editAmount,
                   padding: const EdgeInsets.fromLTRB(14, 16, 14, 14),
@@ -381,8 +366,10 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                               ),
                               Switch(
                                 value: _reimbursable,
-                                onChanged: (value) =>
-                                    setState(() => _reimbursable = value),
+                                onChanged: (value) {
+                                  setState(() => _reimbursable = value);
+                                  _touch();
+                                },
                               ),
                             ],
                           ),
@@ -403,8 +390,10 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                               ),
                               Switch(
                                 value: _excludedFromBudget,
-                                onChanged: (value) =>
-                                    setState(() => _excludedFromBudget = value),
+                                onChanged: (value) {
+                                  setState(() => _excludedFromBudget = value);
+                                  _touch();
+                                },
                               ),
                             ],
                           ),
@@ -446,7 +435,10 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                   RefundSection(
                     expense: _buildEntry(),
                     refunds: _refunds,
-                    onChanged: (refunds) => setState(() => _refunds = refunds),
+                    onChanged: (refunds) {
+                      setState(() => _refunds = refunds);
+                      _touch();
+                    },
                   ),
                 ],
                 const SizedBox(height: 12),
@@ -462,9 +454,12 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                           );
                       if (!mounted) return;
                       setState(() => _attachments.add(attachment));
+                      _touch();
                     },
-                    onRemoveIndex: (index) =>
-                        setState(() => _attachments.removeAt(index)),
+                    onRemoveIndex: (index) {
+                      setState(() => _attachments.removeAt(index));
+                      _touch();
+                    },
                   ),
                 ),
               ],
@@ -662,7 +657,10 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
             title: Text(l10n.entryRememberRate),
             subtitle: Text(l10n.entryRememberRateHint),
             value: _rememberRate,
-            onChanged: (value) => setState(() => _rememberRate = value),
+            onChanged: (value) {
+              setState(() => _rememberRate = value);
+              _touch();
+            },
           ),
         );
       }
@@ -746,6 +744,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
         forceBase: true,
       );
     });
+    _touch();
   }
 
   Future<void> _editAmount() async {
@@ -798,6 +797,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
         _resolveCurrencyAmounts(controller, controller.accounts);
       }
     });
+    _touch();
   }
 
   Future<void> _editFee() async {
@@ -812,6 +812,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       return;
     }
     setState(() => _fee = normalizeCurrencyAmount(fee, _currencyCode));
+    _touch();
   }
 
   Future<void> _editAccountAmount(String currencyCode) async {
@@ -839,6 +840,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       _conversionSource = ConversionSource.manual;
       _missingRateCodes.clear();
     });
+    _touch();
   }
 
   Future<void> _editToAccountAmount(String currencyCode) async {
@@ -858,6 +860,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       _conversionSource = ConversionSource.manual;
       _missingRateCodes.clear();
     });
+    _touch();
   }
 
   Future<void> _editBaseAmount(String baseCode) async {
@@ -885,6 +888,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       _conversionSource = ConversionSource.manual;
       _missingRateCodes.clear();
     });
+    _touch();
   }
 
   Future<void> _editDerivedRate({
@@ -923,6 +927,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       _conversionSource = ConversionSource.manual;
       _missingRateCodes.clear();
     });
+    _touch();
   }
 
   void _selectType(EntryType selected) {
@@ -945,6 +950,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
         forceBase: true,
       );
     });
+    _touch();
   }
 
   Future<void> _pickCategory() async {
@@ -955,6 +961,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     );
     if (selected != null && mounted) {
       setState(() => _categoryId = selected);
+      _touch();
     }
   }
 
@@ -1004,6 +1011,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
           forceBase: true,
         );
       });
+      _touch();
     }
   }
 
@@ -1052,6 +1060,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
               ? ConversionSource.rateTable
               : ConversionSource.manual;
         });
+        _touch();
         return;
       }
       setState(() {
@@ -1063,6 +1072,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
           forceToAccount: true,
         );
       });
+      _touch();
     }
   }
 
@@ -1159,6 +1169,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       );
       // 已保存交易的三层金额是历史事实；只改日期不得按新日期汇率静默重算。
     });
+    _touch();
   }
 
   Future<void> _pickTime() async {
@@ -1178,6 +1189,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
         picked.minute,
       );
     });
+    _touch();
   }
 
   Future<void> _editNote() async {
@@ -1190,6 +1202,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     );
     if (note != null && mounted) {
       setState(() => _noteController.text = note);
+      _touch();
     }
   }
 
@@ -1258,59 +1271,21 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     );
   }
 
-  String get _draftFingerprint {
-    final refunds = List<LedgerEntry>.of(_refunds)
-      ..sort((a, b) => a.id.compareTo(b.id));
-    return jsonEncode(<String, Object?>{
-      'entry': _buildEntry().toJson(),
-      'refunds': refunds.map((refund) => refund.toJson()).toList(),
-      'attachments': _attachments
-          .map((attachment) => attachment.toJson())
-          .toList(),
-    });
-  }
-
-  bool get _isDirty =>
-      _initialEntry != null && _draftFingerprint != _initialFingerprint;
-
-  Future<void> _saveAndExit() async {
-    if (await _save() && mounted) {
-      setState(() => _initialFingerprint = _draftFingerprint);
-      _exitController.exit();
-    }
-  }
-
   Future<bool> _save() async {
-    if (_saving || _initialEntry == null) {
+    if (_initialEntry == null) {
       return false;
     }
     if (_type == EntryType.transfer &&
         (_toAccountId == null || _toAccountId == _accountId)) {
-      unawaited(
-        VeriFeedbackHost.of(context).showMessage(
-          message: AppLocalizations.of(context).transferNeedsTwoAccounts,
-          tone: VeriFeedbackTone.warning,
-        ),
-      );
       return false;
     }
     final refundExceedsExpense =
         _refundTotal > _amount + currencyAmountTolerance(_currencyCode);
     if (refundExceedsExpense ||
-        (_type != EntryType.expense && _refunds.isNotEmpty)) {
-      final l10n = AppLocalizations.of(context);
-      unawaited(
-        VeriFeedbackHost.of(context).showMessage(
-          message: refundExceedsExpense
-              ? l10n.entrySaveRefundExceedsExpense
-              : l10n.entrySaveInvalidRefund,
-          tone: VeriFeedbackTone.warning,
-          duration: VeriFeedbackDuration.long,
-        ),
-      );
+        (_type != EntryType.expense && _refunds.isNotEmpty) ||
+        (_rememberRate && _amount <= 0)) {
       return false;
     }
-    _saving = true;
     final result = await VeriFinScope.of(context).saveEntryAggregateDraftResult(
       entry: _buildEntry(),
       isNew: false,
@@ -1320,21 +1295,6 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       rememberRateToBase: _rememberRate ? _baseAmount / _amount : null,
       rememberRateEffectiveDate: _rememberRate ? _occurredAt : null,
     );
-    if (mounted) {
-      _saving = false;
-    }
-    if (result is EntrySaveValidationFailure && mounted) {
-      unawaited(
-        VeriFeedbackHost.of(context).showMessage(
-          message: entrySaveValidationMessage(
-            AppLocalizations.of(context),
-            result.code,
-          ),
-          tone: VeriFeedbackTone.warning,
-          duration: VeriFeedbackDuration.long,
-        ),
-      );
-    }
     return result.isSuccess;
   }
 
@@ -1344,7 +1304,8 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       return;
     }
     if (mounted) {
-      _exitController.exit();
+      _autoSave.discardPending();
+      Navigator.of(context).pop();
     }
   }
 
@@ -1361,6 +1322,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       return;
     }
     setState(() => _tagIds = result);
+    _touch();
   }
 }
 

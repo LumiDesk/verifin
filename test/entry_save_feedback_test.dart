@@ -84,7 +84,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // 制造一次草稿修改，让 Header 保存可用；再把交易从别处删除。
+    // 制造一次草稿修改并触发自动保存；再从别处删除交易，然后修改另一字段。
     final reimbursableSwitch = find.byType(Switch).first;
     await tester.ensureVisible(reimbursableSwitch);
     await tester.pumpAndSettle();
@@ -92,14 +92,14 @@ void main() {
     await tester.pumpAndSettle();
     await controller.deleteEntry('stale-entry');
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('保存'));
+
+    final excludedSwitch = find.byType(Switch).at(1);
+    await tester.ensureVisible(excludedSwitch);
+    await tester.pumpAndSettle();
+    await tester.tap(excludedSwitch);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('这笔交易已在别处修改或删除，请返回后重新打开。'), findsOneWidget);
-
-    // 让轻提示的计时器走完，避免测试结束时留下挂起的 Timer。
-    await tester.pump(const Duration(seconds: 5));
-    await tester.pumpAndSettle();
+    expect(find.text('保存失败，请重试'), findsOneWidget);
   });
 }

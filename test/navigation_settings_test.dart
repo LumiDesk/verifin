@@ -419,12 +419,6 @@ void main() {
 
     expect(find.text('主题模式'), findsOneWidget);
     expect(find.text('深色'), findsOneWidget);
-    expect(controller.themePreference, ThemePreference.system);
-
-    await tester.fling(firstVerticalScrollable(), const Offset(0, 1200), 1000);
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('保存'));
-    await tester.pumpAndSettle();
     expect(controller.themePreference, ThemePreference.dark);
     expect(find.byTooltip('保存'), findsNothing);
     expect(find.text('未保存的修改'), findsNothing);
@@ -450,12 +444,7 @@ void main() {
     await tester.tap(find.text('确认'));
     await tester.pumpAndSettle();
 
-    // 颜色编辑仍然只改设置页草稿，保存前 Controller 保持原值。
-    expect(controller.themeColorPreference.mode, ThemeColorMode.defaultColor);
-    await tester.fling(firstVerticalScrollable(), const Offset(0, 1200), 1000);
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('保存'));
-    await tester.pumpAndSettle();
+    // 颜色确认后立即自动保存，不再需要右上角保存。
     expect(controller.themeColorPreference.mode, ThemeColorMode.custom);
     expect(controller.themeColorPreference.customColorValue, 0xFFB3261E);
 
@@ -493,16 +482,7 @@ void main() {
     await tester.tap(find.text('English'));
     await tester.pumpAndSettle();
 
-    // 选择仅更新草稿，保存前不切换应用语言、不写 KV。
-    expect(find.text('语言'), findsOneWidget);
-    expect(controller.localePreference, LocalePreference.zh);
-    expect(store.read('verifin.locale.v1'), 'zh');
-
-    // 保存按钮在页头，滚回顶部才能点到。
-    await tester.fling(firstVerticalScrollable(), const Offset(0, 1200), 1000);
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('保存'));
-    await tester.pumpAndSettle();
+    // 选择后立即切换应用语言并写 KV，不再需要保存按钮。
     expect(controller.localePreference, LocalePreference.en);
     expect(store.read('verifin.locale.v1'), 'en');
 
@@ -546,13 +526,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // 设置页先维护草稿，保存前不修改 Controller。
-    expect(controller.moneyUnitStyle, MoneyUnitStyle.symbol);
-    expect(controller.hideUnitInSingleCurrency, isTrue);
-    await tester.fling(firstVerticalScrollable(), const Offset(0, 1200), 1000);
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('保存'));
-    await tester.pumpAndSettle();
+    // 选择与开关都立即写 Controller，不再有页面草稿。
     expect(controller.moneyUnitStyle, MoneyUnitStyle.code);
     expect(controller.hideUnitInSingleCurrency, isFalse);
 

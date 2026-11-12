@@ -68,13 +68,9 @@ void main() {
     await tester.tap(find.text('保存'));
     await tester.pumpAndSettle();
 
-    // 退款弹窗只更新交易页草稿，尚未触碰 Controller 或持久化层。
-    expect(controller.refundsForEntry('e1'), isEmpty);
-    expect(controller.entries.firstWhere((e) => e.id == 'e1').netAmount, 100);
-
-    // 右上角保存把原交易与退款作为一个聚合一次性提交。
-    await tester.tap(find.byTooltip('保存'));
-    await tester.pumpAndSettle();
+    // 退款弹窗确认后，交易页自动保存聚合草稿。
+    expect(controller.refundsForEntry('e1'), isNotEmpty);
+    expect(controller.entries.firstWhere((e) => e.id == 'e1').netAmount, 0);
 
     // 生成一条已到账退款、净额归零、原账户余额 = 1000 − 100 + 100 = 1000。
     final refunds = controller.refundsForEntry('e1');
@@ -148,13 +144,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // 默认剩余可退必须是 48.89，而不是 48.889999…；直接保存后交易页保存成功。
+    // 默认剩余可退必须是 48.89，而不是 48.889999…；确认后自动保存。
     await tester.tap(find.text('添加退款'));
     await tester.pumpAndSettle();
     expect(find.text('+48.89'), findsOneWidget);
     await tester.tap(find.widgetWithText(FilledButton, '保存'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('保存'));
     await tester.pumpAndSettle();
 
     expect(controller.refundsForEntry('partial-refund-expense').length, 5);

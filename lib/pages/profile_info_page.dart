@@ -1,6 +1,7 @@
 import 'package:anchored_menu/anchored_menu.dart';
 import 'package:flutter/material.dart';
 
+import '../app/auto_save.dart';
 import '../app/avatar_picker.dart';
 import '../app/common_widgets.dart';
 import '../app/image_cropper.dart';
@@ -17,13 +18,16 @@ class ProfileInfoPage extends StatefulWidget {
 }
 
 class _ProfileInfoPageState extends State<ProfileInfoPage> {
-  final EditorExitController _exitController = EditorExitController();
+  late final AutoSave _autoSave;
   late TextEditingController _nicknameController;
   late TextEditingController _bioController;
   late TextEditingController _cityController;
   late TextEditingController _occupationController;
+  late VoidCallback _detachNickname;
+  late VoidCallback _detachBio;
+  late VoidCallback _detachCity;
+  late VoidCallback _detachOccupation;
   late String _avatarDataUrl;
-  late UserProfile _initialProfile;
   ProfileGender _gender = ProfileGender.unset;
   String _birthday = '';
   var _initialized = false;
@@ -34,8 +38,10 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
     if (_initialized) {
       return;
     }
-    final profile = VeriFinScope.of(context).profile;
-    _initialProfile = profile;
+    _initialized = true;
+    final controller = VeriFinScope.of(context);
+    _autoSave = AutoSave(save: _save, logger: controller.logger);
+    final profile = controller.profile;
     _nicknameController = TextEditingController(text: profile.nickname);
     _bioController = TextEditingController(text: profile.bio);
     _cityController = TextEditingController(text: profile.city);
@@ -43,19 +49,22 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
     _avatarDataUrl = profile.avatarDataUrl;
     _gender = profile.gender;
     _birthday = profile.birthday;
-    _nicknameController.addListener(_handleDraftChanged);
-    _bioController.addListener(_handleDraftChanged);
-    _cityController.addListener(_handleDraftChanged);
-    _occupationController.addListener(_handleDraftChanged);
-    _initialized = true;
+    _detachNickname = bindAutoSaveText(_nicknameController, _handleTextChanged);
+    _detachBio = bindAutoSaveText(_bioController, _handleTextChanged);
+    _detachCity = bindAutoSaveText(_cityController, _handleTextChanged);
+    _detachOccupation = bindAutoSaveText(
+      _occupationController,
+      _handleTextChanged,
+    );
   }
 
   @override
   void dispose() {
-    _nicknameController.removeListener(_handleDraftChanged);
-    _bioController.removeListener(_handleDraftChanged);
-    _cityController.removeListener(_handleDraftChanged);
-    _occupationController.removeListener(_handleDraftChanged);
+    _detachNickname();
+    _detachBio();
+    _detachCity();
+    _detachOccupation();
+    _autoSave.dispose();
     _nicknameController.dispose();
     _bioController.dispose();
     _cityController.dispose();
@@ -63,14 +72,25 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
     super.dispose();
   }
 
+  void _handleTextChanged() {
+    if (!mounted) {
+      return;
+    }
+    setState(() {});
+    _autoSave.schedule();
+  }
+
+  void _apply(VoidCallback update) {
+    setState(update);
+    _autoSave.schedule(immediate: true);
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
 
-    return UnsavedChangesGuard(
-      isDirty: _isDirty,
-      onSave: _save,
-      exitController: _exitController,
+    return AutoSavePopScope(
+      autoSave: _autoSave,
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -80,11 +100,9 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
                 VeriHeader(
                   title: AppLocalizations.of(context).personalInfo,
                   showBack: true,
-                  actions: <Widget>[
-                    SaveHeaderAction(onPressed: _isDirty ? _saveAndExit : null),
-                  ],
                 ),
                 const SizedBox(height: 10),
+                AutoSaveFailureBanner(autoSave: _autoSave),
                 Center(
                   child: InkWell(
                     borderRadius: BorderRadius.circular(42),
@@ -124,7 +142,7 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
                     ProfileGender.male => Icons.male_rounded,
                     ProfileGender.female => Icons.female_rounded,
                   },
-                  onSelected: (value) => setState(() => _gender = value),
+                  onSelected: (value) => _apply(() => _gender = value),
                   semanticLabel: AppLocalizations.of(context).pickGenderTitle,
                   builder: (context, openMenu, menuOpen) => SelectField(
                     label: AppLocalizations.of(context).genderLabel,
@@ -184,7 +202,7 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
       lastDate: DateTime.now(),
     );
     if (selected != null && mounted) {
-      setState(() {
+      _apply(() {
         _birthday =
             '${selected.year}-${selected.month.toString().padLeft(2, '0')}-${selected.day.toString().padLeft(2, '0')}';
       });
@@ -192,7 +210,7 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
   }
 
   void _clearBirthday() {
-    setState(() => _birthday = '');
+    _apply(() => _birthday = '');
   }
 
   Future<void> _pickAvatar() async {
@@ -223,13 +241,7 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
       ),
     );
     if (avatar != null && mounted) {
-      setState(() => _avatarDataUrl = avatar);
-    }
-  }
-
-  void _handleDraftChanged() {
-    if (mounted) {
-      setState(() {});
+      _apply(() => _avatarDataUrl = avatar);
     }
   }
 
@@ -246,42 +258,7 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
     );
   }
 
-  bool get _isDirty {
-    final draft = _draftProfile(useNicknameFallback: false);
-    return draft.nickname != _initialProfile.nickname ||
-        draft.bio != _initialProfile.bio ||
-        draft.avatarDataUrl != _initialProfile.avatarDataUrl ||
-        draft.gender != _initialProfile.gender ||
-        draft.birthday != _initialProfile.birthday ||
-        draft.city != _initialProfile.city ||
-        draft.occupation != _initialProfile.occupation;
-  }
-
-  Future<void> _saveAndExit() async {
-    if (await _save() && mounted) {
-      setState(() {
-        _initialProfile = _draftProfile(useNicknameFallback: true);
-      });
-      _exitController.exit();
-    }
-  }
-
-  Future<bool> _save() async {
-    final l10n = AppLocalizations.of(context);
-    final nickname = _nicknameController.text.trim();
-    if (nickname.isEmpty) {
-      final confirmed = await showConfirmDialog(
-        context,
-        title: l10n.nicknameEmptyTitle,
-        message: l10n.nicknameEmptyMessage,
-        confirmLabel: l10n.commonSave,
-      );
-      if (confirmed != true || !mounted) {
-        return false;
-      }
-    }
-    return VeriFinScope.of(
-      context,
-    ).saveProfileDraft(_draftProfile(useNicknameFallback: true));
-  }
+  Future<bool> _save() => VeriFinScope.of(
+    context,
+  ).saveProfileDraft(_draftProfile(useNicknameFallback: true));
 }

@@ -1389,6 +1389,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discardChanges => '不保存';
 
   @override
+  String get autoSaveFailedMessage => '最近的修改还没有保存成功。可以重试，或放弃这些修改后离开。';
+
+  @override
+  String get autoSaveRetry => '重试';
+
+  @override
+  String get autoSaveDiscardAndLeave => '放弃修改并离开';
+
+  @override
   String get amountEditTitle => '修改金额';
 
   @override
@@ -1669,9 +1678,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get noteEditTitle => '编辑备注';
-
-  @override
-  String get transferNeedsTwoAccounts => '转账需要两个不同的账户,请先添加转入账户。';
 
   @override
   String noAccountTransferCurrencyChangeTitle(String from, String to) {
@@ -2501,12 +2507,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get nicknameLabel => '昵称';
 
   @override
-  String get nicknameEmptyTitle => '未设置昵称';
-
-  @override
-  String get nicknameEmptyMessage => '未设置昵称，将使用默认昵称「Veri Fin」。是否继续保存？';
-
-  @override
   String get bioLabel => '简介';
 
   @override
@@ -3278,6 +3278,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get aiClearConfigMessage => '将清空请求地址、API Key 与模型。清空后需重新填写才能使用 AI 功能。';
+
+  @override
+  String get aiSwitchProviderTitle => '切换 AI 渠道？';
+
+  @override
+  String get aiSwitchProviderMessage => '切换渠道会清空当前 API Key 与模型，需要重新填写。';
 
   @override
   String get aiConfigCleared => '配置已清空';

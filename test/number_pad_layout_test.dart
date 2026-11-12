@@ -35,7 +35,7 @@ void main() {
     );
   });
 
-  testWidgets('设置中的数字键盘布局保存后可在重启时恢复', (tester) async {
+  testWidgets('设置中的数字键盘布局选择后可在重启时恢复', (tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 1200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final store = LocalKeyValueStore();
@@ -61,13 +61,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // 菜单选择先留在设置草稿中，保存前 Controller 仍为默认布局。
-    expect(controller.numberPadLayout, NumberPadLayout.standard);
+    // 菜单选择后立即自动保存，不再需要右上角保存。
+    expect(controller.numberPadLayout, NumberPadLayout.phone);
+
+    // 自动保存不会关闭设置页；滚回顶部返回，再去验证记账键盘。
     await tester.fling(firstVerticalScrollable(), const Offset(0, 1200), 1000);
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('保存'));
+    await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();
-    expect(controller.numberPadLayout, NumberPadLayout.phone);
 
     await tapBottomTab(tester, 0);
     await tester.tap(find.byKey(const Key('quick_entry_fab')));
