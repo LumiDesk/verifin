@@ -2,6 +2,7 @@ import 'package:anchored_menu/anchored_menu.dart';
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
+import '../app/auto_save.dart';
 import '../app/common_widgets.dart';
 import '../app/home_metrics.dart';
 import '../app/ledger_math.dart';
@@ -11,7 +12,7 @@ import 'home_page.dart';
 import 'sheets.dart';
 
 /// 首页走势卡片自定义页：点击每个槽位在底部弹窗里挑选要展示的数据 / 曲线序列，
-/// 顶部实时预览。改动先进入页面草稿，点击保存后写入设备本地偏好。
+/// 顶部实时预览。改动立即写入设备本地偏好。
 class HomeMetricsSettingsPage extends StatefulWidget {
   const HomeMetricsSettingsPage({super.key});
 
@@ -21,10 +22,9 @@ class HomeMetricsSettingsPage extends StatefulWidget {
 }
 
 class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
-  final EditorExitController _exitController = EditorExitController();
+  late final AutoSave _autoSave;
   final TextEditingController _titleController = TextEditingController();
   bool _titleInitialized = false;
-  late HomeTrendConfig _initialConfig;
   late HomeTrendConfig _draftConfig;
 
   @override
@@ -32,8 +32,10 @@ class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
     super.didChangeDependencies();
     if (!_titleInitialized) {
       _titleInitialized = true;
-      final config = VeriFinScope.of(context).homeTrendConfig;
-      _initialConfig = _draftConfig = config;
+      final controller = VeriFinScope.of(context);
+      _autoSave = AutoSave(save: _save, logger: controller.logger);
+      final config = controller.homeTrendConfig;
+      _draftConfig = config;
       _titleController.text = config.title;
       _titleController.addListener(_handleTitleChanged);
     }
@@ -41,6 +43,7 @@ class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
 
   @override
   void dispose() {
+    _autoSave.dispose();
     _titleController.removeListener(_handleTitleChanged);
     _titleController.dispose();
     super.dispose();
@@ -50,15 +53,21 @@ class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
 
   void _update(HomeTrendConfig config) {
     setState(() => _draftConfig = config);
+    _autoSave.schedule(immediate: true);
   }
 
   void _handleTitleChanged() {
-    if (mounted && _draftConfig.title != _titleController.text) {
-      setState(
-        () =>
-            _draftConfig = _draftConfig.copyWith(title: _titleController.text),
-      );
+    if (!mounted || _draftConfig.title == _titleController.text) {
+      return;
     }
+    // 输入法组合期间不落库，组合结束后按防抖保存。
+    if (_titleController.value.composing.isValid) {
+      return;
+    }
+    setState(
+      () => _draftConfig = _draftConfig.copyWith(title: _titleController.text),
+    );
+    _autoSave.schedule();
   }
 
   Future<void> _pickSlotMetric(int slot) async {
@@ -140,7 +149,7 @@ class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
       confirmLabel: l10n.trendResetConfirm,
     );
     if (confirmed && mounted) {
-      setState(() => _draftConfig = HomeTrendConfig.defaults);
+      _update(HomeTrendConfig.defaults);
       _titleController.text = '';
     }
   }
@@ -170,10 +179,8 @@ class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
       now: now,
     );
 
-    return UnsavedChangesGuard(
-      isDirty: _isDirty,
-      onSave: _save,
-      exitController: _exitController,
+    return AutoSavePopScope(
+      autoSave: _autoSave,
       child: Scaffold(
         body: SafeArea(
           child: VeriPage(
@@ -190,10 +197,10 @@ class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
                       tooltip: l10n.trendResetConfirm,
                       onPressed: _confirmReset,
                     ),
-                    SaveHeaderAction(onPressed: _isDirty ? _saveAndExit : null),
                   ],
                 ),
                 const SizedBox(height: 8),
+                AutoSaveFailureBanner(autoSave: _autoSave),
                 // 实时预览（点击无效，仅展示）。
                 HomeTrendPanel(
                   window: window,
@@ -287,15 +294,6 @@ class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
         ),
       ),
     );
-  }
-
-  bool get _isDirty => _draftConfig != _initialConfig;
-
-  Future<void> _saveAndExit() async {
-    if (await _save() && mounted) {
-      setState(() => _initialConfig = _draftConfig);
-      _exitController.exit();
-    }
   }
 
   Future<bool> _save() =>
