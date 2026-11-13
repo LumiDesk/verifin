@@ -1050,6 +1050,9 @@ class _TransactionsPageState extends State<TransactionsPage> {
     final deleted = await VeriFinScope.of(
       context,
     ).deleteEntries(Set<String>.of(_selectedIds));
+    if (deleted) {
+      VeriHaptics.emphasis();
+    }
     if (mounted && deleted) {
       _exitSelection();
     }
@@ -1071,6 +1074,9 @@ class _TransactionsPageState extends State<TransactionsPage> {
       Set<String>.of(_selectedIds),
       selected,
     );
+    if (changed > 0) {
+      VeriHaptics.commit();
+    }
     if (mounted) {
       unawaited(
         VeriFeedbackHost.of(context).showMessage(
@@ -1116,6 +1122,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
     }
     if (result.status == BatchAccountChangeStatus.unsafeSelection ||
         result.status == BatchAccountChangeStatus.invalidTarget) {
+      VeriHaptics.emphasis();
       unawaited(
         VeriFeedbackHost.of(context).showMessage(
           message: AppLocalizations.of(context).batchAccountChangeUnsafe,
@@ -1126,6 +1133,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
       return;
     }
     if (result.isSuccess) {
+      VeriHaptics.commit();
       unawaited(
         VeriFeedbackHost.of(context).showMessage(
           message: AppLocalizations.of(

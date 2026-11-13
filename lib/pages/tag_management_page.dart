@@ -187,7 +187,12 @@ class _TagManagementPageState extends State<TagManagementPage> {
     if (!mounted || label == null) {
       return;
     }
-    VeriFinScope.of(context).addTag(label);
+    final id = VeriFinScope.of(context).addTag(label);
+    if (id != null) {
+      VeriHaptics.commit();
+    } else {
+      VeriHaptics.emphasis();
+    }
   }
 
   List<AnchoredMenuEntry> _tagMenuEntries(Tag tag) {
@@ -250,6 +255,7 @@ class _TagManagementPageState extends State<TagManagementPage> {
       return;
     }
     await controller.deleteTag(tag.id);
+    VeriHaptics.emphasis();
   }
 }
 

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
 import '../app/currency_math.dart';
+import '../app/haptics.dart';
 import '../app/model_lookup.dart';
 import '../app/models.dart';
 import '../app/veri_fin_scope.dart';
@@ -181,6 +182,7 @@ class _PendingRefundRow extends StatelessWidget {
     );
     if (result?.refund != null && context.mounted) {
       controller.updateRefund(result!.refund!);
+      VeriHaptics.commit();
     }
   }
 }

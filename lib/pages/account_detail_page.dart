@@ -15,6 +15,7 @@ import '../app/credit_card.dart';
 import '../app/currency_catalog.dart';
 import '../app/currency_math.dart';
 import '../app/feedback.dart';
+import '../app/haptics.dart';
 import '../app/icon_catalog.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
@@ -661,6 +662,11 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
         amount,
         note: AppLocalizations.of(context).balanceAdjustNote,
       );
+      if (saved) {
+        VeriHaptics.commit();
+      } else {
+        VeriHaptics.emphasis();
+      }
       if (!saved && mounted) {
         unawaited(
           VeriFeedbackHost.of(context).showMessage(
@@ -674,6 +680,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
       }
     } else {
       controller.rebaseAccountBalance(account, amount);
+      VeriHaptics.commit();
     }
   }
 

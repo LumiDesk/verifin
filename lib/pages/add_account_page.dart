@@ -416,10 +416,11 @@ class _AddAccountPageState extends State<AddAccountPage> {
 
   Future<bool> _save() async {
     if (!_formKey.currentState!.validate()) {
+      VeriHaptics.emphasis();
       return false;
     }
     final controller = VeriFinScope.of(context);
-    return controller.addAccountDraft(
+    final saved = await controller.addAccountDraft(
       Account(
         id: DateTime.now().microsecondsSinceEpoch.toString(),
         bookId: controller.activeBook.id,
@@ -444,5 +445,11 @@ class _AddAccountPageState extends State<AddAccountPage> {
         dueDay: _type.supportsCredit ? _dueDay : null,
       ),
     );
+    if (saved) {
+      VeriHaptics.commit();
+    } else {
+      VeriHaptics.emphasis();
+    }
+    return saved;
   }
 }

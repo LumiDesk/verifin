@@ -15,6 +15,7 @@ import '../app/currency_math.dart';
 import '../app/entry_currency_draft.dart';
 import '../app/entry_save_feedback.dart';
 import '../app/feedback.dart';
+import '../app/haptics.dart';
 import '../app/model_lookup.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
@@ -1916,6 +1917,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
             .where((account) => !account.hidden)
             .toList();
     if (!_canSave(accounts)) {
+      VeriHaptics.emphasis();
       return false;
     }
     final draft = _buildDraftEntry();
@@ -1948,6 +1950,8 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     );
     if (!result.isSuccess) {
       _saving = false;
+      // 保存失败/校验不通过：这一下是「没成」，用更实的触感区分于成功。
+      VeriHaptics.emphasis();
       if (result is EntrySaveValidationFailure && mounted) {
         unawaited(
           VeriFeedbackHost.of(context).showMessage(
@@ -1963,6 +1967,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       return false;
     }
     _saved = true;
+    VeriHaptics.commit();
     return true;
   }
 }

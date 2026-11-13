@@ -286,6 +286,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
       iconCode: iconCode,
       parentId: parent?.id,
     );
+    VeriHaptics.commit();
     // 新建子分类后确保父分类展开可见。
     if (parent != null && mounted) {
       setState(() => _collapsed.remove(parent.id));
@@ -578,6 +579,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
       return;
     }
     final deleted = await controller.deleteCategory(category.id);
+    // 删除属于破坏性命令：成功与失败都给一次更实的反馈。
+    VeriHaptics.emphasis();
     if (!deleted && mounted) {
       unawaited(
         VeriFeedbackHost.of(context).showMessage(

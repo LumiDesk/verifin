@@ -265,6 +265,8 @@ class _PatternInputViewState extends State<PatternInputView> {
     final sequence = _selected.join('-');
     final count = _selected.length;
     if (count < kAppLockPatternMinPoints) {
+      // 连线过短：一次明确的失败反馈。
+      VeriHaptics.emphasis();
       setState(() {
         _selected.clear();
         _pointer = null;
@@ -499,9 +501,11 @@ class _AppLockScreenState extends State<AppLockScreen> {
         ? VeriFinScope.of(context).verifyAppLock(secret)
         : config.verify(secret);
     if (verified) {
+      VeriHaptics.commit();
       widget.onUnlocked();
       return;
     }
+    VeriHaptics.emphasis();
     setState(() => _error = AppLocalizations.of(context).verifyFailedRetry);
   }
 
@@ -515,11 +519,14 @@ class _AppLockScreenState extends State<AppLockScreen> {
     }
     // 顺序不能反：先关锁会让本页在对话框还开着时就被移除。
     if (!await controller.resetAllData()) {
+      VeriHaptics.emphasis();
       if (mounted) {
         setState(() => _error = l10n.saveFailed);
       }
       return;
     }
+    // 无法找回密钥，只能清空本地数据并关锁：属于不可逆命令。
+    VeriHaptics.emphasis();
     if (!await controller.disableAppLock()) {
       // 密钥没删掉就解锁，只会在下次回前台再次上锁，而用户仍然进不去。
       if (mounted) {
@@ -637,6 +644,7 @@ class _AppLockSetupPageState extends State<AppLockSetupPage> {
       return;
     }
     if (secret != first) {
+      VeriHaptics.emphasis();
       setState(() {
         _first = null;
         _error = _isPattern
@@ -657,9 +665,11 @@ class _AppLockSetupPageState extends State<AppLockSetupPage> {
       return;
     }
     if (saved) {
+      VeriHaptics.commit();
       Navigator.of(context).pop(true);
       return;
     }
+    VeriHaptics.emphasis();
     setState(() => _saving = false);
   }
 

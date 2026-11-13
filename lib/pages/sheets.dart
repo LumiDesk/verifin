@@ -1844,15 +1844,25 @@ Future<bool> confirmDeleteAccount(
       return false;
     }
     if (action == AccountDeleteAction.hide) {
-      return controller.saveAccountDraft(account.copyWith(hidden: true));
+      final hidden = await controller.saveAccountDraft(
+        account.copyWith(hidden: true),
+      );
+      if (hidden) {
+        VeriHaptics.commit();
+      } else {
+        VeriHaptics.emphasis();
+      }
+      return hidden;
     }
     final affected = await controller.deleteAccountAndRelatedEntries(
       account.id,
     );
     if (!context.mounted || affected == null) {
+      VeriHaptics.emphasis();
       return false;
     }
     notifyDisabledRules(affected);
+    VeriHaptics.emphasis();
     return true;
   }
 
@@ -1878,9 +1888,11 @@ Future<bool> confirmDeleteAccount(
   }
   final affected = await controller.deleteAccount(account.id);
   if (!context.mounted || affected == null) {
+    VeriHaptics.emphasis();
     return false;
   }
   notifyDisabledRules(affected);
+  VeriHaptics.emphasis();
   return true;
 }
 
@@ -1928,7 +1940,12 @@ Future<List<String>?> pickEntryTags({
               return null;
             }
             final id = controller.addTag(label);
-            return id == null ? null : controller.tagById(id);
+            if (id == null) {
+              VeriHaptics.emphasis();
+              return null;
+            }
+            VeriHaptics.commit();
+            return controller.tagById(id);
           },
         ),
       ),

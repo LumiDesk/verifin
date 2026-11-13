@@ -10,6 +10,7 @@ import '../app/currency_catalog.dart';
 import '../app/currency_math.dart';
 import '../app/entry_currency_draft.dart';
 import '../app/feedback.dart';
+import '../app/haptics.dart';
 import '../app/model_lookup.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
@@ -1303,6 +1304,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     if (entry == null || !await _confirmDeleteEntry(context, entry)) {
       return;
     }
+    VeriHaptics.emphasis();
     if (mounted) {
       _autoSave.discardPending();
       Navigator.of(context).pop();
