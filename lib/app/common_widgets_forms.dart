@@ -714,7 +714,13 @@ class _CardNumberFieldsState extends State<CardNumberFields> {
               l10n.cardLast4Follow,
               style: Theme.of(context).textTheme.bodySmall,
             ),
-            Switch(value: widget.follows, onChanged: _toggleFollows),
+            Switch(
+              value: widget.follows,
+              onChanged: (value) {
+                VeriHaptics.tap();
+                _toggleFollows(value);
+              },
+            ),
           ],
         ),
       ],

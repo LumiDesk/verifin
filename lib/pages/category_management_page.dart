@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:anchored_menu/anchored_menu.dart';
@@ -10,6 +10,7 @@ import '../app/category_tree.dart';
 import '../app/common_widgets.dart';
 import '../app/entry_sheets.dart';
 import '../app/feedback.dart';
+import '../app/haptics.dart';
 import '../app/ledger_math.dart';
 import '../l10n/app_localizations.dart';
 import '../app/models.dart';
@@ -138,8 +139,15 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
       physics: const NeverScrollableScrollPhysics(),
       buildDefaultDragHandles: false,
       itemCount: siblings.length,
+      // 一次拖动只给两次触感：抓住 + 落下（与资产/面板排序一致）。
+      onReorderStart: (_) {
+        if (_sorting) {
+          VeriHaptics.tap();
+        }
+      },
       onReorderItem: (oldIndex, newIndex) {
         if (_sorting) {
+          VeriHaptics.tap();
           _reorderDraft(parentId, oldIndex, newIndex);
         }
       },
@@ -667,7 +675,12 @@ class _CategoryManageRow extends StatelessWidget {
                     height: 40,
                   ),
                   iconSize: 22,
-                  onPressed: onToggle,
+                  onPressed: onToggle == null
+                      ? null
+                      : () {
+                          VeriHaptics.tap();
+                          onToggle!();
+                        },
                   icon: Transform.rotate(
                     angle: collapsed ? -math.pi / 2 : 0,
                     child: Icon(

@@ -1,4 +1,4 @@
-﻿part of 'assets_pages.dart';
+part of 'assets_pages.dart';
 
 class HiddenAccountsPage extends StatelessWidget {
   const HiddenAccountsPage({super.key});
@@ -151,7 +151,17 @@ class _AccountGroupsPageState extends State<AccountGroupsPage> {
                                 physics: const NeverScrollableScrollPhysics(),
                                 buildDefaultDragHandles: false,
                                 itemCount: groups.length,
-                                onReorderItem: _reorderDraft,
+                                onReorderStart: (_) {
+                                  if (_sorting) {
+                                    VeriHaptics.tap();
+                                  }
+                                },
+                                onReorderItem: (oldIndex, newIndex) {
+                                  if (_sorting) {
+                                    VeriHaptics.tap();
+                                  }
+                                  _reorderDraft(oldIndex, newIndex);
+                                },
                                 itemBuilder: (context, index) {
                                   final group = groups[index];
                                   final accountCount = accounts

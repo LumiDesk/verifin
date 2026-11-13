@@ -150,6 +150,54 @@ void main() {
     });
   });
 
+  group('表单内开关与标签', () {
+    testWidgets('卡号后四位跟随开关发 tap', (tester) async {
+      final number = TextEditingController(text: '6222 0000 1111 2222');
+      final last4 = TextEditingController();
+      addTearDown(number.dispose);
+      addTearDown(last4.dispose);
+      var follows = false;
+
+      await tester.pumpWidget(
+        zhMaterialApp(
+          home: Scaffold(
+            body: CardNumberFields(
+              numberController: number,
+              last4Controller: last4,
+              follows: follows,
+              onFollowsChanged: (value) => follows = value,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(Switch));
+
+      expect(played, <VeriHaptic>[VeriHaptic.tap]);
+      expect(follows, isTrue);
+    });
+
+    testWidgets('标签多选切换发 tap', (tester) async {
+      await tester.pumpWidget(
+        zhMaterialApp(
+          home: Scaffold(
+            body: TagSelectorSheet(
+              tags: const <Tag>[
+                Tag(id: 'tag_1', bookId: 'book_1', label: '出差'),
+              ],
+              selectedIds: const <String>[],
+              onCreateTag: () async => null,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('出差'));
+
+      expect(played, <VeriHaptic>[VeriHaptic.tap]);
+    });
+  });
+
   group('交易行', () {
     testWidgets('长按由 VeriHaptics 发 tap，并关闭 Material 自带震动', (tester) async {
       var longPressed = 0;

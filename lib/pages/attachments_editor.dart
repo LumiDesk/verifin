@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 import '../app/attachment_picker.dart';
 import '../app/attachments/attachment_store.dart';
+import '../app/haptics.dart';
 import '../app/models.dart';
 import '../l10n/app_localizations.dart';
 
@@ -34,6 +35,7 @@ class AttachmentsEditor extends StatelessWidget {
   final bool showAddButton;
 
   Future<void> _add(BuildContext context, {required bool fromCamera}) async {
+    VeriHaptics.tap();
     final bytes = await pickAttachmentBytes(fromCamera: fromCamera);
     if (bytes == null || bytes.isEmpty) {
       return;
@@ -202,7 +204,10 @@ class _Thumb extends StatelessWidget {
         GestureDetector(
           onTap: onView,
           // 长按删除：与类注释一致，避免只能点右上角 16dp 小叉删除。
-          onLongPress: onRemove,
+          onLongPress: () {
+            VeriHaptics.tap();
+            onRemove();
+          },
           child: ClipRRect(
             borderRadius: BorderRadius.circular(veriRadiusSm),
             child: SizedBox(
@@ -231,7 +236,10 @@ class _Thumb extends StatelessWidget {
           top: 0,
           right: 0,
           child: GestureDetector(
-            onTap: onRemove,
+            onTap: () {
+              VeriHaptics.tap();
+              onRemove();
+            },
             behavior: HitTestBehavior.opaque,
             child: SizedBox(
               width: 28,
