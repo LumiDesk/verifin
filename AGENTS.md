@@ -232,7 +232,7 @@ dart run scripts/widget_previews.dart
 **Release 标题与说明（规范）：**
 
 - **标题固定等于标签名**：`vX.Y.Z`，不加中文摘要等后缀。CI 建预发布时使用标签名，提升为正式版时不再改标题。
-- **说明正文由 `CHANGELOG.md` 的对应版本段落自动生成**，模板在 `.github/workflows/flutter.yml` 的 `Compose release notes` 步骤里，只补固定文案：预发布时期的验收提示、「直接覆盖安装 + 更新前先备份」提示。
+- **说明正文固定取自 `docs/release-notes/vX.Y.Z.md`**（内容与 `CHANGELOG.md` 的对应版本段一致，但**不自动拼接**）：CI 在构建前校验该文件存在，并直接作为 Release 的 `body_path`。模板是 `docs/release-notes/_template.md`，预发布提示与「直接覆盖安装 + 更新前先备份」都写在文件里。
 - **不写安装包自身的说明**：架构 / ABI / 体积 / 机型限制属于构建与分发口径，只记在 `README.md` 与 `docs/dev/tech-decisions.md`，不进 Release 说明。
 - 提升为正式版：`gh release edit vX.Y.Z --prerelease=false --latest`（不动 git 标签与附件），再用 `--notes-file` 去掉说明里仅适用于预发布的两段（开头的验收提示与结尾的「仍为预发布」说明）；完成后回读 `gh release view` / `gh release list` 确认 `isPrerelease=false`、Latest 已指向它，且说明里不再出现「预发布」。
 

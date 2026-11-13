@@ -15,6 +15,7 @@ Controller 经 repository 写库。`VeriFinController.create()` 是生产初始�
 | 模型 | `lib/app/models/`；`models.dart` 稳定导出；JSON/SQLite 映射须同步 |
 | 页面与弹窗 | `lib/pages/`、`pages/sheets.dart`、`app/entry_sheets.dart`；[组件目录](../design/components.md) |
 | 共享绘制、锚点菜单、图表 | `common_widgets.dart`、`chart_painters.dart`、`root_navigation.dart`、`veri_bottom_bar.dart`；锚点菜单直接使用 `package:anchored_menu`，视觉令牌在 `app_theme.dart` 桥接；[统一设计](../design/design-system.md) |
+| 触感 | `lib/app/haptics.dart`；`VeriHaptics` 是唯一出口（`tick` / `tap` / `commit` / `emphasis`），开关由 Controller 单向镜像，Material 长按震动由调用点 `enableFeedback: false` 收编；规则见 [触感反馈](../design/ui-guidelines.md) |
 | 多币种、预算、退款 | [多币种](multi-currency.md)、[单期预算](category-budget-override.md)、[退款](refund.md)、[交易保存校验与退款金额精度](entry-save-validation.md) |
 | 导入、备份 | `lib/app/backup/import/`、`lib/app/backup/`；只在预览确认后落库，字节格式仅由 BackupService 编解码 |
 | 图片附件 | `lib/app/attachments/attachment_store.dart` 是字节唯一入口（文件存储、暂存、孤儿回收、迁移期物化）；SQLite 只存元数据；`image_picker_cleanup_io.dart` 只删除选择器缓存副本；[设计](attachment-storage-and-backup.md) |

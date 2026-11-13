@@ -7,7 +7,6 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 调用约定速记：
 - 底部弹窗一律经顶层 `show*Sheet(context, ...)` 函数打开（内部封 `showModalBottomSheet` + 统一 chrome），**不要**在页面里裸包 `showModalBottomSheet`。
 - 「取消 / 未选」一律返回 `null`；账户「无账户」返回 **id 为空串的哨兵 `Account`**；分类特殊项用命名常量 `categoryPickerAll` / `categoryPickerTopLevel`。
-- 需要触感（`hapticsEnabled`）的组件由 helper 内部从 `VeriFinScope` 取，调用方不手传。
 - 应用内短反馈统一走 `VeriFeedbackHost.of(context)` / `VeriFeedbackController`；调用、队列和迁移规则见 `feedback-system.md`，新代码不得增加旧式 Material 横条。
 - 触感统一走 `VeriHaptics`（`lib/app/haptics.dart`）：业务代码**不得直接调用 `HapticFeedback`**（`test/haptics_usage_test.dart` 守卫）。组件与页面都不再接收 `hapticsEnabled` 参数，开关由统一入口内部读全局镜像；需要 Material 长按的控件用 `enableFeedback: false`，改由 `VeriHaptics` 发送。
 
