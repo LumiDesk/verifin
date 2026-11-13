@@ -2666,6 +2666,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hapticsLabel => 'Haptic feedback';
 
   @override
+  String get hapticsSubtitle =>
+      'Light vibration for keys, selections and drag sorting';
+
+  @override
   String get numberPadLayoutLabel => 'Number pad layout';
 
   @override

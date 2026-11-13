@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/common_widgets.dart';
 import 'package:verifin/app/haptics.dart';
+import 'package:verifin/app/veri_fin_scope.dart';
+import 'package:verifin/pages/settings_page.dart';
 import 'package:verifin/pages/sheets.dart';
 
 import 'support/test_harness.dart';
@@ -163,6 +165,40 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(played, <VeriHaptic>[VeriHaptic.tick]);
+    });
+  });
+
+  group('设置页开关', () {
+    testWidgets('打开触感时给一次试震，并显示说明', (tester) async {
+      final controller = await makeController();
+      await tester.pumpWidget(
+        VeriFinScope(
+          controller: controller,
+          child: zhMaterialApp(home: const SettingsPage()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final row = find.text('触感反馈');
+      await tester.scrollUntilVisible(
+        row,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('按键、选择与拖动排序时给出轻微震动'), findsOneWidget);
+
+      // 先关掉（此时闸门仍开着，开关行自己发 tap），再打开：闸门刚变回关，
+      // 由设置页主动 preview 补一次确认，最终仍只有一次。
+      await tester.tap(row);
+      await tester.pumpAndSettle();
+      expect(VeriHaptics.enabled, isFalse);
+
+      played.clear();
+      await tester.tap(row);
+      await tester.pumpAndSettle();
+
+      expect(played, <VeriHaptic>[VeriHaptic.tap]);
+      expect(VeriHaptics.enabled, isTrue);
     });
   });
 

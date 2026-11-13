@@ -1930,6 +1930,7 @@
   "themeColorSaturation": "饱和度",
   "themeColorBrightness": "明度",
   "hapticsLabel": "触感反馈",
+  "hapticsSubtitle": "按键、选择与拖动排序时给出轻微震动",
   "numberPadLayoutLabel": "数字键盘布局",
   "numberPadLayoutPickerTitle": "选择数字键盘布局",
   "numberPadLayoutStandard": "标准布局",

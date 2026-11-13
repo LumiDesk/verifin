@@ -10,6 +10,7 @@ import '../app/common_widgets.dart';
 import '../app/credits.dart';
 import '../app/external_links.dart';
 import '../app/feedback.dart';
+import '../app/haptics.dart';
 import '../app/legal_content.dart';
 import '../l10n/app_localizations.dart';
 import '../app/models.dart';
@@ -334,8 +335,18 @@ class _SettingsPageState extends State<SettingsPage> {
                       CompactSwitchRow(
                         icon: Icons.touch_app_outlined,
                         title: Text(AppLocalizations.of(context).hapticsLabel),
+                        subtitle: Text(
+                          AppLocalizations.of(context).hapticsSubtitle,
+                        ),
                         value: _haptics,
-                        onChanged: (value) => _change(() => _haptics = value),
+                        onChanged: (value) {
+                          if (value) {
+                            // 打开这一下闸门还是关的（写入要等下一次保存），
+                            // 主动给一次确认，让用户当场知道效果。
+                            VeriHaptics.preview();
+                          }
+                          _change(() => _haptics = value);
+                        },
                       ),
                       const Divider(height: 1),
                       SettingsRow(
