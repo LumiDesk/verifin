@@ -15,7 +15,6 @@ class AccountSectionCard extends StatelessWidget {
     this.onToggleCollapsed,
     this.onReorderAccounts,
     this.onAccountTap,
-    this.hapticsEnabled = true,
   });
 
   final String title;
@@ -28,7 +27,6 @@ class AccountSectionCard extends StatelessWidget {
   final VoidCallback? onToggleCollapsed;
   final ReorderCallback? onReorderAccounts;
   final ValueChanged<Account>? onAccountTap;
-  final bool hapticsEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -58,9 +56,7 @@ class AccountSectionCard extends StatelessWidget {
             onTap: onToggleCollapsed == null
                 ? null
                 : () {
-                    if (hapticsEnabled) {
-                      HapticFeedback.selectionClick();
-                    }
+                    VeriHaptics.tap();
                     onToggleCollapsed?.call();
                   },
             child: Padding(
@@ -148,20 +144,11 @@ class AccountSectionCard extends StatelessWidget {
                           ),
                         ),
                         itemCount: accounts.length,
-                        onReorderStart: (_) {
-                          if (hapticsEnabled) {
-                            HapticFeedback.selectionClick();
-                          }
-                        },
-                        onReorderEnd: (_) {
-                          if (hapticsEnabled) {
-                            HapticFeedback.selectionClick();
-                          }
-                        },
+                        // 一次拖动只给两次触感：抓住、落下。`onReorderEnd` 还会在
+                        // 动画收尾时再触发一次，叠起来就是「连震三下」。
+                        onReorderStart: (_) => VeriHaptics.tap(),
                         onReorderItem: (oldIndex, newIndex) {
-                          if (hapticsEnabled) {
-                            HapticFeedback.selectionClick();
-                          }
+                          VeriHaptics.tap();
                           (onReorderAccounts ?? (_, _) {})(oldIndex, newIndex);
                         },
                         itemBuilder: (context, index) {
@@ -416,12 +403,15 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                     padding: EdgeInsets.zero,
                     visualDensity: VisualDensity.compact,
                     tooltip: l10n.calendarPrevMonth,
-                    onPressed: () => setState(() {
-                      _visibleMonth = DateTime(
-                        _visibleMonth.year,
-                        _visibleMonth.month - 1,
-                      );
-                    }),
+                    onPressed: () {
+                      VeriHaptics.tick();
+                      setState(() {
+                        _visibleMonth = DateTime(
+                          _visibleMonth.year,
+                          _visibleMonth.month - 1,
+                        );
+                      });
+                    },
                     icon: const Icon(Icons.chevron_left, size: 20),
                   ),
                   Container(
@@ -457,12 +447,15 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                     padding: EdgeInsets.zero,
                     visualDensity: VisualDensity.compact,
                     tooltip: l10n.calendarNextMonth,
-                    onPressed: () => setState(() {
-                      _visibleMonth = DateTime(
-                        _visibleMonth.year,
-                        _visibleMonth.month + 1,
-                      );
-                    }),
+                    onPressed: () {
+                      VeriHaptics.tick();
+                      setState(() {
+                        _visibleMonth = DateTime(
+                          _visibleMonth.year,
+                          _visibleMonth.month + 1,
+                        );
+                      });
+                    },
                     icon: const Icon(Icons.chevron_right, size: 20),
                   ),
                 ],
@@ -511,7 +504,10 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                 borderRadius: BorderRadius.circular(veriRadiusSm),
                 onTap: widget.onDayTap == null
                     ? null
-                    : () => widget.onDayTap!(date),
+                    : () {
+                        VeriHaptics.tick();
+                        widget.onDayTap!(date);
+                      },
                 child: Container(
                   alignment: Alignment.topCenter,
                   padding: const EdgeInsets.symmetric(vertical: 2),

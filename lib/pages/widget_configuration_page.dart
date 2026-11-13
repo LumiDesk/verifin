@@ -9,6 +9,7 @@ import '../app/app_theme.dart';
 import '../app/app_lock.dart';
 import '../app/common_widgets.dart';
 import '../app/feedback.dart';
+import '../app/haptics.dart';
 import '../app/logging/app_logger.dart';
 import '../app/native_widget_preview.dart';
 import '../app/platform_bridge.dart';
@@ -54,6 +55,9 @@ Future<void> runWidgetConfiguration() async {
     return;
   }
   final appLock = AppLockConfig.fromStorage(store.read(appLockStorageKey));
+  // 独立引擎不构造 Controller：触感开关直接从同一份 KV 恢复，
+  // 锁屏才与主应用一样遵守「关闭后不震动」（旧实现硬编码为始终开启）。
+  VeriHaptics.enabled = store.read(VeriHaptics.storageKey) != 'false';
   String? locale;
   try {
     // 语言只是显示偏好：拿不到就跟随系统，不阻塞配置页。

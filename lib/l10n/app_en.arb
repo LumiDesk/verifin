@@ -1008,6 +1008,7 @@
   "themeColorSaturation": "Saturation",
   "themeColorBrightness": "Brightness",
   "hapticsLabel": "Haptic feedback",
+  "hapticsSubtitle": "Light vibration for keys, selections and drag sorting",
   "numberPadLayoutLabel": "Number pad layout",
   "numberPadLayoutPickerTitle": "Choose number pad layout",
   "numberPadLayoutStandard": "Standard layout",

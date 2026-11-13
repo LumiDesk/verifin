@@ -12,6 +12,7 @@ import '../app/currency_math.dart';
 import '../app/model_lookup.dart';
 import '../app/entry_sheets.dart';
 import '../app/feedback.dart';
+import '../app/haptics.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
 import '../app/series_math.dart';
@@ -404,10 +405,13 @@ class _TransactionsPageState extends State<TransactionsPage> {
                                 tooltip: AppLocalizations.of(
                                   context,
                                 ).exitMultiSelect,
-                                onPressed: () => setState(() {
-                                  _selectionMode = false;
-                                  _selectedIds.clear();
-                                }),
+                                onPressed: () {
+                                  VeriHaptics.tap();
+                                  setState(() {
+                                    _selectionMode = false;
+                                    _selectedIds.clear();
+                                  });
+                                },
                               )
                             else ...<Widget>[
                               // 常驻入口：待退款为零时也必须在，否则该功能全应用无路可进。
@@ -430,8 +434,10 @@ class _TransactionsPageState extends State<TransactionsPage> {
                                   tooltip: AppLocalizations.of(
                                     context,
                                   ).multiSelect,
-                                  onPressed: () =>
-                                      setState(() => _selectionMode = true),
+                                  onPressed: () {
+                                    VeriHaptics.tap();
+                                    setState(() => _selectionMode = true);
+                                  },
                                 ),
                             ],
                           ],
@@ -1044,6 +1050,9 @@ class _TransactionsPageState extends State<TransactionsPage> {
     final deleted = await VeriFinScope.of(
       context,
     ).deleteEntries(Set<String>.of(_selectedIds));
+    if (deleted) {
+      VeriHaptics.emphasis();
+    }
     if (mounted && deleted) {
       _exitSelection();
     }
@@ -1065,6 +1074,9 @@ class _TransactionsPageState extends State<TransactionsPage> {
       Set<String>.of(_selectedIds),
       selected,
     );
+    if (changed > 0) {
+      VeriHaptics.commit();
+    }
     if (mounted) {
       unawaited(
         VeriFeedbackHost.of(context).showMessage(
@@ -1110,6 +1122,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
     }
     if (result.status == BatchAccountChangeStatus.unsafeSelection ||
         result.status == BatchAccountChangeStatus.invalidTarget) {
+      VeriHaptics.emphasis();
       unawaited(
         VeriFeedbackHost.of(context).showMessage(
           message: AppLocalizations.of(context).batchAccountChangeUnsafe,
@@ -1120,6 +1133,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
       return;
     }
     if (result.isSuccess) {
+      VeriHaptics.commit();
       unawaited(
         VeriFeedbackHost.of(context).showMessage(
           message: AppLocalizations.of(
@@ -1570,7 +1584,12 @@ class _BatchAction extends StatelessWidget {
         : Theme.of(context).colorScheme.onSurface;
     final color = enabled ? base : base.withValues(alpha: 0.3);
     return InkWell(
-      onTap: onTap,
+      onTap: onTap == null
+          ? null
+          : () {
+              VeriHaptics.tap();
+              onTap!();
+            },
       borderRadius: BorderRadius.circular(veriRadiusSm),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

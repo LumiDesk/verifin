@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:anchored_menu/anchored_menu.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +7,7 @@ import '../app/app_theme.dart';
 import '../app/auto_save.dart';
 import '../app/common_widgets.dart';
 import '../app/feedback.dart';
+import '../app/haptics.dart';
 import '../l10n/app_localizations.dart';
 import '../app/models.dart';
 import '../app/veri_fin_controller.dart';
@@ -98,8 +99,14 @@ class _TagManagementPageState extends State<TagManagementPage> {
                       physics: const NeverScrollableScrollPhysics(),
                       buildDefaultDragHandles: false,
                       itemCount: tags.length,
+                      onReorderStart: (_) {
+                        if (_sorting) {
+                          VeriHaptics.tap();
+                        }
+                      },
                       onReorderItem: (oldIndex, newIndex) {
                         if (_sorting) {
+                          VeriHaptics.tap();
                           _reorderDraft(oldIndex, newIndex);
                         }
                       },
@@ -180,7 +187,12 @@ class _TagManagementPageState extends State<TagManagementPage> {
     if (!mounted || label == null) {
       return;
     }
-    VeriFinScope.of(context).addTag(label);
+    final id = VeriFinScope.of(context).addTag(label);
+    if (id != null) {
+      VeriHaptics.commit();
+    } else {
+      VeriHaptics.emphasis();
+    }
   }
 
   List<AnchoredMenuEntry> _tagMenuEntries(Tag tag) {
@@ -243,6 +255,7 @@ class _TagManagementPageState extends State<TagManagementPage> {
       return;
     }
     await controller.deleteTag(tag.id);
+    VeriHaptics.emphasis();
   }
 }
 

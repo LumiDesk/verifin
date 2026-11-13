@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show listEquals, setEquals;
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
+import 'haptics.dart';
 
 /// 图表气泡内容模型。适配层负责把外部图表库的触摸回调映射到这里。
 class ChartTooltip {
@@ -455,7 +456,8 @@ class _InteractiveTrendChartState extends State<InteractiveTrendChart> {
     }
   }
 
-  void _select(int? index) {
+  /// [haptic] 只给点按：左右拖动会连续跨过多个插槽，逐格震动会变成噪音。
+  void _select(int? index, {bool haptic = false}) {
     if (index != null && widget.missingIndexes.contains(index)) {
       index = null;
     }
@@ -463,6 +465,9 @@ class _InteractiveTrendChartState extends State<InteractiveTrendChart> {
       return;
     }
     setState(() => _selectedIndex = index);
+    if (haptic && index != null) {
+      VeriHaptics.tick();
+    }
   }
 
   @override
@@ -599,7 +604,7 @@ class _InteractiveTrendChartState extends State<InteractiveTrendChart> {
                   return;
                 }
                 final index = indexAt(localX);
-                _select(index == _selectedIndex ? null : index);
+                _select(index == _selectedIndex ? null : index, haptic: true);
               },
               child: Stack(
                 children: <Widget>[
@@ -752,11 +757,14 @@ class _InteractiveBarChartState extends State<InteractiveBarChart> {
     return true;
   }
 
-  void _select(int? index) {
+  void _select(int? index, {bool haptic = false}) {
     if (index == _selectedIndex) {
       return;
     }
     setState(() => _selectedIndex = index);
+    if (haptic && index != null) {
+      VeriHaptics.tick();
+    }
   }
 
   @override
@@ -880,7 +888,7 @@ class _InteractiveBarChartState extends State<InteractiveBarChart> {
                   return;
                 }
                 final index = indexAt(localX);
-                _select(index == _selectedIndex ? null : index);
+                _select(index == _selectedIndex ? null : index, haptic: true);
               },
               child: Stack(
                 children: <Widget>[

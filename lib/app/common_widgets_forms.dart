@@ -222,9 +222,15 @@ class CompactSwitchRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final toggle = onChanged;
     // 整行可点：开关被缩到 0.82 后有效点击区不足 44dp，只点开关很难命中。
     return InkWell(
-      onTap: onChanged == null ? null : () => onChanged!(!value),
+      onTap: toggle == null
+          ? null
+          : () {
+              VeriHaptics.tap();
+              toggle(!value);
+            },
       borderRadius: BorderRadius.circular(veriRadiusSm),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -258,7 +264,15 @@ class CompactSwitchRow extends StatelessWidget {
             Transform.scale(
               scale: 0.82,
               alignment: Alignment.centerRight,
-              child: Switch(value: value, onChanged: onChanged),
+              child: Switch(
+                value: value,
+                onChanged: toggle == null
+                    ? null
+                    : (next) {
+                        VeriHaptics.tap();
+                        toggle(next);
+                      },
+              ),
             ),
           ],
         ),
@@ -700,7 +714,13 @@ class _CardNumberFieldsState extends State<CardNumberFields> {
               l10n.cardLast4Follow,
               style: Theme.of(context).textTheme.bodySmall,
             ),
-            Switch(value: widget.follows, onChanged: _toggleFollows),
+            Switch(
+              value: widget.follows,
+              onChanged: (value) {
+                VeriHaptics.tap();
+                _toggleFollows(value);
+              },
+            ),
           ],
         ),
       ],
@@ -767,6 +787,16 @@ class VeriSegmentedControl<T> extends StatelessWidget {
     final indicator = veriContentSurfaceColor(Theme.of(context).brightness);
     final height = compact ? 30.0 : 40.0;
     final radius = BorderRadius.circular(compact ? veriRadiusSm : veriRadiusMd);
+    final select = onChanged;
+    // 选择变化才发一次：同一项重复点击或外部重建不该反复震。
+    final selectWithHaptic = select == null
+        ? null
+        : (T value) {
+            if (value != selected) {
+              VeriHaptics.tick();
+            }
+            select(value);
+          };
 
     return LayoutBuilder(
       builder: (context, constraints) => Semantics(
@@ -776,9 +806,9 @@ class VeriSegmentedControl<T> extends StatelessWidget {
         child: AnimatedToggleSwitch<T>.rolling(
           current: selected,
           values: values,
-          onChanged: onChanged,
+          onChanged: selectWithHaptic,
           // onChanged 为 null 时整组禁用（如管理页排序期间）。
-          active: onChanged != null,
+          active: select != null,
           height: height,
           borderWidth: 0,
           spacing: _kSegmentSpacing,
@@ -805,7 +835,7 @@ class VeriSegmentedControl<T> extends StatelessWidget {
           ),
           iconBuilder: (value, foreground) {
             final selectedNow = value == selected;
-            final enabled = onChanged != null;
+            final enabled = select != null;
             final accent = accentOf?.call(value);
             final color = selectedNow
                 ? (accent ?? scheme.onSurface.withValues(alpha: 0.94))

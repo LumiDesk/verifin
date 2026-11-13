@@ -7,6 +7,7 @@ import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
 import '../app/currency_catalog.dart';
 import '../app/feedback.dart';
+import '../app/haptics.dart';
 import '../l10n/app_localizations.dart';
 import '../app/models.dart';
 import '../app/veri_fin_scope.dart';
@@ -68,6 +69,7 @@ class LedgerBooksPage extends StatelessWidget {
       return;
     }
     controller.addLedgerBook(draft.name, baseCurrencyCode: draft.currencyCode);
+    VeriHaptics.commit();
   }
 }
 
@@ -264,6 +266,7 @@ class _LedgerBookRow extends StatelessWidget {
       return;
     }
     final deleted = await VeriFinScope.of(context).deleteLedgerBook(book.id);
+    VeriHaptics.emphasis();
     if (!context.mounted || deleted) {
       return;
     }

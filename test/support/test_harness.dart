@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/attachments/attachment_store.dart';
 import 'package:verifin/app/feedback.dart';
+import 'package:verifin/app/haptics.dart';
 import 'package:verifin/app/logging/app_logger.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/app/veri_fin_controller.dart';
@@ -34,11 +35,14 @@ void useTestDatabases() {
   // path_provider 插件；生产入口必须显式注入 FileAttachmentStore。
   setUp(() {
     VeriFinController.debugDefaultAttachmentStore = InMemoryAttachmentStore();
+    // 触感闸门是全局镜像：用例之间必须复位，否则关过开关的用例会污染后续断言。
+    VeriHaptics.reset();
   });
   tearDown(() {
     _repoForStore.clear();
     _attachmentsForStore.clear();
     VeriFinController.debugDefaultAttachmentStore = null;
+    VeriHaptics.reset();
   });
 }
 

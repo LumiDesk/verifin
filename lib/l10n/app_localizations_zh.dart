@@ -2611,6 +2611,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get hapticsLabel => '触感反馈';
 
   @override
+  String get hapticsSubtitle => '按键、选择与拖动排序时给出轻微震动';
+
+  @override
   String get numberPadLayoutLabel => '数字键盘布局';
 
   @override

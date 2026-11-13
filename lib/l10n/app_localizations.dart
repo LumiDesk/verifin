@@ -4778,6 +4778,12 @@ abstract class AppLocalizations {
   /// **'触感反馈'**
   String get hapticsLabel;
 
+  /// No description provided for @hapticsSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'按键、选择与拖动排序时给出轻微震动'**
+  String get hapticsSubtitle;
+
   /// No description provided for @numberPadLayoutLabel.
   ///
   /// In zh, this message translates to:

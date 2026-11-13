@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../app/app_theme.dart';
 import '../app/auto_save.dart';
 import '../app/common_widgets.dart';
 import '../app/feedback.dart';
+import '../app/haptics.dart';
 import '../app/models.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
@@ -172,10 +172,9 @@ class _PanelSettingsPageState extends State<PanelSettingsPage> {
                         child: child,
                       ),
                     ),
-                    onReorderStart: (_) => _triggerSelectionHaptic(),
-                    onReorderEnd: (_) => _triggerSelectionHaptic(),
+                    onReorderStart: (_) => VeriHaptics.tap(),
                     onReorderItem: (oldIndex, newIndex) {
-                      _triggerSelectionHaptic();
+                      VeriHaptics.tap();
                       _apply(() {
                         final moved = _draftPanels.removeAt(oldIndex);
                         _draftPanels.insert(
@@ -245,12 +244,6 @@ class _PanelSettingsPageState extends State<PanelSettingsPage> {
     _apply(() {
       _draftPanels[index] = _draftPanels[index].copyWith(enabled: enabled);
     });
-  }
-
-  void _triggerSelectionHaptic() {
-    if (VeriFinScope.of(context).hapticsEnabled) {
-      HapticFeedback.selectionClick();
-    }
   }
 
   Future<bool> _save() => VeriFinScope.of(

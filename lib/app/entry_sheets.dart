@@ -1,13 +1,13 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'app_theme.dart';
 import 'calc_expression.dart';
 import 'category_tree.dart';
 import 'common_widgets.dart';
 import 'currency_math.dart';
+import 'haptics.dart';
 import 'ledger_math.dart';
 import 'models.dart';
 import '../l10n/app_localizations.dart';
@@ -21,7 +21,6 @@ class NumberPadSheet extends StatefulWidget {
     this.initialAmount,
     this.allowNegative = false,
     this.allowZero = false,
-    this.hapticsEnabled = true,
     this.maxAmount,
     this.maxFractionDigits = 2,
     this.currencyCode,
@@ -33,7 +32,6 @@ class NumberPadSheet extends StatefulWidget {
   final double? initialAmount;
   final bool allowNegative;
   final bool allowZero;
-  final bool hapticsEnabled;
 
   /// 单个操作数允许的小数位数。普通金额默认为 2；本地汇率可提高到 10。
   final int maxFractionDigits;
@@ -392,12 +390,11 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
   }
 
   void _handleKey(String value) {
-    if (widget.hapticsEnabled) {
-      if (value == 'OK') {
-        HapticFeedback.mediumImpact();
-      } else {
-        HapticFeedback.lightImpact();
-      }
+    // 数字键与确认键分两档：确认是一次明确提交，按重一档给反馈。
+    if (value == 'OK') {
+      VeriHaptics.commit();
+    } else {
+      VeriHaptics.tap();
     }
     if (value == 'OK') {
       final max = widget.maxAmount;
@@ -656,7 +653,10 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
                       size: 18,
                     )
                   : null,
-              onTap: () => Navigator.of(context).pop(categoryPickerAll),
+              onTap: () {
+                VeriHaptics.tick();
+                Navigator.of(context).pop(categoryPickerAll);
+              },
             ),
           if (widget.topLevelLabel != null)
             ListTile(
@@ -674,7 +674,10 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
                   context,
                 ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
               ),
-              onTap: () => Navigator.of(context).pop(categoryPickerTopLevel),
+              onTap: () {
+                VeriHaptics.tick();
+                Navigator.of(context).pop(categoryPickerTopLevel);
+              },
             ),
           Flexible(
             child: ListView.separated(
@@ -774,7 +777,10 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
                                   size: 18,
                                 )
                               : null),
-                    onTap: () => Navigator.of(context).pop(category.id),
+                    onTap: () {
+                      VeriHaptics.tick();
+                      Navigator.of(context).pop(category.id);
+                    },
                   ),
                 );
               },
@@ -873,13 +879,16 @@ class _TagSelectorSheetState extends State<TagSelectorSheet> {
                     FilterChip(
                       label: Text(tag.label),
                       selected: _selected.contains(tag.id),
-                      onSelected: (value) => setState(() {
-                        if (value) {
-                          _selected.add(tag.id);
-                        } else {
-                          _selected.remove(tag.id);
-                        }
-                      }),
+                      onSelected: (value) {
+                        VeriHaptics.tap();
+                        setState(() {
+                          if (value) {
+                            _selected.add(tag.id);
+                          } else {
+                            _selected.remove(tag.id);
+                          }
+                        });
+                      },
                     ),
                   ActionChip(
                     avatar: const Icon(Icons.add, size: 18),

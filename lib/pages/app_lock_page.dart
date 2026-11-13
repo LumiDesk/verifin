@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../app/app_lock.dart';
 import '../app/app_theme.dart';
 import '../app/biometric_auth.dart';
 import '../app/common_widgets.dart';
 import '../app/feedback.dart';
+import '../app/haptics.dart';
 import '../app/platform_bridge.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
@@ -24,13 +24,11 @@ class PinInputView extends StatefulWidget {
     super.key,
     required this.onCompleted,
     this.errorText,
-    this.hapticsEnabled = true,
     this.footer,
   });
 
   final ValueChanged<String> onCompleted;
   final String? errorText;
-  final bool hapticsEnabled;
   final Widget? footer;
 
   @override
@@ -44,9 +42,7 @@ class _PinInputViewState extends State<PinInputView> {
     if (_input.length >= kAppLockPinLength) {
       return;
     }
-    if (widget.hapticsEnabled) {
-      HapticFeedback.lightImpact();
-    }
+    VeriHaptics.tap();
     setState(() => _input += digit);
     if (_input.length == kAppLockPinLength) {
       final value = _input;
@@ -59,9 +55,7 @@ class _PinInputViewState extends State<PinInputView> {
     if (_input.isEmpty) {
       return;
     }
-    if (widget.hapticsEnabled) {
-      HapticFeedback.selectionClick();
-    }
+    VeriHaptics.tap();
     setState(() => _input = _input.substring(0, _input.length - 1));
   }
 
@@ -226,12 +220,10 @@ class PatternInputView extends StatefulWidget {
     super.key,
     required this.onCompleted,
     this.errorText,
-    this.hapticsEnabled = true,
   });
 
   final ValueChanged<String> onCompleted;
   final String? errorText;
-  final bool hapticsEnabled;
 
   @override
   State<PatternInputView> createState() => _PatternInputViewState();
@@ -247,9 +239,7 @@ class _PatternInputViewState extends State<PatternInputView> {
       final center = patternDotCenter(i, kPatternAreaSize);
       if ((local - center).distance <= kPatternAreaSize / 6 * 0.62) {
         if (!_selected.contains(i)) {
-          if (widget.hapticsEnabled) {
-            HapticFeedback.selectionClick();
-          }
+          VeriHaptics.tick();
           setState(() => _selected.add(i));
         }
         return;
@@ -275,6 +265,8 @@ class _PatternInputViewState extends State<PatternInputView> {
     final sequence = _selected.join('-');
     final count = _selected.length;
     if (count < kAppLockPatternMinPoints) {
+      // 连线过短：一次明确的失败反馈。
+      VeriHaptics.emphasis();
       setState(() {
         _selected.clear();
         _pointer = null;
@@ -428,20 +420,14 @@ Widget buildAppLockInput({
   required AppLockKind kind,
   required ValueChanged<String> onCompleted,
   String? errorText,
-  bool hapticsEnabled = true,
   Widget? footer,
 }) {
   if (kind == AppLockKind.pattern) {
-    return PatternInputView(
-      onCompleted: onCompleted,
-      errorText: errorText,
-      hapticsEnabled: hapticsEnabled,
-    );
+    return PatternInputView(onCompleted: onCompleted, errorText: errorText);
   }
   return PinInputView(
     onCompleted: onCompleted,
     errorText: errorText,
-    hapticsEnabled: hapticsEnabled,
     footer: footer,
   );
 }
@@ -515,9 +501,11 @@ class _AppLockScreenState extends State<AppLockScreen> {
         ? VeriFinScope.of(context).verifyAppLock(secret)
         : config.verify(secret);
     if (verified) {
+      VeriHaptics.commit();
       widget.onUnlocked();
       return;
     }
+    VeriHaptics.emphasis();
     setState(() => _error = AppLocalizations.of(context).verifyFailedRetry);
   }
 
@@ -531,11 +519,14 @@ class _AppLockScreenState extends State<AppLockScreen> {
     }
     // 顺序不能反：先关锁会让本页在对话框还开着时就被移除。
     if (!await controller.resetAllData()) {
+      VeriHaptics.emphasis();
       if (mounted) {
         setState(() => _error = l10n.saveFailed);
       }
       return;
     }
+    // 无法找回密钥，只能清空本地数据并关锁：属于不可逆命令。
+    VeriHaptics.emphasis();
     if (!await controller.disableAppLock()) {
       // 密钥没删掉就解锁，只会在下次回前台再次上锁，而用户仍然进不去。
       if (mounted) {
@@ -553,9 +544,6 @@ class _AppLockScreenState extends State<AppLockScreen> {
   Widget build(BuildContext context) {
     final config = widget.config;
     final kind = config?.kind ?? VeriFinScope.of(context).appLockKind;
-    final hapticsEnabled = config == null
-        ? VeriFinScope.of(context).hapticsEnabled
-        : true;
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -592,7 +580,6 @@ class _AppLockScreenState extends State<AppLockScreen> {
                   kind: kind,
                   onCompleted: _submit,
                   errorText: _error,
-                  hapticsEnabled: hapticsEnabled,
                 ),
                 if (_biometricAvailable) ...<Widget>[
                   const SizedBox(height: 16),
@@ -657,6 +644,7 @@ class _AppLockSetupPageState extends State<AppLockSetupPage> {
       return;
     }
     if (secret != first) {
+      VeriHaptics.emphasis();
       setState(() {
         _first = null;
         _error = _isPattern
@@ -677,15 +665,16 @@ class _AppLockSetupPageState extends State<AppLockSetupPage> {
       return;
     }
     if (saved) {
+      VeriHaptics.commit();
       Navigator.of(context).pop(true);
       return;
     }
+    VeriHaptics.emphasis();
     setState(() => _saving = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final controller = VeriFinScope.of(context);
     final confirming = _first != null;
     final String hint;
     if (_isPattern) {
@@ -722,7 +711,6 @@ class _AppLockSetupPageState extends State<AppLockSetupPage> {
                 kind: widget.kind,
                 onCompleted: _onCompleted,
                 errorText: _error,
-                hapticsEnabled: controller.hapticsEnabled,
               ),
             ],
           ),
@@ -785,7 +773,6 @@ class _AppLockVerifyPageState extends State<AppLockVerifyPage> {
                 kind: controller.appLockKind,
                 onCompleted: _onCompleted,
                 errorText: _error,
-                hapticsEnabled: controller.hapticsEnabled,
               ),
             ],
           ),

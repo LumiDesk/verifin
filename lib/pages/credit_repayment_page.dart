@@ -9,6 +9,7 @@ import '../app/currency_math.dart';
 import '../app/entry_currency_draft.dart';
 import '../app/entry_save_feedback.dart';
 import '../app/feedback.dart';
+import '../app/haptics.dart';
 import '../app/models.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
@@ -372,6 +373,7 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
     final sourceCode = source?.currencyCode ?? widget.account.currencyCode;
     final sourceAmount = _noAccount ? _amount : _fromAmount;
     if (sourceAmount == null || sourceAmount <= 0) {
+      VeriHaptics.emphasis();
       return false;
     }
     // 用转账分类（「转出」），与普通转账一致，避免列表按空分类回退成「已删除分类」。
@@ -411,6 +413,7 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
     );
     if (!mounted || !result.isSuccess) {
       _saving = false;
+      VeriHaptics.emphasis();
       if (mounted && result is EntrySaveValidationFailure) {
         unawaited(
           VeriFeedbackHost.of(context).showMessage(
@@ -426,6 +429,7 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
       return false;
     }
     _saved = true;
+    VeriHaptics.commit();
     unawaited(
       VeriFeedbackHost.of(context).showMessage(
         message: AppLocalizations.of(context).creditRepaySuccess,

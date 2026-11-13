@@ -10,6 +10,7 @@ import '../app/budget_cycle.dart';
 import '../app/category_tree.dart';
 import '../app/chart_painters.dart';
 import '../app/common_widgets.dart';
+import '../app/haptics.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
 import '../app/series_math.dart';

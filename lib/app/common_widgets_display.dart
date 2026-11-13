@@ -527,13 +527,24 @@ class MonthSwitcher extends StatelessWidget {
       children: <Widget>[
         IconButton(
           tooltip: previousTooltip ?? l10n.calendarPrevMonth,
-          onPressed: onPrevious,
+          // 期间步进是典型的选择变化；到边界时按钮为 null，不发声。
+          onPressed: onPrevious == null
+              ? null
+              : () {
+                  VeriHaptics.tick();
+                  onPrevious!();
+                },
           icon: const Icon(Icons.chevron_left),
         ),
         labelSlot,
         IconButton(
           tooltip: nextTooltip ?? l10n.calendarNextMonth,
-          onPressed: onNext,
+          onPressed: onNext == null
+              ? null
+              : () {
+                  VeriHaptics.tick();
+                  onNext!();
+                },
           icon: const Icon(Icons.chevron_right),
         ),
       ],

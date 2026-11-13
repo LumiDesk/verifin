@@ -775,7 +775,12 @@ class _CategoryBudgetRow extends StatelessWidget {
                     height: 40,
                   ),
                   iconSize: 22,
-                  onPressed: onToggle,
+                  onPressed: onToggle == null
+                      ? null
+                      : () {
+                          VeriHaptics.tap();
+                          onToggle!();
+                        },
                   icon: Transform.rotate(
                     angle: collapsed ? -math.pi / 2 : 0,
                     child: Icon(

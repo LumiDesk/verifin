@@ -19,6 +19,7 @@ import '../app/common_widgets.dart';
 import '../app/currency_math.dart';
 import '../app/data_file_port.dart';
 import '../app/feedback.dart';
+import '../app/haptics.dart';
 import '../app/ledger_math.dart';
 import '../l10n/app_localizations.dart';
 import '../app/veri_fin_controller.dart';
@@ -591,6 +592,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
         return;
       }
       controller.recordBackupTime(now);
+      VeriHaptics.commit();
       unawaited(
         feedback.showMessage(
           message: l10n.backedUpFile(result.filename),
@@ -599,6 +601,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
       );
     } catch (error) {
       controller.logger?.error('手动备份失败', source: 'backup', error: error);
+      VeriHaptics.emphasis();
       unawaited(
         feedback.showMessage(
           message: _backupErrorText(l10n, error),
@@ -680,6 +683,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
         return;
       }
       if (saved && context.mounted) {
+        VeriHaptics.commit();
         final hint = controller.backupEncryptionEnabled
             ? AppLocalizations.of(context).encryptedSuffix
             : '';
@@ -691,6 +695,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
       }
     } catch (error) {
       controller.logger?.error('数据导出失败', source: 'export', error: error);
+      VeriHaptics.emphasis();
       if (context.mounted) {
         _notify(
           context,
@@ -1201,6 +1206,11 @@ class _DataManagementPageState extends State<DataManagementPage> {
         }
         return;
       }
+      if (imported) {
+        VeriHaptics.commit();
+      } else {
+        VeriHaptics.emphasis();
+      }
       if (imported && context.mounted) {
         unawaited(
           feedback.showMessage(
@@ -1298,6 +1308,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
         mimeType: 'text/csv',
       );
       if (saved && context.mounted) {
+        VeriHaptics.commit();
         _notify(
           context,
           message: AppLocalizations.of(context).transactionsCsvExported,
@@ -1306,6 +1317,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
       }
     } catch (error) {
       controller.logger?.error('交易 CSV 导出失败', source: 'export', error: error);
+      VeriHaptics.emphasis();
       if (context.mounted) {
         _notify(
           context,
@@ -1866,6 +1878,11 @@ class _DataManagementPageState extends State<DataManagementPage> {
         }
         return;
       }
+      if (imported) {
+        VeriHaptics.commit();
+      } else {
+        VeriHaptics.emphasis();
+      }
       if (imported && context.mounted) {
         _notify(
           context,
@@ -1912,6 +1929,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
       return;
     }
     final reset = await controller.resetAllData();
+    VeriHaptics.emphasis();
     if (!context.mounted) {
       return;
     }

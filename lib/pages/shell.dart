@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 
 import '../app/app_theme.dart';
 import '../app/app_lock_session.dart';
+import '../app/haptics.dart';
 import '../app/models.dart';
 import '../app/feedback.dart';
 import '../app/platform_bridge.dart';
@@ -179,10 +180,13 @@ class _VeriFinShellState extends State<VeriFinShell> {
 
   /// 切换到指定 Tab：底部导航点击与返回键均走此入口，带一段短动画。
   ///
+  /// [fromUser] 只在用户点底栏时传 true：程序化跳转（组件路由、快捷记账回首页）
+  /// 不该发出选择触感。
+  ///
   /// 跨多页动画会依次触发中间页的 [PageView.onPageChanged]；这些页只是过场，
   /// 不能反向覆盖导航滑块正在吸附的最终目标。直接手势翻页时没有 programmatic
   /// target，仍由 [_handlePageChanged] 正常同步导航。
-  void _goToTab(int index) {
+  void _goToTab(int index, {bool fromUser = false}) {
     // 是否「已经在目标页」以**页面实际停下的位置**为准，而不是 `_index`：`_index`
     // 是点击时乐观写入的，切页动画被打断时它会先跑到目标值，而页面还停在半路。
     // 只看 `_index` 的话，这种脱节状态下点「底栏已经显示在那儿的那个 Tab」会被当成
@@ -192,6 +196,9 @@ class _VeriFinShellState extends State<VeriFinShell> {
         : _index;
     if (index == _index && settled == index) {
       return;
+    }
+    if (fromUser) {
+      VeriHaptics.tick();
     }
     setState(() {
       _index = index;
@@ -281,6 +288,8 @@ class _VeriFinShellState extends State<VeriFinShell> {
       return;
     }
     if (_index != value) {
+      // 手势翻页落定：与点击底栏同样给一次选择刻度。
+      VeriHaptics.tick();
       setState(() => _index = value);
     }
   }
@@ -380,9 +389,17 @@ class _VeriFinShellState extends State<VeriFinShell> {
                             clipBehavior: Clip.antiAlias,
                             child: InkWell(
                               key: const Key('quick_entry_action'),
-                              onTap: _requestQuickEntry,
-                              onLongPress: () =>
-                                  _requestQuickEntry(longPress: true),
+                              // 长按/点击的触感统一由 VeriHaptics 发；关掉 Material
+                              // 自带的长按震动，关闭触感反馈后必须彻底静默。
+                              enableFeedback: false,
+                              onTap: () {
+                                VeriHaptics.tap();
+                                _requestQuickEntry();
+                              },
+                              onLongPress: () {
+                                VeriHaptics.tap();
+                                _requestQuickEntry(longPress: true);
+                              },
                               child: Icon(
                                 Icons.add_rounded,
                                 size: 28,
@@ -404,7 +421,7 @@ class _VeriFinShellState extends State<VeriFinShell> {
           spec: VeriRootNavigationSpec(
             currentIndex: _index,
             destinations: destinations,
-            onSelect: _goToTab,
+            onSelect: (index) => _goToTab(index, fromUser: true),
           ),
         ),
       ),

@@ -10,6 +10,7 @@ import '../app/currency_catalog.dart';
 import '../app/currency_math.dart';
 import '../app/entry_currency_draft.dart';
 import '../app/feedback.dart';
+import '../app/haptics.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
 import '../app/veri_fin_controller.dart';
@@ -1093,10 +1094,12 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
       draft,
       isNew: existing == null,
     )) {
+      VeriHaptics.emphasis();
       return false;
     }
     // 立即补记已到期的交易。
     await controller.applyDueRecurring(DateTime.now());
+    VeriHaptics.commit();
     return true;
   }
 
@@ -1112,6 +1115,7 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
       return;
     }
     VeriFinScope.of(context).deleteRecurringRule(widget.rule!.id);
+    VeriHaptics.emphasis();
     _autoSave.discardPending();
     if (mounted) {
       Navigator.of(context).pop();

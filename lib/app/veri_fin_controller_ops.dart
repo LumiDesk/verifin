@@ -1247,6 +1247,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       return;
     }
     _hapticsEnabled = enabled;
+    _syncHaptics();
     _store.write(_hapticsKey, enabled.toString());
     notifyListeners();
   }
@@ -1537,6 +1538,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _localePreference = localePreference;
     _navigationStylePreference = navigationStylePreference;
     _hapticsEnabled = hapticsEnabled;
+    _syncHaptics();
     _currencyFractionStyle = currencyFractionStyle;
     amount_format.currencyFractionStyle = currencyFractionStyle;
     _moneyUnitStyle = moneyUnitStyle;
@@ -4518,6 +4520,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _activeBookId = defaultLedgerBookId;
     _assetCoverUrl = '';
     _hapticsEnabled = true;
+    _syncHaptics();
     _assetAccountViewMode = AssetAccountViewMode.type;
     _collapsedAssetSections.clear();
     _assetAccountOrders.clear();
@@ -5072,6 +5075,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       _themeColorPreference = nextThemeColorPreference;
       _assetCoverUrl = nextAssetCoverUrl;
       _hapticsEnabled = nextHapticsEnabled;
+      _syncHaptics();
       _assetAccountViewMode = nextAssetAccountViewMode;
       _collapsedAssetSections
         ..clear()
@@ -5156,6 +5160,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       _themeColorPreference = oldThemeColorPreference;
       _assetCoverUrl = oldAssetCoverUrl;
       _hapticsEnabled = oldHapticsEnabled;
+      _syncHaptics();
       _assetAccountViewMode = oldAssetAccountViewMode;
       _collapsedAssetSections
         ..clear()

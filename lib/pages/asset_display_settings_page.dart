@@ -244,7 +244,6 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
                           ),
                           sectionDragIndex: index,
                           sectionDragImmediate: true,
-                          hapticsEnabled: controller.hapticsEnabled,
                           onToggleCollapsed: () => _apply(() {
                             final key = '${_viewMode.name}:${section.id}';
                             if (!_collapsedSections.add(key)) {
