@@ -15,7 +15,6 @@ class AccountSectionCard extends StatelessWidget {
     this.onToggleCollapsed,
     this.onReorderAccounts,
     this.onAccountTap,
-    this.hapticsEnabled = true,
   });
 
   final String title;
@@ -28,7 +27,6 @@ class AccountSectionCard extends StatelessWidget {
   final VoidCallback? onToggleCollapsed;
   final ReorderCallback? onReorderAccounts;
   final ValueChanged<Account>? onAccountTap;
-  final bool hapticsEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -58,9 +56,7 @@ class AccountSectionCard extends StatelessWidget {
             onTap: onToggleCollapsed == null
                 ? null
                 : () {
-                    if (hapticsEnabled) {
-                      HapticFeedback.selectionClick();
-                    }
+                    VeriHaptics.tap();
                     onToggleCollapsed?.call();
                   },
             child: Padding(
@@ -148,20 +144,11 @@ class AccountSectionCard extends StatelessWidget {
                           ),
                         ),
                         itemCount: accounts.length,
-                        onReorderStart: (_) {
-                          if (hapticsEnabled) {
-                            HapticFeedback.selectionClick();
-                          }
-                        },
-                        onReorderEnd: (_) {
-                          if (hapticsEnabled) {
-                            HapticFeedback.selectionClick();
-                          }
-                        },
+                        // 一次拖动只给两次触感：抓住、落下。`onReorderEnd` 还会在
+                        // 动画收尾时再触发一次，叠起来就是「连震三下」。
+                        onReorderStart: (_) => VeriHaptics.tap(),
                         onReorderItem: (oldIndex, newIndex) {
-                          if (hapticsEnabled) {
-                            HapticFeedback.selectionClick();
-                          }
+                          VeriHaptics.tap();
                           (onReorderAccounts ?? (_, _) {})(oldIndex, newIndex);
                         },
                         itemBuilder: (context, index) {

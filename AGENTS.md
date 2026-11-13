@@ -135,7 +135,7 @@ third_party/                  # 本地 vendor 源码（jdenticon_dart、liquid_g
 - 禁止复制内联两按钮 `AlertDialog`。破坏性确认使用 `showConfirmDialog(..., destructive: true)`。
 - 取消/未选统一返回 `null`；“全部”“顶级”“无账户”等特殊选项使用集中定义、带注释的命名哨兵，不在调用点散写魔法字符串或 id。
 - 新增 helper 必须把 `BuildContext` 设计为具名 `context:`；改造既有 helper 时若迁移签名，必须同步全部调用点。不要声称现有 helper 已全部完成统一。
-- 触感偏好由 helper 内部从 `VeriFinScope` 获取，调用方不重复传递。
+- 触感统一经 `lib/app/haptics.dart` 的 `VeriHaptics`（`tick` / `tap` / `commit` / `emphasis`）发送；组件与页面不接收 `hapticsEnabled` 参数，开关由统一入口内部读 Controller 同步的全局镜像。需要 Material 长按的控件用 `enableFeedback: false`，改由 `VeriHaptics` 发送，否则关闭触感后仍会震动。
 
 ### 国际化
 
@@ -291,6 +291,7 @@ dart run scripts/widget_previews.dart
 - Never 手改生成的 `app_localizations*.dart`；文案改动只写 ARB。
 - Never 对 data URL 图片使用 `Image.network`；Never 先完整 `readBytes()` 再检查分享图片大小（>25 MB 必须立即停止）。
 - Never 注册通知监听、无障碍或短信监听；Never 让 AI 静默写账或给查询工具写数据能力。
+- Never 在业务代码直接调用 `HapticFeedback`（统一走 `VeriHaptics`），Never 让组件接收 `hapticsEnabled` 参数；Never 给自动保存、列表行点击、页面转场或滚动加触感。
 - Never 把测试 stub/内存仓储当作生产实现；真实存储、图片、文件能力必须在 Android 上落地。
 - Never 手改 `pubspec.lock`，Never 为简单需求随意引入依赖或工具链；依赖变更用 `flutter pub get/add`。
 - Never 修改 `build/`、`.dart_tool/`、`.flutter-plugins-dependencies` 或 Flutter 生成文件；它们由工具重建。

@@ -466,7 +466,6 @@ class _AssetsPageState extends State<AssetsPage> {
                     mode: viewMode,
                     sectionId: section.id,
                   ),
-                  hapticsEnabled: controller.hapticsEnabled,
                   onToggleCollapsed: () =>
                       controller.toggleAssetSectionCollapsed(
                         mode: viewMode,

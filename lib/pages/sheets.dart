@@ -909,8 +909,8 @@ Future<void> _showBudgetOverrideSheet({
   }
 }
 
-/// 数字键盘弹窗:统一的金额输入入口(四则算式 + 结果预览)。触感偏好由内部从
-/// [VeriFinScope] 取,调用方不用手传。返回所输金额;取消返回 null。
+/// 数字键盘弹窗:统一的金额输入入口(四则算式 + 结果预览)。触感由组件内部经
+/// `VeriHaptics` 统一发送,调用方不用手传。返回所输金额;取消返回 null。
 /// [allowNegative] 允许负数,[allowZero] 允许 0(如清除预算 / 手续费)。
 Future<double?> showNumberPadSheet(
   BuildContext context, {
@@ -923,7 +923,6 @@ Future<double?> showNumberPadSheet(
   String? currencyCode,
   bool showTitle = true,
 }) {
-  final hapticsEnabled = VeriFinScope.of(context).hapticsEnabled;
   final resolvedFractionDigits =
       maxFractionDigits ??
       (currencyCode == null
@@ -938,7 +937,6 @@ Future<double?> showNumberPadSheet(
       initialAmount: initialAmount,
       allowNegative: allowNegative,
       allowZero: allowZero,
-      hapticsEnabled: hapticsEnabled,
       maxAmount: maxAmount,
       maxFractionDigits: resolvedFractionDigits,
       currencyCode: currencyCode,

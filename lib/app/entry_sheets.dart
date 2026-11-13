@@ -1,13 +1,13 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'app_theme.dart';
 import 'calc_expression.dart';
 import 'category_tree.dart';
 import 'common_widgets.dart';
 import 'currency_math.dart';
+import 'haptics.dart';
 import 'ledger_math.dart';
 import 'models.dart';
 import '../l10n/app_localizations.dart';
@@ -21,7 +21,6 @@ class NumberPadSheet extends StatefulWidget {
     this.initialAmount,
     this.allowNegative = false,
     this.allowZero = false,
-    this.hapticsEnabled = true,
     this.maxAmount,
     this.maxFractionDigits = 2,
     this.currencyCode,
@@ -33,7 +32,6 @@ class NumberPadSheet extends StatefulWidget {
   final double? initialAmount;
   final bool allowNegative;
   final bool allowZero;
-  final bool hapticsEnabled;
 
   /// 单个操作数允许的小数位数。普通金额默认为 2；本地汇率可提高到 10。
   final int maxFractionDigits;
@@ -392,12 +390,11 @@ class _NumberPadSheetState extends State<NumberPadSheet> {
   }
 
   void _handleKey(String value) {
-    if (widget.hapticsEnabled) {
-      if (value == 'OK') {
-        HapticFeedback.mediumImpact();
-      } else {
-        HapticFeedback.lightImpact();
-      }
+    // 数字键与确认键分两档：确认是一次明确提交，按重一档给反馈。
+    if (value == 'OK') {
+      VeriHaptics.commit();
+    } else {
+      VeriHaptics.tap();
     }
     if (value == 'OK') {
       final max = widget.maxAmount;

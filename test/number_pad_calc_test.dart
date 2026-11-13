@@ -32,7 +32,6 @@ void main() {
             allowZero: allowZero,
             currencyCode: currencyCode,
             maxFractionDigits: maxFractionDigits,
-            hapticsEnabled: false,
           ),
         ),
       ),
@@ -107,7 +106,6 @@ void main() {
             title: '信用额度',
             initialAmount: 5000,
             allowZero: true,
-            hapticsEnabled: false,
           ),
         ),
       ),
@@ -127,11 +125,7 @@ void main() {
     await tester.pumpWidget(
       zhMaterialApp(
         home: const Scaffold(
-          body: NumberPadSheet(
-            title: '金额',
-            initialAmount: 100,
-            hapticsEnabled: false,
-          ),
+          body: NumberPadSheet(title: '金额', initialAmount: 100),
         ),
       ),
     );
@@ -178,7 +172,6 @@ void main() {
             title: '日元金额',
             maxFractionDigits: 0,
             currencyCode: 'JPY',
-            hapticsEnabled: false,
           ),
         ),
       ),

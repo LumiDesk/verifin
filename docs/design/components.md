@@ -9,6 +9,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 - 「取消 / 未选」一律返回 `null`；账户「无账户」返回 **id 为空串的哨兵 `Account`**；分类特殊项用命名常量 `categoryPickerAll` / `categoryPickerTopLevel`。
 - 需要触感（`hapticsEnabled`）的组件由 helper 内部从 `VeriFinScope` 取，调用方不手传。
 - 应用内短反馈统一走 `VeriFeedbackHost.of(context)` / `VeriFeedbackController`；调用、队列和迁移规则见 `feedback-system.md`，新代码不得增加旧式 Material 横条。
+- 触感统一走 `VeriHaptics`（`lib/app/haptics.dart`）：业务代码**不得直接调用 `HapticFeedback`**（`test/haptics_usage_test.dart` 守卫）。组件与页面都不再接收 `hapticsEnabled` 参数，开关由统一入口内部读全局镜像；需要 Material 长按的控件用 `enableFeedback: false`，改由 `VeriHaptics` 发送。
 
 ---
 
@@ -89,7 +90,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `CardNumberFields` | Widget | `common_widgets.dart` | 完整卡号 + 后四位输入组，含「后四位跟随卡号」开关（信用卡/储蓄卡录入用）；**受控**：`follows`/`onFollowsChanged` 由调用方持久化（`Account.cardLast4Follows`），组件不自行反推 |
 | `showCardNumberDialog` | Dialog 函数 | `sheets.dart` | 编辑完整卡号+后四位+跟随开关，返回 `({number, last4, follows})?`（内部用 `CardNumberFields`，后四位以 `cardLast4Of` 归一化） |
 | `CreditRepaymentPage` | 页面 Widget | `credit_repayment_page.dart` | 信用卡/信用账户还款页；预填欠款、扣款账户可选/可代还，落一笔转账 |
-| `AccountSectionCard` | Widget | `common_widgets.dart` | 资产页账户分区卡（可折叠 + 分区合计）；普通资产页折叠状态由 Controller 按账本/视图模式持久化，资产显示设置页修改后立即自动保存；同时服务类型、文件夹分组和隐藏账户等分区，拖拽只由 `sectionDragIndex != null` 开启，`sectionDragImmediate` 控制即时/延迟拖拽 |
+| `AccountSectionCard` | Widget | `common_widgets.dart` | 资产页账户分区卡（可折叠 + 分区合计）；普通资产页折叠状态由 Controller 按账本/视图模式持久化，资产显示设置页修改后立即自动保存；同时服务类型、文件夹分组和隐藏账户等分区，拖拽只由 `sectionDragIndex != null` 开启，`sectionDragImmediate` 控制即时/延迟拖拽。展开/折叠与拖动排序的触感由内部经 `VeriHaptics` 发送（一次拖动只有「抓住 + 落下」两次），不再接收 `hapticsEnabled` 参数 |
 | `accountBalanceColor` | 纯函数 | `common_widgets.dart` | **账户余额上色**（不计入资产=弱化，负=红，正=青绿） |
 | `accountDisplayName` | 纯函数 | `model_lookup.dart` | 按 id 取账户名，空 id→noneLabel（**展示层用它**，避免误回退首个账户） |
 | `accountById` | 纯函数 | `model_lookup.dart` | 按 id 取账户（会回退首个，展示层慎用） |
@@ -110,7 +111,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 
 | 名称 | 类型 | 位置 | 用途 / 关键点 |
 |---|---|---|---|
-| `showNumberPadSheet` | Sheet 函数 | `sheets.dart` | **数字键盘弹窗**（四则算式 + 结果预览）；输入区默认空并显示「请输入金额」占位，初始值为 0 时不预填 `0`；`allowNegative` 时可在首位按 `-` 输入负数（`-` 后按小数点补成 `-0.`），`allowZero` 决定清空后能否确认为 0；数字区支持设置中的标准（7 8 9 / 4 5 6 / 1 2 3）与电话（1 2 3 / 4 5 6 / 7 8 9）布局，默认标准；货币金额传 `currencyCode` 自动遵循 ISO minor unit，汇率输入才显式用 `maxFractionDigits:10`；`maxAmount` 的展示/比较也随币种精度，JPY 自动禁用小数点。触感偏好内部自取。**输金额一律用它**（含新建账户初始余额、新手引导的余额与预算），不要弹系统 TextField、不要裸包 `showModalBottomSheet` |
+| `showNumberPadSheet` | Sheet 函数 | `sheets.dart` | **数字键盘弹窗**（四则算式 + 结果预览）；输入区默认空并显示「请输入金额」占位，初始值为 0 时不预填 `0`；`allowNegative` 时可在首位按 `-` 输入负数（`-` 后按小数点补成 `-0.`），`allowZero` 决定清空后能否确认为 0；数字区支持设置中的标准（7 8 9 / 4 5 6 / 1 2 3）与电话（1 2 3 / 4 5 6 / 7 8 9）布局，默认标准；货币金额传 `currencyCode` 自动遵循 ISO minor unit，汇率输入才显式用 `maxFractionDigits:10`；`maxAmount` 的展示/比较也随币种精度，JPY 自动禁用小数点。触感由内部经 `VeriHaptics` 发送（按键 `tap`、确认 `commit`），调用方不传开关。**输金额一律用它**（含新建账户初始余额、新手引导的余额与预算），不要弹系统 TextField、不要裸包 `showModalBottomSheet` |
 | `NumberPadSheet` | Widget | `entry_sheets.dart` | 上面 helper 的内部 widget（一般经 `showNumberPadSheet`） |
 | `showCurrencyPickerSheet` | Sheet 函数 | `sheets.dart` | 可搜索的离线 ISO 4217 法定货币选择器（代码/中英文名/符号，支持常用/业务优先币种与排除项）；取消返回 `null` |
 | `evaluateAmountExpression` / `amountExpressionHasOperator` | 纯函数 | `calc_expression.dart` | 算式求值（不完整返回 null，结果已规整到分）/ 是否含运算符 |
@@ -197,6 +198,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 
 | 模块 | 位置 | 关键函数 |
 |---|---|---|
+| 触感统一入口 | `haptics.dart` | `VeriHaptics`（`tick` / `tap` / `commit` / `emphasis` + `preview`）：业务代码**唯一**的触感出口，`enabled` 由 Controller 单向同步，`debugSink` 供测试记录档位。`tick`=选择变化、`tap`=轻动作、`commit`=命令成功、`emphasis`=破坏性/失败；映射集中在内部单点，真机若某档不可感知只改映射。见 [ui-guidelines.md](ui-guidelines.md)「触感反馈」 |
 | 日历日算术 | `calendar_days.dart`（经 `ledger_math.dart` re-export） | `calendarDaysBetween` `addCalendarDays` `monthIndexOf`（月份序号 `年 × 12 + 月`，判断「哪个月更早」用它；直接比 `DateTime` 会带上「日」）——**「相隔几天」「往后推 N 天」一律走前两个，禁止裸用 `difference().inDays` / `add(Duration(days:))`**：那是绝对时间，跨夏令时会差一小时→错一天（CI 在 UTC 恒绿，只在欧美时区暴露） |
 | 账目数学 | `ledger_math.dart` | `signedAmount` `accountDeltaForEntry` `entryTouchesAccount` `colorForType` `sumByType` `isZeroAmount` `normalizeAmount`（金额按分规整）；`dateOnly` `cumulativeWeekWindowFor` `monthWindowFor` `weekWindowFor` `quarterWindowFor` `quarterOfMonth` `entriesInWindow` `valuesForTypeInWindow` `dayExpenseTotal` `dayBudgetExpenseTotal` `monthlyExpenseValues` `monthlyNetValuesForType`；`remainingRefundableAmount`（剩余可退，含待到账并按原币 minor unit 归一化）；`DateWindow` |
 | 金额/时间格式化 | `ledger_math.dart` | `formatAmount` `formatExpenseAmount` `formatIncomeAmount` `formatSignedAmount` `formatCompactAmount` `formatTime`（**金额文本只走这些**，勿内联手拼）。`formatExpenseAmount` 与 `formatIncomeAmount` 对称、**只给绝对值**；符号只出现在混合类型列表（`formatSignedAmount` / `formatSignedUserMoney`）和「负值即信息」的剩余/超出（`formatAmount`）——不要写 `formatExpenseAmount(x.abs())` |

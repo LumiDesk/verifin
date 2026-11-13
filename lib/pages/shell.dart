@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 
 import '../app/app_theme.dart';
 import '../app/app_lock_session.dart';
+import '../app/haptics.dart';
 import '../app/models.dart';
 import '../app/feedback.dart';
 import '../app/platform_bridge.dart';
@@ -380,9 +381,17 @@ class _VeriFinShellState extends State<VeriFinShell> {
                             clipBehavior: Clip.antiAlias,
                             child: InkWell(
                               key: const Key('quick_entry_action'),
-                              onTap: _requestQuickEntry,
-                              onLongPress: () =>
-                                  _requestQuickEntry(longPress: true),
+                              // 长按/点击的触感统一由 VeriHaptics 发；关掉 Material
+                              // 自带的长按震动，关闭触感反馈后必须彻底静默。
+                              enableFeedback: false,
+                              onTap: () {
+                                VeriHaptics.tap();
+                                _requestQuickEntry();
+                              },
+                              onLongPress: () {
+                                VeriHaptics.tap();
+                                _requestQuickEntry(longPress: true);
+                              },
                               child: Icon(
                                 Icons.add_rounded,
                                 size: 28,

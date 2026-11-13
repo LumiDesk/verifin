@@ -16,11 +16,7 @@ void main() {
     await tester.pumpWidget(
       zhMaterialApp(
         home: const Scaffold(
-          body: NumberPadSheet(
-            title: '金额',
-            layout: NumberPadLayout.phone,
-            hapticsEnabled: false,
-          ),
+          body: NumberPadSheet(title: '金额', layout: NumberPadLayout.phone),
         ),
       ),
     );

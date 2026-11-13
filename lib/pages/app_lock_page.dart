@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../app/app_lock.dart';
 import '../app/app_theme.dart';
 import '../app/biometric_auth.dart';
 import '../app/common_widgets.dart';
 import '../app/feedback.dart';
+import '../app/haptics.dart';
 import '../app/platform_bridge.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
@@ -24,13 +24,11 @@ class PinInputView extends StatefulWidget {
     super.key,
     required this.onCompleted,
     this.errorText,
-    this.hapticsEnabled = true,
     this.footer,
   });
 
   final ValueChanged<String> onCompleted;
   final String? errorText;
-  final bool hapticsEnabled;
   final Widget? footer;
 
   @override
@@ -44,9 +42,7 @@ class _PinInputViewState extends State<PinInputView> {
     if (_input.length >= kAppLockPinLength) {
       return;
     }
-    if (widget.hapticsEnabled) {
-      HapticFeedback.lightImpact();
-    }
+    VeriHaptics.tap();
     setState(() => _input += digit);
     if (_input.length == kAppLockPinLength) {
       final value = _input;
@@ -59,9 +55,7 @@ class _PinInputViewState extends State<PinInputView> {
     if (_input.isEmpty) {
       return;
     }
-    if (widget.hapticsEnabled) {
-      HapticFeedback.selectionClick();
-    }
+    VeriHaptics.tap();
     setState(() => _input = _input.substring(0, _input.length - 1));
   }
 
@@ -226,12 +220,10 @@ class PatternInputView extends StatefulWidget {
     super.key,
     required this.onCompleted,
     this.errorText,
-    this.hapticsEnabled = true,
   });
 
   final ValueChanged<String> onCompleted;
   final String? errorText;
-  final bool hapticsEnabled;
 
   @override
   State<PatternInputView> createState() => _PatternInputViewState();
@@ -247,9 +239,7 @@ class _PatternInputViewState extends State<PatternInputView> {
       final center = patternDotCenter(i, kPatternAreaSize);
       if ((local - center).distance <= kPatternAreaSize / 6 * 0.62) {
         if (!_selected.contains(i)) {
-          if (widget.hapticsEnabled) {
-            HapticFeedback.selectionClick();
-          }
+          VeriHaptics.tick();
           setState(() => _selected.add(i));
         }
         return;
@@ -428,20 +418,14 @@ Widget buildAppLockInput({
   required AppLockKind kind,
   required ValueChanged<String> onCompleted,
   String? errorText,
-  bool hapticsEnabled = true,
   Widget? footer,
 }) {
   if (kind == AppLockKind.pattern) {
-    return PatternInputView(
-      onCompleted: onCompleted,
-      errorText: errorText,
-      hapticsEnabled: hapticsEnabled,
-    );
+    return PatternInputView(onCompleted: onCompleted, errorText: errorText);
   }
   return PinInputView(
     onCompleted: onCompleted,
     errorText: errorText,
-    hapticsEnabled: hapticsEnabled,
     footer: footer,
   );
 }
@@ -553,9 +537,6 @@ class _AppLockScreenState extends State<AppLockScreen> {
   Widget build(BuildContext context) {
     final config = widget.config;
     final kind = config?.kind ?? VeriFinScope.of(context).appLockKind;
-    final hapticsEnabled = config == null
-        ? VeriFinScope.of(context).hapticsEnabled
-        : true;
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -592,7 +573,6 @@ class _AppLockScreenState extends State<AppLockScreen> {
                   kind: kind,
                   onCompleted: _submit,
                   errorText: _error,
-                  hapticsEnabled: hapticsEnabled,
                 ),
                 if (_biometricAvailable) ...<Widget>[
                   const SizedBox(height: 16),
@@ -685,7 +665,6 @@ class _AppLockSetupPageState extends State<AppLockSetupPage> {
 
   @override
   Widget build(BuildContext context) {
-    final controller = VeriFinScope.of(context);
     final confirming = _first != null;
     final String hint;
     if (_isPattern) {
@@ -722,7 +701,6 @@ class _AppLockSetupPageState extends State<AppLockSetupPage> {
                 kind: widget.kind,
                 onCompleted: _onCompleted,
                 errorText: _error,
-                hapticsEnabled: controller.hapticsEnabled,
               ),
             ],
           ),
@@ -785,7 +763,6 @@ class _AppLockVerifyPageState extends State<AppLockVerifyPage> {
                 kind: controller.appLockKind,
                 onCompleted: _onCompleted,
                 errorText: _error,
-                hapticsEnabled: controller.hapticsEnabled,
               ),
             ],
           ),

@@ -159,7 +159,15 @@ class TransactionTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(veriRadiusSm),
       child: InkWell(
         onTap: onTap,
-        onLongPress: onLongPress,
+        // 长按进入多选由下面的包装发触感；关掉 Material 自带的长按震动，
+        // 否则「关闭触感反馈」后长按仍会震（它绕过应用内的统一闸门）。
+        enableFeedback: false,
+        onLongPress: onLongPress == null
+            ? null
+            : () {
+                VeriHaptics.tap();
+                onLongPress!();
+              },
         borderRadius: BorderRadius.circular(veriRadiusSm),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
