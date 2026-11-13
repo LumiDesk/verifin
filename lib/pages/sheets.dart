@@ -11,6 +11,7 @@ import '../app/currency_math.dart';
 import '../app/icon_catalog.dart';
 import '../app/entry_sheets.dart';
 import '../app/feedback.dart';
+import '../app/haptics.dart';
 import '../app/ledger_math.dart';
 import '../app/models.dart';
 import '../app/net_security.dart';
@@ -247,7 +248,10 @@ class _ThemeColorPickerSheetState extends State<_ThemeColorPickerSheet> {
                 FilledButton(
                   onPressed: _hexHasError
                       ? null
-                      : () => Navigator.of(context).pop(_color),
+                      : () {
+                          VeriHaptics.tick();
+                          Navigator.of(context).pop(_color);
+                        },
                   child: Text(l10n.commonConfirm),
                 ),
               ],
@@ -419,7 +423,10 @@ Future<T?> showOptionSheet<T>({
                         size: 18,
                       )
                     : null,
-                onTap: () => Navigator.of(context).pop(value),
+                onTap: () {
+                  VeriHaptics.tick();
+                  Navigator.of(context).pop(value);
+                },
               ),
             ),
           ),
@@ -622,7 +629,10 @@ class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
                                     ).colorScheme.primary,
                                   )
                                 : null,
-                            onTap: () => Navigator.of(context).pop(currency),
+                            onTap: () {
+                              VeriHaptics.tick();
+                              Navigator.of(context).pop(currency);
+                            },
                           );
                         },
                       ),
@@ -1230,7 +1240,10 @@ class _AccountPickerRow extends StatelessWidget {
             ],
           ],
         ),
-        onTap: () => Navigator.of(context).pop(account),
+        onTap: () {
+          VeriHaptics.tick();
+          Navigator.of(context).pop(account);
+        },
       ),
     );
   }
@@ -1290,20 +1303,23 @@ class _NoneAccountRow extends StatelessWidget {
                 size: 18,
               )
             : null,
-        onTap: () => Navigator.of(context).pop(
-          const Account(
-            id: '',
-            bookId: '',
-            name: '',
-            type: AccountType.cash,
-            groupId: null,
-            initialBalance: 0,
-            iconCode: 'wallet',
-            note: '',
-            includeInAssets: false,
-            hidden: false,
-          ),
-        ),
+        onTap: () {
+          VeriHaptics.tick();
+          Navigator.of(context).pop(
+            const Account(
+              id: '',
+              bookId: '',
+              name: '',
+              type: AccountType.cash,
+              groupId: null,
+              initialBalance: 0,
+              iconCode: 'wallet',
+              note: '',
+              includeInAssets: false,
+              hidden: false,
+            ),
+          );
+        },
       ),
     );
   }
@@ -1350,7 +1366,10 @@ class _AllAccountsRow extends StatelessWidget {
                 size: 18,
               )
             : null,
-        onTap: () => Navigator.of(context).pop(_accountPickerAllSentinel),
+        onTap: () {
+          VeriHaptics.tick();
+          Navigator.of(context).pop(_accountPickerAllSentinel);
+        },
       ),
     );
   }
@@ -1495,6 +1514,7 @@ class _CategoryIconPickerBodyState extends State<_CategoryIconPickerBody> {
     if (text.isEmpty) {
       return;
     }
+    VeriHaptics.tick();
     // 取首个字形簇，兼容多码位 emoji（如带肤色/ZWJ 的组合）。
     Navigator.of(context).pop(emojiIconCode(text.characters.first));
   }
@@ -1566,7 +1586,10 @@ class _CategoryIconPickerBodyState extends State<_CategoryIconPickerBody> {
                         for (final code in categoryIconCodes)
                           _IconChoiceCell(
                             selected: widget.selected == code,
-                            onTap: () => Navigator.of(context).pop(code),
+                            onTap: () {
+                              VeriHaptics.tick();
+                              Navigator.of(context).pop(code);
+                            },
                             child: CategoryIconBox(iconCode: code, size: 36),
                           ),
                       ]),
@@ -1575,8 +1598,10 @@ class _CategoryIconPickerBodyState extends State<_CategoryIconPickerBody> {
                         for (final emoji in categoryEmojiChoices)
                           _IconChoiceCell(
                             selected: widget.selected == emojiIconCode(emoji),
-                            onTap: () =>
-                                Navigator.of(context).pop(emojiIconCode(emoji)),
+                            onTap: () {
+                              VeriHaptics.tick();
+                              Navigator.of(context).pop(emojiIconCode(emoji));
+                            },
                             child: CategoryIconBox(
                               iconCode: emojiIconCode(emoji),
                               size: 36,
@@ -1922,16 +1947,20 @@ Future<DateTime?> showMonthPickerSheet({
   required DateTime selected,
   required DateTime firstDate,
   DateTime? today,
-}) {
+}) async {
   final min = dateOnly(firstDate);
   final max = dateOnly(today ?? DateTime.now());
-  return month_picker.showMonthPicker(
+  final picked = await month_picker.showMonthPicker(
     context: context,
     initialDate: _clampDay(dateOnly(selected), min, max),
     firstDate: min,
     lastDate: max,
     headerTitle: Text(AppLocalizations.of(context).periodPickMonthTitle),
   );
+  if (picked != null) {
+    VeriHaptics.tick();
+  }
+  return picked;
 }
 
 /// 看板期间栏的「选择年份」入口：同一个组件库的年份对话框，**只选年、点一年即关闭**。
@@ -1941,16 +1970,20 @@ Future<int?> showYearPickerSheet({
   required int selected,
   required DateTime firstDate,
   DateTime? today,
-}) {
+}) async {
   final min = dateOnly(firstDate);
   final max = dateOnly(today ?? DateTime.now());
-  return month_picker.showYearPicker(
+  final picked = await month_picker.showYearPicker(
     context: context,
     initialDate: _clampDay(DateTime(selected, 1, 1), min, max),
     firstDate: min,
     lastDate: max,
     headerTitle: Text(AppLocalizations.of(context).periodPickYearTitle),
   );
+  if (picked != null) {
+    VeriHaptics.tick();
+  }
+  return picked;
 }
 
 /// 把 [value] 夹在 `[min, max]` 之间。日期选择器要求 `initialDate` 落在可选范围内，

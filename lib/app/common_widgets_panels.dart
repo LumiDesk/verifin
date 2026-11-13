@@ -403,12 +403,15 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                     padding: EdgeInsets.zero,
                     visualDensity: VisualDensity.compact,
                     tooltip: l10n.calendarPrevMonth,
-                    onPressed: () => setState(() {
-                      _visibleMonth = DateTime(
-                        _visibleMonth.year,
-                        _visibleMonth.month - 1,
-                      );
-                    }),
+                    onPressed: () {
+                      VeriHaptics.tick();
+                      setState(() {
+                        _visibleMonth = DateTime(
+                          _visibleMonth.year,
+                          _visibleMonth.month - 1,
+                        );
+                      });
+                    },
                     icon: const Icon(Icons.chevron_left, size: 20),
                   ),
                   Container(
@@ -444,12 +447,15 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                     padding: EdgeInsets.zero,
                     visualDensity: VisualDensity.compact,
                     tooltip: l10n.calendarNextMonth,
-                    onPressed: () => setState(() {
-                      _visibleMonth = DateTime(
-                        _visibleMonth.year,
-                        _visibleMonth.month + 1,
-                      );
-                    }),
+                    onPressed: () {
+                      VeriHaptics.tick();
+                      setState(() {
+                        _visibleMonth = DateTime(
+                          _visibleMonth.year,
+                          _visibleMonth.month + 1,
+                        );
+                      });
+                    },
                     icon: const Icon(Icons.chevron_right, size: 20),
                   ),
                 ],
@@ -498,7 +504,10 @@ class _CalendarPreviewState extends State<CalendarPreview> {
                 borderRadius: BorderRadius.circular(veriRadiusSm),
                 onTap: widget.onDayTap == null
                     ? null
-                    : () => widget.onDayTap!(date),
+                    : () {
+                        VeriHaptics.tick();
+                        widget.onDayTap!(date);
+                      },
                 child: Container(
                   alignment: Alignment.topCenter,
                   padding: const EdgeInsets.symmetric(vertical: 2),

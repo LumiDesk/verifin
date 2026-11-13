@@ -653,7 +653,10 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
                       size: 18,
                     )
                   : null,
-              onTap: () => Navigator.of(context).pop(categoryPickerAll),
+              onTap: () {
+                VeriHaptics.tick();
+                Navigator.of(context).pop(categoryPickerAll);
+              },
             ),
           if (widget.topLevelLabel != null)
             ListTile(
@@ -671,7 +674,10 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
                   context,
                 ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
               ),
-              onTap: () => Navigator.of(context).pop(categoryPickerTopLevel),
+              onTap: () {
+                VeriHaptics.tick();
+                Navigator.of(context).pop(categoryPickerTopLevel);
+              },
             ),
           Flexible(
             child: ListView.separated(
@@ -771,7 +777,10 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
                                   size: 18,
                                 )
                               : null),
-                    onTap: () => Navigator.of(context).pop(category.id),
+                    onTap: () {
+                      VeriHaptics.tick();
+                      Navigator.of(context).pop(category.id);
+                    },
                   ),
                 );
               },
@@ -870,13 +879,16 @@ class _TagSelectorSheetState extends State<TagSelectorSheet> {
                     FilterChip(
                       label: Text(tag.label),
                       selected: _selected.contains(tag.id),
-                      onSelected: (value) => setState(() {
-                        if (value) {
-                          _selected.add(tag.id);
-                        } else {
-                          _selected.remove(tag.id);
-                        }
-                      }),
+                      onSelected: (value) {
+                        VeriHaptics.tap();
+                        setState(() {
+                          if (value) {
+                            _selected.add(tag.id);
+                          } else {
+                            _selected.remove(tag.id);
+                          }
+                        });
+                      },
                     ),
                   ActionChip(
                     avatar: const Icon(Icons.add, size: 18),
