@@ -256,6 +256,7 @@ mixin _ControllerState on ChangeNotifier {
     _activeBookId = _store.read(_activeBookKey) ?? defaultLedgerBookId;
     _assetCoverUrl = _store.read(_assetCoverKey) ?? '';
     _hapticsEnabled = _store.read(_hapticsKey) != 'false';
+    _syncHaptics();
     _privacyConsentAccepted = _store.read(_privacyConsentKey) == 'true';
     _onboardingCompleted = _store.read(_onboardingKey) == 'true';
     _loadAppLock();
@@ -332,6 +333,15 @@ mixin _ControllerState on ChangeNotifier {
       rules: _recurringRules,
       rates: _exchangeRates,
     );
+  }
+
+  /// 把触感开关单向同步到无 `BuildContext` 的统一入口。
+  ///
+  /// 只在偏好真正变化的地方调用（载入、设置保存、直接 setter、导入应用与回滚、
+  /// 初始化数据），与 `_syncAmountFormatContext` 同一收敛方式；界面读取口始终是
+  /// `VeriHaptics.enabled`，不再各自传 `hapticsEnabled` 参数。
+  void _syncHaptics() {
+    VeriHaptics.enabled = _hapticsEnabled;
   }
 
   void _syncAmountFormatContext() {
