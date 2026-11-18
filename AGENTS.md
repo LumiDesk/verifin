@@ -218,6 +218,7 @@ dart run scripts/widget_previews.dart
 - 两种 release 都开启 R8 代码压缩与资源裁剪。新增依赖若使用反射，必须同步检查 `android/app/proguard-rules.pro`；OCR、通知等问题可能只在 release/R8 下暴露。
 - `play` flavor 移除 `USE_EXACT_ALARM`，保留可申请的 `SCHEDULE_EXACT_ALARM` 并在无授权时回退；检查更新入口通过 `kUpdateCheckEnabled` 隐藏（GitHub flavor 保留：只查询版本并跳转 Release 页面，应用内不下载、不安装 APK，不申请安装未知应用权限）。渠道差异放在 flavor Manifest 或构建开关中表达。
 - CI 创建 GitHub **预发布**且不标记 Latest；真机验收通过后再由维护者手动提升为正式版。Release 使用项目内稳定 keystore；不要替换、重生成或泄露签名材料。
+- `.github/workflows/telegram-release.yml` 在预发布提升为正式版（`release: released`）或手动触发时，把版本公告发到 Telegram 社区群：bot token 存 `TELEGRAM_BOT_TOKEN`（secret），目标群与话题存 `TELEGRAM_CHAT_ID` / `TELEGRAM_THREAD_ID`（repository variables，缺省 `@verifin_app` 与群的默认话题）。凭证缺失时只打印 notice 并跳过，不让门禁变红。
 
 **发版必须得到用户明确授权。** 打标签会推送远端并触发 CI，不能自行执行。实际顺序如下：
 

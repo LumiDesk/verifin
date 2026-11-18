@@ -1,0 +1,77 @@
+name: Release announcement
+
+# 正式版发布后，把版本公告发到 Telegram 社区群。
+# 触发：预发布提升为正式版（release: released），或手动 workflow_dispatch 指定标签补发。
+# 凭证：TELEGRAM_BOT_TOKEN（secret）；TELEGRAM_CHAT_ID / TELEGRAM_THREAD_ID（repository variables，
+# 群与话题 id 属于公开配置，不按机密管理）。缺少 token 时只打印 notice 并跳过，不让门禁变红。
+
+on:
+  release:
+    types: [released]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '要公告的版本标签，例如 v1.22.0'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: telegram-release
+  cancel-in-progress: false
+
+jobs:
+  announce:
+    name: Post release to Telegram
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Resolve release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.tag }}
+          EVENT_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          tag="${INPUT_TAG:-$EVENT_TAG}"
+          if [ -z "$tag" ]; then
+            echo "::error::无法确定要公告的版本标签"
+            exit 1
+          fi
+          url=$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json url --jq '.url')
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Send to Telegram
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ vars.TELEGRAM_CHAT_ID || '@verifin_app' }}
+          THREAD_ID: ${{ vars.TELEGRAM_THREAD_ID }}
+          TAG: ${{ steps.release.outputs.tag }}
+          URL: ${{ steps.release.outputs.url }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BOT_TOKEN:-}" ]; then
+            echo "::notice::未配置 TELEGRAM_BOT_TOKEN，跳过公告。"
+            exit 0
+          fi
+          text=$(printf '📢 Veri Fin %s is out.\n\nRelease notes: %s' "$TAG" "$URL")
+          args=(
+            -sS -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage"
+            --data-urlencode "chat_id=${CHAT_ID}"
+            --data-urlencode "text=${text}"
+          )
+          if [ -n "${THREAD_ID:-}" ]; then
+            args+=(--data-urlencode "message_thread_id=${THREAD_ID}")
+          else
+            echo "::warning::未配置 TELEGRAM_THREAD_ID，公告会发到群的默认话题。"
+          fi
+          response=$(curl "${args[@]}")
+          if ! printf '%s' "$response" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'; then
+            echo "::error::Telegram 拒绝了这条公告。"
+            printf '%s\n' "$response"
+            exit 1
+          fi
+          echo "::notice::已发布 ${TAG} 的公告。"
