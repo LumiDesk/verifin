@@ -117,6 +117,8 @@ void main() {
     final bar = tester.widget<GlassTabBar>(find.byType(GlassTabBar));
     final settings = bar.settings;
     expect(settings, isNotNull);
+    // 真实底栏保留实时玻璃：premium + blur，不允许被预览的「无 backdrop」调校带偏。
+    expect(bar.quality, GlassQuality.premium);
     expect(
       settings!.glassColor.a,
       lessThan(LiquidGlassSettings.ios27Dark.glassColor.a),

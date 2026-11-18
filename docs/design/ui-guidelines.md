@@ -15,7 +15,7 @@
 
 第二个已注册样式是**液态玻璃**，由本地 vendor 的 `third_party/liquid_glass_widgets` 中的 `GlassTabBar.bottom` 实现，应用侧只在 `root_navigation_liquid_glass.dart` 做适配：浮动胶囊（高 60、左右 12、底部留白 24）会对底栏后面的页面内容做真实背景采样、模糊与折射；按下、拖动、松手吸附和指示器动画都由该组件处理。它声明 `extendBody: true`，页面内容从胶囊下方滚过；着色器不可用时库自行降级，条目、标签与读屏语义不受影响。其他样式与界面不得直接引用该第三方包。
 
-> 样式选择页的液态玻璃预览使用组件库的无 shader `minimal` 路径，避免父级滚动时 premium shader 沿用旧位置；真实根导航仍使用 premium。
+> 样式选择页的液态玻璃预览使用组件库的无 shader `minimal` 路径，避免父级滚动时 premium shader 沿用旧位置；真实根导航仍使用 premium。预览还必须把 `blur` 归零，让这层保持零实时背景采样：预览永远贴在同一张纯色卡片上，模糊没有可见效果（浅色/深色做过像素级 A/B 对比），但 `blur > 0` 会让 `minimal` 生成一层 `BackdropFilter`，它在部分设备上拿到空 backdrop 后会被画成整块不透明黑（Issue 72），重绘一次才恢复。真实底栏走 premium shader、自带捕获，不受影响，仍保留实时模糊。
 
 **记账按钮与导航栏无关**：它是右下角的独立浮动圆角方形，只在首页显示，由 Shell 自己渲染；样式不参与，也不得占用它的区域（内容延伸到栏背后时，Shell 按样式声明的 `occupiedHeight` 把按钮抬到栏上方）。
 

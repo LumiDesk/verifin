@@ -136,6 +136,15 @@
 
 ---
 
+### L17 · 磨砂玻璃（`GlassQuality.minimal`）不能用在滚动内容里
+- **现状**：vendored `liquid_glass_widgets` 的 `minimal` 路径用一层实时 `BackdropFilter` 磨砂（`_FrostedFallback`），且该层被 `GlassTabBar` 包在自己的 `RepaintBoundary` 里。部分设备（Issue 72：ColorOS 16 / Android 16）上这层背景捕获为空，Impeller 把空捕获画成不透明黑，玻璃整块变黑；重绘一次（滚动 / 拖动）才恢复。真实底栏走 premium shader、自带捕获，不受影响。
+- **影响**：目前只有「设置 → 导航栏样式」的冻结预览曾经用过 `minimal`，已改为 `blur: 0` 的无 backdrop 纯绘制路径（视觉等价，浅色/深色都做过像素级 A/B）。若以后在列表、卡片或滚动容器里加玻璃表面，同样的黑块会在这些机型上复现。
+- **为何接受**：`minimal` 的降级是为了避开 premium shader 在滚动容器里沿用旧捕获位置的问题；两者都不可用时，滚动内容里的玻璃本来就不该做实时背景采样（预览背后只是卡片纯色，模糊无可见收益）。上游库也在 README 里明确「玻璃适合静态导航 chrome，不适合放进可滚动列表」。
+- **缓解 / 约定**：滚动或高频重排的内容只用**不透明实色**表面（设计规范本来就这么要求）；确需在滚动内容里展示玻璃外观时，关掉 `blur`（不生成 `BackdropFilter`），或改用静态快照。新增玻璃用途先确认它不在 `ListView` / `GridView` / 滚动 `Column` 内。
+- **触发阈值**：上游库或 Flutter 引擎给出「空 backdrop 不再画黑」的修复（升级 vendored 版本或 CI 固定的 Flutter 版本）后，可重新评估在滚动内容里启用 `minimal`；出现「必须给滚动内容做实时玻璃」的需求时，先按设备矩阵验证再放开。
+
+---
+
 ## 有意缓做（评估后判定：高风险 / 低当前收益）
 
 - **偏好类 KV 剥离为独立 notifier**：可修掉「偏好改动触发全树重建」的性能问题，但需把 ~15 个偏好字段搬出 controller、新建独立 scope，**每个读取点都要改**，漏一个即运行时错误；而该性能问题属「规模变大才疼」。判定为中期项，规模/团队变大或出现掉帧后再单独做。**约定：新增偏好一律照主题/语言的独立 `ValueNotifier` 先例做**（`themePreferenceListenable`/`localePreferenceListenable`），不再往全树广播里加。

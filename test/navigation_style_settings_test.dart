@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:verifin/app/app_theme.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/app/root_navigation.dart';
 import 'package:verifin/app/root_navigation_styles.dart';
@@ -215,6 +216,44 @@ void main() {
           matching: find.text(label),
         ),
         findsWidgets,
+      );
+    }
+  });
+
+  testWidgets('冻结预览不采样实时背景：浅色与深色都不生成 BackdropFilter', (tester) async {
+    final controller = await makeController();
+    for (final brightness in <Brightness>[Brightness.light, Brightness.dark]) {
+      await tester.pumpWidget(
+        VeriFinScope(
+          controller: controller,
+          child: zhMaterialApp(
+            theme: buildVeriFinTheme(brightness),
+            home: const NavigationStyleSettingsPage(initialStyleId: 'docked'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final liquidCard = find.byKey(
+        const ValueKey<String>('navigation_style_liquidGlass'),
+      );
+      // 预览永远贴在同一张纯色卡片上，模糊没有任何可见效果；但 `GlassQuality.minimal`
+      // 的磨砂路径会为它生成一层实时 BackdropFilter，而该层在部分设备上取不到
+      // backdrop，整块被画成不透明黑（Issue 72）。所以冻结预览必须走无 backdrop 的
+      // 纯绘制路径，真实底栏才保留实时玻璃。
+      expect(
+        find.descendant(of: liquidCard, matching: find.byType(BackdropFilter)),
+        findsNothing,
+        reason: '冻结预览不得依赖实时背景采样（Issue 72）',
+      );
+      final bar = tester.widget<GlassTabBar>(
+        find.descendant(of: liquidCard, matching: find.byType(GlassTabBar)),
+      );
+      expect(bar.settings?.blur, 0, reason: '冻结预览必须关掉背景模糊');
+      expect(
+        bar.quality,
+        GlassQuality.minimal,
+        reason: '预览仍要避开 premium shader 的滚动位置缓存',
       );
     }
   });
