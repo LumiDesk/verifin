@@ -227,7 +227,7 @@ dart run scripts/widget_previews.dart
 3. 提交 CHANGELOG 变更，确认当前分支是 `main` 且工作树完全干净。
 4. 运行发布脚本，参数可取 `patch`、`minor`、`major` 或显式版本号（如 `1.2.3`）：`dart run scripts/publish.dart patch`。脚本会再次校验「本机 Flutter 版本 == CI 固定版本」，不一致直接失败（analyzer 的 lint 集合随版本变化，本地绿不代表 CI 绿）；`--dry-run` 只打印将要执行的步骤。
 5. 脚本更新 `pubspec.yaml` 与 `lib/app/app_version.dart`，执行格式化、依赖安装、analyze、test，创建 `chore: release vX.Y.Z` 提交、标签并推送；推送标签触发 CI 构建 APK/AAB 并创建 GitHub **预发布**（不标记 Latest）。
-6. 下载 CI 生成的预发布 APK 真机验收；通过后在 GitHub 上把该 Release **提升为正式版并标记 Latest**（`prerelease` 去掉），同时用 `--notes-file` 重写说明：删掉开头的「⚠️ 预发布（待验证）」与结尾「仍为预发布」两段，保留版本内容与覆盖安装提示。
+6. 下载 CI 生成的预发布 APK 真机验收；通过后在 GitHub 上把该 Release **提升为正式版并标记 Latest**（`prerelease` 去掉），同时用 `--notes-file` 重写说明：删掉开头的「⚠️ 预发布（待验证）」与结尾「仍为预发布」两段，保留版本内容与覆盖安装提示。提升后核对 Telegram 公告 run 是否成功；GitHub 未触发 `released` 事件时用 `gh workflow run telegram-release.yml -f tag=vX.Y.Z` 补发。
 7. 清理没被提升的预发布（见下）。
 
 **Release 标题与说明（规范）：**

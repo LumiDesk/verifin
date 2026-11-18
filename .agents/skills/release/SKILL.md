@@ -111,13 +111,31 @@ gh release edit vX.Y.Z --prerelease=false --latest
 dart run scripts/prune_prereleases.dart
 ```
 
+### 公告同步到 Telegram
+
+提升为正式版会触发 `.github/workflows/telegram-release.yml`，把
+`📢 Veri Fin vX.Y.Z is out.` 与 Release 链接发到社区群的 `📢 Announcements` 话题。
+它不是发版的前置条件，但每次都要核对：
+
+```bash
+gh run list --workflow telegram-release.yml --limit 1
+```
+
+| 结果 | 处置 |
+|---|---|
+| 成功 | 群里能看到公告，汇报里写明 |
+| **没有 run** | GitHub 的 `released` 事件有时不触发，手动补发：`gh workflow run telegram-release.yml -f tag=vX.Y.Z` |
+| `TOPIC_CLOSED` | bot 缺少该话题的 **Manage Topics** 管理员权限（关闭话题要求 `can_manage_topics`，普通管理员不够） |
+| `401 Unauthorized` | `TELEGRAM_BOT_TOKEN` 失效，需要维护者更新 secret 后补发 |
+
 ## 8. 汇报
 
 1. 版本与 tag，PR 号与合并方式。
 2. Release 链接、资产名。
 3. CI 结论；修过什么。
 4. 验收清单执行情况。
-5. 遗留风险 / 需要用户决定的事。
+5. Telegram 公告状态（成功 / 手动补发 / 失败原因）。
+6. 遗留风险 / 需要用户决定的事。
 
 ## Never
 
