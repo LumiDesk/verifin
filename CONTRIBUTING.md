@@ -10,6 +10,8 @@
 - 功能建议：使用 [功能建议](https://github.com/LumiDesk/verifin/issues/new?template=feature_request.md) 说明使用场景、期望行为和备选方案。
 - 可以 Fork 仓库用于个人研究和构建，但 Fork 不等于接受贡献，也不能用于提交 PR。
 
+Telegram 社区群（[Verifin Community](https://t.me/verifin_app)）以英文为主，只做使用交流；它不受理反馈，群里的问题不会被跟踪。
+
 ## Issue 的定位
 
 - Issue 用于报告问题、描述需求和支持维护者确认范围，不代表已经批准实施。

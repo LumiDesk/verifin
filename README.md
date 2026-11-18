@@ -6,10 +6,11 @@
 
 **完全免费 · 本地优先的 Android 记账应用**
 
-[官网](https://verifin.talyra42.top/) · [下载最新版](https://github.com/LumiDesk/verifin/releases) · [产品文档](docs/product/product.md) · [问题反馈](https://github.com/LumiDesk/verifin/issues)
+[官网](https://verifin.talyra42.top/) · [下载最新版](https://github.com/LumiDesk/verifin/releases) · [Community](https://t.me/verifin_app) · [产品文档](docs/product/product.md) · [问题反馈](https://github.com/LumiDesk/verifin/issues)
 
 [![官网](https://img.shields.io/badge/官网-verifin.talyra42.top-346edb?style=flat-square)](https://verifin.talyra42.top/)
 [![Release](https://img.shields.io/github/v/release/LumiDesk/verifin?style=flat-square&label=版本&color=346edb)](https://github.com/LumiDesk/verifin/releases)
+[![Telegram](https://img.shields.io/badge/Telegram-Community-26A5E4?style=flat-square&logo=telegram&logoColor=white)](https://t.me/verifin_app)
 [![Stars](https://img.shields.io/github/stars/LumiDesk/verifin?style=flat-square&label=Stars&color=f59e0b)](https://github.com/LumiDesk/verifin/stargazers)
 [![Downloads](https://img.shields.io/github/downloads/LumiDesk/verifin/total?style=flat-square&label=下载&color=3498db)](https://github.com/LumiDesk/verifin/releases)
 [![Issues](https://img.shields.io/github/issues/LumiDesk/verifin?style=flat-square&label=Issues&color=64748b)](https://github.com/LumiDesk/verifin/issues)
@@ -101,6 +102,15 @@ flutter analyze && flutter test
 | [技术决策](docs/dev/tech-decisions.md) | 数据口径、备份范围与关键技术取舍 |
 | [Android 开发](docs/dev/android-development.md) | 工具链、真机调试与交付检查 |
 | [贡献指南](CONTRIBUTING.md) | Issue 反馈与仓库维护约定 |
+
+## Community
+
+English-first Telegram group for usage questions, tips and release news:
+[Verifin Community](https://t.me/verifin_app).
+
+The group is not a support desk — bug reports and feature requests still go to
+[Issues](https://github.com/LumiDesk/verifin/issues), where they can be searched and closed.
+Admins never ask for passwords, backups or API keys.
 
 ## Star History
 
