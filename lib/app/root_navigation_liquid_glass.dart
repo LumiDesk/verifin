@@ -84,6 +84,24 @@ class VeriLiquidGlassRootNavigation extends StatelessWidget {
         backerColor: const Color(0x12000000),
       );
 
+  /// 冻结预览的浅色材质：与库内 `kBottomBarGlassDefaults` 的可见部分一致
+  /// （24% 白 tint），只把 blur 归零。
+  ///
+  /// 预览永远贴在同一张纯色卡片上，模糊没有任何可见效果（浅色/深色都做过像素级
+  /// A/B 对比，差异只在抗锯齿的小数点后）；但 `GlassQuality.minimal` 的磨砂路径
+  /// 会为 blur > 0 生成一层实时 `BackdropFilter`。那一层位于 `GlassTabBar`
+  /// 自己的 `RepaintBoundary` 内，在部分设备上背景捕获是空的，Impeller 会把空捕获
+  /// 画成不透明黑：整个胶囊全黑，直到一次重绘（用户滚动一下）才恢复——Issue 72。
+  /// 冻结预览不需要实时背景，因此直接走无 backdrop 的纯绘制路径。
+  static const LiquidGlassSettings _lightPreviewSettings = LiquidGlassSettings(
+    blur: 0,
+    glassColor: Color(0x3DFFFFFF),
+  );
+
+  /// 深色冻结预览：沿用 [_darkSettings] 的调校，只去掉 blur（原因同上）。
+  static final LiquidGlassSettings _darkPreviewSettings = _darkSettings
+      .copyWith(blur: 0);
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -92,6 +110,9 @@ class VeriLiquidGlassRootNavigation extends StatelessWidget {
     // 仍会沿用上一帧的位置。预览改用库的无 shader 降级路径，避免背景
     // 面板在滚动时与图标分离。真实底栏仍使用 premium。
     final isPreview = spec.onSelect == null;
+    final LiquidGlassSettings? settings = isPreview
+        ? (isDark ? _darkPreviewSettings : _lightPreviewSettings)
+        : (isDark ? _darkSettings : null);
     final tabs = <GlassTab>[
       for (var index = 0; index < spec.destinations.length; index++)
         GlassTab(
@@ -133,7 +154,8 @@ class VeriLiquidGlassRootNavigation extends StatelessWidget {
         unselectedLabelColor: veriNavigationUnselected,
         adaptiveBrightness: false,
         // 浅色模式保持组件库默认材质；深色模式使用压暗、低白雾的磨砂材质。
-        settings: isDark ? _darkSettings : null,
+        // 预览一律使用 blur 归零的预览材质，不生成实时 backdrop（Issue 72）。
+        settings: settings,
         indicatorColor: isDark ? Colors.white.withValues(alpha: 0.06) : null,
         quality: isPreview ? GlassQuality.minimal : GlassQuality.premium,
         backgroundQuality: isPreview ? GlassQuality.minimal : null,
