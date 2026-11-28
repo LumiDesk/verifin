@@ -64,6 +64,28 @@ class AiTextMessage extends AiAgentMessage {
   };
 }
 
+/// 带图片的用户消息。只用于用户自配视觉模型的单轮图片识账/能力探测，
+/// 不参与 Agent 的 priorMessages 循环；data URL 体积大，不能按字符预算塞进 Agent。
+class AiVisionMessage extends AiAgentMessage {
+  const AiVisionMessage({required this.text, required this.imageDataUrl})
+    : super(AiMessageRole.user);
+
+  final String text;
+  final String imageDataUrl;
+
+  @override
+  Map<String, Object?> toJson() => <String, Object?>{
+    'role': role.name,
+    'content': <Object?>[
+      <String, Object?>{'type': 'text', 'text': text},
+      <String, Object?>{
+        'type': 'image_url',
+        'image_url': <String, Object?>{'url': imageDataUrl},
+      },
+    ],
+  };
+}
+
 /// 模型请求本地工具时需要原样回传的 assistant 消息。
 class AiAssistantToolMessage extends AiAgentMessage {
   const AiAssistantToolMessage({

@@ -12,7 +12,7 @@
 
 - **本地优先、数据自主**：无账号、无自有服务端、无广告、无联网遥测。权威账目数据存于用户设备；只有用户主动启用的导出、WebDAV 备份或 AI 功能才会对外传输相应数据，WebDAV 不是账号云同步。
 - **隐私优先**：AI 使用用户自己配置的 OpenAI 兼容端点。AI 记账只生成草稿，必须经用户确认后落账；AI 查询工具全部只读，绝不提供写数据能力。
-- **不做监听类自动记账**：不注册通知监听、无障碍或短信监听。截图在端上 OCR，原图不上传；分享或 Intent 入口也只能生成待确认草稿。
+- **不做监听类自动记账**：不注册通知监听、无障碍或短信监听。图片识账只在你主动选择/分享图片时，把图片发送到你配置的 OpenAI 兼容端点；分享或 Intent 入口也只能生成待确认草稿。
 - **Android 能力必须真实可用**：测试 stub 不能被当作生产实现。本地存储、图片、文件、通知、生物识别、安装包、桌面小组件或系统入口都要核对 Android 权限、持久化、进程重启和生命周期行为。
 
 ## Project Structure
@@ -168,10 +168,10 @@ third_party/                  # 本地 vendor 源码（jdenticon_dart、liquid_g
 
 ### AI 与 Android
 
-- AI 记账与截图/分享识账只产 `EntryDetailPage` 草稿，不得静默写账。截图原图留在设备，OCR 临时文件识别后删除；只有识别文本会发送到用户配置的端点。
+- AI 记账与图片/分享识账只产 `EntryDetailPage` 草稿，不得静默写账。图片识账会把用户主动选择的图片（压缩后）发送到其配置的视觉模型；图片不落库、不写临时文件，除非用户手动添加为附件。AI 设置页的视觉能力状态来自现有能力探测缓存。
 - AI 查询工具输入 `AiToolContext` 快照，保持只读纯函数，不访问 Controller。新增工具要在 `buildAiQueryTools()` 注册，覆盖正常与非法参数测试，并同步 `docs/dev/ai-tools.md`。
 - 新增原生能力放入 `platform_bridge.dart` 已有领域 Bridge，统一由单一 MethodChannel 处理器分发，不另挂互相覆盖的 handler。
-- 通知、小组件、SAF、分享 Activity、应用更新等必须验证冷启动、前后台切换、进程被杀、重启/升级、Android 权限和 Doze 行为。涉及反射或 ML Kit 时必须验证 release/R8 构建；debug 正常不能替代。
+- 通知、小组件、SAF、分享 Activity、应用更新等必须验证冷启动、前后台切换、进程被杀、重启/升级、Android 权限和 Doze 行为。涉及反射或原生插件时必须验证 release/R8 构建；debug 正常不能替代。
 - data URL 图片使用内存图片渲染，不使用 `Image.network`。
 - Android 明确禁用系统 Auto Backup；外部分享图片必须分块读取并在累计超过 25 MB 时立即停止，禁止先完整 `readBytes()` 再检查大小。
 
@@ -181,7 +181,7 @@ third_party/                  # 本地 vendor 源码（jdenticon_dart、liquid_g
 - Widget 测试覆盖用户可见行为：渲染、点击、导航、表单校验、空态、错误反馈和持久化结果；纯计算覆盖边界、空输入、时区/日期和非法参数。
 - SQLite 相关改动要运行 repository、controller persistence、migration matrix、model roundtrip 和 repository contract 测试；不要只依赖内存仓储。
 - 修复 bug 必须补能在修复前失败的回归测试。导入 parser 使用真实 fixture，避免只测手工构造的理想输入。
-- 功能改动完成后至少运行 `flutter analyze` 和 `flutter test`。Android/OCR/通知/文件/权限/R8 改动还要说明所需的 CI release APK 真机验收项。
+- 功能改动完成后至少运行 `flutter analyze` 和 `flutter test`。Android/图片/AI/通知/文件/权限/R8 改动还要说明所需的 CI release APK 真机验收项。
 
 ## Build Commands
 
@@ -215,7 +215,7 @@ dart run scripts/widget_previews.dart
 - `.github/workflows/flutter.yml` 只在推送 `vX.Y.Z` 标签时触发发布构建：
   - GitHub 自分发：arm64-v8a APK，`--flavor github --split-per-abi`；必须保持 `force-version-code-ignoring-abi=true`，否则 ABI 版本号偏移会破坏 GitHub / Play 渠道间的覆盖升级。
   - Google Play：AAB，`--flavor play --dart-define=UPDATE_CHECK=false`。
-- 两种 release 都开启 R8 代码压缩与资源裁剪。新增依赖若使用反射，必须同步检查 `android/app/proguard-rules.pro`；OCR、通知等问题可能只在 release/R8 下暴露。
+- 两种 release 都开启 R8 代码压缩与资源裁剪。新增依赖若使用反射，必须同步检查 `android/app/proguard-rules.pro`；图片选择、通知等问题可能只在 release/R8 下暴露。
 - `play` flavor 移除 `USE_EXACT_ALARM`，保留可申请的 `SCHEDULE_EXACT_ALARM` 并在无授权时回退；检查更新入口通过 `kUpdateCheckEnabled` 隐藏（GitHub flavor 保留：只查询版本并跳转 Release 页面，应用内不下载、不安装 APK，不申请安装未知应用权限）。渠道差异放在 flavor Manifest 或构建开关中表达。
 - CI 创建 GitHub **预发布**且不标记 Latest；真机验收通过后再由维护者手动提升为正式版。Release 使用项目内稳定 keystore；不要替换、重生成或泄露签名材料。
 - `.github/workflows/telegram-release.yml` 在预发布提升为正式版（`release: released`）或手动触发时，把版本公告发到 Telegram 社区群：bot token 存 `TELEGRAM_BOT_TOKEN`（secret），目标群与话题存 `TELEGRAM_CHAT_ID` / `TELEGRAM_THREAD_ID`（repository variables，缺省 `@verifin_app` 与群的默认话题）。凭证缺失时只打印 notice 并跳过，不让门禁变红。
@@ -290,7 +290,7 @@ dart run scripts/widget_previews.dart
 - Never 在渲染路径执行 I/O、解析、全量排序/过滤或创建大对象；Never 给可重排/可删除列表用 index 当 key。
 - Never 用 `print` / `debugPrint` 作为生产日志，Never 空 `catch (_) {}`；`await` 后使用 `BuildContext` 前必须有 mounted 守卫。
 - Never 手改生成的 `app_localizations*.dart`；文案改动只写 ARB。
-- Never 对 data URL 图片使用 `Image.network`；Never 先完整 `readBytes()` 再检查分享图片大小（>25 MB 必须立即停止）。
+- Never 对 data URL 图片使用 `Image.network`；Never 先完整 `readBytes()` 再检查分享图片大小（>25 MB 必须立即停止）。Never 把用户图片、data URL 或 API Key 写进日志；Never 让图片识账绕过用户确认直接落账。
 - Never 注册通知监听、无障碍或短信监听；Never 让 AI 静默写账或给查询工具写数据能力。
 - Never 在业务代码直接调用 `HapticFeedback`（统一走 `VeriHaptics`），Never 让组件接收 `hapticsEnabled` 参数；Never 给自动保存、列表行点击、页面转场或滚动加触感。
 - Never 把测试 stub/内存仓储当作生产实现；真实存储、图片、文件能力必须在 Android 上落地。

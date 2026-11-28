@@ -3325,28 +3325,52 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiDetectCapabilities => '检测能力';
 
   @override
-  String get aiDetectingCapabilities => '正在检测连接、流式输出与 Tool Calls…';
+  String get aiDetectingCapabilities => '正在检测连接、流式输出、Tool Calls 与图片识别…';
 
   @override
-  String get aiConnectionReady => '连接正常';
+  String get aiCapabilityResultsTitle => '能力检测结果';
 
   @override
-  String get aiStreamingReady => '流式输出正常';
+  String get aiCapabilityConnectionLabel => '连接';
 
   @override
-  String get aiNativeToolsSupported => '原生 Tool Calls：支持';
+  String get aiCapabilityStreamingLabel => '流式输出';
 
   @override
-  String get aiNativeToolsUnsupported => '原生 Tool Calls：不支持，将使用兼容模式';
+  String get aiCapabilityToolCallsLabel => '原生 Tool Calls';
 
   @override
-  String get aiActualProtocolNative => '实际协议：原生 Tool Calls';
+  String get aiCapabilityProtocolLabel => '实际协议';
 
   @override
-  String get aiActualProtocolPrompt => '实际协议：兼容模式';
+  String get aiCapabilityOk => '正常';
 
   @override
-  String get aiActualProtocolAuto => '实际协议：自动检测';
+  String get aiCapabilitySupported => '支持';
+
+  @override
+  String get aiCapabilityUnsupported => '不支持';
+
+  @override
+  String get aiCapabilityProtocolNative => '原生 Tool Calls';
+
+  @override
+  String get aiCapabilityProtocolPrompt => '兼容模式';
+
+  @override
+  String get aiCapabilityProtocolAuto => '自动检测';
+
+  @override
+  String get aiVisionLabel => '图片识别';
+
+  @override
+  String get aiVisionStatusUnknownChecked => '未确认';
+
+  @override
+  String get aiVisionStatusSupported => '支持';
+
+  @override
+  String get aiVisionStatusUnsupported => '不支持';
 
   @override
   String get aiStepRunning => '调用中';
@@ -3468,10 +3492,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiRetryAnswer => '重新回答';
 
   @override
-  String get aiPrivacyNotice =>
-      'AI 功能会把你输入的文字，以及回答问题所需的只读账目查询摘要发送到你配置的第三方服务；配置和完整账目仍只存本机。';
-
-  @override
   String get aiEntryTitle => 'AI 记账';
 
   @override
@@ -3515,16 +3535,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiWarningCurrencyUnmatched => '币种未识别，已回退到账户币种或本位币，请确认';
 
   @override
-  String get screenshotEntryButton => '截图识账';
-
-  @override
-  String get screenshotEntryUnsupported => '当前设备不支持图片文字识别';
-
-  @override
-  String get screenshotEntryNoText => '没有从图片里识别到文字，请换一张更清晰的截图';
+  String get screenshotEntryButton => '图片识账';
 
   @override
   String get captureEntryRecognizing => '正在识别账单内容…';
+
+  @override
+  String get visionEntryUnsupported => '当前模型不支持图片输入，请在 AI 设置中更换支持视觉的模型';
+
+  @override
+  String get visionEntryNoResult => 'AI 未返回可识别的结果，请换一张更清晰的账单截图';
+
+  @override
+  String get visionEntryImageInvalid => '无法读取这张图片，请换一张';
+
+  @override
+  String get visionEntryImageTooLarge => '图片过大，请换一张或重新选择';
 
   @override
   String get captureEntryNoTransaction => '没有识别到交易，请确认内容是账单截图或账单文本';

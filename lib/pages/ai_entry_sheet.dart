@@ -8,11 +8,11 @@ import 'sheets.dart';
 import 'capture_entry.dart';
 import 'entry_detail_page.dart';
 
-/// 弹层里点了「截图识账」时的返回哨兵（与解析出的草稿区分）。
-const Object _screenshotRequested = Object();
+/// 弹层里点了「图片识账」时的返回哨兵（与解析出的草稿区分）。
+const Object _imageRequested = Object();
 
 /// AI 对话记账入口：未配置则引导去设置；否则弹出自然语言输入框，解析成交易草稿，
-/// 落账前 push 到记账页由用户确认/修改。弹层内也可切到「截图识账」。
+/// 落账前 push 到记账页由用户确认/修改。弹层内也可切到「图片识账」。
 Future<void> startAiEntry(BuildContext context) async {
   final controller = VeriFinScope.of(context);
   if (!await ensureAiConfigured(context) || !context.mounted) {
@@ -30,8 +30,8 @@ Future<void> startAiEntry(BuildContext context) async {
     return;
   }
 
-  if (identical(result, _screenshotRequested)) {
-    await startScreenshotEntry(context);
+  if (identical(result, _imageRequested)) {
+    await startImageEntry(context);
     return;
   }
   if (result is AiEntryDraft) {
@@ -123,7 +123,6 @@ class _AiEntrySheetState extends State<_AiEntrySheet> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.55);
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -165,23 +164,6 @@ class _AiEntrySheetState extends State<_AiEntrySheet> {
               errorText: _errorText,
             ),
           ),
-          const SizedBox(height: 10),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Icon(Icons.privacy_tip_outlined, size: 14, color: muted),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  l10n.aiPrivacyNotice,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: muted,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-            ],
-          ),
           const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
@@ -198,15 +180,14 @@ class _AiEntrySheetState extends State<_AiEntrySheet> {
             ),
           ),
           const SizedBox(height: 6),
-          // 截图识账：选一张账单截图本地 OCR 后交 AI 解析（也支持从其他 App
-          // 直接把截图「分享」给 Veri Fin）。弹层先关，由入口方接力跑识别流程。
+          // 图片识账：弹层先关，由入口方接力走「相册 → 视觉模型 → 记账页」。
           SizedBox(
             width: double.infinity,
             child: TextButton.icon(
               key: const Key('ai_entry_screenshot_button'),
               onPressed: _parsing
                   ? null
-                  : () => Navigator.of(context).pop(_screenshotRequested),
+                  : () => Navigator.of(context).pop(_imageRequested),
               icon: const Icon(Icons.document_scanner_outlined, size: 18),
               label: Text(l10n.screenshotEntryButton),
             ),

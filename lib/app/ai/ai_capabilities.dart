@@ -1,11 +1,14 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'ai_agent_message.dart';
 import 'ai_client.dart';
 import 'ai_completion_event.dart';
+import 'ai_error.dart';
 import 'ai_settings.dart';
 
 const int aiCapabilityProtocolVersion = 1;
+const String visionProbeExpectedCode = '7391';
 
 enum AiNativeToolCapability {
   unknown,
@@ -19,6 +22,18 @@ enum AiNativeToolCapability {
   };
 }
 
+enum AiVisionCapability {
+  unknown,
+  supported,
+  unsupported;
+
+  static AiVisionCapability fromJson(Object? value) => switch (value) {
+    'supported' => AiVisionCapability.supported,
+    'unsupported' => AiVisionCapability.unsupported,
+    _ => AiVisionCapability.unknown,
+  };
+}
+
 /// 与端点和模型绑定的设备本地能力缓存，不含 API Key 或账目数据。
 class AiCapabilityProfile {
   const AiCapabilityProfile({
@@ -26,24 +41,28 @@ class AiCapabilityProfile {
     required this.model,
     required this.nativeToolCalls,
     required this.checkedAt,
+    this.vision = AiVisionCapability.unknown,
     this.protocolVersion = aiCapabilityProtocolVersion,
   });
 
   final String endpoint;
   final String model;
   final AiNativeToolCapability nativeToolCalls;
+  final AiVisionCapability vision;
   final DateTime checkedAt;
   final int protocolVersion;
 
   factory AiCapabilityProfile.forSettings({
     required AiSettings settings,
     required AiNativeToolCapability nativeToolCalls,
+    AiVisionCapability vision = AiVisionCapability.unknown,
     DateTime? checkedAt,
   }) {
     return AiCapabilityProfile(
       endpoint: normalizeAiEndpoint(settings.chatCompletionsUrl),
       model: settings.model.trim(),
       nativeToolCalls: nativeToolCalls,
+      vision: vision,
       checkedAt: checkedAt ?? DateTime.now(),
     );
   }
@@ -70,6 +89,7 @@ class AiCapabilityProfile {
     'endpoint': endpoint,
     'model': model,
     'nativeToolCalls': nativeToolCalls.name,
+    'vision': vision.name,
     'checkedAt': checkedAt.toUtc().toIso8601String(),
     'protocolVersion': protocolVersion,
   };
@@ -100,6 +120,7 @@ class AiCapabilityProfile {
         nativeToolCalls: AiNativeToolCapability.fromJson(
           json['nativeToolCalls'],
         ),
+        vision: AiVisionCapability.fromJson(json['vision']),
         checkedAt: checkedAt,
         protocolVersion: protocolVersion,
       );
@@ -114,13 +135,20 @@ class AiCapabilityProfile {
         other.endpoint == endpoint &&
         other.model == model &&
         other.nativeToolCalls == nativeToolCalls &&
+        other.vision == vision &&
         other.checkedAt == checkedAt &&
         other.protocolVersion == protocolVersion;
   }
 
   @override
-  int get hashCode =>
-      Object.hash(endpoint, model, nativeToolCalls, checkedAt, protocolVersion);
+  int get hashCode => Object.hash(
+    endpoint,
+    model,
+    nativeToolCalls,
+    vision,
+    checkedAt,
+    protocolVersion,
+  );
 }
 
 /// 解析本次 Agent 请求应交给引擎的协议模式。
@@ -158,6 +186,7 @@ Future<AiCapabilityProfile> detectAiCapabilities({
   required AiSettings settings,
   AiCapabilityCompleteTransport? completeTransport,
   AiCapabilityStreamTransport? streamTransport,
+  Uint8List? visionProbeImageBytes,
   DateTime? checkedAt,
 }) async {
   final complete =
@@ -218,9 +247,34 @@ Future<AiCapabilityProfile> detectAiCapabilities({
     if (error.code != AiErrorCode.protocolUnsupported) rethrow;
   }
 
+  var vision = AiVisionCapability.unknown;
+  if (visionProbeImageBytes != null && visionProbeImageBytes.isNotEmpty) {
+    final imageDataUrl =
+        'data:image/png;base64,${base64Encode(visionProbeImageBytes)}';
+    try {
+      final probe = await complete(<AiAgentMessage>[
+        AiTextMessage.system(
+          'Read the 4-digit number in the image. '
+          'Reply with only the digits.',
+        ),
+        AiVisionMessage(text: '请读出图中的数字。', imageDataUrl: imageDataUrl),
+      ], const <Map<String, Object?>>[]);
+      vision =
+          RegExp(r'\d{4}')
+              .allMatches(probe.content)
+              .any((match) => match.group(0) == visionProbeExpectedCode)
+          ? AiVisionCapability.supported
+          : AiVisionCapability.unsupported;
+    } on AiException catch (error) {
+      if (!isUnsupportedVisionError(error)) rethrow;
+      vision = AiVisionCapability.unsupported;
+    }
+  }
+
   return AiCapabilityProfile.forSettings(
     settings: settings,
     nativeToolCalls: capability,
+    vision: vision,
     checkedAt: checkedAt,
   );
 }

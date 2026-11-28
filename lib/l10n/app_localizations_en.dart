@@ -3410,29 +3410,52 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiDetectingCapabilities =>
-      'Checking connection, streaming, and Tool Calls…';
+      'Checking connection, streaming, Tool Calls, and image support…';
 
   @override
-  String get aiConnectionReady => 'Connection successful';
+  String get aiCapabilityResultsTitle => 'Capability check';
 
   @override
-  String get aiStreamingReady => 'Streaming successful';
+  String get aiCapabilityConnectionLabel => 'Connection';
 
   @override
-  String get aiNativeToolsSupported => 'Native Tool Calls: supported';
+  String get aiCapabilityStreamingLabel => 'Streaming';
 
   @override
-  String get aiNativeToolsUnsupported =>
-      'Native Tool Calls: unsupported; compatibility mode will be used';
+  String get aiCapabilityToolCallsLabel => 'Native Tool Calls';
 
   @override
-  String get aiActualProtocolNative => 'Active protocol: native Tool Calls';
+  String get aiCapabilityProtocolLabel => 'Active protocol';
 
   @override
-  String get aiActualProtocolPrompt => 'Active protocol: compatibility mode';
+  String get aiCapabilityOk => 'OK';
 
   @override
-  String get aiActualProtocolAuto => 'Active protocol: automatic detection';
+  String get aiCapabilitySupported => 'Supported';
+
+  @override
+  String get aiCapabilityUnsupported => 'Not supported';
+
+  @override
+  String get aiCapabilityProtocolNative => 'Native Tool Calls';
+
+  @override
+  String get aiCapabilityProtocolPrompt => 'Compatibility mode';
+
+  @override
+  String get aiCapabilityProtocolAuto => 'Automatic';
+
+  @override
+  String get aiVisionLabel => 'Image input';
+
+  @override
+  String get aiVisionStatusUnknownChecked => 'Unconfirmed';
+
+  @override
+  String get aiVisionStatusSupported => 'Supported';
+
+  @override
+  String get aiVisionStatusUnsupported => 'Not supported';
 
   @override
   String get aiStepRunning => 'Running';
@@ -3557,10 +3580,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiRetryAnswer => 'Answer again';
 
   @override
-  String get aiPrivacyNotice =>
-      'AI features send your text and the read-only financial summaries needed to answer your questions to your configured third-party service. The configuration and full ledger remain on this device.';
-
-  @override
   String get aiEntryTitle => 'AI entry';
 
   @override
@@ -3611,18 +3630,26 @@ class AppLocalizationsEn extends AppLocalizations {
       'Currency not recognized — using the account or base currency, please confirm';
 
   @override
-  String get screenshotEntryButton => 'Scan a screenshot';
-
-  @override
-  String get screenshotEntryUnsupported =>
-      'Image text recognition is not supported on this device';
-
-  @override
-  String get screenshotEntryNoText =>
-      'No text was recognized in the image — try a clearer screenshot';
+  String get screenshotEntryButton => 'Import image';
 
   @override
   String get captureEntryRecognizing => 'Reading the bill…';
+
+  @override
+  String get visionEntryUnsupported =>
+      'This model does not support image input. Please switch to a vision-capable model in AI settings.';
+
+  @override
+  String get visionEntryNoResult =>
+      'The AI could not recognize a transaction. Try a clearer bill image.';
+
+  @override
+  String get visionEntryImageInvalid =>
+      'Could not read this image. Try another one.';
+
+  @override
+  String get visionEntryImageTooLarge =>
+      'The image is too large. Try another one.';
 
   @override
   String get captureEntryNoTransaction =>

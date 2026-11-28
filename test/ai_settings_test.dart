@@ -49,6 +49,69 @@ void main() {
     restarted.dispose();
   });
 
+  testWidgets('显示缓存的能力检测卡片并在模型变化后隐藏', (tester) async {
+    final controller = await makeController();
+    addTearDown(controller.dispose);
+    const settings = AiSettings(
+      baseUrl: 'https://example.com/v1',
+      apiKey: 'secret',
+      model: 'model-a',
+    );
+    controller.setAiSettings(settings);
+    controller.setAiCapabilityProfile(
+      AiCapabilityProfile.forSettings(
+        settings: settings,
+        nativeToolCalls: AiNativeToolCapability.supported,
+        vision: AiVisionCapability.supported,
+        checkedAt: DateTime.utc(2026, 11, 28),
+      ),
+    );
+
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(home: const AiSettingsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -600));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('ai_capability_results_card')), findsOneWidget);
+    expect(find.text('能力检测结果'), findsOneWidget);
+    expect(find.text('连接'), findsOneWidget);
+    expect(find.text('流式输出'), findsOneWidget);
+    expect(find.text('实际协议'), findsOneWidget);
+    expect(find.text('正常'), findsNWidgets(2));
+    expect(find.text('图片识别'), findsOneWidget);
+    expect(find.text('支持'), findsNWidgets(2));
+    expect(find.text('未检测'), findsNothing);
+
+    await tester.enterText(_textField('模型'), 'model-b');
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pump();
+
+    expect(find.byKey(const Key('ai_capability_results_card')), findsNothing);
+    expect(find.text('图片识别'), findsNothing);
+    expect(find.text('未检测'), findsNothing);
+  });
+
+  testWidgets('未配置时不显示能力检测卡片', (tester) async {
+    final controller = await makeController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(home: const AiSettingsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('ai_capability_results_card')), findsNothing);
+    expect(find.text('图片识别'), findsNothing);
+    expect(find.text('未检测'), findsNothing);
+  });
+
   testWidgets('AI 配置输入停止后自动保存', (tester) async {
     final controller = await makeController();
     addTearDown(controller.dispose);

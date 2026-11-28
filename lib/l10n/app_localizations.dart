@@ -6131,50 +6131,98 @@ abstract class AppLocalizations {
   /// No description provided for @aiDetectingCapabilities.
   ///
   /// In zh, this message translates to:
-  /// **'正在检测连接、流式输出与 Tool Calls…'**
+  /// **'正在检测连接、流式输出、Tool Calls 与图片识别…'**
   String get aiDetectingCapabilities;
 
-  /// No description provided for @aiConnectionReady.
+  /// No description provided for @aiCapabilityResultsTitle.
   ///
   /// In zh, this message translates to:
-  /// **'连接正常'**
-  String get aiConnectionReady;
+  /// **'能力检测结果'**
+  String get aiCapabilityResultsTitle;
 
-  /// No description provided for @aiStreamingReady.
+  /// No description provided for @aiCapabilityConnectionLabel.
   ///
   /// In zh, this message translates to:
-  /// **'流式输出正常'**
-  String get aiStreamingReady;
+  /// **'连接'**
+  String get aiCapabilityConnectionLabel;
 
-  /// No description provided for @aiNativeToolsSupported.
+  /// No description provided for @aiCapabilityStreamingLabel.
   ///
   /// In zh, this message translates to:
-  /// **'原生 Tool Calls：支持'**
-  String get aiNativeToolsSupported;
+  /// **'流式输出'**
+  String get aiCapabilityStreamingLabel;
 
-  /// No description provided for @aiNativeToolsUnsupported.
+  /// No description provided for @aiCapabilityToolCallsLabel.
   ///
   /// In zh, this message translates to:
-  /// **'原生 Tool Calls：不支持，将使用兼容模式'**
-  String get aiNativeToolsUnsupported;
+  /// **'原生 Tool Calls'**
+  String get aiCapabilityToolCallsLabel;
 
-  /// No description provided for @aiActualProtocolNative.
+  /// No description provided for @aiCapabilityProtocolLabel.
   ///
   /// In zh, this message translates to:
-  /// **'实际协议：原生 Tool Calls'**
-  String get aiActualProtocolNative;
+  /// **'实际协议'**
+  String get aiCapabilityProtocolLabel;
 
-  /// No description provided for @aiActualProtocolPrompt.
+  /// No description provided for @aiCapabilityOk.
   ///
   /// In zh, this message translates to:
-  /// **'实际协议：兼容模式'**
-  String get aiActualProtocolPrompt;
+  /// **'正常'**
+  String get aiCapabilityOk;
 
-  /// No description provided for @aiActualProtocolAuto.
+  /// No description provided for @aiCapabilitySupported.
   ///
   /// In zh, this message translates to:
-  /// **'实际协议：自动检测'**
-  String get aiActualProtocolAuto;
+  /// **'支持'**
+  String get aiCapabilitySupported;
+
+  /// No description provided for @aiCapabilityUnsupported.
+  ///
+  /// In zh, this message translates to:
+  /// **'不支持'**
+  String get aiCapabilityUnsupported;
+
+  /// No description provided for @aiCapabilityProtocolNative.
+  ///
+  /// In zh, this message translates to:
+  /// **'原生 Tool Calls'**
+  String get aiCapabilityProtocolNative;
+
+  /// No description provided for @aiCapabilityProtocolPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'兼容模式'**
+  String get aiCapabilityProtocolPrompt;
+
+  /// No description provided for @aiCapabilityProtocolAuto.
+  ///
+  /// In zh, this message translates to:
+  /// **'自动检测'**
+  String get aiCapabilityProtocolAuto;
+
+  /// No description provided for @aiVisionLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'图片识别'**
+  String get aiVisionLabel;
+
+  /// No description provided for @aiVisionStatusUnknownChecked.
+  ///
+  /// In zh, this message translates to:
+  /// **'未确认'**
+  String get aiVisionStatusUnknownChecked;
+
+  /// No description provided for @aiVisionStatusSupported.
+  ///
+  /// In zh, this message translates to:
+  /// **'支持'**
+  String get aiVisionStatusSupported;
+
+  /// No description provided for @aiVisionStatusUnsupported.
+  ///
+  /// In zh, this message translates to:
+  /// **'不支持'**
+  String get aiVisionStatusUnsupported;
 
   /// No description provided for @aiStepRunning.
   ///
@@ -6398,12 +6446,6 @@ abstract class AppLocalizations {
   /// **'重新回答'**
   String get aiRetryAnswer;
 
-  /// No description provided for @aiPrivacyNotice.
-  ///
-  /// In zh, this message translates to:
-  /// **'AI 功能会把你输入的文字，以及回答问题所需的只读账目查询摘要发送到你配置的第三方服务；配置和完整账目仍只存本机。'**
-  String get aiPrivacyNotice;
-
   /// No description provided for @aiEntryTitle.
   ///
   /// In zh, this message translates to:
@@ -6491,26 +6533,38 @@ abstract class AppLocalizations {
   /// No description provided for @screenshotEntryButton.
   ///
   /// In zh, this message translates to:
-  /// **'截图识账'**
+  /// **'图片识账'**
   String get screenshotEntryButton;
-
-  /// No description provided for @screenshotEntryUnsupported.
-  ///
-  /// In zh, this message translates to:
-  /// **'当前设备不支持图片文字识别'**
-  String get screenshotEntryUnsupported;
-
-  /// No description provided for @screenshotEntryNoText.
-  ///
-  /// In zh, this message translates to:
-  /// **'没有从图片里识别到文字，请换一张更清晰的截图'**
-  String get screenshotEntryNoText;
 
   /// No description provided for @captureEntryRecognizing.
   ///
   /// In zh, this message translates to:
   /// **'正在识别账单内容…'**
   String get captureEntryRecognizing;
+
+  /// No description provided for @visionEntryUnsupported.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前模型不支持图片输入，请在 AI 设置中更换支持视觉的模型'**
+  String get visionEntryUnsupported;
+
+  /// No description provided for @visionEntryNoResult.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 未返回可识别的结果，请换一张更清晰的账单截图'**
+  String get visionEntryNoResult;
+
+  /// No description provided for @visionEntryImageInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法读取这张图片，请换一张'**
+  String get visionEntryImageInvalid;
+
+  /// No description provided for @visionEntryImageTooLarge.
+  ///
+  /// In zh, this message translates to:
+  /// **'图片过大，请换一张或重新选择'**
+  String get visionEntryImageTooLarge;
 
   /// No description provided for @captureEntryNoTransaction.
   ///

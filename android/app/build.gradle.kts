@@ -75,14 +75,14 @@ android {
         release {
             signingConfig = signingConfigs.getByName("verifinRelease")
             // 开启 R8 代码裁剪 + 资源裁剪，减小 APK：裁掉未用到的插件 Java/Kotlin
-            // 代码与未引用资源。反射依赖点（ML Kit 识别器、本地通知的 Gson 序列化等）
-            // 由 proguard-rules.pro 的 keep 规则保护，勿删。改动后必须用 CI 的 release
-            // APK 真机验证反射相关功能（截图识账 / 记账提醒 / 生物解锁 / 图片选择）。
+            // 代码与未引用资源。反射依赖点（本地通知的 Gson 序列化等）由
+            // proguard-rules.pro 的 keep 规则保护，勿删。改动后必须用 CI 的 release
+            // APK 真机验证反射相关功能（记账提醒 / 生物解锁 / 图片选择）。
             isMinifyEnabled = true
             isShrinkResources = true
             // 默认优化规则（枚举 values()/valueOf、注解、反射等关键 keep）必须保留，
-            // 再追加本项目的 R8 规则（ML Kit 缺类豁免 + 识别器/通知反射类 keep）。
-            // 只传自定义文件会顶掉默认规则，导致 ML Kit 反射实例化被裁成 release NPE。
+            // 再追加本项目的 R8 规则（通知反射类 keep）。只传自定义文件会顶掉默认规则，
+            // 导致通知等反射实例化被裁成 release NPE。
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -108,10 +108,6 @@ dependencies {
     implementation("androidx.documentfile:documentfile:1.0.1")
     // flutter_local_notifications 定时通知所需的 desugaring 运行库。
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
-    // 截图识账的中文离线识别库：google_mlkit_text_recognition 插件对各脚本库只
-    // compileOnly，使用方必须显式引入所需脚本，否则 release 构建 R8 报缺类。
-    implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
-
     // 仪器测试（只在设备上跑，不进 APK）：标准 runner + JUnit4 断言。
     // 版本必须与主配置里已解析到的 androidx.test 依赖一致：Gradle 的
     // consistent resolution 会把 androidTestClasspath 钉到 `githubDebugRuntimeClasspath`
