@@ -44,7 +44,7 @@ AI 配置在 [ai_settings.dart](../../lib/app/ai/ai_settings.dart) 中保存：
 - `toolCallMode`
 
 `AiSettings.isConfigured` 只要求 Base URL 与模型非空；API Key 可为空。
-`AiChatPage`、AI 记账和截图识账共用这份配置。
+`AiChatPage`、AI 记账和图片识账共用这份配置。
 
 传输层固定使用：
 
@@ -57,6 +57,14 @@ AI 配置在 [ai_settings.dart](../../lib/app/ai/ai_settings.dart) 中保存：
 获取”的渠道。Anthropic Messages、OpenAI Responses、AWS Bedrock、Azure 管理面模型
 枚举等协议不在范围内；如果后续要接，需要另立协议适配设计，不能把渠道名和协议名
 混在一起。
+
+## 2.1 图片识账的视觉能力
+
+图片识账把压缩后的图片放进 OpenAI Chat Completions 的 `image_url` data URL 内容块，不要求渠道在 `/models` 中声明视觉能力。AI 设置页的「检测能力」按钮在连接、流式、Tool Calls 探测之后，用内置 4 位数字测试图再发一次图片请求，结果作为现有能力缓存的一部分显示为「图片识别：支持/不支持/未确认」。
+
+- 只承诺 OpenAI `image_url` 格式；端点若要求其它图片字段（或只支持纯文本），检测会判为不支持。
+- 本地 Ollama/LM Studio 等端点是否可用，取决于它实现的 OpenAI 兼容层和所选模型，不按渠道品牌推断。
+- 视图入口只读缓存：已缓存不支持时选图前提示；未检测时直接请求，失败后写入缓存并提示换模型。
 
 ## 3. cc-switch 调研结论
 

@@ -19,7 +19,7 @@ Controller 经 repository 写库。`VeriFinController.create()` 是生产初始�
 | 多币种、预算、退款 | [多币种](multi-currency.md)、[单期预算](category-budget-override.md)、[退款](refund.md)、[交易保存校验与退款金额精度](entry-save-validation.md) |
 | 导入、备份 | `lib/app/backup/import/`、`lib/app/backup/`；只在预览确认后落库，字节格式仅由 BackupService 编解码 |
 | 图片附件 | `lib/app/attachments/attachment_store.dart` 是字节唯一入口（文件存储、暂存、孤儿回收、迁移期物化）；SQLite 只存元数据；`image_picker_cleanup_io.dart` 只删除选择器缓存副本；[设计](attachment-storage-and-backup.md) |
-| AI | `lib/app/ai/`：`ai_chat_session_controller.dart` 管页面内会话，`ai_ledger_snapshot.dart` 冻结账本/余额/预算，`ai_agent_engine.dart` 管协议轮次，`ai_query_tool.dart` 注册只读工具；[渠道预设与模型发现](ai-provider-presets.md)、[只读查询工具](ai-tools.md)、[截图识别与外部采集](auto-capture.md) |
+| AI | `lib/app/ai/`：`ai_chat_session_controller.dart` 管页面内会话，`ai_ledger_snapshot.dart` 冻结账本/余额/预算，`ai_agent_engine.dart` 管协议轮次，`ai_query_tool.dart` 注册只读工具；[渠道预设与模型发现](ai-provider-presets.md)、[只读查询工具](ai-tools.md)；图片识账在 `ai_vision_entry.dart` / `ai_vision_image.dart`，视觉能力并入 `ai_capabilities.dart`；[图片识账与外部采集](auto-capture.md) |
 | 应用内更新检查 | `lib/app/update/update_check.dart`：用户手点「检查更新」时只读 GitHub Release 最新正式版版本号并比较，设置页弹窗跳转系统浏览器；应用内不下载、不安装 APK |
 | Android 系统能力 | `platform_bridge*.dart`、`android/`；单一 MethodChannel 分发，真实权限与冷启动验收；`AppLockPreferences.kt` 在 Flutter 启动前读取锁状态，`availableBytes` 为备份解包提供 `StatFs` 空间预检；[桌面小组件](home-widgets.md) |
 | 国际化 | `lib/l10n/*.arb` 与 gen-l10n 输出；[国际化验收](i18n-verification.md) |

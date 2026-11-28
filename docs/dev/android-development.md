@@ -113,7 +113,7 @@ flutter test integration_test/ -d <device-id> --flavor diagnostic
 
 默认调试使用独立 applicationId `top.talyra42.verifin.graphicsdiagnostic`，显示名称
 “Veri Fin 图形诊断”；仍是正式页面、Controller、SQLite 和原生插件，数据与用户正式应用隔离。
-debug 支持 hot reload；最终图形/OCR/插件行为必须另外用 release/R8 检查。
+debug 支持 hot reload；最终图形/图片识账/插件行为必须另外用 release/R8 检查。
 同一工作区的 `flutter test`、`flutter pub get` 与 Android 构建必须顺序执行：它们会更新
 插件注册文件和依赖元数据，并行运行可能让 release 编译误引用 integration_test 插件。
 用户明确要求在正式应用目录调试时使用 `--flavor github`，先核对签名/版本号；不得为

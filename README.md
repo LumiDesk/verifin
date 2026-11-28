@@ -55,7 +55,7 @@ Veri Fin 是一款仅面向 Android 的个人记账应用。没有账号、没�
 - **快速记账**：支出、收入、转账，支持多级分类、多标签、图片附件、退款和周期记账。
 - **账本与资产**：多账本隔离、多币种账户、离线汇率、信用账户、净资产与余额趋势。
 - **预算与看板**：总预算、分类预算、按日预算、自定义预算周期，以及日常、月度、年度多维分析。
-- **可选 AI**：用自己的 OpenAI 兼容端点记账、查询账目或识别截图；AI 只生成草稿，不会静默写入。
+- **可选 AI**：用自己的 OpenAI 兼容端点记账、查询账目或识别图片；AI 只生成草稿，不会静默写入。
 - **数据由你掌控**：账本保存在本地，支持加密备份、WebDAV、账单导入和本应用 CSV 导出。
 - **Android 原生体验**：桌面小组件、快捷磁贴、本地提醒、系统分享入口和应用锁。
 
@@ -69,7 +69,7 @@ Veri Fin 是一款仅面向 Android 的个人记账应用。没有账号、没�
 | 界面 | Material 3、`fl_chart`、`anchored_menu`，可选液态玻璃底栏 |
 | 数据 | SQLite（`sqflite`）、SharedPreferences、分层数据库迁移 |
 | 备份与安全 | AES-GCM + PBKDF2、流式 ZIP、WebDAV、Android SAF |
-| AI 与 OCR | OpenAI 兼容端点、原生 Tool Calls、端上 ML Kit OCR |
+| AI | OpenAI 兼容端点、原生 Tool Calls、图片输入 |
 | Android 集成 | Jetpack Glance 小组件、本地通知、快捷磁贴、MethodChannel |
 
 ## 下载
