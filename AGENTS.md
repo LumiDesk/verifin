@@ -211,7 +211,7 @@ dart run scripts/widget_previews.dart
 
 ### CI 与发版
 
-- `.github/workflows/ci.yml` 在每次 push 到 `main` 时执行格式检查、analyze、全量测试和 `github` flavor Android debug APK 编译门禁；该 APK 只用于提前发现 Kotlin/Manifest/原生桥编译错误，不作为交付物。
+- `.github/workflows/ci.yml` 对**代码变更**执行格式检查、analyze、全量测试；push 到 `main` 的代码变更额外执行 `github` flavor Android debug APK 编译门禁，该 APK 只用于提前发现 Kotlin/Manifest/原生桥编译错误，不作为交付物。仅文档变更（`docs/`、README、AGENTS、CHANGELOG、`.agents/` 等）只跑轻量变更检测，跳过这些重门禁；任何 `lib/`、`test/`、`android/`、`scripts/`、依赖或工作流变更仍完整跑。
 - `.github/workflows/flutter.yml` 只在推送 `vX.Y.Z` 标签时触发发布构建：
   - GitHub 自分发：arm64-v8a APK，`--flavor github --split-per-abi`；必须保持 `force-version-code-ignoring-abi=true`，否则 ABI 版本号偏移会破坏 GitHub / Play 渠道间的覆盖升级。
   - Google Play：AAB，`--flavor play --dart-define=UPDATE_CHECK=false`。
