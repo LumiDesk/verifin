@@ -6131,7 +6131,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiDetectingCapabilities.
   ///
   /// In zh, this message translates to:
-  /// **'正在检测连接、流式输出与 Tool Calls…'**
+  /// **'正在检测连接、流式输出、Tool Calls 与图片识别…'**
   String get aiDetectingCapabilities;
 
   /// No description provided for @aiConnectionReady.
@@ -6175,6 +6175,36 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'实际协议：自动检测'**
   String get aiActualProtocolAuto;
+
+  /// No description provided for @aiVisionLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'图片识别'**
+  String get aiVisionLabel;
+
+  /// No description provided for @aiVisionStatusUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'未检测'**
+  String get aiVisionStatusUnknown;
+
+  /// No description provided for @aiVisionStatusUnknownChecked.
+  ///
+  /// In zh, this message translates to:
+  /// **'未确认'**
+  String get aiVisionStatusUnknownChecked;
+
+  /// No description provided for @aiVisionStatusSupported.
+  ///
+  /// In zh, this message translates to:
+  /// **'支持'**
+  String get aiVisionStatusSupported;
+
+  /// No description provided for @aiVisionStatusUnsupported.
+  ///
+  /// In zh, this message translates to:
+  /// **'不支持'**
+  String get aiVisionStatusUnsupported;
 
   /// No description provided for @aiStepRunning.
   ///

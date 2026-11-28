@@ -3325,7 +3325,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiDetectCapabilities => '检测能力';
 
   @override
-  String get aiDetectingCapabilities => '正在检测连接、流式输出与 Tool Calls…';
+  String get aiDetectingCapabilities => '正在检测连接、流式输出、Tool Calls 与图片识别…';
 
   @override
   String get aiConnectionReady => '连接正常';
@@ -3347,6 +3347,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get aiActualProtocolAuto => '实际协议：自动检测';
+
+  @override
+  String get aiVisionLabel => '图片识别';
+
+  @override
+  String get aiVisionStatusUnknown => '未检测';
+
+  @override
+  String get aiVisionStatusUnknownChecked => '未确认';
+
+  @override
+  String get aiVisionStatusSupported => '支持';
+
+  @override
+  String get aiVisionStatusUnsupported => '不支持';
 
   @override
   String get aiStepRunning => '调用中';

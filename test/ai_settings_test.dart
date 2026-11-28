@@ -49,6 +49,43 @@ void main() {
     restarted.dispose();
   });
 
+  testWidgets('显示缓存的视觉能力并在模型变化后重置', (tester) async {
+    final controller = await makeController();
+    addTearDown(controller.dispose);
+    const settings = AiSettings(
+      baseUrl: 'https://example.com/v1',
+      apiKey: 'secret',
+      model: 'model-a',
+    );
+    controller.setAiSettings(settings);
+    controller.setAiCapabilityProfile(
+      AiCapabilityProfile.forSettings(
+        settings: settings,
+        nativeToolCalls: AiNativeToolCapability.supported,
+        vision: AiVisionCapability.supported,
+        checkedAt: DateTime.utc(2026, 11, 28),
+      ),
+    );
+
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(home: const AiSettingsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('图片识别'), findsOneWidget);
+    expect(find.text('支持'), findsOneWidget);
+
+    await tester.enterText(_textField('模型'), 'model-b');
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pump();
+
+    expect(find.text('未检测'), findsOneWidget);
+    expect(find.text('支持'), findsNothing);
+  });
+
   testWidgets('AI 配置输入停止后自动保存', (tester) async {
     final controller = await makeController();
     addTearDown(controller.dispose);

@@ -3410,7 +3410,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiDetectingCapabilities =>
-      'Checking connection, streaming, and Tool Calls…';
+      'Checking connection, streaming, Tool Calls, and image support…';
 
   @override
   String get aiConnectionReady => 'Connection successful';
@@ -3433,6 +3433,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiActualProtocolAuto => 'Active protocol: automatic detection';
+
+  @override
+  String get aiVisionLabel => 'Image input';
+
+  @override
+  String get aiVisionStatusUnknown => 'Not checked';
+
+  @override
+  String get aiVisionStatusUnknownChecked => 'Unconfirmed';
+
+  @override
+  String get aiVisionStatusSupported => 'Supported';
+
+  @override
+  String get aiVisionStatusUnsupported => 'Not supported';
 
   @override
   String get aiStepRunning => 'Running';

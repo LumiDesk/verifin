@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:anchored_menu/anchored_menu.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../app/ai/ai_capabilities.dart';
 import '../app/ai/ai_client.dart';
@@ -321,8 +322,22 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       _statusIsError = false;
       _statusText = l10n.aiDetectingCapabilities;
     });
+    Uint8List? visionProbeImageBytes;
     try {
-      final profile = await detectAiCapabilities(settings: settings);
+      final data = await rootBundle.load('assets/ai_vision/vision_probe.png');
+      visionProbeImageBytes = data.buffer.asUint8List();
+    } catch (error) {
+      if (mounted) {
+        VeriFinScope.of(
+          context,
+        ).logger?.error('AI 视觉探测图读取失败', source: 'ai', error: error);
+      }
+    }
+    try {
+      final profile = await detectAiCapabilities(
+        settings: settings,
+        visionProbeImageBytes: visionProbeImageBytes,
+      );
       if (!mounted) {
         return;
       }
@@ -394,6 +409,32 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     };
   }
 
+  String _visionStatusLabel(AppLocalizations l10n) {
+    final profile = _detectedProfile;
+    if (profile == null) {
+      return l10n.aiVisionStatusUnknown;
+    }
+    return switch (profile.vision) {
+      AiVisionCapability.supported => l10n.aiVisionStatusSupported,
+      AiVisionCapability.unsupported => l10n.aiVisionStatusUnsupported,
+      AiVisionCapability.unknown => l10n.aiVisionStatusUnknownChecked,
+    };
+  }
+
+  Color _visionStatusColor(ThemeData theme) {
+    final profile = _detectedProfile;
+    if (profile == null) {
+      return theme.colorScheme.onSurface.withValues(alpha: 0.55);
+    }
+    return switch (profile.vision) {
+      AiVisionCapability.supported => theme.colorScheme.primary,
+      AiVisionCapability.unsupported => theme.colorScheme.error,
+      AiVisionCapability.unknown => theme.colorScheme.onSurface.withValues(
+        alpha: 0.55,
+      ),
+    };
+  }
+
   String _capabilityStatus(AiCapabilityProfile profile, AiSettings settings) {
     final l10n = AppLocalizations.of(context);
     final capability =
@@ -421,8 +462,11 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       return;
     }
     setState(() {
-      _detectedProfile = null;
-      _statusText = null;
+      final profile = _detectedProfile;
+      if (profile != null && !profile.matches(_current())) {
+        _detectedProfile = null;
+        _statusText = null;
+      }
       _statusIsError = false;
     });
     _autoSave.schedule();
@@ -667,6 +711,29 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                             label: l10n.aiToolModeTitle,
                             suffixIcon: const Icon(Icons.expand_more),
                           ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: Row(
+                          children: <Widget>[
+                            Icon(Icons.image_outlined, size: 16, color: muted),
+                            const SizedBox(width: 6),
+                            Text(
+                              l10n.aiVisionLabel,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: muted,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              _visionStatusLabel(l10n),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: _visionStatusColor(theme),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       if (_statusText != null) ...<Widget>[
