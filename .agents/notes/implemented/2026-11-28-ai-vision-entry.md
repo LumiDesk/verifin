@@ -635,12 +635,12 @@ class AiCapabilityProfile {
 
 - [ ] AI 弹层点「图片识账」→ 相册选图 → 加载 → **直接进入 `EntryDetailPage`**；没有第二次「解析」、没有图片预览页、没有额外路由。
 - [ ] 文字 AI 记账、分享文本、CAPTURE_TEXT 的现有行为不变。
-- [ ] AI 设置页有一行「图片识别：未检测/支持/不支持/未确认」；现有「检测能力」按钮同时检测视觉；模型变更重置。
+- [x] AI 设置页在检测成功后显示独立「能力检测结果」卡片，包含「图片识别：支持/不支持/未确认」；现有「检测能力」按钮同时检测视觉；模型变更后隐藏旧结果。
 - [ ] 已缓存不支持时选图前提示换模型；未检测时请求失败会提示并写缓存；入口不做额外探测。
 - [ ] 相册 + 系统分享图片 + CAPTURE_TEXT 三条入口均可用；图片不落库、不写临时文件、不进备份。
 - [ ] 识别成功进入草稿；失败本地化提示、可重试、不崩、不落账。
 - [ ] 没有 OCR/ML Kit 代码、依赖、Gradle 引入、proguard 规则和 APK 产物。
-- [ ] arm64 release APK ≤ 33 MB；AAB 体积记录；无 `libmlkit_google_ocr_pipeline.so` / `mlkit-google-ocr-models`。
+- [ ] arm64 release APK ≤ 33 MB（v1.22.0 实测 36.2 MB，目标未达成）；AAB 98.3 MB；APK 内无 `libmlkit_google_ocr_pipeline.so` / `mlkit-google-ocr-models`。
 - [ ] `flutter analyze` / `flutter test` 全绿；PR CI 与 main debug APK 构建绿。
 - [ ] release APK 真机通过第 7 节验收项。
 - [ ] 隐私政策、README、AGENTS、产品/验收/技术文档、CHANGELOG 同步。
@@ -653,7 +653,7 @@ class AiCapabilityProfile {
 1. **UI**：保留现有 AI 记账弹层；图片按钮走现有“选图 → 加载 → 记账页”路径；不新增页面、预览或图片模式；选图后不需要再点解析。（已确认）
 2. **提示**：不新增上传确认/提示，并删除弹层里的 `aiPrivacyNotice`；隐私政策按事实更新。（已确认）
 3. **发布**：先实现功能，不排版本、不现在准备 release notes。（已确认）
-4. **视觉检测**：不新增按钮/卡片；现有「检测能力」按钮同时检测视觉，设置页显示一行状态；图片入口只读现有能力缓存，未检测时直接请求，失败写缓存并提示。（技术实现）
+4. **视觉检测**：不新增独立页面或按钮；现有「检测能力」按钮同时检测视觉；检测成功后用独立「能力检测结果」卡片展示连接、流式、Tool Calls、实际协议和图片识别状态；未配置/未检测时隐藏图片识别行；图片入口只读现有能力缓存，未检测时直接请求，失败写缓存并提示。（技术实现，用户验收后调整了展示形态）
 5. **探测图**：内置 4 位数字测试图，无用户数据，精确匹配数字；技术选择，可替换。
 
 ---
@@ -665,15 +665,25 @@ class AiCapabilityProfile {
 | 图片入口 | 闭环 | 弹层图片按钮 → 相册 → 加载 → 视觉请求 → `EntryDetailPage`；没有第二个解析/页面/预览 |
 | 文字入口 | 闭环 | 弹层文字 + 解析按钮保持不变；分享文本仍走 `requestCapturedEntryDraft` |
 | 分享/Intent | 闭环 | 图片走同一视觉函数；文本走原路径；图片优先并清理残留文本；锁/单飞不变 |
-| 视觉闸门 | 闭环 | 现有「检测能力」按钮更新能力缓存；设置页一行状态；入口只读缓存；请求 `visionUnsupported` 写缓存并提示；严格无绕过 |
+| 视觉闸门 | 闭环 | 现有「检测能力」按钮更新能力缓存；设置页独立结果卡片；入口只读缓存；请求 `visionUnsupported` 写缓存并提示；严格无绕过 |
 | 图片处理 | 闭环 | 相册缓存副本删除；分享字节只在内存；压缩 1600px/≤1.5 MB；30 MP/25 MB 上限 |
 | 请求 | 闭环 | `AiVisionMessage` 标准 `image_url` data URL；单轮非流式；8 MB 请求体上限；不塞进 Agent 预算 |
 | 解析与落账 | 闭环 | 复用 `parseAiEntryDraft`；只产 `EntryDetailPage` 草稿；默认账户沿用；用户确认才落账 |
 | 失败路径 | 闭环 | 无 AI/不支持/网络/鉴权/限流/无交易/图片过大/格式错误都有本地化提示；不崩、不落账 |
 | 数据与兼容 | 闭环 | 无 schema/备份变化；视觉状态并入现有 AI 能力缓存（设备本地、不进备份）；旧账目不变 |
 | 删除 | 闭环 | OCR 三件套、ML Kit 依赖/Gradle/proguard/ARB/测试都有删除落点 |
-| 体积 | 闭环 | 预期 arm64 44.9 → 31.6 MB；release 产物核对 |
+| 体积 | 部分达成 | arm64 44.9 → 36.2 MB（-8.7 MB），未达到 33 MB 目标；release 产物已核对无 ML Kit |
 | 文档/法务 | 闭环 | README、AGENTS、产品/验收/自动化/技术/架构/限制文档、隐私政策、CHANGELOG 均有条目 |
 | 已确认决定 | 闭环 | 保留弹层、选图后直接进记账页、不加入口提示、视觉检测并入现有「检测能力」、先实现功能；见第 13 节 |
 
 **自检结论**：这条链路已经是最小改动——**OCR 换成一次视觉请求，选图后直接进记账页**；没有新增页面、图片模式、预览、二次解析或额外探测。剩余风险是模型端点差异和识别质量，属于验收项，不是链路断点。
+
+---
+
+## 15. 落地结果（2026-11-28）
+
+- 已合并 PR #87，发布 `v1.22.0`；正式 Release：<https://github.com/LumiDesk/verifin/releases/tag/v1.22.0>。
+- `flutter analyze` 通过；`flutter test` 1459 passed。
+- release APK：arm64，36.2 MB；AAB：98.3 MB；无 ML Kit/OCR 原生库。
+- 体积目标 ≤33 MB 未达成，已在 `docs/dev/tech-decisions.md` 记录实测值；后续如要追体积，优先拆 Flutter 引擎/libapp，而不是恢复 OCR。
+- 真实 arm64 设备的 release APK 覆盖安装验收仍需补做；模拟器完成的是 diagnostic 视觉验收。
