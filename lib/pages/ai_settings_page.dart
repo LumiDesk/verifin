@@ -69,7 +69,6 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       final cached = controller.aiCapabilityProfile;
       if (cached?.matches(settings) == true) {
         _detectedProfile = cached;
-        _statusText = _capabilityStatus(cached!, settings);
       }
       _seeded = true;
     }
@@ -348,7 +347,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       setState(() {
         _detectedProfile = profile;
         _statusIsError = false;
-        _statusText = _capabilityStatus(profile, settings);
+        _statusText = null;
       });
     } on AiException catch (error) {
       if (!mounted) {
@@ -383,10 +382,6 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     setState(() {
       _toolCallMode = selected;
       _toolModeController.text = _toolModeLabel(selected);
-      final profile = _detectedProfile;
-      if (profile != null) {
-        _statusText = _capabilityStatus(profile, _current());
-      }
     });
     _autoSave.schedule(immediate: true);
   }
@@ -409,11 +404,123 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     };
   }
 
-  String _visionStatusLabel(AppLocalizations l10n) {
-    final profile = _detectedProfile;
-    if (profile == null) {
-      return l10n.aiVisionStatusUnknown;
-    }
+  Widget _buildCapabilityResultsCard(AppLocalizations l10n) {
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.55);
+    final profile = _detectedProfile!;
+    final protocol = switch (profile.effectiveMode(_current())) {
+      AiToolCallMode.native => l10n.aiCapabilityProtocolNative,
+      AiToolCallMode.prompt => l10n.aiCapabilityProtocolPrompt,
+      AiToolCallMode.auto => l10n.aiCapabilityProtocolAuto,
+    };
+    final toolsSupported =
+        profile.nativeToolCalls == AiNativeToolCapability.supported;
+    return VeriCard(
+      key: const Key('ai_capability_results_card'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(
+                Icons.fact_check_outlined,
+                size: 18,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                l10n.aiCapabilityResultsTitle,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          _capabilityRow(
+            label: l10n.aiCapabilityConnectionLabel,
+            value: l10n.aiCapabilityOk,
+            valueColor: theme.colorScheme.primary,
+          ),
+          _capabilityDivider(theme),
+          _capabilityRow(
+            label: l10n.aiCapabilityStreamingLabel,
+            value: l10n.aiCapabilityOk,
+            valueColor: theme.colorScheme.primary,
+          ),
+          _capabilityDivider(theme),
+          _capabilityRow(
+            label: l10n.aiCapabilityToolCallsLabel,
+            value: toolsSupported
+                ? l10n.aiCapabilitySupported
+                : l10n.aiCapabilityUnsupported,
+            valueColor: toolsSupported ? theme.colorScheme.primary : muted,
+          ),
+          _capabilityDivider(theme),
+          _capabilityRow(
+            label: l10n.aiCapabilityProtocolLabel,
+            value: protocol,
+            valueColor: theme.colorScheme.onSurface,
+          ),
+          _capabilityDivider(theme),
+          _capabilityRow(
+            label: l10n.aiVisionLabel,
+            value: _visionStatusLabel(l10n, profile),
+            valueColor: _visionStatusColor(theme, profile),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _capabilityRow({
+    required String label,
+    required String value,
+    required Color valueColor,
+  }) {
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.55);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 9),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Expanded(
+            flex: 4,
+            child: Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(color: muted),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 6,
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: valueColor,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _capabilityDivider(ThemeData theme) {
+    return Divider(
+      height: 1,
+      thickness: 1,
+      color: theme.dividerColor.withValues(alpha: 0.18),
+    );
+  }
+
+  String _visionStatusLabel(
+    AppLocalizations l10n,
+    AiCapabilityProfile profile,
+  ) {
     return switch (profile.vision) {
       AiVisionCapability.supported => l10n.aiVisionStatusSupported,
       AiVisionCapability.unsupported => l10n.aiVisionStatusUnsupported,
@@ -421,11 +528,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     };
   }
 
-  Color _visionStatusColor(ThemeData theme) {
-    final profile = _detectedProfile;
-    if (profile == null) {
-      return theme.colorScheme.onSurface.withValues(alpha: 0.55);
-    }
+  Color _visionStatusColor(ThemeData theme, AiCapabilityProfile profile) {
     return switch (profile.vision) {
       AiVisionCapability.supported => theme.colorScheme.primary,
       AiVisionCapability.unsupported => theme.colorScheme.error,
@@ -433,24 +536,6 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
         alpha: 0.55,
       ),
     };
-  }
-
-  String _capabilityStatus(AiCapabilityProfile profile, AiSettings settings) {
-    final l10n = AppLocalizations.of(context);
-    final capability =
-        profile.nativeToolCalls == AiNativeToolCapability.supported
-        ? l10n.aiNativeToolsSupported
-        : l10n.aiNativeToolsUnsupported;
-    final effectiveMode = profile.effectiveMode(settings);
-    final protocol = switch (effectiveMode) {
-      AiToolCallMode.native => l10n.aiActualProtocolNative,
-      AiToolCallMode.prompt => l10n.aiActualProtocolPrompt,
-      AiToolCallMode.auto => l10n.aiActualProtocolAuto,
-    };
-    return '${l10n.aiConnectionReady}\n'
-        '${l10n.aiStreamingReady}\n'
-        '$capability\n'
-        '$protocol';
   }
 
   void _onConfigChanged() {
@@ -713,29 +798,6 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                           ),
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 10),
-                        child: Row(
-                          children: <Widget>[
-                            Icon(Icons.image_outlined, size: 16, color: muted),
-                            const SizedBox(width: 6),
-                            Text(
-                              l10n.aiVisionLabel,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: muted,
-                              ),
-                            ),
-                            const Spacer(),
-                            Text(
-                              _visionStatusLabel(l10n),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: _visionStatusColor(theme),
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                       if (_statusText != null) ...<Widget>[
                         const SizedBox(height: 12),
                         Text(
@@ -778,6 +840,10 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                     ],
                   ),
                 ),
+                if (_detectedProfile != null) ...<Widget>[
+                  const SizedBox(height: 14),
+                  _buildCapabilityResultsCard(l10n),
+                ],
               ],
             ),
           ),

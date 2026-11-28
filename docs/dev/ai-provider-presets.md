@@ -60,7 +60,7 @@ AI 配置在 [ai_settings.dart](../../lib/app/ai/ai_settings.dart) 中保存：
 
 ### 2.1 图片识账的视觉能力
 
-图片识账把压缩后的图片放进 OpenAI Chat Completions 的 `image_url` data URL 内容块，不要求渠道在 `/models` 中声明视觉能力。AI 设置页的「检测能力」按钮在连接、流式、Tool Calls 探测之后，用内置 4 位数字测试图再发一次图片请求，结果作为现有能力缓存的一部分显示为「图片识别：支持/不支持/未确认」。
+图片识账把压缩后的图片放进 OpenAI Chat Completions 的 `image_url` data URL 内容块，不要求渠道在 `/models` 中声明视觉能力。AI 设置页的「检测能力」按钮在连接、流式、Tool Calls 探测之后，用内置 4 位数字测试图再发一次图片请求，结果作为现有能力缓存的一部分，在独立的「能力检测结果」卡片中显示为「图片识别：支持/不支持/未确认」；未配置或未检测时不显示该行。
 
 - 只承诺 OpenAI `image_url` 格式；端点若要求其它图片字段（或只支持纯文本），检测会判为不支持。
 - 本地 Ollama/LM Studio 等端点是否可用，取决于它实现的 OpenAI 兼容层和所选模型，不按渠道品牌推断。

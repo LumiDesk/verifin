@@ -3413,32 +3413,40 @@ class AppLocalizationsEn extends AppLocalizations {
       'Checking connection, streaming, Tool Calls, and image support…';
 
   @override
-  String get aiConnectionReady => 'Connection successful';
+  String get aiCapabilityResultsTitle => 'Capability check';
 
   @override
-  String get aiStreamingReady => 'Streaming successful';
+  String get aiCapabilityConnectionLabel => 'Connection';
 
   @override
-  String get aiNativeToolsSupported => 'Native Tool Calls: supported';
+  String get aiCapabilityStreamingLabel => 'Streaming';
 
   @override
-  String get aiNativeToolsUnsupported =>
-      'Native Tool Calls: unsupported; compatibility mode will be used';
+  String get aiCapabilityToolCallsLabel => 'Native Tool Calls';
 
   @override
-  String get aiActualProtocolNative => 'Active protocol: native Tool Calls';
+  String get aiCapabilityProtocolLabel => 'Active protocol';
 
   @override
-  String get aiActualProtocolPrompt => 'Active protocol: compatibility mode';
+  String get aiCapabilityOk => 'OK';
 
   @override
-  String get aiActualProtocolAuto => 'Active protocol: automatic detection';
+  String get aiCapabilitySupported => 'Supported';
+
+  @override
+  String get aiCapabilityUnsupported => 'Not supported';
+
+  @override
+  String get aiCapabilityProtocolNative => 'Native Tool Calls';
+
+  @override
+  String get aiCapabilityProtocolPrompt => 'Compatibility mode';
+
+  @override
+  String get aiCapabilityProtocolAuto => 'Automatic';
 
   @override
   String get aiVisionLabel => 'Image input';
-
-  @override
-  String get aiVisionStatusUnknown => 'Not checked';
 
   @override
   String get aiVisionStatusUnknownChecked => 'Unconfirmed';

@@ -6134,59 +6134,77 @@ abstract class AppLocalizations {
   /// **'正在检测连接、流式输出、Tool Calls 与图片识别…'**
   String get aiDetectingCapabilities;
 
-  /// No description provided for @aiConnectionReady.
+  /// No description provided for @aiCapabilityResultsTitle.
   ///
   /// In zh, this message translates to:
-  /// **'连接正常'**
-  String get aiConnectionReady;
+  /// **'能力检测结果'**
+  String get aiCapabilityResultsTitle;
 
-  /// No description provided for @aiStreamingReady.
+  /// No description provided for @aiCapabilityConnectionLabel.
   ///
   /// In zh, this message translates to:
-  /// **'流式输出正常'**
-  String get aiStreamingReady;
+  /// **'连接'**
+  String get aiCapabilityConnectionLabel;
 
-  /// No description provided for @aiNativeToolsSupported.
+  /// No description provided for @aiCapabilityStreamingLabel.
   ///
   /// In zh, this message translates to:
-  /// **'原生 Tool Calls：支持'**
-  String get aiNativeToolsSupported;
+  /// **'流式输出'**
+  String get aiCapabilityStreamingLabel;
 
-  /// No description provided for @aiNativeToolsUnsupported.
+  /// No description provided for @aiCapabilityToolCallsLabel.
   ///
   /// In zh, this message translates to:
-  /// **'原生 Tool Calls：不支持，将使用兼容模式'**
-  String get aiNativeToolsUnsupported;
+  /// **'原生 Tool Calls'**
+  String get aiCapabilityToolCallsLabel;
 
-  /// No description provided for @aiActualProtocolNative.
+  /// No description provided for @aiCapabilityProtocolLabel.
   ///
   /// In zh, this message translates to:
-  /// **'实际协议：原生 Tool Calls'**
-  String get aiActualProtocolNative;
+  /// **'实际协议'**
+  String get aiCapabilityProtocolLabel;
 
-  /// No description provided for @aiActualProtocolPrompt.
+  /// No description provided for @aiCapabilityOk.
   ///
   /// In zh, this message translates to:
-  /// **'实际协议：兼容模式'**
-  String get aiActualProtocolPrompt;
+  /// **'正常'**
+  String get aiCapabilityOk;
 
-  /// No description provided for @aiActualProtocolAuto.
+  /// No description provided for @aiCapabilitySupported.
   ///
   /// In zh, this message translates to:
-  /// **'实际协议：自动检测'**
-  String get aiActualProtocolAuto;
+  /// **'支持'**
+  String get aiCapabilitySupported;
+
+  /// No description provided for @aiCapabilityUnsupported.
+  ///
+  /// In zh, this message translates to:
+  /// **'不支持'**
+  String get aiCapabilityUnsupported;
+
+  /// No description provided for @aiCapabilityProtocolNative.
+  ///
+  /// In zh, this message translates to:
+  /// **'原生 Tool Calls'**
+  String get aiCapabilityProtocolNative;
+
+  /// No description provided for @aiCapabilityProtocolPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'兼容模式'**
+  String get aiCapabilityProtocolPrompt;
+
+  /// No description provided for @aiCapabilityProtocolAuto.
+  ///
+  /// In zh, this message translates to:
+  /// **'自动检测'**
+  String get aiCapabilityProtocolAuto;
 
   /// No description provided for @aiVisionLabel.
   ///
   /// In zh, this message translates to:
   /// **'图片识别'**
   String get aiVisionLabel;
-
-  /// No description provided for @aiVisionStatusUnknown.
-  ///
-  /// In zh, this message translates to:
-  /// **'未检测'**
-  String get aiVisionStatusUnknown;
 
   /// No description provided for @aiVisionStatusUnknownChecked.
   ///
