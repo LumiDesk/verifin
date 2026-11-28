@@ -1530,9 +1530,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get filterTimeTitle => 'Filter by time';
 
   @override
-  String get sortTitle => 'Sort order';
-
-  @override
   String get filterAccountTitle => 'Filter by account';
 
   @override

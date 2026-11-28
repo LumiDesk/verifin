@@ -2876,12 +2876,6 @@ abstract class AppLocalizations {
   /// **'筛选时间'**
   String get filterTimeTitle;
 
-  /// No description provided for @sortTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'排序方式'**
-  String get sortTitle;
-
   /// No description provided for @filterAccountTitle.
   ///
   /// In zh, this message translates to:

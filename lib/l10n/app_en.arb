@@ -538,7 +538,6 @@
   "noMatchDesc": "Try a different keyword, account, or category.",
   "emptyEntriesDesc": "Saved transactions appear here by date.",
   "filterTimeTitle": "Filter by time",
-  "sortTitle": "Sort order",
   "filterAccountTitle": "Filter by account",
   "allAccounts": "All accounts",
   "filterCategoryTitle": "Filter by category",

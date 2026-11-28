@@ -1492,9 +1492,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get filterTimeTitle => '筛选时间';
 
   @override
-  String get sortTitle => '排序方式';
-
-  @override
   String get filterAccountTitle => '筛选账户';
 
   @override
