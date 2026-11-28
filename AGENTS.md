@@ -211,20 +211,20 @@ dart run scripts/widget_previews.dart
 
 ### CI 与发版
 
-- `.github/workflows/ci.yml` 在每次 push 到 `main` 时执行格式检查、analyze、全量测试和 `github` flavor Android debug APK 编译门禁；该 APK 只用于提前发现 Kotlin/Manifest/原生桥编译错误，不作为交付物。
-- `.github/workflows/flutter.yml` 只在推送 `vX.Y.Z` 标签时触发发布构建：
+**GitHub Actions 只用于发版构建，PR 与 push 到 `main` 都不跑 CI。** 格式检查、analyze 和全量测试必须在提交前本地跑完（`dart format .`、`flutter analyze`、`flutter test`），不要指望远端门禁兜底；`main` 的分支保护只要求 PR 与 merge commit，不再要求状态检查。
+- `.github/workflows/flutter.yml` 只在推送 `vX.Y.Z` 标签时触发发布构建（唯一的 CI）：
   - GitHub 自分发：arm64-v8a APK，`--flavor github --split-per-abi`；必须保持 `force-version-code-ignoring-abi=true`，否则 ABI 版本号偏移会破坏 GitHub / Play 渠道间的覆盖升级。
   - Google Play：AAB，`--flavor play --dart-define=UPDATE_CHECK=false`。
 - 两种 release 都开启 R8 代码压缩与资源裁剪。新增依赖若使用反射，必须同步检查 `android/app/proguard-rules.pro`；图片选择、通知等问题可能只在 release/R8 下暴露。
 - `play` flavor 移除 `USE_EXACT_ALARM`，保留可申请的 `SCHEDULE_EXACT_ALARM` 并在无授权时回退；检查更新入口通过 `kUpdateCheckEnabled` 隐藏（GitHub flavor 保留：只查询版本并跳转 Release 页面，应用内不下载、不安装 APK，不申请安装未知应用权限）。渠道差异放在 flavor Manifest 或构建开关中表达。
-- CI 创建 GitHub **预发布**且不标记 Latest；真机验收通过后再由维护者手动提升为正式版。Release 使用项目内稳定 keystore；不要替换、重生成或泄露签名材料。
+- 发版构建创建 GitHub **预发布**且不标记 Latest；真机验收通过后再由维护者手动提升为正式版。Release 使用项目内稳定 keystore；不要替换、重生成或泄露签名材料。
 - `.github/workflows/telegram-release.yml` 在预发布提升为正式版（`release: released`）或手动触发时，把版本公告发到 Telegram 社区群：bot token 存 `TELEGRAM_BOT_TOKEN`（secret），目标群与话题存 `TELEGRAM_CHAT_ID` / `TELEGRAM_THREAD_ID`（repository variables，缺省 `@verifin_app` 与群的默认话题）。凭证缺失时只打印 notice 并跳过，不让门禁变红。
 
 **发版必须得到用户明确授权。** 打标签会推送远端并触发 CI，不能自行执行。实际顺序如下：
 
 1. 先跑 `dart run scripts/doctor.dart` 确认环境（Flutter 版本必须等于 CI 固定版本、Android SDK/JDK 可用、工作树干净）。
 2. 确定版本号与日期，把 `CHANGELOG.md` 顶部 `## [Unreleased]` 提升为本次版本，并在其上新建空的 `## [Unreleased]`。`CHANGELOG.md` 只保留未发布改动与最近一个次版本线；更早版本的**源码归档以 git 标签为准**，不再回填。
-3. 提交 CHANGELOG 变更，确认当前分支是 `main` 且工作树完全干净。
+3. 提交 CHANGELOG 变更（可以随发版 PR 一起提交），确认工作树完全干净。
 4. 运行发布脚本，参数可取 `patch`、`minor`、`major` 或显式版本号（如 `1.2.3`）：`dart run scripts/publish.dart patch`。脚本会再次校验「本机 Flutter 版本 == CI 固定版本」，不一致直接失败（analyzer 的 lint 集合随版本变化，本地绿不代表 CI 绿）；`--dry-run` 只打印将要执行的步骤。
 5. 脚本更新 `pubspec.yaml` 与 `lib/app/app_version.dart`，执行格式化、依赖安装、analyze、test，创建 `chore: release vX.Y.Z` 提交、标签并推送；推送标签触发 CI 构建 APK/AAB 并创建 GitHub **预发布**（不标记 Latest）。
 6. 下载 CI 生成的预发布 APK 真机验收；通过后在 GitHub 上把该 Release **提升为正式版并标记 Latest**（`prerelease` 去掉），同时用 `--notes-file` 重写说明：删掉开头的「⚠️ 预发布（待验证）」与结尾「仍为预发布」两段，保留版本内容与覆盖安装提示。提升后核对 Telegram 公告 run 是否成功；GitHub 未触发 `released` 事件时用 `gh workflow run telegram-release.yml -f tag=vX.Y.Z` 补发。
@@ -262,10 +262,10 @@ dart run scripts/widget_previews.dart
 
 ## 合并与依赖更新
 
-- `main` 受保护：必须经 PR，且必需状态检查通过；合并只用 **merge commit**。
+- `main` 受保护：必须经 PR，合并只用 **merge commit**；不再要求状态检查（CI 只在发版标签构建时运行）。
 - 合并前确认 `mergeStateStatus=CLEAN` 且 `mergeable`，不要凭"看起来绿了"判断。
 - 依赖 PR（dependabot）只应改 `.github/workflows/*`、`pubspec.yaml`、`pubspec.lock`；动了别的就停下问。
-- 大版本跳跃合并后必须确认 `main` 的 CI：PR 上不构建安装包，只有 `main` 会真正打包。
+- 大版本跳跃（如 GitHub Actions、Flutter、AGP）合并后不跑远端 CI：发版前必须本地通过 `flutter analyze` / `flutter test`，并在发版构建时确认真机能打包。
 - 合坏了用 `git revert -m 1 <merge-sha>` 开 PR 回滚；不 force push、不 reset 远端。
 - 步骤见 `.agents/skills/merge-pr/SKILL.md`；授权边界见 `.agents/CONVENTIONS.md`。
 

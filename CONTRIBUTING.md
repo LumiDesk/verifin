@@ -23,7 +23,7 @@ Telegram 社区群（[Verifin Community](https://t.me/verifin_app)）以英文�
 
 - 仓库内的开发、设计、测试和提交规范统一见 [`AGENTS.md`](AGENTS.md)。
 - 架构与源码导航见 [`docs/dev/architecture.md`](docs/dev/architecture.md)；组件复用前先查 [`docs/design/components.md`](docs/design/components.md)。
-- 维护者直接向 `main` 提交；`main` 的 CI 只由 push 触发。
+- `main` 受保护：改动经 PR 以 merge commit 合并；不要求状态检查，格式 / analyze / 测试在提交前本地完成。
 
 ### 已确认的 Code Review 取舍
 
@@ -36,16 +36,16 @@ Telegram 社区群（[Verifin Community](https://t.me/verifin_app)）以英文�
 
 ## 发版（仅维护者）
 
-可执行的分步流程（开 PR、合并、清理分支、写发布说明、等 CI、失败处置、汇报）见
+可执行的分步流程（开 PR、合并、清理分支、写发布说明、发版构建、失败处置、汇报）见
 [`.agents/skills/release/SKILL.md`](.agents/skills/release/SKILL.md)；本节写规则与红线。
 
 - 发版必须经明确同意；打 `vX.Y.Z` 标签会触发 CI 构建并发预发布，不可逆。
 - 发版前必须齐两份材料：`CHANGELOG.md` 的 `## [X.Y.Z]` 段（用户可见变化）、
   `docs/release-notes/vX.Y.Z.md`（**Release 正文的唯一来源**，模板见 `docs/release-notes/_template.md`）。
-  缺发布说明时 `scripts/publish.dart` 在改版本号之前就退出，CI 也会在构建前再查一次。
+  缺发布说明时 `scripts/publish.dart` 在改版本号之前就退出，发版构建也会在构建前再查一次。
 - 流程：先 `dart run scripts/doctor.dart` 确认环境；确认当前分支为 `main` 且工作树干净后，
   运行 `dart run scripts/publish.dart patch`。脚本会切出 `release/vX.Y.Z` 分支、开 PR、
   等检查通过后合并，再打 tag 推送——`main` 受保护，不接受直接推送。
-- CI 默认创建**预发布**（不标 Latest）；真机验收通过后由维护者手动提升为正式版并标记 Latest，
+- 发版构建默认创建**预发布**（不标 Latest）；真机验收通过后由维护者手动提升为正式版并标记 Latest，
   同时把发布说明里仅适用于预发布的那行删掉。
 - 未被提升的预发布用 `dart run scripts/prune_prereleases.dart` 清理；先加 `--dry-run` 核对，默认保留 git 标签。

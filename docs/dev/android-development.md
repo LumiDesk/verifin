@@ -7,7 +7,7 @@ Veri Fin 只维护 Android 应用；电脑上的单元/widget/ffi 测试保留�
 ## 环境检测与自动补齐
 
 每次 Android 任务先检查工作树、`flutter --version`、`flutter doctor -v`、
-`adb devices -l`、Java 和 `android/local.properties`。Flutter 版本以两个 CI 工作流
+`adb devices -l`、Java 和 `android/local.properties`。Flutter 版本以发版 CI 工作流
 的 `flutter-version` 为准，当前 **3.47.2**。不要静默升级到其他 stable 版本。
 
 上述检查已收进 `dart run scripts/doctor.dart`（加 `--devices` 附带 adb 设备列表）：

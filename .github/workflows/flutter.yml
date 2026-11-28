@@ -1,5 +1,7 @@
 name: Flutter CI
 
+# 只做发版构建：仓库不在 PR / push 上跑 CI，格式检查、analyze 与测试都在提交前本地完成
+# （见 AGENTS.md「CI 与发版」）。打 vX.Y.Z 标签时构建 APK/AAB 并创建预发布。
 on:
   push:
     tags:
@@ -9,14 +11,14 @@ permissions:
   contents: read
 
 jobs:
-  checks:
-    name: Analyze, Test
+  android:
+    name: Android APK + AAB
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      # 发布说明是 Release 正文的唯一来源；缺文件在构建前就失败，不浪费一次 APK/AAB 构建。
+      # 发布说明是 Release 正文的唯一来源；缺文件在构建前就失败，避免发出说明为空的版本。
       - name: Verify release notes
         run: |
           set -euo pipefail
@@ -25,40 +27,6 @@ jobs:
             echo "::error::缺少发布说明 $NOTES（模板见 docs/release-notes/_template.md）"
             exit 1
           fi
-
-      - name: Setup Java
-        uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          flutter-version: '3.47.2'
-          cache: true
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Check formatting
-        # 与 ci.yml 保持一致：打标签的发布提交同样必须通过格式门禁。
-        run: dart format --output=none --set-exit-if-changed .
-
-      - name: Analyze
-        run: flutter analyze
-
-      - name: Test
-        run: flutter test
-
-  android:
-    name: Android APK + AAB
-    runs-on: ubuntu-latest
-    needs: checks
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
 
       - name: Setup Java
         uses: actions/setup-java@v6
@@ -77,10 +45,6 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
-
-      # 发布包与已评审外观同源，不再需要额外构建参数；先跑设计契约测试。
-      - name: Verify design flows
-        run: flutter test test/design_consistency_test.dart test/page_smoke_test.dart test/home_density_test.dart test/anchored_menu_test.dart test/material_stability_test.dart test/navigation_settings_test.dart
 
       - name: Build release APK (github flavor)
         # GitHub 自分发包：github flavor，保留应用内「检查更新」入口（只跳转 Release 页面）。
