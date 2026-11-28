@@ -24,5 +24,16 @@ updates:
       pub:
         patterns:
           - '*'
+    # 当前工具链装不上的 major 更新先忽略，避免每周生成必然失败的 PR：
+    # - month_picker_dialog 7.x 要求 Dart >=3.14.0，而 CI 固定的 Flutter 3.47.2 是 Dart 3.13.2；
+    # - flutter_local_notifications 23.x 要求 compileSdk 37 与 AGP 9.1.1，属工具链迁移。
+    # 升级 Flutter / AGP 后删除对应条目，让 dependabot 重新提案。
+    ignore:
+      - dependency-name: month_picker_dialog
+        update-types:
+          - version-update:semver-major
+      - dependency-name: flutter_local_notifications
+        update-types:
+          - version-update:semver-major
     commit-message:
       prefix: deps
