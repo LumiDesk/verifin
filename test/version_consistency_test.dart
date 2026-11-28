@@ -10,8 +10,8 @@ import 'package:verifin/app/app_version.dart';
 ///
 /// 例外是发版流程的「已准备、待发版」窗口：发版材料（CHANGELOG 段 + 发布说明）
 /// 会先经独立 PR 合入 `main`，此时 `CHANGELOG.md` 的顶段本来就会领先
-/// `pubspec.yaml` 一个 patch，等 `scripts/publish.dart` 再递增版本。这个窗口必须
-/// 严格限制为「恰好下一个 patch」且「发布说明已存在」，其余不一致仍然失败。
+/// `pubspec.yaml` 一个 patch/minor/major，等 `scripts/publish.dart` 再递增版本。
+/// 这个窗口必须严格限制为三种合法递增之一，且「发布说明已存在」，其余不一致仍然失败。
 void main() {
   test('pubspec、app_version 与 CHANGELOG 的版本号一致', () {
     final pubspec = File('pubspec.yaml').readAsStringSync();
@@ -42,13 +42,15 @@ void main() {
           .split('.')
           .map(int.parse)
           .toList(growable: false);
-      final preparedVersion = '${parts[0]}.${parts[1]}.${parts[2] + 1}';
+      final nextPatch = '${parts[0]}.${parts[1]}.${parts[2] + 1}';
+      final nextMinor = '${parts[0]}.${parts[1] + 1}.0';
+      final nextMajor = '${parts[0] + 1}.0.0';
       expect(
         changelogVersion,
-        preparedVersion,
+        anyOf(nextPatch, nextMinor, nextMajor),
         reason:
             'CHANGELOG.md 顶部版本必须等于 pubspec.yaml，'
-            '或恰好是下一个 patch（已准备、待发版）',
+            '或恰好是下一个 patch/minor/major（已准备、待发版）',
       );
       expect(
         File('docs/release-notes/v$changelogVersion.md').existsSync(),
