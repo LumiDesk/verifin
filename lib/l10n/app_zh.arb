@@ -923,6 +923,32 @@
   },
   "attachTakePhoto": "拍照",
   "attachFromGallery": "从相册选择",
+  "attachFromGalleryHint": "可一次选择多张",
+  "attachAdding": "正在添加图片…",
+  "attachAddingProgress": "正在添加图片 {done}/{total}",
+  "@attachAddingProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "attachBatchPartial": "已添加 {added} 张，{failed} 张无法读取",
+  "@attachBatchPartial": {
+    "placeholders": {
+      "added": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "attachBatchAllFailed": "所选图片无法读取，请换一批试试",
+  "attachPickFailed": "添加图片失败，请重试",
   "attachTitle": "图片附件",
   "attachCount": "{count} 张",
   "@attachCount": {

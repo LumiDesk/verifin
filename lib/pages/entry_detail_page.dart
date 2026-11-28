@@ -1000,29 +1000,14 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                           ),
                         if (!_isDraft)
                           AnchoredMenuAnchor(
-                            entries: <AnchoredMenuEntry>[
-                              AnchoredMenuItem(
-                                id: 'entry_attachment_camera',
-                                icon: Icons.photo_camera_outlined,
-                                title: AppLocalizations.of(
-                                  context,
-                                ).attachTakePhoto,
-                                enabled: attachmentPickingSupported,
-                                onPressed: () =>
-                                    unawaited(_addAttachment(fromCamera: true)),
-                              ),
-                              AnchoredMenuItem(
-                                id: 'entry_attachment_gallery',
-                                icon: Icons.photo_library_outlined,
-                                title: AppLocalizations.of(
-                                  context,
-                                ).attachFromGallery,
-                                enabled: attachmentPickingSupported,
-                                onPressed: () => unawaited(
-                                  _addAttachment(fromCamera: false),
-                                ),
-                              ),
-                            ],
+                            entries: attachmentAddMenuEntries(
+                              l10n: AppLocalizations.of(context),
+                              enabled: attachmentPickingSupported,
+                              onCamera: () =>
+                                  unawaited(_addAttachment(fromCamera: true)),
+                              onGallery: () =>
+                                  unawaited(_addAttachment(fromCamera: false)),
+                            ),
                             semanticLabel: AppLocalizations.of(
                               context,
                             ).attachTitle,
@@ -1113,6 +1098,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                             setState(() => _pendingAttachments.removeAt(index)),
                         showHeader: false,
                         showAddButton: false,
+                        logger: controller.logger,
                       ),
                     ],
                   ],
@@ -1739,13 +1725,20 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
   }
 
   Future<void> _addAttachment({required bool fromCamera}) async {
-    final bytes = await pickAttachmentBytes(fromCamera: fromCamera);
-    if (!mounted || bytes == null || bytes.isEmpty) return;
-    final attachment = await VeriFinScope.of(
-      context,
-    ).stageNewAttachment(entryId: _entryId, bytes: bytes);
-    if (!mounted) return;
-    setState(() => _pendingAttachments.add(attachment));
+    final controller = VeriFinScope.of(context);
+    await pickAndAddAttachments(
+      context: context,
+      fromCamera: fromCamera,
+      logger: controller.logger,
+      onAddBytes: (bytes) async {
+        final attachment = await controller.stageNewAttachment(
+          entryId: _entryId,
+          bytes: bytes,
+        );
+        if (!mounted) return;
+        setState(() => _pendingAttachments.add(attachment));
+      },
+    );
   }
 
   Future<void> _pickTags() async {

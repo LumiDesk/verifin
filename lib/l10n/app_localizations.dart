@@ -2492,6 +2492,42 @@ abstract class AppLocalizations {
   /// **'从相册选择'**
   String get attachFromGallery;
 
+  /// No description provided for @attachFromGalleryHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'可一次选择多张'**
+  String get attachFromGalleryHint;
+
+  /// No description provided for @attachAdding.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在添加图片…'**
+  String get attachAdding;
+
+  /// No description provided for @attachAddingProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在添加图片 {done}/{total}'**
+  String attachAddingProgress(int done, int total);
+
+  /// No description provided for @attachBatchPartial.
+  ///
+  /// In zh, this message translates to:
+  /// **'已添加 {added} 张，{failed} 张无法读取'**
+  String attachBatchPartial(int added, int failed);
+
+  /// No description provided for @attachBatchAllFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'所选图片无法读取，请换一批试试'**
+  String get attachBatchAllFailed;
+
+  /// No description provided for @attachPickFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加图片失败，请重试'**
+  String get attachPickFailed;
+
   /// No description provided for @attachTitle.
   ///
   /// In zh, this message translates to:

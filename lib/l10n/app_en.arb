@@ -459,6 +459,32 @@
   "monthlyRepayLine": "Repay on day {day} of each month",
   "attachTakePhoto": "Take photo",
   "attachFromGallery": "Choose from gallery",
+  "attachFromGalleryHint": "Select multiple at once",
+  "attachAdding": "Adding images…",
+  "attachAddingProgress": "Adding images {done}/{total}",
+  "@attachAddingProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "attachBatchPartial": "Added {added}; {failed} couldn't be read",
+  "@attachBatchPartial": {
+    "placeholders": {
+      "added": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "attachBatchAllFailed": "Couldn't read the selected images. Try another batch.",
+  "attachPickFailed": "Couldn't add the images. Try again.",
   "attachTitle": "Attachments",
   "attachCount": "{count} images",
   "attachUnsupported": "Adding attachments isn't supported on this platform",

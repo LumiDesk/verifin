@@ -282,11 +282,15 @@ class CompactSwitchRow extends StatelessWidget {
 }
 
 /// 在执行耗时任务期间显示不可关闭的加载对话框,任务结束后自动关闭并返回结果。
-/// 用于图片裁剪等短时重计算,避免用户以为程序卡死。
+/// 用于图片裁剪、批量添加附件等短时重计算,避免用户以为程序卡死。
+///
+/// 需要按进度更新文案时传 [progressMessage]；它优先于 [message]，对话框会在
+/// 每次值变化时重建正文。
 Future<T> runWithLoadingDialog<T>({
   required BuildContext context,
   required Future<T> Function() task,
   String? message,
+  ValueListenable<String>? progressMessage,
 }) async {
   final resolvedMessage =
       message ?? AppLocalizations.of(context).commonProcessing;
@@ -308,7 +312,14 @@ Future<T> runWithLoadingDialog<T>({
                 child: CircularProgressIndicator(strokeWidth: 2.6),
               ),
               const SizedBox(width: 14),
-              Expanded(child: Text(resolvedMessage)),
+              Expanded(
+                child: progressMessage == null
+                    ? Text(resolvedMessage)
+                    : ValueListenableBuilder<String>(
+                        valueListenable: progressMessage,
+                        builder: (context, value, _) => Text(value),
+                      ),
+              ),
             ],
           ),
         ),

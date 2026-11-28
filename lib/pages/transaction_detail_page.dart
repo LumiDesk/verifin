@@ -461,6 +461,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                       setState(() => _attachments.removeAt(index));
                       _touch();
                     },
+                    logger: VeriFinScope.of(context).logger,
                   ),
                 ),
               ],
