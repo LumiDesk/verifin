@@ -5,7 +5,7 @@ description: Use when the user asks to publish a new Veri Fin version (patch, mi
 
 # 发版
 
-把「开 PR → 合并 → 清理 → 发版 → 等 CI → 验收 → 汇报」固化成一条可复现的路径。
+把「开 PR → 合并 → 清理 → 发版 → 发版构建 → 验收 → 汇报」固化成一条可复现的路径。
 这是**用户可见的对外动作**：没有明确授权时，只做到"准备完毕"就停。
 
 ## 前提

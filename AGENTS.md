@@ -41,7 +41,7 @@ integration_test/             # 设备侧冒烟与帧耗时采样（不进 CI）
 scripts/                      # Dart 任务脚本（doctor/publish/prune/clean/widget_previews）
 docs/                         # 当前事实：产品、设计、开发文档与测试样例
 .agents/notes/                # 设计与决策记录（为什么这么定、否掉了什么）
-.agents/skills/               # 固化流程（release：合并→发版→等 CI→汇报）
+.agents/skills/               # 固化流程（release：合并→发版→发版构建→汇报）
 third_party/                  # 本地 vendor 源码（jdenticon_dart、liquid_glass_widgets）
 ```
 
@@ -73,7 +73,7 @@ third_party/                  # 本地 vendor 源码（jdenticon_dart、liquid_g
 - `docs/design/ui-guidelines.md`：页面骨架、交互、图表和视觉规范；新增根导航样式前先读「根导航」小节及其契约测试清单。
 - `docs/dev/tech-decisions.md`：数据口径、备份范围和关键技术取舍；判断当前实现仍以源码、测试与工作流为准。
 - `.agents/notes/`：设计稿、技术选型与被否决方案的**来龙去脉**；不是当前事实，规则见 `.agents/notes/README.md`。
-- `.agents/skills/release/SKILL.md`：**发版的可执行步骤**（合并、清理分支、发版、等 CI、处置失败、汇报）。
+- `.agents/skills/release/SKILL.md`：**发版的可执行步骤**（合并、清理分支、发版、发版构建、处置失败、汇报）。
 - `.agents/skills/merge-pr/SKILL.md`：合并 PR 的可执行流程（状态判定、合并、回滚）。
 - `.agents/CONVENTIONS.md`：跨项目共用的体系约定（分支合并、依赖更新、文档分层、授权边界）。
 - `docs/dev/known-limitations.md`：已接受的限制、技术债及触发整改的阈值。
