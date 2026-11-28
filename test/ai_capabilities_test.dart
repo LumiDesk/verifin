@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/ai/ai_agent_message.dart';
 import 'package:verifin/app/ai/ai_capabilities.dart';
@@ -34,6 +37,23 @@ void main() {
     );
   });
 
+  test('vision capability roundtrips and old cache reads unknown', () {
+    final profile = AiCapabilityProfile.forSettings(
+      settings: settings,
+      nativeToolCalls: AiNativeToolCapability.supported,
+      vision: AiVisionCapability.supported,
+      checkedAt: DateTime.utc(2026, 8, 6),
+    );
+    final decoded = AiCapabilityProfile.decode(profile.encode());
+    expect(decoded!.vision, AiVisionCapability.supported);
+
+    final json = jsonDecode(profile.encode()) as Map<String, Object?>;
+    json.remove('vision');
+    final legacy = AiCapabilityProfile.decode(jsonEncode(json));
+    expect(legacy!.vision, AiVisionCapability.unknown);
+    expect(legacy.nativeToolCalls, AiNativeToolCapability.supported);
+  });
+
   test('detection checks completion, stream and native tools', () async {
     var completeCalls = 0;
     final profile = await detectAiCapabilities(
@@ -67,6 +87,144 @@ void main() {
 
     expect(completeCalls, 2);
     expect(profile.nativeToolCalls, AiNativeToolCapability.supported);
+    expect(profile.vision, AiVisionCapability.unknown);
+  });
+
+  test(
+    'vision probe marks a model that reads the digits as supported',
+    () async {
+      final profile = await detectAiCapabilities(
+        settings: settings,
+        visionProbeImageBytes: Uint8List.fromList(<int>[1, 2, 3]),
+        checkedAt: DateTime.utc(2026, 8, 6),
+        completeTransport: (messages, tools) async {
+          if (messages.any((message) => message is AiVisionMessage)) {
+            return const AiCompletionResult(
+              content: '图里的数字是 7391',
+              finishReason: AiFinishReason.stop,
+            );
+          }
+          if (tools.isEmpty) {
+            return const AiCompletionResult(
+              content: 'OK',
+              finishReason: AiFinishReason.stop,
+            );
+          }
+          return const AiCompletionResult(
+            finishReason: AiFinishReason.toolCalls,
+            toolCalls: <AiNativeToolCall>[
+              AiNativeToolCall(
+                id: 'probe_1',
+                name: 'verifinCapabilityProbe',
+                arguments: '{}',
+              ),
+            ],
+          );
+        },
+        streamTransport: (messages, tools) async* {
+          yield const AiContentDelta('OK');
+          yield const AiCompletionFinished(AiFinishReason.stop);
+        },
+      );
+
+      expect(profile.vision, AiVisionCapability.supported);
+    },
+  );
+
+  test(
+    'vision probe marks wrong digits and image rejection unsupported',
+    () async {
+      final wrong = await detectAiCapabilities(
+        settings: settings,
+        visionProbeImageBytes: Uint8List.fromList(<int>[1, 2, 3]),
+        completeTransport: (messages, tools) async {
+          if (messages.any((message) => message is AiVisionMessage)) {
+            return const AiCompletionResult(
+              content: '0000',
+              finishReason: AiFinishReason.stop,
+            );
+          }
+          if (tools.isEmpty) {
+            return const AiCompletionResult(
+              content: 'OK',
+              finishReason: AiFinishReason.stop,
+            );
+          }
+          return const AiCompletionResult(
+            content: 'OK',
+            finishReason: AiFinishReason.stop,
+          );
+        },
+        streamTransport: (messages, tools) async* {
+          yield const AiContentDelta('OK');
+          yield const AiCompletionFinished(AiFinishReason.stop);
+        },
+      );
+      expect(wrong.vision, AiVisionCapability.unsupported);
+
+      final rejected = await detectAiCapabilities(
+        settings: settings,
+        visionProbeImageBytes: Uint8List.fromList(<int>[1, 2, 3]),
+        completeTransport: (messages, tools) async {
+          if (messages.any((message) => message is AiVisionMessage)) {
+            throw AiException(
+              AiErrorCode.serverError,
+              detail: 'image input unsupported',
+            );
+          }
+          if (tools.isEmpty) {
+            return const AiCompletionResult(
+              content: 'OK',
+              finishReason: AiFinishReason.stop,
+            );
+          }
+          return const AiCompletionResult(
+            content: 'OK',
+            finishReason: AiFinishReason.stop,
+          );
+        },
+        streamTransport: (messages, tools) async* {
+          yield const AiContentDelta('OK');
+          yield const AiCompletionFinished(AiFinishReason.stop);
+        },
+      );
+      expect(rejected.vision, AiVisionCapability.unsupported);
+    },
+  );
+
+  test('vision probe network errors are not cached as unsupported', () async {
+    await expectLater(
+      detectAiCapabilities(
+        settings: settings,
+        visionProbeImageBytes: Uint8List.fromList(<int>[1, 2, 3]),
+        completeTransport: (messages, tools) async {
+          if (messages.any((message) => message is AiVisionMessage)) {
+            throw AiException(AiErrorCode.network);
+          }
+          if (tools.isEmpty) {
+            return const AiCompletionResult(
+              content: 'OK',
+              finishReason: AiFinishReason.stop,
+            );
+          }
+          return const AiCompletionResult(
+            content: 'OK',
+            finishReason: AiFinishReason.stop,
+          );
+        },
+        streamTransport: (messages, tools) async* {
+          yield const AiContentDelta('OK');
+          yield const AiCompletionFinished(AiFinishReason.stop);
+        },
+      ),
+      throwsA(
+        isA<AiException>().having(
+          (error) => error.code,
+          'code',
+          AiErrorCode.network,
+        ),
+      ),
+    );
   });
 
   test('explicit tool protocol rejection is cached as unsupported', () async {

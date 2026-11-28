@@ -16,6 +16,8 @@ const Duration _defaultStreamIdleTimeout = Duration(seconds: 45);
 const Duration _defaultTotalTimeout = Duration(seconds: 120);
 const int _defaultMaxResponseBytes = 2 * 1024 * 1024;
 const int _defaultMaxStreamEvents = 10000;
+// 图片 data URL 会放大请求体；超过此上限直接拒绝，避免把大图发出去。
+const int _defaultMaxRequestBytes = 8 * 1024 * 1024;
 
 /// 发起一次非流式 OpenAI-compatible 补全，并保留文本、推理字段与 Tool Calls。
 Future<AiCompletionResult> aiAgentComplete({
@@ -267,7 +269,14 @@ Future<HttpClientResponse> _post({
     request.headers.set(HttpHeaders.acceptHeader, 'text/event-stream');
   }
   request.followRedirects = true;
-  request.add(utf8.encode(jsonEncode(body)));
+  final encodedBody = utf8.encode(jsonEncode(body));
+  if (encodedBody.length > _defaultMaxRequestBytes) {
+    throw AiException(
+      AiErrorCode.requestTooLarge,
+      detail: 'request body too large',
+    );
+  }
+  request.add(encodedBody);
   return request.close().timeout(responseTimeout);
 }
 

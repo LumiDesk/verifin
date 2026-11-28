@@ -372,6 +372,68 @@ void main() {
     });
   });
 
+  test('vision message serializes as OpenAI image content', () async {
+    final requestBody = Completer<Map<String, Object?>>();
+    const dataUrl = 'data:image/jpeg;base64,AQID';
+    final settings = await _serve((request) async {
+      requestBody.complete(await _requestJson(request));
+      request.response.headers.contentType = ContentType.json;
+      request.response.write(
+        jsonEncode(<String, Object?>{
+          'choices': <Object?>[
+            <String, Object?>{
+              'message': <String, Object?>{
+                'role': 'assistant',
+                'content': 'ok',
+              },
+              'finish_reason': 'stop',
+            },
+          ],
+        }),
+      );
+      await request.response.close();
+    });
+
+    final result = await aiAgentComplete(
+      settings: settings,
+      messages: const <AiAgentMessage>[
+        AiVisionMessage(text: '看看这张图', imageDataUrl: dataUrl),
+      ],
+    );
+    final body = await requestBody.future;
+
+    expect(result.content, 'ok');
+    final messages = body['messages']! as List<Object?>;
+    final content =
+        (messages.single! as Map<String, Object?>)['content']! as List<Object?>;
+    expect((content[0]! as Map<String, Object?>)['type'], 'text');
+    expect((content[0]! as Map<String, Object?>)['text'], '看看这张图');
+    expect((content[1]! as Map<String, Object?>)['type'], 'image_url');
+    final image = (content[1]! as Map<String, Object?>)['image_url'];
+    expect((image! as Map<String, Object?>)['url'], dataUrl);
+  });
+
+  test('oversized request bodies are rejected before sending', () async {
+    final settings = await _serve((request) async {
+      await request.drain<void>();
+    });
+    await expectLater(
+      aiAgentComplete(
+        settings: settings,
+        messages: <AiAgentMessage>[
+          AiTextMessage.user('x' * (8 * 1024 * 1024 + 1)),
+        ],
+      ),
+      throwsA(
+        isA<AiException>().having(
+          (error) => error.code,
+          'code',
+          AiErrorCode.requestTooLarge,
+        ),
+      ),
+    );
+  });
+
   test('explicit unsupported tools response gets a dedicated error', () async {
     final settings = await _serve((request) async {
       await _requestJson(request);
