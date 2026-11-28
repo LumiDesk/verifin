@@ -995,6 +995,9 @@
   "sortDateAsc": "日期升序",
   "sortAmountDesc": "金额降序",
   "sortAmountAsc": "金额升序",
+  "sortGroupingByDate": "按日期分组",
+  "sortGroupingNone": "不分组",
+  "sortAndGroupingTitle": "排序与分组",
   "selectedCount": "已选 {count} 项",
   "@selectedCount": {
     "placeholders": {
@@ -1020,7 +1023,6 @@
   "noMatchDesc": "换一个关键词、账户或分类再试。",
   "emptyEntriesDesc": "保存交易后会在这里按日期展示。",
   "filterTimeTitle": "筛选时间",
-  "sortTitle": "排序方式",
   "filterAccountTitle": "筛选账户",
   "allAccounts": "全部账户",
   "filterCategoryTitle": "筛选分类",
@@ -2339,7 +2341,7 @@
   "aiEntryReviewHint": "已由 AI 解析为草稿，确认或修改后保存",
   "aiEntryNoResult": "AI 未返回可识别的结果，请换种说法再试",
   "aiEntryNoAmount": "未能识别金额，请在描述中说明金额，例如「打车 32」",
-  "aiWarningCategoryUnmatched": "分类未匹配，已用默认分类，请确认",
+  "aiWarningCategoryUnmatched": "分类未识别，请在记账页确认",
   "aiWarningAccountUnmatched": "账户未匹配，已置为无账户，请确认",
   "aiWarningCurrencyUnmatched": "币种未识别，已回退到账户币种或本位币，请确认",
   "screenshotEntryButton": "图片识账",

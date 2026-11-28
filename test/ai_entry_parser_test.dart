@@ -8,8 +8,15 @@ AiEntryContext _context() => AiEntryContext(
     AiOption(id: 'dining', label: '餐饮'),
     AiOption(id: 'transport', label: '交通'),
     AiOption(id: 'coffee', label: '餐饮 / 咖啡'),
+    AiOption(id: 'shopping_online', label: '购物 / 网购'),
+    AiOption(id: 'other_food', label: '餐饮 / 其他'),
+    AiOption(id: 'other_shopping', label: '购物 / 其他'),
+    AiOption(id: 'uncategorized_expense', label: '未分类', isUncategorized: true),
   ],
-  incomeCategories: const <AiOption>[AiOption(id: 'salary', label: '工资')],
+  incomeCategories: const <AiOption>[
+    AiOption(id: 'salary', label: '工资'),
+    AiOption(id: 'uncategorized_income', label: '未分类', isUncategorized: true),
+  ],
   accounts: const <AiOption>[
     AiOption(id: 'cash', label: '现金', currencyCode: 'CNY'),
     AiOption(id: 'card', label: '招商银行', currencyCode: 'USD'),
@@ -31,6 +38,7 @@ void main() {
       expect(prompt, contains('salary'));
       expect(prompt, contains('card'));
       expect(prompt, contains('currencyCode'));
+      expect(prompt, contains('"category"'));
       expect(prompt, contains('USD'));
     });
   });
@@ -77,8 +85,8 @@ void main() {
         _context(),
       );
       expect(draft.amount, 20);
-      // 非法 categoryId 降级到第一个支出分类。
-      expect(draft.categoryId, 'dining');
+      // 非法 categoryId 落到本类型的「未分类」兜底。
+      expect(draft.categoryId, 'uncategorized_expense');
       // 非法 accountId 视为空（无账户）。
       expect(draft.accountId, '');
       // 非法 note 视为空串。
@@ -126,12 +134,57 @@ void main() {
       expect(draft.categoryId, '');
     });
 
-    test('unknown category falls back to first and warns', () {
+    test('unknown category falls back to uncategorized and warns', () {
       final draft = parseAiEntryDraft(
         '{"type":"expense","amount":10,"categoryId":"nope","accountId":"cash"}',
         _context(),
       );
-      expect(draft.categoryId, 'dining');
+      expect(draft.categoryId, 'uncategorized_expense');
+      expect(draft.warnings, contains(AiDraftWarning.categoryUnmatched));
+    });
+
+    test('分类名回传时按名称解析，不再误判为未识别', () {
+      final draft = parseAiEntryDraft(
+        '{"type":"expense","amount":32,"categoryId":"网购"}',
+        _context(),
+      );
+      expect(draft.categoryId, 'shopping_online');
+      expect(draft.warnings, isEmpty);
+    });
+
+    test('category 字段支持完整路径与全半角/空格差异', () {
+      final draft = parseAiEntryDraft(
+        '{"type":"expense","amount":18,"categoryId":"","category":"餐饮／咖啡"}',
+        _context(),
+      );
+      expect(draft.categoryId, 'coffee');
+      expect(draft.warnings, isEmpty);
+    });
+
+    test('同名叶子分类有歧义时落到未分类并提示', () {
+      final draft = parseAiEntryDraft(
+        '{"type":"expense","amount":18,"categoryId":"其他"}',
+        _context(),
+      );
+      expect(draft.categoryId, 'uncategorized_expense');
+      expect(draft.warnings, contains(AiDraftWarning.categoryUnmatched));
+    });
+
+    test('模型留空分类时直接落到未分类，不算未匹配', () {
+      final draft = parseAiEntryDraft(
+        '{"type":"expense","amount":10,"accountId":"cash"}',
+        _context(),
+      );
+      expect(draft.categoryId, 'uncategorized_expense');
+      expect(draft.warnings, isEmpty);
+    });
+
+    test('收入分类未识别时落到收入的未分类，而不是支出分类', () {
+      final draft = parseAiEntryDraft(
+        '{"type":"income","amount":100,"categoryId":"餐饮"}',
+        _context(),
+      );
+      expect(draft.categoryId, 'uncategorized_income');
       expect(draft.warnings, contains(AiDraftWarning.categoryUnmatched));
     });
 

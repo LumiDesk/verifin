@@ -129,7 +129,7 @@ class _PendingRefundRow extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     '${context1.isEmpty ? '' : '$context1 · '}'
-                    '${l10n.refundInitiatedDateLabel} ${l10n.dateMonthDay(refund.occurredAt)}',
+                    '${l10n.refundInitiatedDateLabel} ${recordDateLabel(l10n, refund.occurredAt)}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall?.copyWith(

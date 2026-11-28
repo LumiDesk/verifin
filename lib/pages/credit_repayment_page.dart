@@ -206,7 +206,7 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
                 const SizedBox(height: 10),
                 SelectField(
                   label: l10n.dateLabel,
-                  value: l10n.dateMonthDay(_occurredAt),
+                  value: recordDateLabel(l10n, _occurredAt),
                   icon: Icons.event_outlined,
                   onTap: _pickDate,
                 ),

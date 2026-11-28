@@ -158,12 +158,19 @@ class TransactionsPage extends StatefulWidget {
     this.initialDate,
     this.accountId,
     this.initialCategoryId,
+    this.initialTimeFilter,
+    this.initialPeriodAnchor,
     this.title,
   });
 
   final DateTime? initialDate;
   final String? accountId;
   final String? initialCategoryId;
+
+  /// 进入页面时的时间档与锚点。看板排行等入口下钻时必须带上，否则看到的是全部历史。
+  /// 与 [initialDate]（按天视图）互斥，同时给时以按天视图为准。
+  final TransactionTimeFilter? initialTimeFilter;
+  final DateTime? initialPeriodAnchor;
   final String? title;
 
   @override
@@ -178,6 +185,10 @@ class _TransactionsPageState extends State<TransactionsPage> {
 
   TransactionTimeFilter _timeFilter = TransactionTimeFilter.all;
   TransactionSortOrder _sortOrder = TransactionSortOrder.dateDesc;
+
+  /// 列表是否按日期分组。排序与分组是两个独立维度：日期分组只决定「怎么分段」，
+  /// 排序决定「先后」；关掉分组后是全平铺的列表（每行自带日期）。
+  bool _groupByDate = true;
   DateTime _periodAnchor = DateTime.now();
   late DateTime _visibleDate = widget.initialDate ?? DateTime.now();
   late bool _dateMode = widget.initialDate != null;
@@ -221,6 +232,11 @@ class _TransactionsPageState extends State<TransactionsPage> {
     super.initState();
     _selectedAccountId = widget.accountId;
     _selectedCategoryId = widget.initialCategoryId;
+    // 按天视图（日历/首页日期行进入）优先；否则采用调用方给的期间。
+    if (!_dateMode) {
+      _timeFilter = widget.initialTimeFilter ?? TransactionTimeFilter.all;
+      _periodAnchor = widget.initialPeriodAnchor ?? DateTime.now();
+    }
   }
 
   /// 筛选条件：用户改了「看什么」，就视为重新浏览。
@@ -237,6 +253,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
     _reimbursementFilter,
     _budgetScopeFilter,
     _sortOrder,
+    _groupByDate,
   ];
 
   /// 按签名判断派生结果是否失效；失效才重跑过滤/排序/分组/汇总。
@@ -265,13 +282,24 @@ class _TransactionsPageState extends State<TransactionsPage> {
     _derivedEntries = entries;
     _derivedExpense = sumByType(entries, EntryType.expense);
     _derivedIncome = sumByType(entries, EntryType.income);
-    _derivedGroups = groupEntriesByDate(entries);
+    _derivedGroups = _groupByDate
+        ? _groupedEntries(entries)
+        : const <DateEntryGroup>[];
     // 只有筛选条件变化才回到第一批（输入变化视为「重新浏览」）；账目数据在后台
     // 变化（周期补记、汇率或偏好更新引发的通知）时保留当前深度，不把用户正在
     // 看的位置顶回顶部。
     if (filterChanged) {
       _visibleCount = _pageBatchSize;
     }
+  }
+
+  /// 按日期分组。日期升序时分组顺序也跟着反过来（组内顺序由全局排序决定）；
+  /// 金额排序下分组只负责分段，日期仍按最新在前。
+  List<DateEntryGroup> _groupedEntries(List<LedgerEntry> entries) {
+    final groups = groupEntriesByDate(entries);
+    return _sortOrder == TransactionSortOrder.dateAsc
+        ? groups.reversed.toList(growable: false)
+        : groups;
   }
 
   /// 当前应展示的日期分组：累计交易数达到 _visibleCount 即截断（含跨越该阈值的
@@ -289,8 +317,9 @@ class _TransactionsPageState extends State<TransactionsPage> {
     return result;
   }
 
-  /// 滚动到接近底部（预取余量内）且仍有未展示分组时，追加下一批。数据全在内存，
-  /// 追加只是多渲染几组、无异步等待，故「加载」瞬时完成、不会卡在底部。
+  /// 滚动到接近底部（预取余量内）且仍有未展示内容时，追加下一批。日期分组与
+  /// 金额平铺共用同一个条数阈值；数据全在内存，追加只是多渲染几组/几条、无异步
+  /// 等待，故「加载」瞬时完成、不会卡在底部。
   bool _onScroll(ScrollNotification notification, bool hasMore) {
     if (hasMore && notification.metrics.extentAfter < _prefetchExtent) {
       setState(() => _visibleCount += _pageBatchSize);
@@ -324,8 +353,16 @@ class _TransactionsPageState extends State<TransactionsPage> {
     final entries = _derivedEntries;
     final expense = _derivedExpense;
     final income = _derivedIncome;
-    final visibleGroups = _visibleGroups();
-    final hasMore = visibleGroups.length < _derivedGroups.length;
+    // 排序决定先后，分组决定是否按日期分段；不分组时每行自带日期。
+    final visibleFlat = _groupByDate
+        ? const <LedgerEntry>[]
+        : entries.take(_visibleCount).toList(growable: false);
+    final visibleGroups = _groupByDate
+        ? _visibleGroups()
+        : const <DateEntryGroup>[];
+    final hasMore = _groupByDate
+        ? visibleGroups.length < _derivedGroups.length
+        : visibleFlat.length < entries.length;
     // 悬浮记账按钮（56 + 下边距 16）会压住列表末行金额，底部按需额外避让；多选时
     // 按钮让位给底部批量栏，只保留原来的内容留白。
     final double listBottomPadding = _selectionMode ? 28 : 100;
@@ -387,9 +424,10 @@ class _TransactionsPageState extends State<TransactionsPage> {
                               : (_dateMode
                                     ? currencyUnitSubtitle(
                                         AppLocalizations.of(context),
-                                        AppLocalizations.of(
-                                          context,
-                                        ).dateMonthDay(_visibleDate),
+                                        recordDateLabel(
+                                          AppLocalizations.of(context),
+                                          _visibleDate,
+                                        ),
                                         controller.activeBook.baseCurrencyCode,
                                       )
                                     : currencyUnitSubtitle(
@@ -600,6 +638,24 @@ class _TransactionsPageState extends State<TransactionsPage> {
                       ),
                     ),
                   )
+                else if (!_groupByDate)
+                  SliverPadding(
+                    padding: EdgeInsets.fromLTRB(14, 0, 14, listBottomPadding),
+                    sliver: SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          // 不分组时没有日期分组头，日期改由每行副行给出。
+                          _buildEntryListCard(
+                            controller,
+                            visibleFlat,
+                            showDate: true,
+                          ),
+                          const SizedBox(height: 18),
+                        ],
+                      ),
+                    ),
+                  )
                 else
                   SliverPadding(
                     padding: EdgeInsets.fromLTRB(14, 0, 14, listBottomPadding),
@@ -617,33 +673,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
                                   controller.activeBook.baseCurrencyCode,
                             ),
                             const SizedBox(height: 8),
-                            TransactionListCard(
-                              entries: group.entries,
-                              accounts: controller.accounts,
-                              categories: controller.categories,
-                              tags: controller.tags,
-                              baseCurrencyCode:
-                                  controller.activeBook.baseCurrencyCode,
-                              // 逐笔结余是可选显示；关着时连计算都不做。
-                              balanceAfterEntry: controller.showRunningBalance
-                                  ? controller.balanceAfterEntry
-                                  : null,
-                              selectionMode: _selectionMode,
-                              selectedIds: _selectedIds,
-                              onEntryTap: (entry) {
-                                if (_selectionMode) {
-                                  _toggleSelected(entry.id);
-                                } else {
-                                  openEntryDetail(context, entry);
-                                }
-                              },
-                              onEntryLongPress: (entry) {
-                                setState(() {
-                                  _selectionMode = true;
-                                  _selectedIds.add(entry.id);
-                                });
-                              },
-                            ),
+                            _buildEntryListCard(controller, group.entries),
                             const SizedBox(height: 18),
                           ],
                         );
@@ -655,6 +685,42 @@ class _TransactionsPageState extends State<TransactionsPage> {
           ),
         ),
       ),
+    );
+  }
+
+  /// 一张交易列表卡。日期分组与金额平铺共用同一份入口，避免两处参数漂移；
+  /// 平铺时必须开 [showDate]，否则看不出每行属于哪一天。
+  Widget _buildEntryListCard(
+    VeriFinController controller,
+    List<LedgerEntry> entries, {
+    bool showDate = false,
+  }) {
+    return TransactionListCard(
+      entries: entries,
+      accounts: controller.accounts,
+      categories: controller.categories,
+      tags: controller.tags,
+      showDate: showDate,
+      baseCurrencyCode: controller.activeBook.baseCurrencyCode,
+      // 逐笔结余是可选显示；关着时连计算都不做。
+      balanceAfterEntry: controller.showRunningBalance
+          ? controller.balanceAfterEntry
+          : null,
+      selectionMode: _selectionMode,
+      selectedIds: _selectedIds,
+      onEntryTap: (entry) {
+        if (_selectionMode) {
+          _toggleSelected(entry.id);
+        } else {
+          openEntryDetail(context, entry);
+        }
+      },
+      onEntryLongPress: (entry) {
+        setState(() {
+          _selectionMode = true;
+          _selectedIds.add(entry.id);
+        });
+      },
     );
   }
 
@@ -870,19 +936,40 @@ class _TransactionsPageState extends State<TransactionsPage> {
 
   Widget _buildSortOrderAnchor() {
     final l10n = AppLocalizations.of(context);
-    return AnchoredMenuChoice<TransactionSortOrder>(
-      values: TransactionSortOrder.values,
-      selected: _sortOrder,
-      idOf: (value) => 'transaction_sort_${value.name}',
-      labelOf: (value) => value.label(l10n),
-      iconOf: (value) => switch (value) {
-        TransactionSortOrder.dateDesc => Icons.arrow_downward_rounded,
-        TransactionSortOrder.dateAsc => Icons.arrow_upward_rounded,
-        TransactionSortOrder.amountDesc => Icons.trending_down_rounded,
-        TransactionSortOrder.amountAsc => Icons.trending_up_rounded,
-      },
-      onSelected: (value) => setState(() => _sortOrder = value),
-      semanticLabel: l10n.sortTitle,
+    return AnchoredMenuAnchor(
+      semanticLabel: l10n.sortAndGroupingTitle,
+      entries: <AnchoredMenuEntry>[
+        for (final value in TransactionSortOrder.values)
+          AnchoredMenuItem(
+            id: 'transaction_sort_${value.name}',
+            title: value.label(l10n),
+            icon: switch (value) {
+              TransactionSortOrder.dateDesc => Icons.arrow_downward_rounded,
+              TransactionSortOrder.dateAsc => Icons.arrow_upward_rounded,
+              TransactionSortOrder.amountDesc => Icons.trending_down_rounded,
+              TransactionSortOrder.amountAsc => Icons.trending_up_rounded,
+            },
+            selected: value == _sortOrder,
+            onPressed: () => setState(() => _sortOrder = value),
+          ),
+        const AnchoredMenuDivider(),
+        // 分组与排序是两个独立维度：排序决定先后，分组决定是否按日期分段。
+        // 不分组时列表平铺，日期改由每行副行给出。
+        AnchoredMenuItem(
+          id: 'transaction_sort_group_by_date',
+          title: l10n.sortGroupingByDate,
+          icon: Icons.calendar_view_day_outlined,
+          selected: _groupByDate,
+          onPressed: () => setState(() => _groupByDate = true),
+        ),
+        AnchoredMenuItem(
+          id: 'transaction_sort_no_grouping',
+          title: l10n.sortGroupingNone,
+          icon: Icons.view_list_outlined,
+          selected: !_groupByDate,
+          onPressed: () => setState(() => _groupByDate = false),
+        ),
+      ],
       builder: (context, openMenu, menuOpen) =>
           FilterPill(label: _sortOrder.label(l10n), onTap: openMenu),
     );
@@ -1488,7 +1575,7 @@ class _DateFilterBar extends StatelessWidget {
           icon: const Icon(Icons.chevron_left),
         ),
         FilterPill(
-          label: AppLocalizations.of(context).dateMonthDay(date),
+          label: recordDateLabel(AppLocalizations.of(context), date),
           onTap: onTap,
         ),
         IconButton(

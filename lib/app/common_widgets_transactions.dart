@@ -432,6 +432,19 @@ List<DateEntryGroup> groupEntriesByDate(List<LedgerEntry> entries) {
     ..sort((a, b) => b.date.compareTo(a.date));
 }
 
+/// 记录日期的统一展示：本年只给「几月几日」，非本年补全年份。
+///
+/// 交易列表分组头、交易详情、记账页的日期字段，以及退款、周期规则等所有展示
+/// 「某条记录的日期」的地方都走这里——同一笔交易不该在列表里没有年份、在详情里
+/// 又有（或反过来）。带期间上下文的日期标签（图表横轴、首页/看板的日标签、
+/// 筛选栏的期间名）不适用，它们由所在期间说明年份。
+String recordDateLabel(AppLocalizations l10n, DateTime date, {DateTime? now}) {
+  final current = now ?? DateTime.now();
+  return date.year == current.year
+      ? l10n.dateMonthDay(date)
+      : l10n.dateYearMonthDay(date);
+}
+
 /// 相对今天的日期说明（今天 / 昨天，其余为空）。
 String relativeDay(AppLocalizations l10n, DateTime date) {
   final diff = calendarDaysBetween(date, DateTime.now());
@@ -469,7 +482,7 @@ class DateGroupHeader extends StatelessWidget {
         children: <Widget>[
           Expanded(
             child: Text(
-              '${AppLocalizations.of(context).dateMonthDay(date)}  ${relativeDay(AppLocalizations.of(context), date)}',
+              '${recordDateLabel(AppLocalizations.of(context), date)}  ${relativeDay(AppLocalizations.of(context), date)}',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: Theme.of(
                   context,
@@ -506,6 +519,7 @@ class TransactionListCard extends StatelessWidget {
     this.onEntryLongPress,
     this.selectionMode = false,
     this.selectedIds = const <String>{},
+    this.showDate = false,
     this.baseCurrencyCode,
     this.balanceAfterEntry,
     this.moneyDisplay,
@@ -521,6 +535,10 @@ class TransactionListCard extends StatelessWidget {
   final ValueChanged<LedgerEntry>? onEntryLongPress;
   final bool selectionMode;
   final Set<String> selectedIds;
+
+  /// 行内是否显示日期（[TransactionTile.showDate]）。没有日期分组头的平铺列表
+  /// 需要开启，否则同一张卡里的交易看不出各自是哪一天。
+  final bool showDate;
   final String? baseCurrencyCode;
 
   /// 交易 id → 该账户在这笔之后的余额；为 null 时行内不显示逐笔结余。
@@ -540,6 +558,7 @@ class TransactionListCard extends StatelessWidget {
               tags: tags,
               selectionMode: selectionMode,
               selected: selectedIds.contains(item.$2.id),
+              showDate: showDate,
               baseCurrencyCode: baseCurrencyCode,
               runningBalance: balanceAfterEntry?[item.$2.id],
               moneyDisplay: moneyDisplay,

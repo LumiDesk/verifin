@@ -1446,6 +1446,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sortAmountAsc => '金额升序';
 
   @override
+  String get sortGroupingByDate => '按日期分组';
+
+  @override
+  String get sortGroupingNone => '不分组';
+
+  @override
+  String get sortAndGroupingTitle => '排序与分组';
+
+  @override
   String selectedCount(int count) {
     return '已选 $count 项';
   }
@@ -1481,9 +1490,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get filterTimeTitle => '筛选时间';
-
-  @override
-  String get sortTitle => '排序方式';
 
   @override
   String get filterAccountTitle => '筛选账户';
@@ -3526,7 +3532,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiEntryNoAmount => '未能识别金额，请在描述中说明金额，例如「打车 32」';
 
   @override
-  String get aiWarningCategoryUnmatched => '分类未匹配，已用默认分类，请确认';
+  String get aiWarningCategoryUnmatched => '分类未识别，请在记账页确认';
 
   @override
   String get aiWarningAccountUnmatched => '账户未匹配，已置为无账户，请确认';
