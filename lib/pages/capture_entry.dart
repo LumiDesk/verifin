@@ -47,15 +47,20 @@ Future<bool> ensureAiConfigured(BuildContext context) async {
 
 /// 从 controller 组装喂给 AI 的账本上下文（分类/账户清单、当前时刻、账本）。
 AiEntryContext buildAiEntryContext(VeriFinController controller) {
-  List<AiOption> optionsFor(EntryType type) => controller
-      .categoriesForType(type)
-      .map(
-        (category) => AiOption(
-          id: category.id,
-          label: controller.categoryPathLabel(category.id),
-        ),
-      )
-      .toList();
+  List<AiOption> optionsFor(EntryType type) {
+    return controller
+        .categoriesForType(type)
+        .map(
+          (category) => AiOption(
+            id: category.id,
+            label: controller.categoryPathLabel(category.id),
+            // 未分类兜底：AI 认不出分类时落到它，而不是列表第一个分类。
+            isUncategorized: category.isUncategorized,
+          ),
+        )
+        .toList();
+  }
+
   final accounts = controller.accounts
       .where((account) => !account.hidden)
       .map(

@@ -125,9 +125,9 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | 名称 | 类型 | 位置 | 用途 |
 |---|---|---|---|
 | `TransactionTile` | Widget | `common_widgets.dart` | 单条交易行（图标+分类+时间/备注+金额+账户 pill+待报销/已退款徽标，多选态内建）；副行的跨币种换算**只在两端币种不同时**渲染（同币种两端的换算整条是重复信息），`forceUnit: true` 只留给真正同屏出现第二个币种的换算字段；`moneyDisplay` 仅供非活动账本结果（如 AI 对话）显式覆盖单位口径，普通页面保持为空 |
-| `TransactionListCard` | Widget | `common_widgets.dart` | 交易列表卡（多条 `TransactionTile` + 分隔线）；可透传 `moneyDisplay`，AI 等非活动账本结果使用；AI 对话调用时不传 `onEntryTap`，保持只读 |
-| `DateGroupHeader` | Widget | `common_widgets.dart` | 日期分组小标题（日期+今天/昨天+当日合计） |
-| `groupEntriesByDate` / `relativeDay` | 纯函数 | `common_widgets.dart` | 按日分组、日期倒序 / 相对今天；`DateEntryGroup` 分组模型 |
+| `TransactionListCard` | Widget | `common_widgets.dart` | 交易列表卡（多条 `TransactionTile` + 分隔线）；可透传 `moneyDisplay`，AI 等非活动账本结果使用；AI 对话调用时不传 `onEntryTap`，保持只读。`showDate` 为真时逐行显示日期，供「不分组」的平铺交易列表使用 |
+| `DateGroupHeader` | Widget | `common_widgets.dart` | 日期分组小标题（日期+今天/昨天+当日合计）；日期文案走 `recordDateLabel` |
+| `groupEntriesByDate` / `relativeDay` / `recordDateLabel` | 纯函数 | `common_widgets.dart` | 按日分组、日期倒序 / 相对今天（今天、昨天）/ 记录日期（本年只给「几月几日」，非本年补全年份）；列表分组头、交易详情、记账页、退款与周期规则等展示「某条记录的日期」统一走 `recordDateLabel`，带期间上下文的图表横轴与筛选标签不要用；`DateEntryGroup` 分组模型 |
 | `CalendarPreview` | Widget | `common_widgets.dart` | 月历预览（内建月份切换、非当前月份显示「本月」回跳按钮 + 日收支）；必传 `currencyCode`；单币种账本隐藏单位时右下角不再显示轻量单位提示，并**连同前置 6dp 间距整块不构建**（`if (!textCurrencyUnitHidden)`，见维护约定），多币种账本照常显示 |
 | `VeriCalendarHeatmap` | Widget | `common_widgets_heatmap.dart` | 月历热力图：12 个月各一张迷你日历，按天着色（值越大越深，无记录为浅底）。固定尺寸格子 + `RepaintBoundary`，格子尺寸按可用宽度一次算出（默认 4 列），领空格不生成 Widget；调用方传 `year` / `dailyValues` / 深浅两色 / 月份文案。配套纯函数 `heatmapDayIndexOfYear` 把日期映射成 `dailyValues` 下标（**必须走 `calendarDaysBetween`**，`difference().inDays` 在夏令时地区会少算一天）。看板「收支热力」卡用它 |
 | `EntryTagField` | Widget | `common_widgets.dart` | 记账表单标签行 |

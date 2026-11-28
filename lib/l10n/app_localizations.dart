@@ -2792,6 +2792,24 @@ abstract class AppLocalizations {
   /// **'金额升序'**
   String get sortAmountAsc;
 
+  /// No description provided for @sortGroupingByDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'按日期分组'**
+  String get sortGroupingByDate;
+
+  /// No description provided for @sortGroupingNone.
+  ///
+  /// In zh, this message translates to:
+  /// **'不分组'**
+  String get sortGroupingNone;
+
+  /// No description provided for @sortAndGroupingTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'排序与分组'**
+  String get sortAndGroupingTitle;
+
   /// No description provided for @selectedCount.
   ///
   /// In zh, this message translates to:
@@ -6515,7 +6533,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiWarningCategoryUnmatched.
   ///
   /// In zh, this message translates to:
-  /// **'分类未匹配，已用默认分类，请确认'**
+  /// **'分类未识别，请在记账页确认'**
   String get aiWarningCategoryUnmatched;
 
   /// No description provided for @aiWarningAccountUnmatched.

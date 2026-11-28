@@ -1484,6 +1484,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sortAmountAsc => 'Amount, low to high';
 
   @override
+  String get sortGroupingByDate => 'Group by date';
+
+  @override
+  String get sortGroupingNone => 'No grouping';
+
+  @override
+  String get sortAndGroupingTitle => 'Sort and group';
+
+  @override
   String selectedCount(int count) {
     return '$count selected';
   }
@@ -3619,7 +3628,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiWarningCategoryUnmatched =>
-      'Category not matched — a default was used, please confirm';
+      'Category not recognized — please confirm on the entry page';
 
   @override
   String get aiWarningAccountUnmatched =>

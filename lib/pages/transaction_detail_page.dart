@@ -331,7 +331,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                       DetailInfoRow(
                         label: AppLocalizations.of(context).dateLabel,
                         value:
-                            '${AppLocalizations.of(context).dateMonthDay(_occurredAt)}  ${relativeDay(AppLocalizations.of(context), _occurredAt)}',
+                            '${recordDateLabel(AppLocalizations.of(context), _occurredAt)}  ${relativeDay(AppLocalizations.of(context), _occurredAt)}',
                         onTap: _pickDate,
                       ),
                       DetailInfoRow(

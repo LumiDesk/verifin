@@ -212,7 +212,7 @@ class _RefundRow extends StatelessWidget {
                   ),
                   Text(
                     '${settled ? l10n.refundStatusSettled : l10n.refundStatusPending}'
-                    ' · ${l10n.dateMonthDay(date)}'
+                    ' · ${recordDateLabel(l10n, date)}'
                     '${refund.note.isEmpty ? '' : ' · ${refund.note}'}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -757,13 +757,13 @@ class _RefundSheetState extends State<_RefundSheet> {
                   DetailInfoRow(
                     label: l10n.refundArrivalDateLabel,
                     value:
-                        '${l10n.dateMonthDay(_settledAt)}  ${relativeDay(l10n, _settledAt)}',
+                        '${recordDateLabel(l10n, _settledAt)}  ${relativeDay(l10n, _settledAt)}',
                     onTap: () => _pickDate(arrival: true),
                   ),
                 DetailInfoRow(
                   label: l10n.refundInitiatedDateLabel,
                   value:
-                      '${l10n.dateMonthDay(_initiatedAt)}  ${relativeDay(l10n, _initiatedAt)}',
+                      '${recordDateLabel(l10n, _initiatedAt)}  ${relativeDay(l10n, _initiatedAt)}',
                   onTap: () => _pickDate(arrival: false),
                 ),
                 DetailInfoRow(

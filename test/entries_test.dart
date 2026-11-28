@@ -9,6 +9,11 @@ import 'package:verifin/pages/transactions_pages.dart';
 
 import 'support/test_harness.dart';
 
+List<String> _tileNotes(WidgetTester tester) => tester
+    .widgetList<TransactionTile>(find.byType(TransactionTile))
+    .map((tile) => tile.entry.note)
+    .toList(growable: false);
+
 void main() {
   useTestDatabases();
 
@@ -91,6 +96,153 @@ void main() {
     await tester.tap(find.text('无需报销'));
     await tester.pumpAndSettle();
     expect(find.text('无需报销'), findsOneWidget);
+  });
+
+  testWidgets('排序与分组相互独立：金额排序可平铺，也可按日期分组', (tester) async {
+    // 两个日期分组 + 汇总区需要更高的画布，避免懒构建让第二组还没进入视口。
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final controller = await makeController();
+    addTearDown(controller.dispose);
+    final bookId = controller.activeBook.id;
+    void add(String id, double amount, String note, DateTime when) {
+      controller.addEntry(
+        LedgerEntry(
+          id: id,
+          bookId: bookId,
+          type: EntryType.expense,
+          amount: amount,
+          categoryId: 'dining',
+          accountId: 'cash',
+          note: note,
+          occurredAt: when,
+        ),
+      );
+    }
+
+    add('a', 30, '最贵', DateTime(2026, 7, 12, 12));
+    add('b', 10, '最便宜', DateTime(2026, 7, 12, 9));
+    add('c', 20, '中间', DateTime(2026, 7, 11, 20));
+
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(home: const TransactionsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 默认：日期降序 + 按日期分组，两天两个分组头。
+    expect(find.byType(DateGroupHeader), findsNWidgets(2));
+
+    // 只改排序、不改分组：仍是两个日期分组头，组内按金额升序。
+    await tester.tap(find.text('日期降序'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(
+        const ValueKey<String>('anchored_menu_item_transaction_sort_amountAsc'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(DateGroupHeader), findsNWidgets(2));
+    expect(_tileNotes(tester), <String>['最便宜', '最贵', '中间']);
+
+    // 关掉分组：平铺按金额升序，每行自带日期。
+    await tester.tap(find.text('金额升序'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(
+        const ValueKey<String>(
+          'anchored_menu_item_transaction_sort_no_grouping',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(DateGroupHeader), findsNothing);
+    expect(_tileNotes(tester), <String>['最便宜', '中间', '最贵']);
+    expect(find.textContaining('07/11'), findsOneWidget);
+
+    // 再打开按日期分组：恢复两个分组头，组内仍按金额升序。
+    await tester.tap(find.text('金额升序'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(
+        const ValueKey<String>(
+          'anchored_menu_item_transaction_sort_group_by_date',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(DateGroupHeader), findsNWidgets(2));
+    expect(_tileNotes(tester), <String>['最便宜', '最贵', '中间']);
+
+    // 日期升序：分组顺序也跟着反转为最早的一天在前。
+    await tester.tap(find.text('金额升序'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(
+        const ValueKey<String>('anchored_menu_item_transaction_sort_dateAsc'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(_tileNotes(tester), <String>['中间', '最便宜', '最贵']);
+  });
+
+  testWidgets('非本年的交易在列表分组头和详情日期行显示年份', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final controller = await makeController();
+    addTearDown(controller.dispose);
+    final bookId = controller.activeBook.id;
+    final now = DateTime.now();
+    final previousYear = DateTime(now.year - 1, 7, 3, 12);
+    final thisYear = DateTime(now.year, 7, 4, 12);
+    controller
+      ..addEntry(
+        LedgerEntry(
+          id: 'old',
+          bookId: bookId,
+          type: EntryType.expense,
+          amount: 10,
+          categoryId: 'dining',
+          accountId: 'cash',
+          note: '去年',
+          occurredAt: previousYear,
+        ),
+      )
+      ..addEntry(
+        LedgerEntry(
+          id: 'new',
+          bookId: bookId,
+          type: EntryType.expense,
+          amount: 20,
+          categoryId: 'dining',
+          accountId: 'cash',
+          note: '今年',
+          occurredAt: thisYear,
+        ),
+      );
+
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(home: const TransactionsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 非本年：分组头带完整年份；本年：仍只给月日。
+    expect(find.textContaining('${previousYear.year}年7月3日'), findsOneWidget);
+    expect(find.textContaining('${thisYear.year}年'), findsNothing);
+
+    // 详情页的日期行同样遵循「非本年才带年」。
+    await tester.tap(find.text('去年'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('${previousYear.year}年7月3日'), findsOneWidget);
   });
 
   testWidgets('收支统计页可切换周/月/季/年视图', (WidgetTester tester) async {

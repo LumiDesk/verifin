@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../category_tree.dart';
 import '../currency_catalog.dart';
 import '../models.dart';
 import 'ai_client.dart';
@@ -7,11 +8,21 @@ import 'ai_settings.dart';
 
 /// 一个可选项（分类或账户），供 AI 从中挑选并回传 id。
 class AiOption {
-  const AiOption({required this.id, required this.label, this.currencyCode});
+  const AiOption({
+    required this.id,
+    required this.label,
+    this.currencyCode,
+    this.isUncategorized = false,
+  });
 
   final String id;
+
+  /// 分类用完整路径（如「餐饮 / 外卖」）；账户用名称。
   final String label;
   final String? currencyCode;
+
+  /// 该分类是否为「未分类」兜底。AI 认不出分类时落到这里，而不是列表第一个分类。
+  final bool isUncategorized;
 }
 
 /// 喂给 AI 的账本上下文：可选的分类/账户清单、今天日期、当前账本。
@@ -111,16 +122,33 @@ String buildAiEntryPrompt(AiEntryContext context) {
             )
             .join('\n');
 
+  // 示例用清单里的真实 id 与名称，避免模型照着假 id（如 "transport"）编造。
+  final exampleCategory = context.expenseCategories.isNotEmpty
+      ? context.expenseCategories.first
+      : null;
+  final example = jsonEncode(<String, Object?>{
+    'type': 'expense',
+    'amount': 32,
+    'currencyCode': context.baseCurrencyCode,
+    'categoryId': exampleCategory?.id ?? '',
+    'category': exampleCategory?.label ?? '',
+    'accountId': '',
+    'toAccountId': null,
+    'note': '午餐',
+    'date': _dateKey(context.today),
+    'time': null,
+  });
+
   return '''
 你是一个记账助手。请把用户用自然语言描述的一笔账，解析成一个 JSON 对象。
 现在是 ${_dateKey(context.today)} ${_timeKey(context.today)}（当前日期与时间，用于解析「今天」「昨天」「前天」「上午」「晚上八点」「半小时前」等相对日期或时间）。
 
-只能从下面给定的清单里选择 categoryId 和 accountId，必须原样回传清单中的 id，不要自造 id。
+只能使用下面清单里给出的分类和账户，不要编造清单外的 id 或名称。
 
-支出分类（categoryId 从这里选）：
+支出分类（每行是「id | 完整名称」）：
 ${optionsBlock(context.expenseCategories)}
 
-收入分类（categoryId 从这里选）：
+收入分类（每行是「id | 完整名称」）：
 ${optionsBlock(context.incomeCategories)}
 
 账户（accountId / toAccountId 从这里选）：
@@ -130,7 +158,9 @@ $accountsBlock
 - type：支出用 "expense"，收入用 "income"，账户间转账用 "transfer"。默认为 "expense"。
 - amount：正数金额（不带货币符号）。无法识别金额时置为 0。
 - currencyCode：金额原币的 ISO 4217 三位代码。用户明确提到美元、日元、货币符号或代码时据此判断；否则使用所选账户币种，没有账户则使用账本本位币 ${context.baseCurrencyCode}。
-- categoryId：按 type 从对应清单里选最贴切的一项；转账可留空字符串。
+- categoryId：清单里该分类前面的 id，必须原样复制（通常是随机字符串），不要把分类名当 id。无法确定 id 时留空字符串。
+- category：该分类在清单里的完整名称（含父分类路径，如「餐饮 / 外卖」）。填了 categoryId 时可以留空；无法确定 id 时填名称，程序会按名称匹配。
+- 清单里没有合适的分类时，categoryId 与 category 都留空字符串；不要用清单外的分类。
 - accountId：从账户清单选最贴切的；用户没提到账户就留空字符串 ""（表示无账户）。
 - toAccountId：仅转账时填转入账户 id，否则为 null。
 - note：一句话备注，保留用户输入的原始语言；没有额外信息就留空字符串。
@@ -138,7 +168,7 @@ $accountsBlock
 - time：形如 "HH:MM"（24 小时制）。仅当用户明确提到具体时间（如「晚上八点」记 "20:00"、「中午」记 "12:00"、「刚刚」用当前时间）时才填；用户没提时间就置为 null。
 
 只输出一个 JSON 对象，不要任何解释、不要 Markdown 代码块。格式：
-{"type":"expense","amount":32,"currencyCode":"${context.baseCurrencyCode}","categoryId":"transport","accountId":"","toAccountId":null,"note":"打车","date":"${_dateKey(context.today)}","time":null}
+$example
 ''';
 }
 
@@ -253,20 +283,27 @@ AiEntryDraft parseAiEntryDraft(String content, AiEntryContext context) {
   final categories = type == EntryType.income
       ? context.incomeCategories
       : context.expenseCategories;
-  final categoryIds = categories.map((o) => o.id).toSet();
-  var categoryId = _parseString(json['categoryId']);
-  if (categoryId.isEmpty || !categoryIds.contains(categoryId)) {
-    if (type == EntryType.transfer) {
-      categoryId = '';
-    } else if (categories.isNotEmpty) {
-      final wasNonEmpty = categoryId.isNotEmpty;
-      categoryId = categories.first.id;
-      if (wasNonEmpty) {
-        warnings.add(AiDraftWarning.categoryUnmatched);
-      }
-    } else {
-      categoryId = '';
+  final rawCategoryId = _parseString(json['categoryId']);
+  final rawCategoryName = _parseString(json['category']);
+  final matchedCategoryId = _resolveCategoryId(
+    rawId: rawCategoryId,
+    rawName: rawCategoryName,
+    categories: categories,
+  );
+  String categoryId;
+  if (type == EntryType.transfer) {
+    // 转账的分类由记账页按本账本的「转账」分类补齐，AI 不挑。
+    categoryId = '';
+  } else if (matchedCategoryId != null) {
+    categoryId = matchedCategoryId;
+  } else {
+    if (rawCategoryId.isNotEmpty || rawCategoryName.isNotEmpty) {
+      warnings.add(AiDraftWarning.categoryUnmatched);
     }
+    // 认不出就落到本类型的「未分类」；账本还没有兜底分类时返回空分类（记账页会提示确认），不回退到清单第一个分类。
+    categoryId =
+        categories.where((option) => option.isUncategorized).firstOrNull?.id ??
+        '';
   }
 
   final accountIds = context.accounts.map((o) => o.id).toSet();
@@ -313,6 +350,91 @@ AiEntryDraft parseAiEntryDraft(String content, AiEntryContext context) {
     occurredAt: occurredAt,
     warnings: warnings,
   );
+}
+
+/// 把模型回传的分类解析到清单里的 id：先按 id 精确匹配，再按名称匹配。
+///
+/// 模型经常不照抄随机 id（而是回传「网购」这样的名称），只比对 id 会把明明存在的
+/// 分类判成未识别。名称解析放在这里做，不额外发请求。
+String? _resolveCategoryId({
+  required String rawId,
+  required String rawName,
+  required List<AiOption> categories,
+}) {
+  if (rawId.isNotEmpty) {
+    for (final option in categories) {
+      if (option.id == rawId) {
+        return option.id;
+      }
+    }
+  }
+  // categoryId 里也可能装着分类名（模型把名称填进了 id 字段），一并当名称尝试。
+  for (final candidate in <String>[rawName, rawId]) {
+    if (candidate.trim().isEmpty) {
+      continue;
+    }
+    final matched = _matchCategoryByName(candidate, categories);
+    if (matched != null) {
+      return matched;
+    }
+  }
+  return null;
+}
+
+/// 名称解析顺序：完整路径精确 → 叶子名精确 → 唯一包含匹配。
+/// 命中多个候选（同名分类）时返回 null，交给「未分类」兜底，不猜。
+String? _matchCategoryByName(String raw, List<AiOption> categories) {
+  final target = _canonicalCategoryName(raw);
+  if (target.isEmpty) {
+    return null;
+  }
+  final exact = categories
+      .where((option) => _canonicalCategoryName(option.label) == target)
+      .toList(growable: false);
+  if (exact.length == 1) {
+    return exact.first.id;
+  }
+  if (exact.length > 1) {
+    return null;
+  }
+  final leafExact = categories
+      .where(
+        (option) => _canonicalCategoryName(_leafLabel(option.label)) == target,
+      )
+      .toList(growable: false);
+  if (leafExact.length == 1) {
+    return leafExact.first.id;
+  }
+  if (leafExact.length > 1) {
+    return null;
+  }
+  // 单字名称太容易误配（如「餐」），只对两个字符以上的名称做包含匹配。
+  if (target.length < 2) {
+    return null;
+  }
+  final contains = categories
+      .where((option) {
+        final label = _canonicalCategoryName(option.label);
+        return label.contains(target) || target.contains(label);
+      })
+      .toList(growable: false);
+  return contains.length == 1 ? contains.first.id : null;
+}
+
+/// 分类名的比较形态：每段做全半角/大小写归一，去掉首尾空白，再用 " / " 重新连接。
+/// 这样「餐饮／咖啡」「餐饮 / 咖啡」「 餐饮 / 咖啡 」都能落到同一个键。
+String _canonicalCategoryName(String label) {
+  final parts = label
+      .split(RegExp(r'\s*[/／]\s*'))
+      .map(normalizedCategoryLabel)
+      .where((part) => part.isNotEmpty);
+  return parts.join(' / ');
+}
+
+/// 分类路径的最后一段（`pathLabel` 用 " / " 连接）。
+String _leafLabel(String label) {
+  final parts = label.split(RegExp(r'\s*[/／]\s*'));
+  return (parts.isEmpty ? label : parts.last).trim();
 }
 
 /// 发起一次 AI 记账解析：请求 → 解析 → 校验，返回草稿。网络/解析异常抛 [AiException]。

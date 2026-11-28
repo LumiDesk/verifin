@@ -947,9 +947,10 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                           chipKey: const Key('entry_metadata_date'),
                           icon: Icons.calendar_today_outlined,
                           label: Text(
-                            AppLocalizations.of(
-                              context,
-                            ).dateMonthDay(_occurredAt),
+                            recordDateLabel(
+                              AppLocalizations.of(context),
+                              _occurredAt,
+                            ),
                           ),
                           onTap: _pickDate,
                         ),

@@ -124,6 +124,10 @@ class _ReportsPageState extends State<ReportsPage> {
         case 'ranking':
           return _RankingPanel(
             window: _tab == ReportPeriodTab.yearly ? yearWindow : monthWindow,
+            // 下钻的交易列表要沿用这里的统计期间，不能退回「全部历史」。
+            period: _tab == ReportPeriodTab.yearly
+                ? TransactionTimeFilter.year
+                : TransactionTimeFilter.month,
           );
         case 'year_trend':
           return _YearTrendPanel(
@@ -1443,10 +1447,13 @@ enum _RankGrouping { topCategory, subCategory, tag }
 /// 月统计的排行卡：分类 / 子分类 / 标签排行，点行可下钻到子分类拆分与交易列表。
 /// 聚合口径来自 `report_analysis.dart` 的纯函数（与 AI 账目查询工具共用）。
 class _RankingPanel extends StatefulWidget {
-  const _RankingPanel({required this.window});
+  const _RankingPanel({required this.window, required this.period});
 
   /// 排行取数窗口：月统计传整月、年统计传整年。
   final DateWindow window;
+
+  /// 与 [window] 对应的时间档，下钻交易列表时一并带上。
+  final TransactionTimeFilter period;
 
   @override
   State<_RankingPanel> createState() => _RankingPanelState();
@@ -1539,6 +1546,7 @@ class _RankingPanelState extends State<_RankingPanel> {
           children: <Widget>[
             for (final stat in stats)
               _RankRow(
+                key: Key('ranking_row_${stat.categoryId}'),
                 leading: CategoryIconBox(
                   iconCode: stat.category.iconCode,
                   color: color,
@@ -1571,6 +1579,7 @@ class _RankingPanelState extends State<_RankingPanel> {
             for (final stat in stats)
               // 标签没有对应的交易列表筛选入口，行不可点。
               _RankRow(
+                key: Key('ranking_tag_row_${stat.tag.id}'),
                 leading: VeriIconBox(
                   icon: Icons.label_outline,
                   color: color,
@@ -1611,7 +1620,12 @@ class _RankingPanelState extends State<_RankingPanel> {
   void _openCategoryEntries(String categoryId) {
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (_) => TransactionsPage(initialCategoryId: categoryId),
+        builder: (_) => TransactionsPage(
+          initialCategoryId: categoryId,
+          // 卡片按当前期间统计，下钻列表也必须落在同一期间，否则数字对不上。
+          initialTimeFilter: widget.period,
+          initialPeriodAnchor: widget.window.start,
+        ),
       ),
     );
   }
@@ -1725,6 +1739,7 @@ class _RankingPanelState extends State<_RankingPanel> {
 /// 排行行：图标 + 名称 + 金额 + 占比进度条 + 占比/笔数。可选点按下钻。
 class _RankRow extends StatelessWidget {
   const _RankRow({
+    super.key,
     required this.leading,
     required this.label,
     required this.amount,
