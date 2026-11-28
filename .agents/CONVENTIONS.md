@@ -7,7 +7,7 @@
 
 ## 分支与合并
 
-- `main` 受保护：要求 PR + 必需状态检查，禁止强推与删除。
+- `main` 受保护：要求 PR + merge commit，禁止强推与删除；不要求状态检查（CI 只在发版构建时运行）。
 - 合并只用 **merge commit**（仓库已关闭 squash / rebase），保留可回退的合并点。
 - 合并后删除分支（仓库已开启自动删除）。
 - 合并前三件事：必需检查全绿、`mergeStateStatus=CLEAN`、`mergeable`。
@@ -18,7 +18,7 @@
 
 - dependabot 每周开一个分组 PR（actions 一组、pub 一组，最多 1 个未合并）。
 - 依赖 PR 只应改 `.github/workflows/*`、`pubspec.yaml`、`pubspec.lock`；动了别的就停下问。
-- 大版本跳跃：PR 上的 CI 不构建安装包，**合并后必须确认 `main` 的 CI**。
+- 大版本跳跃：不在 PR 上跑 CI；合并前本地通过 `flutter analyze` / `flutter test`，发版构建时验证安装包。
 - 被当前工具链阻塞的 major 更新在 `.github/dependabot.yml` 的 `ignore` 里登记并注明原因（当前为 `month_picker_dialog` 与 `flutter_local_notifications`），升级 Flutter / AGP 后移除。
 - 升级让旧注释过期时，一并改掉（例：pubspec 里"显式锁某版本"的说明）。
 

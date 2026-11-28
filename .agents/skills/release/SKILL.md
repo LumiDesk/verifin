@@ -12,6 +12,7 @@ description: Use when the user asks to publish a new Veri Fin version (patch, mi
 
 - 用户明确说了要发版，并给了 `patch` / `minor` / `major`。
 - 工作区干净，`main` 与 `origin/main` 同步。
+- 提交前已在本地跑过 `dart format .`、`flutter analyze`、`flutter test`：仓库不在 PR / push 上跑 CI，质量门禁不能指望远端。
 
 ## 1. 合并到 main（非快进）
 
@@ -21,7 +22,6 @@ description: Use when the user asks to publish a new Veri Fin version (patch, mi
 ```bash
 git push -u origin <branch>
 gh pr create --fill --base main
-gh pr checks --watch
 gh pr merge --merge --delete-branch        # 不要 squash、不要 rebase
 git checkout main && git pull --ff-only
 ```
@@ -38,7 +38,7 @@ git fetch --prune
 ## 3. 写两份材料
 
 `scripts/publish.dart` 会先检查发布说明，缺文件时在改版本号之前退出；
-CI 的 `checks` job 还会在构建前再查一次。
+发版构建还会在构建前再校验一次。
 
 | 文件 | 要求 |
 |---|---|
@@ -58,11 +58,11 @@ dart run scripts/publish.dart patch       # 或 minor / major / X.Y.Z
 
 脚本会：切出 `release/vX.Y.Z` 分支 → 递增版本 → 写 `pubspec.yaml` 与
 `lib/app/app_version.dart` → `dart format` → `flutter analyze` → `flutter test` →
-提交 `chore: release vX.Y.Z` → 推送分支 → 开 PR → 等检查 → 合并（merge commit）→
+提交 `chore: release vX.Y.Z` → 推送分支 → 开 PR → 合并（merge commit）→
 回到 `main` → 打 tag → 推送 tag。
 
-`main` 是受保护分支（要求 PR + 状态检查），脚本不再直接推 `main`。中途失败时分支与
-PR 都会留着：修好重跑，或手动合并在本地补 tag。
+`main` 是受保护分支（要求 PR + merge commit，不要求状态检查），脚本不再直接推 `main`。
+中途失败时分支与 PR 都会留着：修好重跑，或手动合并后在本地补 tag。
 
 ## 5. 盯着 CI 到绿
 
@@ -71,15 +71,16 @@ gh run list --limit 3
 gh run watch <run-id> --exit-status
 ```
 
-`.github/workflows/flutter.yml` 会先校验发布说明，再跑设计契约测试、构建 github flavor 的
-arm64 APK 与 AAB、校验 ABI 与 versionCode，最后创建**预发布**。
+`.github/workflows/flutter.yml` 是仓库唯一的 CI：先校验发布说明，再构建 github flavor 的
+arm64 APK 与 AAB、校验 ABI 与 versionCode，最后创建**预发布**。它不跑测试——
+格式、analyze 与测试已经在本地完成。
 
 ### 失败怎么处置
 
 | 情况 | 处置 |
 |---|---|
-| 格式、lint、测试期望过期 | 直接修，重跑，不用汇报 |
 | 依赖下载 5xx、runner 抖动 | 重跑同一 job；连续两次同因失败才升级 |
+| 本地测试 / analyze 失败 | 修好并重新提交，不要推标签 |
 | 缺发布说明 / CHANGELOG 段 | 补文件后重新发下一个 `patch`（不要移动 tag） |
 | versionCode 校验失败 | 停下，检查 `pubspec.yaml` 的 build number |
 | 需要改产品行为、数据格式或签名 | **停下来汇报** |

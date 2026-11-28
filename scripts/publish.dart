@@ -165,7 +165,7 @@ Future<int> _run(List<String> arguments) async {
       '  2. dart format . && flutter pub get && flutter analyze && flutter test',
     );
     info('  3. 提交 chore: release ${next.tag} 并推送分支');
-    info('  4. 开 PR，等检查通过后合并（main 受保护分支）');
+    info('  4. 开 PR 并合并（main 受保护分支，不要求状态检查）');
     info('  5. git tag ${next.tag} && git push origin ${next.tag}');
     info('');
     success('dry-run 结束：未做任何改动。');
@@ -225,15 +225,8 @@ Future<int> _run(List<String> arguments) async {
     '--base',
     'main',
   ], workingDirectory: root);
-  info('等待 PR 检查（格式、analyze、测试都在 PR 上跑）…');
-  await run(<String>[
-    'gh',
-    'pr',
-    'checks',
-    '--watch',
-    '--interval',
-    '20',
-  ], workingDirectory: root);
+  // 仓库不在 PR 上跑 CI（见 AGENTS.md「CI 与发版」）：质量门禁刚在本地跑过，
+  // 这里直接合并，只有推送标签后的发版构建会跑 GitHub Actions。
   await run(<String>[
     'gh',
     'pr',
