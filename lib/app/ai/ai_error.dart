@@ -65,13 +65,20 @@ String aiErrorMessage(AppLocalizations l10n, AiException error) {
 /// 其它请求错误区分开；只匹配同时出现图片/视觉与不支持语义的详情。
 bool isUnsupportedVisionError(AiException error) {
   final detail = error.detail?.toLowerCase() ?? '';
-  if (!detail.contains('image') &&
-      !detail.contains('vision') &&
-      !detail.contains('multimodal')) {
+  final mentionsImage =
+      detail.contains('image') ||
+      detail.contains('vision') ||
+      detail.contains('multimodal') ||
+      detail.contains('图片') ||
+      detail.contains('图像') ||
+      detail.contains('视觉');
+  if (!mentionsImage) {
     return false;
   }
   return detail.contains('unsupported') ||
       detail.contains('not support') ||
       detail.contains('invalid') ||
-      detail.contains('unknown');
+      detail.contains('unknown') ||
+      detail.contains('不支持') ||
+      detail.contains('不支援');
 }

@@ -113,6 +113,30 @@ void main() {
     },
   );
 
+  test('recognizes localized unsupported-image details', () {
+    expect(
+      isUnsupportedVisionError(
+        AiException(AiErrorCode.serverError, detail: '当前模型不支持图片输入'),
+      ),
+      isTrue,
+    );
+    expect(
+      isUnsupportedVisionError(
+        AiException(
+          AiErrorCode.serverError,
+          detail: 'vision input not supported',
+        ),
+      ),
+      isTrue,
+    );
+    expect(
+      isUnsupportedVisionError(
+        AiException(AiErrorCode.serverError, detail: 'quota exceeded'),
+      ),
+      isFalse,
+    );
+  });
+
   test('image rejection is mapped to visionUnsupported', () async {
     final settings = await _serve((request, body) async {
       request.response.statusCode = HttpStatus.badRequest;
