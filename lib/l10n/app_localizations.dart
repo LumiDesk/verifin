@@ -6428,12 +6428,6 @@ abstract class AppLocalizations {
   /// **'重新回答'**
   String get aiRetryAnswer;
 
-  /// No description provided for @aiPrivacyNotice.
-  ///
-  /// In zh, this message translates to:
-  /// **'AI 功能会把你输入的文字，以及回答问题所需的只读账目查询摘要发送到你配置的第三方服务；配置和完整账目仍只存本机。'**
-  String get aiPrivacyNotice;
-
   /// No description provided for @aiEntryTitle.
   ///
   /// In zh, this message translates to:
@@ -6521,26 +6515,38 @@ abstract class AppLocalizations {
   /// No description provided for @screenshotEntryButton.
   ///
   /// In zh, this message translates to:
-  /// **'截图识账'**
+  /// **'图片识账'**
   String get screenshotEntryButton;
-
-  /// No description provided for @screenshotEntryUnsupported.
-  ///
-  /// In zh, this message translates to:
-  /// **'当前设备不支持图片文字识别'**
-  String get screenshotEntryUnsupported;
-
-  /// No description provided for @screenshotEntryNoText.
-  ///
-  /// In zh, this message translates to:
-  /// **'没有从图片里识别到文字，请换一张更清晰的截图'**
-  String get screenshotEntryNoText;
 
   /// No description provided for @captureEntryRecognizing.
   ///
   /// In zh, this message translates to:
   /// **'正在识别账单内容…'**
   String get captureEntryRecognizing;
+
+  /// No description provided for @visionEntryUnsupported.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前模型不支持图片输入，请在 AI 设置中更换支持视觉的模型'**
+  String get visionEntryUnsupported;
+
+  /// No description provided for @visionEntryNoResult.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 未返回可识别的结果，请换一张更清晰的账单截图'**
+  String get visionEntryNoResult;
+
+  /// No description provided for @visionEntryImageInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法读取这张图片，请换一张'**
+  String get visionEntryImageInvalid;
+
+  /// No description provided for @visionEntryImageTooLarge.
+  ///
+  /// In zh, this message translates to:
+  /// **'图片过大，请换一张或重新选择'**
+  String get visionEntryImageTooLarge;
 
   /// No description provided for @captureEntryNoTransaction.
   ///

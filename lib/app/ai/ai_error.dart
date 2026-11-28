@@ -18,6 +18,7 @@ enum AiErrorCode {
   responseTooLarge,
   requestTooLarge,
   protocolUnsupported,
+  visionUnsupported,
   modelListUnsupported,
   upstream,
   unknown,
@@ -52,9 +53,25 @@ String aiErrorMessage(AppLocalizations l10n, AiException error) {
     AiErrorCode.responseTooLarge => l10n.aiErrResponseTooLarge,
     AiErrorCode.requestTooLarge => l10n.aiErrRequestTooLarge,
     AiErrorCode.protocolUnsupported => l10n.aiErrNotSupported,
+    AiErrorCode.visionUnsupported => l10n.visionEntryUnsupported,
     AiErrorCode.modelListUnsupported => l10n.aiErrModelListUnsupported,
     AiErrorCode.upstream => l10n.aiErrUpstream,
     AiErrorCode.unknown => l10n.aiErrUnknown,
   };
   return base;
+}
+
+/// 上游错误是否明确表示“不接受图片输入”。用于把 400/422 的图片能力错误与
+/// 其它请求错误区分开；只匹配同时出现图片/视觉与不支持语义的详情。
+bool isUnsupportedVisionError(AiException error) {
+  final detail = error.detail?.toLowerCase() ?? '';
+  if (!detail.contains('image') &&
+      !detail.contains('vision') &&
+      !detail.contains('multimodal')) {
+    return false;
+  }
+  return detail.contains('unsupported') ||
+      detail.contains('not support') ||
+      detail.contains('invalid') ||
+      detail.contains('unknown');
 }

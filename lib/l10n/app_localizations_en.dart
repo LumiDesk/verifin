@@ -3572,10 +3572,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiRetryAnswer => 'Answer again';
 
   @override
-  String get aiPrivacyNotice =>
-      'AI features send your text and the read-only financial summaries needed to answer your questions to your configured third-party service. The configuration and full ledger remain on this device.';
-
-  @override
   String get aiEntryTitle => 'AI entry';
 
   @override
@@ -3626,18 +3622,26 @@ class AppLocalizationsEn extends AppLocalizations {
       'Currency not recognized — using the account or base currency, please confirm';
 
   @override
-  String get screenshotEntryButton => 'Scan a screenshot';
-
-  @override
-  String get screenshotEntryUnsupported =>
-      'Image text recognition is not supported on this device';
-
-  @override
-  String get screenshotEntryNoText =>
-      'No text was recognized in the image — try a clearer screenshot';
+  String get screenshotEntryButton => 'Import image';
 
   @override
   String get captureEntryRecognizing => 'Reading the bill…';
+
+  @override
+  String get visionEntryUnsupported =>
+      'This model does not support image input. Please switch to a vision-capable model in AI settings.';
+
+  @override
+  String get visionEntryNoResult =>
+      'The AI could not recognize a transaction. Try a clearer bill image.';
+
+  @override
+  String get visionEntryImageInvalid =>
+      'Could not read this image. Try another one.';
+
+  @override
+  String get visionEntryImageTooLarge =>
+      'The image is too large. Try another one.';
 
   @override
   String get captureEntryNoTransaction =>

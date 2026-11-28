@@ -1,6 +1,7 @@
 // 截图识账 / 外部采集记账：提示词、预过滤等纯函数，与 AI 弹层入口的 UI 行为。
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:verifin/app/ai/ai_capabilities.dart';
 import 'package:verifin/app/ai/ai_entry_parser.dart';
 import 'package:verifin/app/ai/ai_settings.dart';
 import 'package:verifin/app/models.dart';
@@ -44,8 +45,8 @@ void main() {
       expect(prompt, contains('dining'));
       expect(prompt, contains('salary'));
       expect(prompt, contains('cash'));
-      // 采集文本专属规则：OCR 噪音、忽略余额类数字、交易时间优先、非交易置 0。
-      expect(prompt, contains('OCR'));
+      // 采集文本专属规则：账单噪音、忽略余额类数字、交易时间优先、非交易置 0。
+      expect(prompt, contains('账单原文'));
       expect(prompt, contains('余额'));
       expect(prompt, contains('交易时间'));
       expect(prompt, contains('amount 置为 0'));
@@ -105,6 +106,35 @@ void main() {
       await tester.tap(find.byKey(const Key('ai_entry_screenshot_button')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('ai_entry_screenshot_button')), findsNothing);
+    });
+
+    testWidgets('缓存不支持视觉时选图前提示换模型', (tester) async {
+      final controller = await pumpApp(tester);
+      const settings = AiSettings(
+        baseUrl: 'http://localhost:11434/v1',
+        apiKey: 'test',
+        model: 'text-model',
+      );
+      controller.setAiSettings(settings);
+      controller.setAiCapabilityProfile(
+        AiCapabilityProfile.forSettings(
+          settings: settings,
+          nativeToolCalls: AiNativeToolCapability.unsupported,
+          vision: AiVisionCapability.unsupported,
+          checkedAt: DateTime.utc(2026, 11, 28),
+        ),
+      );
+      controller.setFabActionMode(FabActionMode.ai);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('quick_entry_fab')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('ai_entry_screenshot_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('当前模型不支持图片输入，请在 AI 设置中更换支持视觉的模型'), findsOne);
+      await tester.tap(find.text('取消'));
+      await tester.pumpAndSettle();
     });
 
     testWidgets('未配置 AI 时先弹配置引导', (tester) async {

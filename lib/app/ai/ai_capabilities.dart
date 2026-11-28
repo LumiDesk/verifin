@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'ai_agent_message.dart';
 import 'ai_client.dart';
 import 'ai_completion_event.dart';
+import 'ai_error.dart';
 import 'ai_settings.dart';
 
 const int aiCapabilityProtocolVersion = 1;
@@ -265,7 +266,7 @@ Future<AiCapabilityProfile> detectAiCapabilities({
           ? AiVisionCapability.supported
           : AiVisionCapability.unsupported;
     } on AiException catch (error) {
-      if (!_indicatesUnsupportedVision(error)) rethrow;
+      if (!isUnsupportedVisionError(error)) rethrow;
       vision = AiVisionCapability.unsupported;
     }
   }
@@ -276,19 +277,6 @@ Future<AiCapabilityProfile> detectAiCapabilities({
     vision: vision,
     checkedAt: checkedAt,
   );
-}
-
-bool _indicatesUnsupportedVision(AiException error) {
-  final detail = error.detail?.toLowerCase() ?? '';
-  if (!detail.contains('image') &&
-      !detail.contains('vision') &&
-      !detail.contains('multimodal')) {
-    return false;
-  }
-  return detail.contains('unsupported') ||
-      detail.contains('not support') ||
-      detail.contains('invalid') ||
-      detail.contains('unknown');
 }
 
 String normalizeAiEndpoint(String value) {
