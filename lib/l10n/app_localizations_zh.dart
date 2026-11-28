@@ -1288,6 +1288,28 @@ class AppLocalizationsZh extends AppLocalizations {
   String get attachFromGallery => '从相册选择';
 
   @override
+  String get attachFromGalleryHint => '可一次选择多张';
+
+  @override
+  String get attachAdding => '正在添加图片…';
+
+  @override
+  String attachAddingProgress(int done, int total) {
+    return '正在添加图片 $done/$total';
+  }
+
+  @override
+  String attachBatchPartial(int added, int failed) {
+    return '已添加 $added 张，$failed 张无法读取';
+  }
+
+  @override
+  String get attachBatchAllFailed => '所选图片无法读取，请换一批试试';
+
+  @override
+  String get attachPickFailed => '添加图片失败，请重试';
+
+  @override
   String get attachTitle => '图片附件';
 
   @override

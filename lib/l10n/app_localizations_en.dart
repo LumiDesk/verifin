@@ -1318,6 +1318,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get attachFromGallery => 'Choose from gallery';
 
   @override
+  String get attachFromGalleryHint => 'Select multiple at once';
+
+  @override
+  String get attachAdding => 'Adding images…';
+
+  @override
+  String attachAddingProgress(int done, int total) {
+    return 'Adding images $done/$total';
+  }
+
+  @override
+  String attachBatchPartial(int added, int failed) {
+    return 'Added $added; $failed couldn\'t be read';
+  }
+
+  @override
+  String get attachBatchAllFailed =>
+      'Couldn\'t read the selected images. Try another batch.';
+
+  @override
+  String get attachPickFailed => 'Couldn\'t add the images. Try again.';
+
+  @override
   String get attachTitle => 'Attachments';
 
   @override

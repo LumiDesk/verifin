@@ -7,6 +7,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:animated_toggle_switch/animated_toggle_switch.dart';
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
